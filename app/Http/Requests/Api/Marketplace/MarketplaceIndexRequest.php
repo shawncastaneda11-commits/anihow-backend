@@ -21,6 +21,7 @@ class MarketplaceIndexRequest extends FormRequest
         return [
             'category_id' => ['sometimes', 'integer', Rule::exists(Category::class, 'id')],
             'search' => ['sometimes', 'string', 'max:255'],
+            'sort' => ['sometimes', 'string', Rule::in(['price_asc', 'price_desc', 'freshest', 'availability'])],
         ];
     }
 }

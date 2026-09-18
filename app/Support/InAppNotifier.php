@@ -18,8 +18,10 @@ class InAppNotifier
     /**
      * Persist an in-app notification, then queue email as an additional channel.
      *
-     * TODO(push-notifications): no push provider yet. Email is queued; in-app
-     * records stay the source of truth for the mobile inbox.
+     * TODO(push-notifications): no push provider yet.
+     * TODO(email-notifications): queued mailables already exist from Phase 5;
+     * do not add a second email product. In-app records stay the source of
+     * truth for the mobile inbox.
      */
     public function send(
         User $user,
@@ -44,25 +46,31 @@ class InAppNotifier
     public function reservationCreated(User $farmer, Reservation $reservation): InAppNotification
     {
         $buyerName = $reservation->buyer?->name ?? 'A buyer';
+        $total = number_format((float) $reservation->total, 2, '.', '');
 
         return $this->send(
             $farmer,
             NotificationType::ReservationCreated,
             'New reservation',
-            "{$buyerName} reserved produce totaling {$reservation->total}.",
+            "{$buyerName} reserved produce totaling ₱{$total}.",
             $reservation,
         );
     }
 
-    public function reservationStatusChanged(User $buyer, Reservation $reservation): InAppNotification
+    public function reservationStatusChanged(User $recipient, Reservation $reservation): InAppNotification
     {
         $status = $reservation->status?->label() ?? $reservation->status?->value;
+        $total = number_format((float) $reservation->total, 2, '.', '');
+        $forBuyer = $recipient->id === $reservation->buyer_id;
+        $body = $forBuyer
+            ? "Your reservation is now {$status}."
+            : "A reservation totaling ₱{$total} is now {$status}.";
 
         return $this->send(
-            $buyer,
+            $recipient,
             NotificationType::ReservationStatusChanged,
             'Reservation updated',
-            "Your reservation is now {$status}.",
+            $body,
             $reservation,
         );
     }
@@ -70,12 +78,13 @@ class InAppNotifier
     public function listingLowStock(User $farmer, Listing $listing): InAppNotification
     {
         $unit = $listing->unit?->value ?? '';
+        $quantity = number_format((float) $listing->quantity_available, 2, '.', '');
 
         return $this->send(
             $farmer,
             NotificationType::ListingLowStock,
             'Low stock',
-            "{$listing->name} is down to {$listing->quantity_available} {$unit}.",
+            "{$listing->name} is down to {$quantity} {$unit}.",
             $listing,
         );
     }

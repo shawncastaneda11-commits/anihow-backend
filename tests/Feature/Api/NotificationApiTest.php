@@ -45,7 +45,10 @@ class NotificationApiTest extends TestCase
         $this->asUser($farmer)
             ->getJson('/api/notifications')
             ->assertOk()
-            ->assertJsonPath('data.0.type', NotificationType::ReservationCreated->value);
+            ->assertJsonPath('data.0.type', NotificationType::ReservationCreated->value)
+            ->assertJsonPath('data.0.related_type', 'reservation')
+            ->assertJsonPath('data.0.related_id', $id)
+            ->assertJsonPath('data.0.title', 'New reservation');
 
         Mail::assertQueued(ReservationCreatedMail::class);
 
@@ -64,7 +67,90 @@ class NotificationApiTest extends TestCase
             ->getJson('/api/notifications')
             ->assertOk()
             ->assertJsonPath('data.0.type', NotificationType::ReservationStatusChanged->value)
+            ->assertJsonPath('data.0.related_type', 'reservation')
+            ->assertJsonPath('data.0.related_id', $id)
             ->assertJsonCount(1, 'data');
+
+        $this->asUser($farmer)
+            ->patchJson("/api/farmer/reservations/{$id}/complete")
+            ->assertOk();
+
+        $this->asUser($buyer)
+            ->getJson('/api/notifications')
+            ->assertOk()
+            ->assertJsonPath('data.0.type', NotificationType::ReservationStatusChanged->value)
+            ->assertJsonPath('data.0.related_type', 'reservation')
+            ->assertJsonPath('data.0.related_id', $id)
+            ->assertJsonCount(2, 'data');
+    }
+
+    public function test_buyer_cancel_notifies_the_farmer_not_the_buyer(): void
+    {
+        $farmer = $this->farmer();
+        $listing = Listing::factory()->forFarmer($farmer)->create(['quantity_available' => 10]);
+        $buyer = $this->buyer();
+
+        $id = $this->asUser($buyer)
+            ->postJson('/api/buyer/reservations', [
+                'items' => [['listing_id' => $listing->id, 'quantity' => 1]],
+            ])
+            ->json('data.id');
+
+        $this->asUser($buyer)
+            ->patchJson("/api/buyer/reservations/{$id}/cancel")
+            ->assertOk();
+
+        $this->asUser($farmer)
+            ->getJson('/api/notifications')
+            ->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonFragment([
+                'type' => NotificationType::ReservationStatusChanged->value,
+                'related_type' => 'reservation',
+                'related_id' => $id,
+            ]);
+
+        $this->asUser($buyer)
+            ->getJson('/api/notifications')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
+    public function test_farmer_cancel_notifies_the_buyer(): void
+    {
+        $farmer = $this->farmer();
+        $listing = Listing::factory()->forFarmer($farmer)->create(['quantity_available' => 10]);
+        $buyer = $this->buyer();
+
+        $id = $this->asUser($buyer)
+            ->postJson('/api/buyer/reservations', [
+                'items' => [['listing_id' => $listing->id, 'quantity' => 1]],
+            ])
+            ->json('data.id');
+
+        $this->asUser($farmer)
+            ->patchJson("/api/farmer/reservations/{$id}/cancel", [
+                'reason' => 'Sold out at the stall.',
+            ])
+            ->assertOk();
+
+        $this->asUser($buyer)
+            ->getJson('/api/notifications')
+            ->assertOk()
+            ->assertJsonPath('data.0.type', NotificationType::ReservationStatusChanged->value)
+            ->assertJsonPath('data.0.related_type', 'reservation')
+            ->assertJsonPath('data.0.related_id', $id);
+
+        $farmerTypes = $farmer->inAppNotifications()->get()->map(
+            fn ($notification) => $notification->type->value,
+        )->all();
+
+        $this->assertSame([NotificationType::ReservationCreated->value], $farmerTypes);
+    }
+
+    public function test_unauthenticated_notification_requests_return_401(): void
+    {
+        $this->getJson('/api/notifications')->assertUnauthorized();
     }
 
     public function test_low_stock_notifies_farmer_once_when_crossing_threshold(): void
@@ -86,6 +172,16 @@ class NotificationApiTest extends TestCase
 
         $this->assertContains(NotificationType::ListingLowStock->value, $types);
         $this->assertContains(NotificationType::ReservationCreated->value, $types);
+
+        $this->asUser($farmer)
+            ->getJson('/api/notifications')
+            ->assertOk()
+            ->assertJsonFragment([
+                'type' => NotificationType::ListingLowStock->value,
+                'related_id' => $listing->id,
+                'related_type' => 'listing',
+                'title' => 'Low stock',
+            ]);
     }
 
     public function test_user_can_mark_one_and_all_notifications_as_read(): void
@@ -104,6 +200,19 @@ class NotificationApiTest extends TestCase
             ->patchJson("/api/notifications/{$notificationId}/read")
             ->assertOk()
             ->assertJsonPath('data.read_at', fn ($value) => $value !== null);
+
+        $this->asUser($farmer)
+            ->getJson('/api/notifications/unread-count')
+            ->assertJsonPath('data.unread_count', 0);
+
+        $second = Listing::factory()->forFarmer($farmer)->create(['quantity_available' => 10]);
+        $this->asUser($buyer)->postJson('/api/buyer/reservations', [
+            'items' => [['listing_id' => $second->id, 'quantity' => 1]],
+        ]);
+
+        $this->asUser($farmer)
+            ->postJson('/api/notifications/read-all')
+            ->assertOk();
 
         $this->asUser($farmer)
             ->getJson('/api/notifications/unread-count')

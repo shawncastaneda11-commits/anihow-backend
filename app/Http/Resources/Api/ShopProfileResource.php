@@ -19,20 +19,9 @@ class ShopProfileResource extends JsonResource
             'bio' => $this->bio,
             'location' => $this->location,
             'contact' => $this->shopContact(),
-            'average_rating' => $this->formatAverageRating(),
+            'average_rating' => $this->averageRating(),
             'reviews_count' => (int) ($this->reviews_received_count ?? 0),
             'listings' => ListingResource::collection($this->whenLoaded('listings')),
         ];
-    }
-
-    private function formatAverageRating(): ?string
-    {
-        $average = $this->reviews_received_avg_rating ?? $this->averageRating();
-
-        if ($average === null) {
-            return null;
-        }
-
-        return number_format((float) $average, 2, '.', '');
     }
 }

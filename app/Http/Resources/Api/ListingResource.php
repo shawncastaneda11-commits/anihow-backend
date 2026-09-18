@@ -12,6 +12,10 @@ class ListingResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $sellerLoaded = $this->relationLoaded('farmerSeller');
+        $averageRating = $sellerLoaded ? $this->sellerAverageRating() : null;
+        $reviewsCount = $sellerLoaded ? $this->sellerReviewsCount() : 0;
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -23,15 +27,29 @@ class ListingResource extends JsonResource
             'image_url' => $this->imageUrl(),
             'is_active' => $this->is_active,
             'category' => new CategoryResource($this->whenLoaded('category')),
-            'seller' => $this->whenLoaded('farmerSeller', fn () => [
+            'seller' => $this->when($sellerLoaded, fn () => [
                 'id' => $this->farmerSeller->id,
                 'shop_name' => $this->farmerSeller->shop_name ?: $this->farmerSeller->name,
                 'name' => $this->farmerSeller->name,
                 'location' => $this->farmerSeller->location,
                 'phone' => $this->farmerSeller->phone,
+                'average_rating' => $averageRating,
+                'reviews_count' => $reviewsCount,
             ]),
+            'average_rating' => $this->when($sellerLoaded, fn () => $averageRating),
+            'reviews_count' => $this->when($sellerLoaded, fn () => $reviewsCount),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
+    }
+
+    private function sellerAverageRating(): ?string
+    {
+        return $this->farmerSeller->averageRating();
+    }
+
+    private function sellerReviewsCount(): int
+    {
+        return (int) ($this->farmerSeller->reviews_received_count ?? 0);
     }
 }

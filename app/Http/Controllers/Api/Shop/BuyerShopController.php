@@ -29,10 +29,14 @@ class BuyerShopController extends Controller
         abort_unless($farmerSeller->isFarmerSeller() && $farmerSeller->is_active, 404);
 
         $farmerSeller->load([
-            'listings' => fn ($query) => $query->marketplaceVisible()->with('category'),
+            'listings' => fn ($query) => $query->marketplaceVisible()->with('category')->latest(),
         ])
             ->loadCount('reviewsReceived')
             ->loadAvg('reviewsReceived', 'rating');
+
+        $farmerSeller->listings->each(
+            fn ($listing) => $listing->setRelation('farmerSeller', $farmerSeller),
+        );
 
         return new ShopProfileResource($farmerSeller);
     }
@@ -44,11 +48,14 @@ class BuyerShopController extends Controller
         $reviews = $farmerSeller->reviewsReceived()
             ->with('buyer')
             ->latest()
+            ->orderByDesc('id')
             ->paginate();
+
+        $farmerSeller->loadCount('reviewsReceived')->loadAvg('reviewsReceived', 'rating');
 
         return ReviewResource::collection($reviews)->additional([
             'average_rating' => $farmerSeller->averageRating(),
-            'reviews_count' => $farmerSeller->reviewsReceived()->count(),
+            'reviews_count' => (int) ($farmerSeller->reviews_received_count ?? 0),
         ]);
     }
 }

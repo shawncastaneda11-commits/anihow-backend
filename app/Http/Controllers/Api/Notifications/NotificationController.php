@@ -18,6 +18,7 @@ class NotificationController extends Controller
         $notifications = $request->user()
             ->inAppNotifications()
             ->latest()
+            ->orderByDesc('id')
             ->paginate();
 
         return InAppNotificationResource::collection($notifications);

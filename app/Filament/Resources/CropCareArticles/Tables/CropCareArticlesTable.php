@@ -23,7 +23,7 @@ class CropCareArticlesTable
                     ->sortable(),
                 TextColumn::make('category.name')
                     ->label('Category')
-                    ->placeholder('All crops')
+                    ->placeholder('General')
                     ->sortable(),
                 IconColumn::make('is_active')
                     ->label('Published')

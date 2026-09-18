@@ -94,9 +94,18 @@ Route::middleware([
     Route::post('sales', [SaleController::class, 'store'])->name('farmer.sales.store');
     Route::get('sales/{sale}', [SaleController::class, 'show'])->name('farmer.sales.show');
 
+    Route::get('crop-care/categories', [CropCareArticleController::class, 'categories'])
+        ->name('farmer.crop-care.categories');
+    Route::get('crop-care/mine', [CropCareArticleController::class, 'mine'])
+        ->name('farmer.crop-care.mine');
     Route::get('crop-care', [CropCareArticleController::class, 'index'])->name('farmer.crop-care.index');
+    Route::post('crop-care', [CropCareArticleController::class, 'store'])->name('farmer.crop-care.store');
     Route::get('crop-care/{cropCareArticle}', [CropCareArticleController::class, 'show'])
         ->name('farmer.crop-care.show');
+    Route::match(['put', 'patch'], 'crop-care/{cropCareArticle}', [CropCareArticleController::class, 'update'])
+        ->name('farmer.crop-care.update');
+    Route::delete('crop-care/{cropCareArticle}', [CropCareArticleController::class, 'destroy'])
+        ->name('farmer.crop-care.destroy');
 
     Route::get('shop', [FarmerShopController::class, 'show'])->name('farmer.shop.show');
     Route::match(['put', 'patch'], 'shop', [FarmerShopController::class, 'update'])->name('farmer.shop.update');

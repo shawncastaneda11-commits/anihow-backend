@@ -23,7 +23,7 @@ class CropCareArticleForm
                     ->searchable()
                     ->preload()
                     ->nullable()
-                    ->helperText('Optional. Crop-cycle / growth tracking is not part of this content.'),
+                    ->helperText('Optional. Tips without a category appear under General in the app. Crop-cycle tracking is not part of this content.'),
                 Textarea::make('body')
                     ->required()
                     ->rows(12)

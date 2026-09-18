@@ -17,9 +17,9 @@ class ReservationItemResource extends JsonResource
             'listing_id' => $this->listing_id,
             'listing_name' => $this->listing_name,
             'unit' => $this->unit?->value,
-            'quantity' => $this->quantity,
-            'unit_price' => $this->unit_price,
-            'line_subtotal' => $this->line_subtotal,
+            'quantity' => number_format((float) $this->quantity, 2, '.', ''),
+            'unit_price' => number_format((float) $this->unit_price, 2, '.', ''),
+            'line_subtotal' => number_format((float) $this->line_subtotal, 2, '.', ''),
         ];
     }
 }

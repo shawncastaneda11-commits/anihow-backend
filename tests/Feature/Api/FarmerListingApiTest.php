@@ -6,6 +6,8 @@ use App\Enums\ListingUnit;
 use App\Enums\Role;
 use App\Models\Category;
 use App\Models\Listing;
+use App\Models\Reservation;
+use App\Models\ReservationItem;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -107,6 +109,26 @@ class FarmerListingApiTest extends TestCase
                 'quantity_available' => 20,
             ])
             ->assertForbidden();
+    }
+
+    public function test_returns_422_when_listing_is_used_on_a_reservation(): void
+    {
+        $farmer = $this->farmer();
+        $listing = Listing::factory()->forFarmer($farmer)->create();
+        $reservation = Reservation::factory()->create([
+            'farmer_seller_id' => $farmer->id,
+        ]);
+        ReservationItem::factory()->create([
+            'reservation_id' => $reservation->id,
+            'listing_id' => $listing->id,
+        ]);
+
+        $this->withToken($farmer->createToken('mobile')->plainTextToken)
+            ->deleteJson("/api/farmer/listings/{$listing->id}")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('listing');
+
+        $this->assertDatabaseHas('listings', ['id' => $listing->id]);
     }
 
     /**

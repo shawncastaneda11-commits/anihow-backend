@@ -18,8 +18,18 @@ class CropCareIndexRequest extends FormRequest
      */
     public function rules(): array
     {
+        $categoryId = $this->integer('category_id');
+
         return [
-            'category_id' => ['sometimes', 'integer', Rule::exists(Category::class, 'id')],
+            'category_id' => [
+                'sometimes',
+                'integer',
+                'min:0',
+                Rule::when(
+                    $this->filled('category_id') && $categoryId > 0,
+                    [Rule::exists(Category::class, 'id')],
+                ),
+            ],
             'search' => ['sometimes', 'string', 'max:255'],
         ];
     }

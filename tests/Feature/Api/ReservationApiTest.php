@@ -24,7 +24,11 @@ class ReservationApiTest extends TestCase
 
     public function test_buyer_can_create_view_and_cancel_a_pending_reservation(): void
     {
-        $farmer = $this->farmer();
+        $farmer = $this->farmer([
+            'shop_name' => 'Juan Farm Stall',
+            'location' => 'San Francisco, General Trias, Cavite',
+            'contact' => '09171230001',
+        ]);
         $listing = Listing::factory()->forFarmer($farmer)->create([
             'name' => 'Tomato',
             'quantity_available' => 10,
@@ -47,6 +51,18 @@ class ReservationApiTest extends TestCase
         $this->assertEquals('8.00', $listing->fresh()->quantity_available);
 
         $id = $create->json('data.id');
+
+        $this->asUser($buyer)
+            ->getJson("/api/buyer/reservations/{$id}")
+            ->assertOk()
+            ->assertJsonPath('data.seller.shop_name', 'Juan Farm Stall')
+            ->assertJsonPath('data.seller.location', 'San Francisco, General Trias, Cavite')
+            ->assertJsonPath('data.seller.contact', '09171230001')
+            ->assertJsonPath('data.items.0.listing_name', 'Tomato')
+            ->assertJsonPath('data.items.0.quantity', '2.00')
+            ->assertJsonPath('data.items.0.unit_price', '65.00')
+            ->assertJsonPath('data.items.0.line_subtotal', '130.00')
+            ->assertJsonPath('data.can_review', false);
 
         $this->asUser($buyer)
             ->getJson('/api/buyer/reservations')
@@ -116,6 +132,27 @@ class ReservationApiTest extends TestCase
             ->assertJsonPath('data.status', ReservationStatus::Completed->value);
 
         $this->assertEquals('9.00', $listing->fresh()->quantity_available);
+
+        $this->asUser($buyer)
+            ->getJson("/api/buyer/reservations/{$reservationId}")
+            ->assertOk()
+            ->assertJsonPath('data.status', ReservationStatus::Completed->value)
+            ->assertJsonPath('data.can_review', true)
+            ->assertJsonPath('data.review', null);
+
+        $this->asUser($buyer)
+            ->postJson('/api/buyer/reviews', [
+                'reservation_id' => $reservationId,
+                'rating' => 5,
+                'comment' => 'Picked up fresh.',
+            ])
+            ->assertCreated();
+
+        $this->asUser($buyer)
+            ->getJson("/api/buyer/reservations/{$reservationId}")
+            ->assertOk()
+            ->assertJsonPath('data.can_review', false)
+            ->assertJsonPath('data.review.rating', 5);
     }
 
     public function test_farmer_cancel_requires_a_reason_and_restores_stock(): void
@@ -161,6 +198,29 @@ class ReservationApiTest extends TestCase
         $this->asUser($other)
             ->getJson("/api/farmer/reservations/{$id}")
             ->assertForbidden();
+    }
+
+    public function test_buyer_cannot_view_another_buyers_reservation(): void
+    {
+        $farmer = $this->farmer();
+        $listing = Listing::factory()->forFarmer($farmer)->create();
+        $buyer = $this->buyer();
+        $other = $this->buyer(['email' => 'other.buyer@example.com']);
+
+        $id = $this->asUser($buyer)
+            ->postJson('/api/buyer/reservations', [
+                'items' => [['listing_id' => $listing->id, 'quantity' => 1]],
+            ])
+            ->json('data.id');
+
+        $this->asUser($other)
+            ->getJson("/api/buyer/reservations/{$id}")
+            ->assertForbidden();
+    }
+
+    public function test_unauthenticated_buyer_reservation_show_returns_401(): void
+    {
+        $this->getJson('/api/buyer/reservations/1')->assertUnauthorized();
     }
 
     private function farmer(array $attributes = []): User

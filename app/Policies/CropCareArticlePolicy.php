@@ -14,10 +14,29 @@ class CropCareArticlePolicy
 
     public function view(User $user, CropCareArticle $article): bool
     {
-        if (! $user->isFarmerSeller() && ! $user->isSuperAdmin()) {
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        if (! $user->isFarmerSeller()) {
             return false;
         }
 
-        return $article->is_active || $user->isSuperAdmin();
+        return $article->is_active || $article->isOwnedBy($user);
+    }
+
+    public function create(User $user): bool
+    {
+        return $user->isFarmerSeller();
+    }
+
+    public function update(User $user, CropCareArticle $article): bool
+    {
+        return $user->isFarmerSeller() && $article->isOwnedBy($user);
+    }
+
+    public function delete(User $user, CropCareArticle $article): bool
+    {
+        return $this->update($user, $article);
     }
 }

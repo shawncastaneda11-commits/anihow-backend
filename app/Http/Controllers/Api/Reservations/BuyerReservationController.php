@@ -22,7 +22,7 @@ class BuyerReservationController extends Controller
 
         $reservations = $request->user()
             ->buyerReservations()
-            ->with(['items', 'farmerSeller'])
+            ->with(['items', 'farmerSeller', 'review'])
             ->latest()
             ->paginate();
 
@@ -47,7 +47,7 @@ class BuyerReservationController extends Controller
     {
         $this->authorize('view', $reservation);
 
-        $reservation->load(['items', 'buyer', 'farmerSeller']);
+        $reservation->load(['items', 'buyer', 'farmerSeller', 'review']);
 
         return new ReservationResource($reservation);
     }

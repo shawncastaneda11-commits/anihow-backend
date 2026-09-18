@@ -57,7 +57,19 @@ class ReviewShopFavoriteOrderApiTest extends TestCase
             ->getJson("/api/buyer/shops/{$farmer->id}/reviews")
             ->assertOk()
             ->assertJsonCount(1, 'data')
-            ->assertJsonPath('average_rating', '5.00');
+            ->assertJsonPath('data.0.rating', 5)
+            ->assertJsonPath('data.0.comment', 'Fresh kamote.')
+            ->assertJsonPath('data.0.buyer.name', $buyer->name)
+            ->assertJsonPath('average_rating', '5.0')
+            ->assertJsonPath('reviews_count', 1);
+
+        $this->asUser($buyer)
+            ->getJson("/api/buyer/shops/{$farmer->id}")
+            ->assertOk()
+            ->assertJsonPath('data.average_rating', '5.0')
+            ->assertJsonPath('data.reviews_count', 1)
+            ->assertJsonPath('data.listings.0.average_rating', '5.0')
+            ->assertJsonPath('data.listings.0.seller.average_rating', '5.0');
     }
 
     public function test_buyer_can_view_shop_profile_and_farmer_can_update_own_shop(): void
@@ -82,7 +94,32 @@ class ReviewShopFavoriteOrderApiTest extends TestCase
             ->getJson("/api/buyer/shops/{$farmer->id}")
             ->assertOk()
             ->assertJsonPath('data.shop_name', 'Juan Farm Stall')
-            ->assertJsonCount(1, 'data.listings');
+            ->assertJsonPath('data.location', 'San Francisco, General Trias, Cavite')
+            ->assertJsonPath('data.contact', '09171230001')
+            ->assertJsonCount(1, 'data.listings')
+            ->assertJsonPath('data.listings.0.name', 'Tomato')
+            ->assertJsonPath('data.average_rating', null)
+            ->assertJsonPath('data.reviews_count', 0);
+
+        $this->asUser($farmer)
+            ->getJson("/api/buyer/shops/{$farmer->id}")
+            ->assertForbidden();
+
+        $this->flushHeaders();
+        $this->app['auth']->forgetGuards();
+        $this->getJson("/api/buyer/shops/{$farmer->id}")->assertUnauthorized();
+
+        $inactive = $this->farmer(['is_active' => false]);
+        $this->asUser($buyer)
+            ->getJson("/api/buyer/shops/{$inactive->id}")
+            ->assertNotFound();
+        $this->asUser($buyer)
+            ->getJson("/api/buyer/shops/{$inactive->id}/reviews")
+            ->assertNotFound();
+
+        $this->asUser($buyer)
+            ->getJson("/api/buyer/shops/{$buyer->id}")
+            ->assertNotFound();
 
         $this->asUser($farmer)
             ->patchJson('/api/farmer/shop', [

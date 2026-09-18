@@ -20,7 +20,7 @@ class FavoriteController extends Controller
 
         $favorites = $request->user()
             ->favorites()
-            ->with(['listing.category', 'listing.farmerSeller'])
+            ->with($this->listingRelations())
             ->latest()
             ->paginate();
 
@@ -31,7 +31,7 @@ class FavoriteController extends Controller
     {
         $favorite = $addFavorite->handle($request->user(), $request->listing());
 
-        return (new FavoriteResource($favorite->load(['listing.category', 'listing.farmerSeller'])))
+        return (new FavoriteResource($favorite->load($this->listingRelations())))
             ->additional(['message' => 'Listing added to favorites.'])
             ->response()
             ->setStatusCode(201);
@@ -50,5 +50,19 @@ class FavoriteController extends Controller
         return response()->json([
             'message' => 'Listing removed from favorites.',
         ]);
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    private function listingRelations(): array
+    {
+        return [
+            'listing.category',
+            'listing.farmerSeller' => function ($query): void {
+                $query->withAvg('reviewsReceived', 'rating')
+                    ->withCount('reviewsReceived');
+            },
+        ];
     }
 }

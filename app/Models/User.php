@@ -91,6 +91,11 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         return $this->hasMany(Listing::class, 'farmer_seller_id');
     }
 
+    public function cropCareArticles(): HasMany
+    {
+        return $this->hasMany(CropCareArticle::class, 'created_by');
+    }
+
     public function buyerReservations(): HasMany
     {
         return $this->hasMany(Reservation::class, 'buyer_id');
@@ -133,12 +138,14 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
 
     public function averageRating(): ?string
     {
-        $average = $this->reviewsReceived()->avg('rating');
+        $average = array_key_exists('reviews_received_avg_rating', $this->getAttributes())
+            ? $this->reviews_received_avg_rating
+            : $this->reviewsReceived()->avg('rating');
 
         if ($average === null) {
             return null;
         }
 
-        return number_format((float) $average, 2, '.', '');
+        return number_format((float) $average, 1, '.', '');
     }
 }

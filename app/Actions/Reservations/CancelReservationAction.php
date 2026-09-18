@@ -54,7 +54,13 @@ class CancelReservationAction
             ]);
 
             $reservation = $reservation->refresh()->load(['items.listing', 'buyer', 'farmerSeller']);
-            $this->notifier->reservationStatusChanged($reservation->buyer, $reservation);
+            $recipient = $actor === ReservationActor::Buyer
+                ? $reservation->farmerSeller
+                : $reservation->buyer;
+
+            if ($recipient) {
+                $this->notifier->reservationStatusChanged($recipient, $reservation);
+            }
 
             return $reservation;
         });

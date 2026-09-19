@@ -12,12 +12,18 @@ class DashedPhotoBox extends StatelessWidget {
     this.networkUrl,
     this.onTap,
     this.enabled = true,
+    this.emptyLabel = 'Add photo',
+    this.emptyIcon = Icons.add_a_photo_outlined,
+    this.height = 148,
   });
 
   final String? filePath;
   final String? networkUrl;
   final VoidCallback? onTap;
   final bool enabled;
+  final String emptyLabel;
+  final IconData emptyIcon;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -34,21 +40,25 @@ class DashedPhotoBox extends StatelessWidget {
           child: CustomPaint(
             painter: _DashPainter(color: theme.dividerColor),
             child: SizedBox(
-              height: 148,
+              height: height,
               width: double.infinity,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(AniHowSpace.radius),
                 child: image ??
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.add_a_photo_outlined, color: AniHowColors.brand),
-                        const SizedBox(height: AniHowSpace.labelGap),
-                        Text(
-                          enabled ? 'Add photo' : 'Photo upload unavailable',
-                          style: theme.textTheme.labelLarge?.copyWith(color: AniHowColors.brand),
-                        ),
-                      ],
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AniHowSpace.screen),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(emptyIcon, color: AniHowColors.brand),
+                          const SizedBox(height: AniHowSpace.labelGap),
+                          Text(
+                            enabled ? emptyLabel : 'Photo upload unavailable',
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.labelLarge?.copyWith(color: AniHowColors.brand),
+                          ),
+                        ],
+                      ),
                     ),
               ),
             ),

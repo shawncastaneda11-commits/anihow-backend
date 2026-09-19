@@ -238,9 +238,22 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
               ],
               if (reservation.isCompleted && !reservation.canReview && reservation.reviewRating != null) ...[
                 const SizedBox(height: AniHowSpace.section),
-                Text(
-                  'You rated this farmer ${reservation.reviewRating}/5',
-                  style: const TextStyle(fontSize: AniHowSpace.body),
+                Row(
+                  children: [
+                    Text(
+                      'You rated this farmer',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(width: 8),
+                    ...List.generate(5, (index) {
+                      final filled = index < reservation.reviewRating!;
+                      return Icon(
+                        filled ? Icons.star_rounded : Icons.star_border_rounded,
+                        size: 20,
+                        color: AniHowColors.pending,
+                      );
+                    }),
+                  ],
                 ),
               ],
             ],

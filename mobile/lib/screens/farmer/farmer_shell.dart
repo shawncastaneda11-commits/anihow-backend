@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../state/auth_controller.dart';
-import '../../widgets/app_header.dart';
 import '../../widgets/notification_bell.dart';
 import '../../widgets/profile_avatar_button.dart';
 import '../profile/profile_screen.dart';
@@ -33,13 +32,13 @@ class _FarmerShellState extends State<FarmerShell> {
     final titles = ['My listings', 'Incoming orders', 'Walk-in POS', 'Crop care'];
 
     return Scaffold(
-      appBar: AppHeader(
-        title: titles[_index],
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const NotificationBellButton(),
-            ProfileAvatarButton(
+      appBar: AppBar(
+        title: Text(titles[_index]),
+        actions: [
+          const NotificationBellButton(),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ProfileAvatarButton(
               name: user?.shopName ?? user?.name ?? 'F',
               onPressed: () {
                 Navigator.of(context).push(
@@ -47,19 +46,24 @@ class _FarmerShellState extends State<FarmerShell> {
                 );
               },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
       body: pages[_index],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (value) => setState(() => _index = value),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.inventory_2_outlined), label: 'Listings'),
-          NavigationDestination(icon: Icon(Icons.inbox_outlined), label: 'Orders'),
-          NavigationDestination(icon: Icon(Icons.point_of_sale_outlined), label: 'POS'),
-          NavigationDestination(icon: Icon(Icons.menu_book_outlined), label: 'Crop care'),
-        ],
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
+        ),
+        child: NavigationBar(
+          selectedIndex: _index,
+          onDestinationSelected: (value) => setState(() => _index = value),
+          destinations: const [
+            NavigationDestination(icon: Icon(Icons.inventory_2_outlined), label: 'Listings'),
+            NavigationDestination(icon: Icon(Icons.inbox_outlined), label: 'Orders'),
+            NavigationDestination(icon: Icon(Icons.point_of_sale_outlined), label: 'POS'),
+            NavigationDestination(icon: Icon(Icons.menu_book_outlined), label: 'Crop care'),
+          ],
+        ),
       ),
     );
   }

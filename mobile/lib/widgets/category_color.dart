@@ -23,7 +23,7 @@ class CategoryColor {
     if (haystack.contains('veget') || haystack.contains('herb') || haystack.contains('leaf')) {
       return AniHowColors.leafy;
     }
-    return AniHowColors.brand;
+    return AniHowColors.sage;
   }
 
   static IconData iconOf(CategoryItem? category) {

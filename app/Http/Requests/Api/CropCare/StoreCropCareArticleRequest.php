@@ -23,6 +23,15 @@ class StoreCropCareArticleRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'body' => ['required', 'string', 'max:10000'],
             'category_id' => ['required', 'integer', Rule::exists(Category::class, 'id')->where('is_active', true)],
+            'image' => ['nullable', 'image', 'max:2048'],
         ];
+    }
+
+    /**
+     * @return array{title: string, body: string, category_id: int}
+     */
+    public function articleAttributes(): array
+    {
+        return $this->safe()->only(['title', 'body', 'category_id']);
     }
 }

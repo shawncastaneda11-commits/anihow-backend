@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
+import '../../theme/anihow_theme.dart';
+import '../../widgets/dashed_photo_box.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/primary_button.dart';
 
@@ -21,8 +24,12 @@ class _CropCareFormScreenState extends State<CropCareFormScreen> {
   final _title = TextEditingController();
   final _body = TextEditingController();
   int? _categoryId;
+  String? _imagePath;
   bool _busy = false;
   late Future<List<CategoryItem>> _categories;
+
+  static const _titleHint = 'Name this guide';
+  static const _instructionsHint = 'Write the steps, materials, and what to avoid.';
 
   @override
   void initState() {
@@ -43,10 +50,17 @@ class _CropCareFormScreenState extends State<CropCareFormScreen> {
     super.dispose();
   }
 
+  Future<void> _pickPhoto() async {
+    final file = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
+    if (file != null && mounted) {
+      setState(() => _imagePath = file.path);
+    }
+  }
+
   Future<void> _save() async {
     if (_title.text.trim().isEmpty || _body.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add a title and body.')),
+        const SnackBar(content: Text('Add a title and care instructions.')),
       );
       return;
     }
@@ -64,6 +78,7 @@ class _CropCareFormScreenState extends State<CropCareFormScreen> {
           title: _title.text.trim(),
           body: _body.text.trim(),
           categoryId: _categoryId!,
+          imagePath: _imagePath,
         );
       } else {
         await api.updateCropCare(
@@ -71,6 +86,7 @@ class _CropCareFormScreenState extends State<CropCareFormScreen> {
           title: _title.text.trim(),
           body: _body.text.trim(),
           categoryId: _categoryId!,
+          imagePath: _imagePath,
         );
       }
       if (mounted) {
@@ -87,12 +103,19 @@ class _CropCareFormScreenState extends State<CropCareFormScreen> {
     }
   }
 
+  List<CategoryItem> _orderedCategories(List<CategoryItem> categories) {
+    return [
+      ...categories.where((category) => category.name.toLowerCase() == 'vegetables'),
+      ...categories.where((category) => category.name.toLowerCase() != 'vegetables'),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final editing = widget.article != null;
 
     return Scaffold(
-      appBar: AppBar(title: Text(editing ? 'Edit guide' : 'Add guide')),
+      appBar: AppBar(title: Text(editing ? 'Edit Care Guide' : 'Add Care Guide')),
       body: FutureBuilder<List<CategoryItem>>(
         future: _categories,
         builder: (context, snapshot) {
@@ -106,39 +129,84 @@ class _CropCareFormScreenState extends State<CropCareFormScreen> {
           return Column(
             children: [
               Expanded(
-                child: ListView(
+                child: Padding(
                   padding: AniHowSpace.screenPadding,
-                  children: [
-                    AniHowField(
-                      label: 'Title',
-                      child: TextField(controller: _title),
-                    ),
-                    const SizedBox(height: AniHowSpace.fieldGap),
-                    AniHowField(
-                      label: 'Category',
-                      child: DropdownButtonFormField<int>(
-                        initialValue: _categoryId,
-                        items: categories
-                            .map(
-                              (category) => DropdownMenuItem(
-                                value: category.id,
-                                child: Text(category.name),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      DashedPhotoBox(
+                        filePath: _imagePath,
+                        networkUrl: widget.article?.imageUrl,
+                        onTap: _pickPhoto,
+                        emptyLabel: 'Upload crop photo / diagram (Optional)',
+                        emptyIcon: Icons.photo_camera_outlined,
+                        height: 112,
+                      ),
+                      const SizedBox(height: AniHowSpace.section),
+                      AniHowField(
+                        label: 'Guide Title',
+                        child: TextField(
+                          controller: _title,
+                          decoration: const InputDecoration(hintText: _titleHint),
+                        ),
+                      ),
+                      const SizedBox(height: AniHowSpace.fieldGap),
+                      Text(
+                        'Crop / Category Selector',
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                      const SizedBox(height: AniHowSpace.labelGap),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          for (final category in _orderedCategories(categories))
+                            ChoiceChip(
+                              label: Text(category.name),
+                              selected: _categoryId == category.id,
+                              showCheckmark: true,
+                              visualDensity: VisualDensity.compact,
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              padding: EdgeInsets.zero,
+                              labelPadding: const EdgeInsets.symmetric(horizontal: 10),
+                              selectedColor: AniHowColors.navActive,
+                              backgroundColor: AniHowColors.card,
+                              side: BorderSide(
+                                color: _categoryId == category.id
+                                    ? AniHowColors.navActive
+                                    : AniHowColors.hairline,
                               ),
-                            )
-                            .toList(),
-                        onChanged: (value) => setState(() => _categoryId = value),
+                              labelStyle: TextStyle(
+                                color: _categoryId == category.id
+                                    ? AniHowColors.brand
+                                    : AniHowColors.muted,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              onSelected: (_) => setState(() => _categoryId = category.id),
+                            ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: AniHowSpace.fieldGap),
-                    AniHowField(
-                      label: 'Body',
-                      child: TextField(
-                        controller: _body,
-                        maxLines: 10,
-                        minLines: 6,
+                      const SizedBox(height: AniHowSpace.section),
+                      Text(
+                        'Care Instructions',
+                        style: Theme.of(context).textTheme.labelSmall,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: AniHowSpace.labelGap),
+                      Expanded(
+                        child: TextField(
+                          controller: _body,
+                          expands: true,
+                          maxLines: null,
+                          minLines: null,
+                          textAlignVertical: TextAlignVertical.top,
+                          decoration: const InputDecoration(
+                            hintText: _instructionsHint,
+                            alignLabelWithHint: true,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               SafeArea(
@@ -151,7 +219,7 @@ class _CropCareFormScreenState extends State<CropCareFormScreen> {
                     AniHowSpace.screen,
                   ),
                   child: PrimaryButton(
-                    label: editing ? 'Save guide' : 'Publish guide',
+                    label: editing ? 'Save Care Guide' : 'Publish Care Guide',
                     busy: _busy,
                     onPressed: _save,
                   ),

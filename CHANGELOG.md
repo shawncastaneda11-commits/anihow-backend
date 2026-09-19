@@ -1,5 +1,220 @@
 # Changelog
 
+## [0.9.24] — Level farmer app bar (2026-09-19)
+
+My listings title, bell, and profile sit on one toolbar line with matching 40px controls.
+
+### Files changed
+- `mobile/lib/screens/farmer/farmer_shell.dart`
+- `mobile/lib/widgets/app_header.dart`
+- `mobile/lib/widgets/notification_bell.dart`
+- `mobile/lib/widgets/profile_avatar_button.dart`
+- `CHANGELOG.md`
+
+## [0.9.23] — Mark all notifications read (2026-09-19)
+
+Mark all read now clears the green dots immediately. The old FutureBuilder reload never rebuilt after the API call.
+
+### Files changed
+- `mobile/lib/screens/notifications/notifications_screen.dart`
+- `mobile/lib/models/models.dart`
+- `mobile/test/widget_test.dart`
+- `CHANGELOG.md`
+
+## [0.9.22] — Delete listing from Edit (2026-09-19)
+
+Edit listing shows a trash icon in the app bar. Confirm, then DELETE `/farmer/listings/{id}` and return to My listings. New listing has no trash icon.
+
+### Files changed
+- `mobile/lib/screens/farmer/listing_form_screen.dart`
+- `mobile/lib/services/api_client.dart`
+- `CHANGELOG.md`
+
+## [0.9.21] — Listing active pills (2026-09-19)
+
+UI only. My listings uses Active / Inactive pills instead of switches. Tap still toggles the listing.
+
+### Files changed
+- `mobile/lib/widgets/listing_active_badge.dart`
+- `mobile/lib/screens/farmer/listings_screen.dart`
+- `CHANGELOG.md`
+
+## [0.9.20] — Care Guide Details read-only (2026-09-19)
+
+UI only. Details is a single cream-page card: photo, Detailed Instructions, crop type, and the saved body. No edit/FAB on this screen. Edit/delete stay on My Care Guides.
+
+### Files changed
+- `mobile/lib/screens/farmer/crop_care_detail_screen.dart`
+- `mobile/lib/screens/farmer/crop_care_mine_screen.dart`
+- `mobile/lib/widgets/care_guide_card.dart`
+- `CHANGELOG.md`
+
+## [0.9.19] — My Care Guides cards (2026-09-19)
+
+UI only. My Care Guides lists real farmer guides as white cards: photo thumb, title, category pill, 3-line summary, View Details. FAB opens Add Care Guide.
+
+### Files changed
+- `mobile/lib/screens/farmer/crop_care_mine_screen.dart`
+- `mobile/lib/screens/farmer/crop_care_screen.dart`
+- `mobile/lib/widgets/care_guide_card.dart`
+- `mobile/lib/theme/anihow_theme.dart`
+- `CHANGELOG.md`
+
+## [0.9.18] — Add Care Guide matches mock (2026-09-19)
+
+Optional photo, Guide Title hint, category chips, and a large Care Instructions box. Photo is stored like listing images.
+
+### Files changed
+- `mobile/lib/screens/farmer/crop_care_form_screen.dart`
+- `mobile/lib/screens/farmer/crop_care_detail_screen.dart`
+- `mobile/lib/widgets/dashed_photo_box.dart`
+- `mobile/lib/models/models.dart`
+- `mobile/lib/services/api_client.dart`
+- `app/Models/CropCareArticle.php`
+- `app/Actions/CropCare/*`
+- `app/Http/Requests/Api/CropCare/*`
+- `app/Http/Controllers/Api/CropCare/CropCareArticleController.php`
+- `app/Http/Resources/Api/CropCareArticleResource.php`
+- `app/Filament/Resources/CropCareArticles/Schemas/CropCareArticleForm.php`
+- `routes/api.php`
+- `database/migrations/2026_09_19_053850_add_image_path_to_crop_care_articles_table.php`
+- `tests/Feature/Api/CropCareApiTest.php`
+- `CHANGELOG.md`
+
+## [0.9.17] — Add Care Guide form trim (2026-09-19)
+
+UI only. Target Stage and Timing/Frequency are not on the form or in the create/update payload. Care Instructions sits under Crop / Category and fills the space above Publish Care Guide.
+
+### Files changed
+- `mobile/lib/screens/farmer/crop_care_form_screen.dart`
+- `mobile/lib/screens/farmer/crop_care_screen.dart`
+- `CHANGELOG.md`
+
+## [0.9.16] — Warm agricultural palette (2026-09-19)
+
+UI only. Theme tokens and My listings use the beige/forest palette. Dark mode still uses the existing dark surfaces.
+
+### Palette
+- Screen `#F8F6F0`, cards `#FFFFFF` with a light shadow
+- App bar, active tabs, price, FAB, active nav: forest `#1F5A3E`
+- Titles `#1E2421`; inactive tabs `#6C757D`; inactive nav `#6F7872`
+- In stock avatar `#7CD96C`, pill `#D9F5DF` / `#1C5635`
+- Low stock avatar `#E88A83`, pill `#FCE3DE` / `#B94A3E`
+- Switch on `#2E8B57`, off `#D6D1C7`; nav pill `#D7EADF`; badge `#E63946`
+
+### Files changed
+- `mobile/lib/theme/anihow_theme.dart`
+- `mobile/lib/screens/farmer/listings_screen.dart`
+- `mobile/lib/widgets/produce_card.dart`
+- `mobile/lib/widgets/profile_avatar_button.dart`
+- `mobile/test/widget_test.dart`
+- `CHANGELOG.md`
+
+## [0.9.15] — Order status updates immediately (2026-09-19)
+
+UI only. Mark ready and Complete pickup update the order in place and switch to Ready / Done. No pull-to-refresh needed.
+
+### Files changed
+- `mobile/lib/screens/farmer/reservations_screen.dart`
+- `mobile/lib/models/models.dart`
+- `mobile/lib/services/api_client.dart`
+- `CHANGELOG.md`
+
+## [0.9.14] — Crop-care detail cards (2026-09-19)
+
+UI only. Category and Official chips stay at the top. Title and body each sit in their own card.
+
+### Files changed
+- `mobile/lib/screens/farmer/crop_care_detail_screen.dart`
+- `CHANGELOG.md`
+
+## [0.9.13] — Listing switches update immediately (2026-09-19)
+
+UI only. Active/inactive switches on My listings flip at once and no longer wait for a pull-to-refresh. The switch is outside the card tap target so it does not open the editor.
+
+### Files changed
+- `mobile/lib/screens/farmer/listings_screen.dart`
+- `mobile/lib/widgets/produce_card.dart`
+- `mobile/lib/models/models.dart`
+- `mobile/lib/services/api_client.dart`
+- `CHANGELOG.md`
+
+## [0.9.12] — Forest green color scheme (2026-09-19)
+
+UI only. Palette lives on `AniHowColors`; theme + My listings consume those tokens. Dark mode still uses the existing dark surfaces.
+
+### Palette
+- App bar, tabs (active), price, FAB, active nav: forest `#1B4D3E`
+- Screen `#F8F9FA`, cards `#FFFFFF`, borders `#E9ECEF`, titles `#1A1D20`
+- Listing placeholder sage `#58A67D`, switch mint `#52B788`
+- In stock `#DDF3E4` / `#1B4332`; Low stock `#FDE8E4` / `#C84B31`
+- Unread badge `#E63946`; inactive tabs `#6C757D`; inactive nav `#8D99AE`
+
+### Files changed
+- `mobile/lib/theme/anihow_theme.dart`
+- `mobile/lib/screens/farmer/listings_screen.dart`
+- `mobile/lib/screens/farmer/farmer_shell.dart`
+- `mobile/lib/screens/buyer/buyer_shell.dart`
+- `mobile/lib/widgets/produce_card.dart`
+- `mobile/lib/widgets/status_pill.dart`
+- `mobile/lib/widgets/profile_avatar_button.dart`
+- `mobile/lib/widgets/category_color.dart`
+- `mobile/test/widget_test.dart`
+- `CHANGELOG.md`
+
+## [0.9.11] — Farmer shop profile polish (2026-09-19)
+
+UI only. No backend changes. Uses existing farmer shop, listings, reservations, and POS endpoints.
+
+### Layout
+- Header is a left avatar + shop name, pin + location, and star + rating + review count when reviews exist
+- One bordered stat row: **Listings** (active), **Sales** (completed reservations + POS), **Rating** (1 decimal). A cell is omitted when that value is not available
+- Bio, location, and contact share one card. Contact is tap-to-call
+- **Active listings** fill the lower half with existing `ProduceCard` rows
+- **Edit shop profile** is an outlined secondary button. Settings gear stays in the app bar
+
+### Data notes
+- `GET /farmer/shop` has no listings payload. Active listings come from `GET /farmer/listings` (`is_active`). Buyer shop also requires an active category — that flag is not in the listing JSON, so it is not filtered here
+- Sales = completed rows from `GET /farmer/reservations` + all rows from `GET /farmer/sales`. Omitted if either call fails or pagination is truncated after 20 pages
+- Listings count omitted if listing pages are truncated. Rating omitted when `reviews_count` is 0
+- Farmers cannot call `GET /buyer/shops/{id}` (buyer role)
+
+### Files changed
+- `mobile/lib/screens/profile/profile_screen.dart`
+- `mobile/lib/screens/buyer/shop_profile_screen.dart`
+- `mobile/lib/widgets/shop_profile_parts.dart`
+- `mobile/lib/services/api_client.dart`
+- `mobile/lib/theme/anihow_theme.dart`
+- `CHANGELOG.md`
+
+## [0.9.10] — Settings grouped + trimmed (2026-09-19)
+
+UI + light local wiring. No new backend.
+
+### Layout
+- Section header + bordered card of rows: Appearance, Preferences, Account, About
+- Row labels only (no subtitles). Change password uses a **Soon** tag. Email uses a **Verified** pill. About is `AniHow v1.0.0`
+- Log out is a red outlined destructive button
+
+### Wired
+- Appearance Light/Dark/System (existing theme prefs)
+- Notifications toggle — **local SharedPreferences only** (no user notification-preference column). Bell stops polling/badge when off
+- Edit profile — farmer_seller only, opens existing shop profile
+- Email Verified pill; Unverified still offers Resend (`POST /api/auth/email/verification-notification`)
+- Log out
+
+### Placeholder
+- Language: static **English** (no app localization)
+- Change password: disabled **Soon** (no logged-in change-password API)
+- Help & contact, Terms & privacy: static copy screens
+
+### Files changed
+- `mobile/lib/screens/profile/settings_screen.dart`
+- `mobile/lib/state/preferences_controller.dart`
+- `mobile/lib/main.dart`
+- `mobile/lib/widgets/notification_bell.dart`
+- `CHANGELOG.md`
+
 ## [0.9.9] — Larger farmer type scale (2026-09-19)
 
 UI only. Shared `AniHowSpace` / `AniHowTheme` type scale. No logic, color, or feature changes.

@@ -9,10 +9,12 @@ class StatusPill extends StatelessWidget {
     super.key,
     required this.label,
     required this.color,
+    this.background,
   });
 
   final String label;
   final Color color;
+  final Color? background;
 
   factory StatusPill.reservation(String status, {String? label}) {
     final normalized = status.toLowerCase();
@@ -27,11 +29,19 @@ class StatusPill extends StatelessWidget {
   }
 
   factory StatusPill.lowStock() {
-    return const StatusPill(label: 'Low stock', color: AniHowColors.pending);
+    return const StatusPill(
+      label: 'Low stock',
+      color: AniHowColors.lowStock,
+      background: AniHowColors.lowStockBg,
+    );
   }
 
   factory StatusPill.inStock() {
-    return const StatusPill(label: 'In stock', color: AniHowColors.ready);
+    return const StatusPill(
+      label: 'In stock',
+      color: AniHowColors.inStock,
+      background: AniHowColors.inStockBg,
+    );
   }
 
   factory StatusPill.forListing(ListingItem listing) {
@@ -47,7 +57,7 @@ class StatusPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
+        color: background ?? color.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(

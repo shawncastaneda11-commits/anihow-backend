@@ -7,20 +7,24 @@ import 'screens/farmer/farmer_shell.dart';
 import 'screens/login_screen.dart';
 import 'navigation/route_observer.dart';
 import 'state/auth_controller.dart';
+import 'state/preferences_controller.dart';
 import 'state/theme_controller.dart';
 import 'theme/anihow_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final theme = ThemeController();
+  final preferences = PreferencesController();
   await theme.load();
-  runApp(AniHowApp(theme: theme));
+  await preferences.load();
+  runApp(AniHowApp(theme: theme, preferences: preferences));
 }
 
 class AniHowApp extends StatefulWidget {
-  const AniHowApp({super.key, required this.theme});
+  const AniHowApp({super.key, required this.theme, required this.preferences});
 
   final ThemeController theme;
+  final PreferencesController preferences;
 
   @override
   State<AniHowApp> createState() => _AniHowAppState();
@@ -47,6 +51,7 @@ class _AniHowAppState extends State<AniHowApp> {
       providers: [
         ChangeNotifierProvider.value(value: _auth),
         ChangeNotifierProvider.value(value: widget.theme),
+        ChangeNotifierProvider.value(value: widget.preferences),
       ],
       child: Consumer<ThemeController>(
         builder: (context, theme, _) {

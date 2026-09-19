@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../navigation/route_observer.dart';
 import '../screens/notifications/notifications_screen.dart';
 import '../state/auth_controller.dart';
+import '../state/preferences_controller.dart';
 
 class NotificationBellButton extends StatefulWidget {
   const NotificationBellButton({super.key});
@@ -15,6 +16,7 @@ class NotificationBellButton extends StatefulWidget {
 class _NotificationBellButtonState extends State<NotificationBellButton>
     with WidgetsBindingObserver, RouteAware {
   int _unread = 0;
+  bool? _lastEnabled;
 
   @override
   void initState() {
@@ -57,6 +59,10 @@ class _NotificationBellButtonState extends State<NotificationBellButton>
     if (!mounted) {
       return;
     }
+    if (!context.read<PreferencesController>().notificationsEnabled) {
+      setState(() => _unread = 0);
+      return;
+    }
     try {
       final count = await context.read<AuthController>().api.unreadNotificationCount();
       if (mounted) {
@@ -76,14 +82,27 @@ class _NotificationBellButtonState extends State<NotificationBellButton>
 
   @override
   Widget build(BuildContext context) {
-    final label = _unread > 99 ? '99+' : '$_unread';
+    final enabled = context.watch<PreferencesController>().notificationsEnabled;
+    if (_lastEnabled != enabled) {
+      _lastEnabled = enabled;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _refresh();
+        }
+      });
+    }
+    final unread = enabled ? _unread : 0;
+    final label = unread > 99 ? '99+' : '$unread';
     return IconButton(
       tooltip: 'Notifications',
       onPressed: _openInbox,
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
       icon: Badge(
-        isLabelVisible: _unread > 0,
+        isLabelVisible: unread > 0,
         label: Text(label),
-        child: const Icon(Icons.notifications_outlined, color: Colors.white),
+        child: const Icon(Icons.notifications_outlined, size: 24, color: Colors.white),
       ),
     );
   }

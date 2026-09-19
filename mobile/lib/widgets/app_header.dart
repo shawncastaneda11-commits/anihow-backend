@@ -22,7 +22,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     if (brandMark) {
       return const Size.fromHeight(128);
     }
-    return Size.fromHeight(subtitle == null ? 80 : 104);
+    return Size.fromHeight(subtitle == null ? kToolbarHeight : kToolbarHeight + 24);
   }
 
   @override
@@ -34,9 +34,9 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         child: Padding(
           padding: EdgeInsets.fromLTRB(
             AniHowSpace.screen,
-            brandMark ? AniHowSpace.cardGap : 12,
+            brandMark ? AniHowSpace.cardGap : 0,
             AniHowSpace.screen,
-            brandMark ? AniHowSpace.section : 14,
+            brandMark ? AniHowSpace.section : 0,
           ),
           child: brandMark ? _brand() : _bar(),
         ),
@@ -76,6 +76,8 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
 
   Widget _bar() {
     final titleBlock = Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
@@ -106,22 +108,14 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       ],
     );
 
-    if (trailing == null) {
-      return titleBlock;
-    }
-
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 104),
-          child: titleBlock,
-        ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: trailing,
-        ),
-      ],
+    return SizedBox(
+      height: kToolbarHeight,
+      child: NavigationToolbar(
+        middleSpacing: 8,
+        centerMiddle: true,
+        middle: titleBlock,
+        trailing: trailing,
+      ),
     );
   }
 }

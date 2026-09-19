@@ -102,7 +102,7 @@ Route::middleware([
     Route::post('crop-care', [CropCareArticleController::class, 'store'])->name('farmer.crop-care.store');
     Route::get('crop-care/{cropCareArticle}', [CropCareArticleController::class, 'show'])
         ->name('farmer.crop-care.show');
-    Route::match(['put', 'patch'], 'crop-care/{cropCareArticle}', [CropCareArticleController::class, 'update'])
+    Route::match(['put', 'patch', 'post'], 'crop-care/{cropCareArticle}', [CropCareArticleController::class, 'update'])
         ->name('farmer.crop-care.update');
     Route::delete('crop-care/{cropCareArticle}', [CropCareArticleController::class, 'destroy'])
         ->name('farmer.crop-care.destroy');

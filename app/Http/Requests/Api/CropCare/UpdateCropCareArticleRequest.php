@@ -26,6 +26,15 @@ class UpdateCropCareArticleRequest extends FormRequest
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'body' => ['sometimes', 'required', 'string', 'max:10000'],
             'category_id' => ['sometimes', 'required', 'integer', Rule::exists(Category::class, 'id')->where('is_active', true)],
+            'image' => ['nullable', 'image', 'max:2048'],
         ];
+    }
+
+    /**
+     * @return array{title?: string, body?: string, category_id?: int}
+     */
+    public function articleAttributes(): array
+    {
+        return $this->safe()->only(['title', 'body', 'category_id']);
     }
 }

@@ -103,7 +103,8 @@ class CropCareArticleController extends Controller
     {
         $article = $createArticle->handle(
             $request->user(),
-            $request->safe()->only(['title', 'body', 'category_id']),
+            $request->articleAttributes(),
+            $request->file('image'),
         );
 
         return (new CropCareArticleResource($article))
@@ -132,7 +133,8 @@ class CropCareArticleController extends Controller
     ): CropCareArticleResource {
         $article = $updateArticle->handle(
             $cropCareArticle,
-            $request->safe()->only(['title', 'body', 'category_id']),
+            $request->articleAttributes(),
+            $request->file('image'),
         );
 
         return (new CropCareArticleResource($article))

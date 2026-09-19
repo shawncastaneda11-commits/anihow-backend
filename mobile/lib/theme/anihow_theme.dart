@@ -3,18 +3,37 @@ import 'package:flutter/material.dart';
 import 'anihow_space.dart';
 
 class AniHowColors {
-  static const Color brand = Color(0xFF1D9E75);
-  static const Color deepGreen = Color(0xFF0F6E56);
+  static const Color brand = Color(0xFF1F5A3E);
+  static const Color deepGreen = Color(0xFF1F5A3E);
+  static const Color sage = Color(0xFF58A67D);
+  static const Color mint = Color(0xFF2E8B57);
   static const Color leafy = Color(0xFF639922);
   static const Color fruit = Color(0xFFD85A30);
   static const Color root = Color(0xFFBA7517);
   static const Color eggplant = Color(0xFF7F77DD);
-  static const Color cream = Color(0xFFFAF7F0);
+  static const Color cream = Color(0xFFF8F6F0);
   static const Color card = Color(0xFFFFFFFF);
-  static const Color hairline = Color(0xFFECE8DF);
-  static const Color text = Color(0xFF24312B);
+  static const Color hairline = Color(0xFFE8E4DA);
+  static const Color cardBorder = Color(0xFFE5E7EB);
+  static const Color photoPlaceholder = Color(0xFFE2E8F0);
+  static const Color categoryChip = Color(0xFFD1E7DD);
+  static const Color text = Color(0xFF1E2421);
+  static const Color muted = Color(0xFF6C757D);
+  static const Color navBar = Color(0xFFFDFCFA);
+  static const Color navActive = Color(0xFFD7EADF);
+  static const Color navInactive = Color(0xFF6F7872);
+  static const Color badge = Color(0xFFE63946);
+  static const Color avatarOnBrand = Color(0xFF3A7A58);
+  static const Color switchOn = Color(0xFF2E8B57);
+  static const Color switchOff = Color(0xFFD6D1C7);
+  static const Color inStock = Color(0xFF1C5635);
+  static const Color inStockBg = Color(0xFFD9F5DF);
+  static const Color inStockAvatar = Color(0xFF7CD96C);
+  static const Color lowStock = Color(0xFFB94A3E);
+  static const Color lowStockBg = Color(0xFFFCE3DE);
+  static const Color lowStockAvatar = Color(0xFFE88A83);
   static const Color pending = Color(0xFFBA7517);
-  static const Color ready = Color(0xFF1D9E75);
+  static const Color ready = Color(0xFF2E8B57);
   static const Color completed = Color(0xFF378ADD);
   static const Color cancelled = Color(0xFF888780);
 
@@ -22,6 +41,16 @@ class AniHowColors {
   static const Color darkCard = Color(0xFF1C2622);
   static const Color darkHairline = Color(0xFF2E3A34);
   static const Color darkText = Color(0xFFF3F0E8);
+
+  static Color stockPlaceholder({required bool isLowStock, required bool isInStock}) {
+    if (isLowStock) {
+      return lowStockAvatar;
+    }
+    if (isInStock) {
+      return inStockAvatar;
+    }
+    return switchOff;
+  }
 }
 
 class AniHowTheme {
@@ -84,14 +113,17 @@ class AniHowTheme {
       ),
       cardTheme: CardThemeData(
         color: card,
-        elevation: 0,
+        elevation: 1.5,
+        shadowColor: AniHowColors.text.withValues(alpha: 0.10),
+        surfaceTintColor: Colors.transparent,
         margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: radius,
-          side: BorderSide(color: hairline),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: radius),
       ),
       dividerColor: hairline,
+      badgeTheme: const BadgeThemeData(
+        backgroundColor: AniHowColors.badge,
+        textColor: Colors.white,
+      ),
       chipTheme: ChipThemeData(
         backgroundColor: card,
         selectedColor: AniHowColors.brand.withValues(alpha: 0.16),
@@ -127,24 +159,34 @@ class AniHowTheme {
           textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: AniHowSpace.name),
         ),
       ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AniHowColors.brand,
+          side: const BorderSide(color: AniHowColors.brand),
+          minimumSize: const Size.fromHeight(48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(controlRadius),
+          ),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: AniHowSpace.name),
+        ),
+      ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: AniHowColors.brand,
         foregroundColor: Colors.white,
       ),
       switchTheme: SwitchThemeData(
         materialTapTargetSize: MaterialTapTargetSize.padded,
-        thumbColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected) ? Colors.white : hairline,
-        ),
+        thumbColor: const WidgetStatePropertyAll(Colors.white),
         trackColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
-              ? AniHowColors.brand
-              : hairline,
+              ? AniHowColors.switchOn
+              : AniHowColors.switchOff,
         ),
+        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
       ),
       tabBarTheme: TabBarThemeData(
         labelColor: AniHowColors.brand,
-        unselectedLabelColor: text.withValues(alpha: 0.55),
+        unselectedLabelColor: AniHowColors.muted,
         indicatorColor: AniHowColors.brand,
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: hairline,
@@ -159,11 +201,26 @@ class AniHowTheme {
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: card,
-        indicatorColor: AniHowColors.brand.withValues(alpha: 0.16),
-        labelTextStyle: WidgetStatePropertyAll(
-          TextStyle(fontWeight: FontWeight.w600, color: text, fontSize: AniHowSpace.nav),
-        ),
+        backgroundColor: AniHowColors.navBar,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: AniHowColors.navActive,
+        overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
+          return IconThemeData(
+            color: selected ? AniHowColors.brand : AniHowColors.navInactive,
+          );
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
+          return TextStyle(
+            fontWeight: FontWeight.w600,
+            color: selected ? AniHowColors.brand : AniHowColors.navInactive,
+            fontSize: AniHowSpace.nav,
+          );
+        }),
       ),
     );
   }

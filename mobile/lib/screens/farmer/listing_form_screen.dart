@@ -100,10 +100,63 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     }
   }
 
+  Future<void> _deleteListing() async {
+    final listing = widget.listing;
+    if (listing == null || _busy) {
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete this listing?'),
+        content: Text(listing.name),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await context.read<AuthController>().api.deleteListing(listing.id);
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  static String _unitLabel(String unit) {
+    if (unit.isEmpty) {
+      return unit;
+    }
+    return unit[0].toUpperCase() + unit.substring(1);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.listing == null ? 'New listing' : 'Edit listing')),
+      appBar: AppBar(
+        title: Text(widget.listing == null ? 'New listing' : 'Edit listing'),
+        actions: [
+          if (widget.listing != null)
+            IconButton(
+              tooltip: 'Delete listing',
+              onPressed: _busy ? null : _deleteListing,
+              icon: const Icon(Icons.delete_outline),
+            ),
+        ],
+      ),
       body: FutureBuilder<List<CategoryItem>>(
         future: _categories,
         builder: (context, snapshot) {
@@ -128,7 +181,11 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                     const SizedBox(height: AniHowSpace.section),
                     AniHowField(
                       label: 'Name',
-                      child: TextField(controller: _name),
+                      child: TextField(
+                        controller: _name,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: const InputDecoration(hintText: 'Name this produce'),
+                      ),
                     ),
                     const SizedBox(height: AniHowSpace.fieldGap),
                     Row(
@@ -158,7 +215,12 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                             child: DropdownButtonFormField<String>(
                               initialValue: _unit,
                               items: units
-                                  .map((unit) => DropdownMenuItem(value: unit, child: Text(unit)))
+                                  .map(
+                                    (unit) => DropdownMenuItem(
+                                      value: unit,
+                                      child: Text(_unitLabel(unit)),
+                                    ),
+                                  )
                                   .toList(),
                               onChanged: (value) => setState(() => _unit = value ?? 'kg'),
                             ),
@@ -176,6 +238,10 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                             child: TextField(
                               controller: _price,
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: const InputDecoration(
+                                prefixText: '₱ ',
+                                hintText: '0.00',
+                              ),
                             ),
                           ),
                         ),
@@ -194,7 +260,12 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                     const SizedBox(height: AniHowSpace.fieldGap),
                     AniHowField(
                       label: 'Description',
-                      child: TextField(controller: _description, maxLines: 4),
+                      child: TextField(
+                        controller: _description,
+                        maxLines: 4,
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: const InputDecoration(hintText: 'Add a short note'),
+                      ),
                     ),
                   ],
                 ),

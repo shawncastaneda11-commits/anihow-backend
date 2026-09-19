@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ListingStorage;
 use Database\Factories\CropCareArticleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
-#[Fillable(['title', 'body', 'category_id', 'is_active'])]
+#[Fillable(['title', 'body', 'category_id', 'image_path', 'is_active'])]
 class CropCareArticle extends Model
 {
     /** Virtual grouping id for tips with no category_id. Not a categories row. */
@@ -26,6 +27,15 @@ class CropCareArticle extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::deleting(function (CropCareArticle $article): void {
+            if (filled($article->image_path)) {
+                ListingStorage::disk()->delete($article->image_path);
+            }
+        });
+    }
+
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
@@ -34,6 +44,15 @@ class CropCareArticle extends Model
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function imageUrl(): ?string
+    {
+        if (! filled($this->image_path)) {
+            return null;
+        }
+
+        return ListingStorage::disk()->url($this->image_path);
     }
 
     public function isOfficial(): bool

@@ -9,7 +9,7 @@ import '../../support/relative_time.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/produce_card.dart';
-import '../../widgets/profile_avatar_button.dart';
+import '../../widgets/shop_profile_parts.dart';
 import 'listing_detail_screen.dart';
 
 void openBuyerShop(BuildContext context, int sellerId) {
@@ -133,7 +133,7 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
             child: ListView(
               padding: AniHowSpace.screenPadding,
               children: [
-                _ShopHeader(shop: shop),
+                ShopIdentityHeader(shop: shop),
                 const SizedBox(height: AniHowSpace.section),
                 const Text(
                   'Pickup only',
@@ -162,10 +162,7 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                 ),
                 const SizedBox(height: AniHowSpace.cardGap),
                 if (shop.listings.isEmpty)
-                  const _EmptyNote(
-                    icon: Icons.inventory_2_outlined,
-                    message: 'No active listings',
-                  )
+                  const ShopListingsEmpty()
                 else
                   ...shop.listings.map(
                     (listing) => Padding(
@@ -219,49 +216,6 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
           );
         },
       ),
-    );
-  }
-}
-
-class _ShopHeader extends StatelessWidget {
-  const _ShopHeader({required this.shop});
-
-  final ShopProfile shop;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AniHowAvatar(name: shop.shopName, radius: 28),
-        const SizedBox(width: AniHowSpace.cardGap),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                shop.shopName,
-                style: const TextStyle(fontSize: AniHowSpace.title, fontWeight: FontWeight.w800),
-              ),
-              if (shop.location != null && shop.location!.isNotEmpty) ...[
-                const SizedBox(height: 2),
-                Text(shop.location!, style: const TextStyle(fontSize: AniHowSpace.body)),
-              ],
-              const SizedBox(height: AniHowSpace.labelGap),
-              if (shop.hasRating)
-                RatingLabel(rating: shop.averageRating!, count: shop.reviewsCount)
-              else
-                Text(
-                  'No reviews yet',
-                  style: TextStyle(
-                    fontSize: AniHowSpace.meta,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

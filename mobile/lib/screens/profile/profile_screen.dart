@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/models.dart';
+import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/primary_button.dart';
+import '../../widgets/produce_card.dart';
 import '../../widgets/profile_avatar_button.dart';
+import '../../widgets/shop_profile_parts.dart';
 import '../buyer/favorites_screen.dart';
 import '../buyer/order_history_screen.dart';
+import '../farmer/listing_form_screen.dart';
 import 'settings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -81,18 +86,95 @@ class FarmerProfileScreen extends StatefulWidget {
 }
 
 class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
-  late Future<ShopProfile> shopFuture;
+  late Future<_FarmerShopView> _view;
 
   @override
   void initState() {
     super.initState();
-    shopFuture = context.read<AuthController>().api.farmerShop();
+    _view = _load();
+  }
+
+  Future<_FarmerShopView> _load() async {
+    final api = context.read<AuthController>().api;
+    final shopFuture = api.farmerShop();
+    final listingsFuture = api.farmerListingsPaged();
+    final reservationsFuture = api.farmerReservationsPaged();
+    final salesFuture = api.farmerSalesPaged();
+
+    final shop = await shopFuture;
+
+    List<ListingItem> activeListings = const [];
+    int? listingsCount;
+    String? listingsError;
+    try {
+      final pages = await listingsFuture;
+      activeListings = pages.items.where((listing) => listing.isActive).toList();
+      if (pages.complete) {
+        listingsCount = activeListings.length;
+      }
+    } on ApiException catch (error) {
+      listingsError = error.message;
+    }
+
+    int? salesCount;
+    try {
+      final reservations = await reservationsFuture;
+      final sales = await salesFuture;
+      if (reservations.complete && sales.complete) {
+        salesCount = reservations.items.where((item) => item.isCompleted).length + sales.items.length;
+      }
+    } on ApiException {
+      salesCount = null;
+    }
+
+    return _FarmerShopView(
+      shop: shop,
+      activeListings: activeListings,
+      listingsCount: listingsCount,
+      salesCount: salesCount,
+      listingsError: listingsError,
+    );
+  }
+
+  Future<void> _reload() async {
+    final next = _load();
+    setState(() => _view = next);
+    await next;
+  }
+
+  Future<void> _call(String number) async {
+    final digits = number.replaceAll(RegExp(r'[^\d+]'), '');
+    if (digits.isEmpty) {
+      return;
+    }
+    final opened = await launchUrl(Uri(scheme: 'tel', path: digits));
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the phone app.')),
+      );
+    }
+  }
+
+  Future<void> _editShop(ShopProfile shop) async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => ShopEditScreen(shop: shop)),
+    );
+    if (saved == true && mounted) {
+      await _reload();
+    }
+  }
+
+  Future<void> _openListing(ListingItem listing) async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => ListingFormScreen(listing: listing)),
+    );
+    if (changed == true && mounted) {
+      await _reload();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthController>().user;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Shop profile'),
@@ -105,8 +187,8 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
           ),
         ],
       ),
-      body: FutureBuilder<ShopProfile>(
-        future: shopFuture,
+      body: FutureBuilder<_FarmerShopView>(
+        future: _view,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());
@@ -114,35 +196,56 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
           if (snapshot.hasError) {
             return Center(child: Text('${snapshot.error}'));
           }
-          final shop = snapshot.data!;
-          return ListView(
-            padding: AniHowSpace.screenPadding,
-            children: [
-              Center(child: AniHowAvatar(name: shop.shopName, radius: 36)),
-              const SizedBox(height: AniHowSpace.cardGap),
-              Center(child: Text(shop.shopName, style: Theme.of(context).textTheme.titleMedium)),
-              Center(child: Text(user?.email ?? '', style: Theme.of(context).textTheme.bodyMedium)),
-              if (shop.averageRating != null)
-                Center(child: Text('★ ${shop.averageRating} · ${shop.reviewsCount} reviews')),
-              const SizedBox(height: AniHowSpace.section),
-              _InfoCard(label: 'Bio', value: shop.bio ?? 'No bio yet'),
-              _InfoCard(label: 'Location', value: shop.location ?? 'No location yet'),
-              _InfoCard(label: 'Contact', value: shop.contact ?? 'No contact yet'),
-              const SizedBox(height: AniHowSpace.section),
-              PrimaryButton(
-                label: 'Edit shop profile',
-                onPressed: () async {
-                  final saved = await Navigator.of(context).push<bool>(
-                    MaterialPageRoute(builder: (_) => ShopEditScreen(shop: shop)),
-                  );
-                  if (saved == true && mounted) {
-                    setState(() {
-                      shopFuture = context.read<AuthController>().api.farmerShop();
-                    });
-                  }
-                },
-              ),
-            ],
+          final view = snapshot.data;
+          if (view == null) {
+            return const Center(child: Text('Shop not found.'));
+          }
+          final shop = view.shop;
+          return RefreshIndicator(
+            onRefresh: _reload,
+            child: ListView(
+              padding: AniHowSpace.screenPadding,
+              children: [
+                ShopIdentityHeader(shop: shop),
+                if (view.listingsCount != null || view.salesCount != null || shop.hasRating) ...[
+                  const SizedBox(height: AniHowSpace.section),
+                  ShopStatRow(
+                    listings: view.listingsCount,
+                    sales: view.salesCount,
+                    rating: shop.hasRating ? shop.averageRating : null,
+                  ),
+                ],
+                const SizedBox(height: AniHowSpace.section),
+                ShopAboutCard(shop: shop, onCall: _call),
+                const SizedBox(height: AniHowSpace.section),
+                OutlinedButton(
+                  onPressed: () => _editShop(shop),
+                  child: const Text('Edit shop profile'),
+                ),
+                const SizedBox(height: AniHowSpace.section),
+                const Text(
+                  'Active listings',
+                  style: TextStyle(fontSize: AniHowSpace.name, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: AniHowSpace.cardGap),
+                if (view.listingsError != null)
+                  Text(view.listingsError!, style: const TextStyle(fontSize: AniHowSpace.body))
+                else if (view.activeListings.isEmpty)
+                  const ShopListingsEmpty()
+                else
+                  ...view.activeListings.map(
+                    (listing) => Padding(
+                      padding: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
+                      child: ProduceCard(
+                        listing: listing,
+                        showSeller: false,
+                        showStock: true,
+                        onTap: () => _openListing(listing),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           );
         },
       ),
@@ -150,22 +253,20 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
   }
 }
 
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({required this.label, required this.value});
+class _FarmerShopView {
+  const _FarmerShopView({
+    required this.shop,
+    required this.activeListings,
+    this.listingsCount,
+    this.salesCount,
+    this.listingsError,
+  });
 
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
-      child: ListTile(
-        title: Text(label, style: Theme.of(context).textTheme.labelSmall),
-        subtitle: Text(value, style: Theme.of(context).textTheme.bodyLarge),
-      ),
-    );
-  }
+  final ShopProfile shop;
+  final List<ListingItem> activeListings;
+  final int? listingsCount;
+  final int? salesCount;
+  final String? listingsError;
 }
 
 class ShopEditScreen extends StatefulWidget {

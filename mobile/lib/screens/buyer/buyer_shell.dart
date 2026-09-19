@@ -54,15 +54,20 @@ class _BuyerShellState extends State<BuyerShell> {
           Expanded(child: pages[_index]),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (value) => setState(() => _index = value),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.storefront_outlined), label: 'Market'),
-          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), label: 'Reservations'),
-          NavigationDestination(icon: Icon(Icons.favorite_outline), label: 'Favorites'),
-          NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
-        ],
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
+        ),
+        child: NavigationBar(
+          selectedIndex: _index,
+          onDestinationSelected: (value) => setState(() => _index = value),
+          destinations: const [
+            NavigationDestination(icon: Icon(Icons.storefront_outlined), label: 'Market'),
+            NavigationDestination(icon: Icon(Icons.receipt_long_outlined), label: 'Reservations'),
+            NavigationDestination(icon: Icon(Icons.favorite_outline), label: 'Favorites'),
+            NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
+          ],
+        ),
       ),
     );
   }

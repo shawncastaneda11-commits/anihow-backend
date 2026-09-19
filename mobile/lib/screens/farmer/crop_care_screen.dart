@@ -57,7 +57,7 @@ class _CropCareScreenState extends State<CropCareScreen> {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: _openForm,
-        tooltip: 'Add guide',
+        tooltip: 'Add Care Guide',
         child: const Icon(Icons.add),
       ),
       body: FutureBuilder<List<CropCareCategory>>(
@@ -87,7 +87,7 @@ class _CropCareScreenState extends State<CropCareScreen> {
                           foregroundColor: AniHowColors.brand,
                           child: const Icon(Icons.edit_note),
                         ),
-                        title: const Text('My guides'),
+                        title: const Text('My Care Guides'),
                         subtitle: const Text('Write, edit, or delete your tips'),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: _openMine,

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\CropCareArticles\Schemas;
 
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -27,6 +28,14 @@ class CropCareArticleForm
                 Textarea::make('body')
                     ->required()
                     ->rows(12)
+                    ->columnSpanFull(),
+                FileUpload::make('image_path')
+                    ->label('Photo')
+                    ->image()
+                    ->disk(config('anihow.listing_disk', 'public'))
+                    ->directory('crop-care')
+                    ->visibility('public')
+                    ->maxSize(2048)
                     ->columnSpanFull(),
                 Toggle::make('is_active')
                     ->label('Published')

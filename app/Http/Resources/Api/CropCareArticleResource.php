@@ -27,6 +27,7 @@ class CropCareArticleResource extends JsonResource
                 ),
                 $this->body,
             ),
+            'image_url' => $this->imageUrl(),
             'category' => new CategoryResource($this->whenLoaded('category')),
             'is_official' => $this->isOfficial(),
             'can_edit' => $user !== null && $user->can('update', $this->resource),

@@ -102,6 +102,26 @@ class ListingItem {
     return quantity >= 5;
   }
 
+  ListingItem copyWith({bool? isActive}) {
+    return ListingItem(
+      id: id,
+      name: name,
+      pricePerUnit: pricePerUnit,
+      quantityAvailable: quantityAvailable,
+      unit: unit,
+      unitLabel: unitLabel,
+      description: description,
+      imageUrl: imageUrl,
+      isActive: isActive ?? this.isActive,
+      category: category,
+      sellerName: sellerName,
+      sellerLocation: sellerLocation,
+      sellerId: sellerId,
+      averageRating: averageRating,
+      reviewsCount: reviewsCount,
+    );
+  }
+
   factory ListingItem.fromJson(Map<String, dynamic> json) {
     final categoryJson = json['category'];
     final sellerJson = json['seller'];
@@ -253,6 +273,29 @@ class ReservationRecord {
   bool get isReady => status == 'ready_for_pickup' || status == 'ready';
   bool get isCompleted => status == 'completed';
   bool get isCancelled => status == 'cancelled';
+
+  ReservationRecord copyWith({
+    String? status,
+    String? statusLabel,
+  }) {
+    return ReservationRecord(
+      id: id,
+      status: status ?? this.status,
+      statusLabel: statusLabel ?? this.statusLabel,
+      total: total,
+      items: items,
+      notes: notes,
+      counterpartyName: counterpartyName,
+      shopName: shopName,
+      location: location,
+      contact: contact,
+      sellerId: sellerId,
+      createdAt: createdAt,
+      canReview: canReview,
+      reviewRating: reviewRating,
+      cancellationReason: cancellationReason,
+    );
+  }
 }
 
 class FavoriteRecord {
@@ -290,6 +333,7 @@ class CropCareArticle {
     this.authorId,
     this.authorName,
     this.authorShopName,
+    this.imageUrl,
   });
 
   final int id;
@@ -302,6 +346,7 @@ class CropCareArticle {
   final int? authorId;
   final String? authorName;
   final String? authorShopName;
+  final String? imageUrl;
 
   String get authorLabel {
     if (isOfficial) {
@@ -347,6 +392,7 @@ class CropCareArticle {
       authorId: ListingItem._asCount(authorMap?['id']),
       authorName: authorMap?['name'] as String?,
       authorShopName: authorMap?['shop_name'] as String?,
+      imageUrl: json['image_url'] as String?,
     );
   }
 }
@@ -552,6 +598,19 @@ class AppNotification {
   final String? createdAt;
 
   bool get isUnread => readAt == null || readAt!.isEmpty;
+
+  AppNotification copyWith({String? readAt}) {
+    return AppNotification(
+      id: id,
+      title: title,
+      body: body,
+      type: type,
+      relatedId: relatedId,
+      relatedType: relatedType,
+      readAt: readAt ?? this.readAt,
+      createdAt: createdAt,
+    );
+  }
 
   bool get pointsToListing {
     final related = relatedType ?? '';

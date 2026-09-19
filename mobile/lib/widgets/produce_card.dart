@@ -15,6 +15,7 @@ class ProduceCard extends StatelessWidget {
     this.trailing,
     this.showSeller = true,
     this.showStock = false,
+    this.placeholderColor,
   });
 
   final ListingItem listing;
@@ -23,64 +24,84 @@ class ProduceCard extends StatelessWidget {
   final Widget? trailing;
   final bool showSeller;
   final bool showStock;
+  final Color? placeholderColor;
 
   @override
   Widget build(BuildContext context) {
-    final accent = CategoryColor.of(listing.category, listingName: listing.name);
+    final accent = placeholderColor ??
+        (showStock
+            ? AniHowColors.stockPlaceholder(
+                isLowStock: listing.isLowStock,
+                isInStock: listing.isInStock,
+              )
+            : CategoryColor.of(listing.category, listingName: listing.name));
     final theme = Theme.of(context);
     final sellerLabel = listing.sellerName ?? listing.category?.name ?? 'Farm stall';
 
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: AniHowSpace.cardPadding,
-          child: Row(
-            children: [
-              _Thumbnail(listing: listing, accent: accent),
-              const SizedBox(width: AniHowSpace.cardGap),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        children: [
+          Expanded(
+            child: InkWell(
+              onTap: onTap,
+              child: Padding(
+                padding: AniHowSpace.cardPadding,
+                child: Row(
                   children: [
-                    Text(listing.name, style: theme.textTheme.titleMedium),
-                    if (showSeller) ...[
-                      const SizedBox(height: 2),
-                      GestureDetector(
-                        onTap: onSellerTap,
-                        behavior: HitTestBehavior.opaque,
-                        child: Text(
-                          sellerLabel,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: onSellerTap == null
-                                ? theme.colorScheme.onSurface.withValues(alpha: 0.7)
-                                : AniHowColors.deepGreen,
-                            fontWeight: onSellerTap == null ? FontWeight.w500 : FontWeight.w700,
+                    _Thumbnail(listing: listing, accent: accent),
+                    const SizedBox(width: AniHowSpace.cardGap),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(listing.name, style: theme.textTheme.titleMedium),
+                          if (showSeller) ...[
+                            const SizedBox(height: 2),
+                            GestureDetector(
+                              onTap: onSellerTap,
+                              behavior: HitTestBehavior.opaque,
+                              child: Text(
+                                sellerLabel,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: onSellerTap == null
+                                      ? theme.colorScheme.onSurface.withValues(alpha: 0.7)
+                                      : AniHowColors.deepGreen,
+                                  fontWeight: onSellerTap == null ? FontWeight.w500 : FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: AniHowSpace.labelGap),
+                          Text(
+                            '${AniHowMoney.peso(listing.pricePerUnit)} / ${listing.unit ?? ''}',
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              color: AniHowColors.brand,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
+                          if (listing.hasRating) ...[
+                            const SizedBox(height: AniHowSpace.labelGap),
+                            RatingLabel(rating: listing.averageRating!),
+                          ],
+                          if (showStock) ...[
+                            const SizedBox(height: AniHowSpace.labelGap),
+                            StatusPill.forListing(listing),
+                          ],
+                        ],
                       ),
-                    ],
-                    const SizedBox(height: AniHowSpace.labelGap),
-                    Text(
-                      '${AniHowMoney.peso(listing.pricePerUnit)} / ${listing.unit ?? ''}',
-                      style: theme.textTheme.labelLarge?.copyWith(color: AniHowColors.deepGreen),
                     ),
-                    if (listing.hasRating) ...[
-                      const SizedBox(height: AniHowSpace.labelGap),
-                      RatingLabel(rating: listing.averageRating!),
-                    ],
-                    if (showStock) ...[
-                      const SizedBox(height: AniHowSpace.labelGap),
-                      StatusPill.forListing(listing),
-                    ],
                   ],
                 ),
               ),
-              ?trailing,
-            ],
+            ),
           ),
-        ),
+          if (trailing != null)
+            Padding(
+              padding: const EdgeInsets.only(right: AniHowSpace.cardPad),
+              child: trailing,
+            ),
+        ],
       ),
     );
   }

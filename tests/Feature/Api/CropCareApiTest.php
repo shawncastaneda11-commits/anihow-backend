@@ -8,6 +8,8 @@ use App\Models\CropCareArticle;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CropCareApiTest extends TestCase
@@ -175,6 +177,28 @@ class CropCareApiTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.title', 'My ampalaya trellis tip')
             ->assertJsonPath('data.0.body', 'Give sitaw a trellis before the vines tangle.');
+    }
+
+    public function test_farmer_can_create_guide_with_optional_photo(): void
+    {
+        Storage::fake(config('anihow.listing_disk'));
+        $category = Category::factory()->create();
+        $farmer = $this->farmer();
+
+        $create = $this->asUser($farmer)->post('/api/farmer/crop-care', [
+            'title' => 'Ampalaya trellis setup',
+            'body' => 'Secure vines to bamboo using nylon twine.',
+            'category_id' => $category->id,
+            'image' => UploadedFile::fake()->image('trellis.jpg'),
+        ]);
+
+        $create->assertCreated()
+            ->assertJsonPath('data.title', 'Ampalaya trellis setup');
+
+        $article = CropCareArticle::query()->find($create->json('data.id'));
+        $this->assertNotNull($article?->image_path);
+        Storage::disk(config('anihow.listing_disk'))->assertExists($article->image_path);
+        $this->assertNotEmpty($create->json('data.image_url'));
     }
 
     public function test_farmer_can_update_and_delete_own_guide_only(): void

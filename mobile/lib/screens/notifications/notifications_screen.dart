@@ -23,38 +23,82 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  late Future<List<AppNotification>> _future;
+  List<AppNotification> _items = const [];
+  bool _loading = true;
+  bool _busy = false;
+  Object? _error;
 
   @override
   void initState() {
     super.initState();
-    _future = context.read<AuthController>().api.notifications();
+    _reload();
   }
 
   Future<void> _reload() async {
-    final future = context.read<AuthController>().api.notifications();
-    setState(() => _future = future);
-    await future;
+    setState(() {
+      _loading = _items.isEmpty;
+      _error = null;
+    });
+    try {
+      final items = await context.read<AuthController>().api.notifications();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _items = items;
+        _loading = false;
+        _error = null;
+      });
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loading = false;
+        _error = error;
+      });
+    }
+  }
+
+  void _markLocallyRead(Iterable<int> ids) {
+    final readAt = DateTime.now().toUtc().toIso8601String();
+    setState(() {
+      _items = [
+        for (final item in _items)
+          if (ids.contains(item.id)) item.copyWith(readAt: readAt) else item,
+      ];
+    });
   }
 
   Future<void> _markAllRead() async {
+    final unreadIds = [
+      for (final item in _items)
+        if (item.isUnread) item.id,
+    ];
+    if (_busy || unreadIds.isEmpty) {
+      return;
+    }
+    setState(() => _busy = true);
+    _markLocallyRead(unreadIds);
     try {
       await context.read<AuthController>().api.markAllNotificationsRead();
-      if (mounted) {
-        await _reload();
-      }
     } on ApiException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        await _reload();
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
       }
     }
   }
 
   Future<void> _open(AppNotification item) async {
-    final api = context.read<AuthController>().api;
     if (item.isUnread) {
+      _markLocallyRead([item.id]);
       try {
-        await api.markNotificationRead(item.id);
+        await context.read<AuthController>().api.markNotificationRead(item.id);
       } on ApiException catch (error) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
@@ -66,84 +110,87 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
     await openNotificationTarget(context, item);
     if (mounted) {
-      _reload();
+      await _reload();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final hasUnread = _items.any((item) => item.isUnread);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notifications'),
         actions: [
           TextButton(
-            onPressed: _markAllRead,
-            child: const Text('Mark all read', style: TextStyle(color: Colors.white)),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white,
+              disabledForegroundColor: Colors.white70,
+            ),
+            onPressed: _busy || !hasUnread ? null : _markAllRead,
+            child: const Text('Mark all read'),
           ),
         ],
       ),
-      body: FutureBuilder<List<AppNotification>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('${snapshot.error}'));
-          }
-          final items = snapshot.data ?? const [];
-          if (items.isEmpty) {
-            return const _CaughtUpEmpty();
-          }
-          return ListView.separated(
-            padding: AniHowSpace.screenPadding,
-            itemCount: items.length,
-            separatorBuilder: (_, _) => const SizedBox(height: AniHowSpace.cardGap),
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return Card(
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AniHowSpace.cardPad,
-                    vertical: 8,
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(child: Text('$_error'));
+    }
+    if (_items.isEmpty) {
+      return const _CaughtUpEmpty();
+    }
+    return ListView.separated(
+      padding: AniHowSpace.screenPadding,
+      itemCount: _items.length,
+      separatorBuilder: (_, _) => const SizedBox(height: AniHowSpace.cardGap),
+      itemBuilder: (context, index) {
+        final item = _items[index];
+        return Card(
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AniHowSpace.cardPad,
+              vertical: 8,
+            ),
+            leading: _UnreadDot(visible: item.isUnread),
+            title: Text(
+              item.title,
+              style: TextStyle(
+                fontSize: AniHowSpace.name,
+                fontWeight: item.isUnread ? FontWeight.w800 : FontWeight.w600,
+              ),
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.body,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: AniHowSpace.body),
                   ),
-                  leading: _UnreadDot(visible: item.isUnread),
-                  title: Text(
-                    item.title,
+                  const SizedBox(height: 4),
+                  Text(
+                    relativeTime(item.createdAt),
                     style: TextStyle(
-                      fontSize: AniHowSpace.name,
-                      fontWeight: item.isUnread ? FontWeight.w800 : FontWeight.w600,
+                      fontSize: AniHowSpace.label,
+                      color: Theme.of(context).textTheme.bodySmall?.color,
                     ),
                   ),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.body,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: AniHowSpace.body),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          relativeTime(item.createdAt),
-                          style: TextStyle(
-                            fontSize: AniHowSpace.label,
-                            color: Theme.of(context).textTheme.bodySmall?.color,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  onTap: () => _open(item),
-                ),
-              );
-            },
-          );
-        },
-      ),
+                ],
+              ),
+            ),
+            onTap: () => _open(item),
+          ),
+        );
+      },
     );
   }
 }

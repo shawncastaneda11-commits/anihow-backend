@@ -5,6 +5,7 @@ import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
+import '../../widgets/listing_active_badge.dart';
 import '../../widgets/produce_card.dart';
 import 'listing_form_screen.dart';
 
@@ -16,31 +17,76 @@ class FarmerListingsScreen extends StatefulWidget {
 }
 
 class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
-  late Future<List<ListingItem>> _future;
+  List<ListingItem> _items = const [];
+  bool _loading = true;
+  Object? _error;
+  final Set<int> _toggling = {};
 
   @override
   void initState() {
     super.initState();
-    _future = context.read<AuthController>().api.farmerListings();
+    _reload();
   }
 
   Future<void> _reload() async {
-    final future = context.read<AuthController>().api.farmerListings();
-    setState(() => _future = future);
-    await future;
-  }
-
-  Future<void> _toggle(ListingItem listing) async {
+    setState(() {
+      _loading = _items.isEmpty;
+      _error = null;
+    });
     try {
-      await context.read<AuthController>().api.toggleListingActive(listing.id);
+      final items = await context.read<AuthController>().api.farmerListings();
       if (!mounted) {
         return;
       }
-      await _reload();
+      setState(() {
+        _items = items;
+        _loading = false;
+        _error = null;
+      });
     } on ApiException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      if (!mounted) {
+        return;
       }
+      setState(() {
+        _loading = false;
+        _error = error;
+      });
+    }
+  }
+
+  void _replace(ListingItem listing) {
+    setState(() {
+      _items = [
+        for (final item in _items)
+          if (item.id == listing.id) listing else item,
+      ];
+    });
+  }
+
+  Future<void> _toggle(ListingItem listing, bool isActive) async {
+    if (listing.isActive == isActive || _toggling.contains(listing.id)) {
+      return;
+    }
+
+    _toggling.add(listing.id);
+    _replace(listing.copyWith(isActive: isActive));
+
+    try {
+      final updated = await context.read<AuthController>().api.toggleListingActive(
+            listing.id,
+            isActive: isActive,
+          );
+      if (mounted) {
+        _replace(updated);
+      }
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _replace(listing);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } finally {
+      _toggling.remove(listing.id);
     }
   }
 
@@ -80,48 +126,44 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
                 Tab(height: AniHowSpace.tabHeight, text: 'Low'),
               ],
             ),
-            Expanded(
-              child: FutureBuilder<List<ListingItem>>(
-                future: _future,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState != ConnectionState.done) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(child: Text('${snapshot.error}'));
-                  }
-                  final items = snapshot.data ?? const [];
-                  return TabBarView(
-                    children: [
-                      _List(
-                        items: _filter(items, 0),
-                        emptyLabel: 'No listings yet.',
-                        onReload: _reload,
-                        onOpen: _openForm,
-                        onToggle: _toggle,
-                      ),
-                      _List(
-                        items: _filter(items, 1),
-                        emptyLabel: 'No in-stock listings.',
-                        onReload: _reload,
-                        onOpen: _openForm,
-                        onToggle: _toggle,
-                      ),
-                      _List(
-                        items: _filter(items, 2),
-                        emptyLabel: 'No low-stock listings.',
-                        onReload: _reload,
-                        onOpen: _openForm,
-                        onToggle: _toggle,
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
+            Expanded(child: _body()),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _body() {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(child: Text('$_error'));
+    }
+    return TabBarView(
+      children: [
+        _List(
+          items: _filter(_items, 0),
+          emptyLabel: 'No listings yet.',
+          onReload: _reload,
+          onOpen: _openForm,
+          onToggle: _toggle,
+        ),
+        _List(
+          items: _filter(_items, 1),
+          emptyLabel: 'No in-stock listings.',
+          onReload: _reload,
+          onOpen: _openForm,
+          onToggle: _toggle,
+        ),
+        _List(
+          items: _filter(_items, 2),
+          emptyLabel: 'No low-stock listings.',
+          onReload: _reload,
+          onOpen: _openForm,
+          onToggle: _toggle,
+        ),
+      ],
     );
   }
 }
@@ -139,7 +181,7 @@ class _List extends StatelessWidget {
   final String emptyLabel;
   final Future<void> Function() onReload;
   final Future<void> Function([ListingItem?]) onOpen;
-  final Future<void> Function(ListingItem) onToggle;
+  final Future<void> Function(ListingItem, bool) onToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -159,12 +201,9 @@ class _List extends StatelessWidget {
             showSeller: false,
             showStock: true,
             onTap: () => onOpen(listing),
-            trailing: Transform.scale(
-              scale: AniHowSpace.switchScale,
-              child: Switch(
-                value: listing.isActive,
-                onChanged: (_) => onToggle(listing),
-              ),
+            trailing: ListingActiveBadge(
+              isActive: listing.isActive,
+              onTap: () => onToggle(listing, !listing.isActive),
             ),
           );
         },

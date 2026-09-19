@@ -12,6 +12,13 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+class PagedItems<T> {
+  const PagedItems({required this.items, required this.complete});
+
+  final List<T> items;
+  final bool complete;
+}
+
 class ApiClient {
   ApiClient({required this.onUnauthorized})
       : _dio = Dio(
@@ -189,6 +196,10 @@ class ApiClient {
     return _list('/farmer/listings', parse: ListingItem.fromJson);
   }
 
+  Future<PagedItems<ListingItem>> farmerListingsPaged() {
+    return _listPages('/farmer/listings', parse: ListingItem.fromJson);
+  }
+
   Future<ListingItem> createListing(
     Map<String, dynamic> body, {
     String? imagePath,
@@ -208,18 +219,36 @@ class ApiClient {
     return ListingItem.fromJson(_asMap(response['data'] ?? response));
   }
 
-  Future<void> toggleListingActive(int id) =>
-      _patch('/farmer/listings/$id/active');
+  Future<ListingItem> toggleListingActive(int id, {required bool isActive}) async {
+    try {
+      final response = await _dio.patch('/farmer/listings/$id/active', data: {
+        'is_active': isActive,
+      });
+      return ListingItem.fromJson(_asMap(_asMap(response.data)['data'] ?? response.data));
+    } on DioException catch (error) {
+      throw ApiException(_messageFrom(error));
+    }
+  }
+
+  Future<void> deleteListing(int id) => _delete('/farmer/listings/$id');
 
   Future<List<ReservationRecord>> farmerReservations() {
     return _list('/farmer/reservations', parse: ReservationRecord.fromJson);
   }
 
-  Future<void> markReservationReady(int id) =>
-      _patch('/farmer/reservations/$id/ready');
+  Future<PagedItems<ReservationRecord>> farmerReservationsPaged() {
+    return _listPages('/farmer/reservations', parse: ReservationRecord.fromJson);
+  }
 
-  Future<void> completeReservation(int id) =>
-      _patch('/farmer/reservations/$id/complete');
+  Future<ReservationRecord> markReservationReady(int id) async {
+    final response = await _patchJson('/farmer/reservations/$id/ready');
+    return ReservationRecord.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<ReservationRecord> completeReservation(int id) async {
+    final response = await _patchJson('/farmer/reservations/$id/complete');
+    return ReservationRecord.fromJson(_asMap(response['data'] ?? response));
+  }
 
   Future<SaleRecord> recordSale({
     required int listingId,
@@ -237,6 +266,10 @@ class ApiClient {
 
   Future<List<SaleRecord>> farmerSales() {
     return _list('/farmer/sales', parse: SaleRecord.fromJson);
+  }
+
+  Future<PagedItems<SaleRecord>> farmerSalesPaged() {
+    return _listPages('/farmer/sales', parse: SaleRecord.fromJson);
   }
 
   Future<List<CropCareCategory>> cropCareCategories() {
@@ -267,12 +300,13 @@ class ApiClient {
     required String title,
     required String body,
     required int categoryId,
+    String? imagePath,
   }) async {
-    final response = await _post('/farmer/crop-care', {
+    final response = await _sendListing('/farmer/crop-care', {
       'title': title,
       'body': body,
       'category_id': categoryId,
-    });
+    }, imagePath: imagePath);
     return CropCareArticle.fromJson(_asMap(response['data'] ?? response));
   }
 
@@ -281,12 +315,19 @@ class ApiClient {
     required String title,
     required String body,
     required int categoryId,
+    String? imagePath,
   }) async {
-    final response = await _put('/farmer/crop-care/$id', {
-      'title': title,
-      'body': body,
-      'category_id': categoryId,
-    });
+    final response = imagePath == null
+        ? await _put('/farmer/crop-care/$id', {
+            'title': title,
+            'body': body,
+            'category_id': categoryId,
+          })
+        : await _sendListing('/farmer/crop-care/$id', {
+            'title': title,
+            'body': body,
+            'category_id': categoryId,
+          }, imagePath: imagePath);
     return CropCareArticle.fromJson(_asMap(response['data'] ?? response));
   }
 
@@ -415,8 +456,13 @@ class ApiClient {
   }
 
   Future<void> _patch(String path, [Map<String, dynamic>? body]) async {
+    await _patchJson(path, body);
+  }
+
+  Future<Map<String, dynamic>> _patchJson(String path, [Map<String, dynamic>? body]) async {
     try {
-      await _dio.patch(path, data: body);
+      final response = await _dio.patch(path, data: body);
+      return _asMap(response.data);
     } on DioException catch (error) {
       throw ApiException(_messageFrom(error));
     }
@@ -437,19 +483,55 @@ class ApiClient {
   }) async {
     try {
       final response = await _dio.get(path, queryParameters: query);
-      final body = response.data;
-      final raw = body is Map && body['data'] is List
-          ? body['data'] as List
-          : body is List
-              ? body
-              : const [];
-      return raw
-          .whereType<Map>()
-          .map((item) => parse(Map<String, dynamic>.from(item)))
-          .toList();
+      return _parseList(response.data, parse);
     } on DioException catch (error) {
       throw ApiException(_messageFrom(error));
     }
+  }
+
+  Future<PagedItems<T>> _listPages<T>(
+    String path, {
+    required T Function(Map<String, dynamic>) parse,
+    Map<String, dynamic>? query,
+  }) async {
+    const maxPages = 20;
+    try {
+      final items = <T>[];
+      var page = 1;
+      var lastPage = 1;
+      do {
+        final response = await _dio.get(
+          path,
+          queryParameters: {
+            ...?query,
+            'page': page,
+          },
+        );
+        items.addAll(_parseList(response.data, parse));
+        final body = response.data;
+        final meta = body is Map ? _asMap(body['meta']) : <String, dynamic>{};
+        lastPage = _asInt(meta['last_page'], 1);
+        page++;
+      } while (page <= lastPage && page <= maxPages);
+      return PagedItems(items: items, complete: lastPage <= maxPages);
+    } on DioException catch (error) {
+      throw ApiException(_messageFrom(error));
+    }
+  }
+
+  List<T> _parseList<T>(
+    dynamic body,
+    T Function(Map<String, dynamic>) parse,
+  ) {
+    final raw = body is Map && body['data'] is List
+        ? body['data'] as List
+        : body is List
+            ? body
+            : const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => parse(Map<String, dynamic>.from(item)))
+        .toList();
   }
 
   Map<String, dynamic> _asMap(dynamic value) {

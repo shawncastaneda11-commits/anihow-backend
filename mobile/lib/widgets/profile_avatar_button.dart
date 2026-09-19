@@ -18,7 +18,15 @@ class ProfileAvatarButton extends StatelessWidget {
     return IconButton(
       tooltip: 'Profile',
       onPressed: onPressed,
-      icon: AniHowAvatar(name: name, radius: 16),
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+      icon: AniHowAvatar(
+        name: name,
+        radius: 16,
+        backgroundColor: AniHowColors.avatarOnBrand,
+        foregroundColor: Colors.white,
+      ),
     );
   }
 }
@@ -28,10 +36,14 @@ class AniHowAvatar extends StatelessWidget {
     super.key,
     required this.name,
     this.radius = AniHowSpace.avatar,
+    this.backgroundColor,
+    this.foregroundColor,
   });
 
   final String name;
   final double radius;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
 
   String get _initials {
     final parts = name.trim().split(RegExp(r'\s+'));
@@ -48,8 +60,8 @@ class AniHowAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     return CircleAvatar(
       radius: radius,
-      backgroundColor: AniHowColors.deepGreen,
-      foregroundColor: Colors.white,
+      backgroundColor: backgroundColor ?? AniHowColors.brand,
+      foregroundColor: foregroundColor ?? Colors.white,
       child: Text(
         _initials,
         style: TextStyle(

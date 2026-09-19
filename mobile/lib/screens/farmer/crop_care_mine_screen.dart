@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/models.dart';
-import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
+import '../../widgets/care_guide_card.dart';
 import '../../widgets/primary_button.dart';
 import 'crop_care_detail_screen.dart';
 import 'crop_care_form_screen.dart';
@@ -43,40 +43,28 @@ class _CropCareMineScreenState extends State<CropCareMineScreen> {
     }
   }
 
-  Future<void> _delete(CropCareArticle article) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete this guide?'),
-        content: Text(article.title),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
-        ],
+  Future<void> _openDetails(CropCareArticle guide) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => CropCareDetailScreen(
+          articleId: guide.id,
+          category: guide.category,
+        ),
       ),
     );
-    if (confirmed != true || !mounted) {
-      return;
-    }
-    try {
-      await context.read<AuthController>().api.deleteCropCare(article.id);
-      if (mounted) {
-        await _reload();
-      }
-    } on ApiException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
-      }
+    if (mounted) {
+      await _reload();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My guides')),
+      backgroundColor: AniHowColors.cream,
+      appBar: AppBar(title: const Text('My Care Guides')),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _openForm(),
-        tooltip: 'Add guide',
+        onPressed: _openForm,
+        tooltip: 'Add Care Guide',
         child: const Icon(Icons.add),
       ),
       body: FutureBuilder<List<CropCareArticle>>(
@@ -109,7 +97,7 @@ class _CropCareMineScreenState extends State<CropCareMineScreen> {
                     style: Theme.of(context).textTheme.bodyLarge,
                   ),
                   const SizedBox(height: AniHowSpace.section),
-                  PrimaryButton(label: 'Add guide', onPressed: () => _openForm()),
+                  PrimaryButton(label: 'Add Care Guide', onPressed: _openForm),
                 ],
               ),
             );
@@ -128,48 +116,10 @@ class _CropCareMineScreenState extends State<CropCareMineScreen> {
               separatorBuilder: (_, _) => const SizedBox(height: AniHowSpace.cardGap),
               itemBuilder: (context, index) {
                 final guide = guides[index];
-                return Card(
-                  child: ListTile(
-                    title: Text(
-                      guide.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    subtitle: Text(
-                      guide.summary,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          tooltip: 'Edit',
-                          onPressed: () => _openForm(guide),
-                          icon: const Icon(Icons.edit_outlined),
-                        ),
-                        IconButton(
-                          tooltip: 'Delete',
-                          onPressed: () => _delete(guide),
-                          icon: const Icon(Icons.delete_outline),
-                        ),
-                      ],
-                    ),
-                    onTap: () async {
-                      await Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => CropCareDetailScreen(
-                            articleId: guide.id,
-                            category: guide.category,
-                          ),
-                        ),
-                      );
-                      if (mounted) {
-                        await _reload();
-                      }
-                    },
-                  ),
+                return CareGuideCard(
+                  article: guide,
+                  index: index,
+                  onViewDetails: () => _openDetails(guide),
                 );
               },
             ),

@@ -16,46 +16,111 @@ class FarmerReservationsScreen extends StatefulWidget {
   State<FarmerReservationsScreen> createState() => _FarmerReservationsScreenState();
 }
 
-class _FarmerReservationsScreenState extends State<FarmerReservationsScreen> {
-  late Future<List<ReservationRecord>> _future;
+class _FarmerReservationsScreenState extends State<FarmerReservationsScreen>
+    with SingleTickerProviderStateMixin {
+  List<ReservationRecord> _items = const [];
+  bool _loading = true;
+  Object? _error;
+  final Set<int> _acting = {};
+  late final TabController _tabs;
 
   @override
   void initState() {
     super.initState();
-    _future = context.read<AuthController>().api.farmerReservations();
+    _tabs = TabController(length: 4, vsync: this);
+    _reload();
+  }
+
+  @override
+  void dispose() {
+    _tabs.dispose();
+    super.dispose();
   }
 
   Future<void> _reload() async {
-    final future = context.read<AuthController>().api.farmerReservations();
-    setState(() => _future = future);
-    await future;
-  }
-
-  Future<void> _ready(int id) async {
+    setState(() {
+      _loading = _items.isEmpty;
+      _error = null;
+    });
     try {
-      await context.read<AuthController>().api.markReservationReady(id);
+      final items = await context.read<AuthController>().api.farmerReservations();
       if (!mounted) {
         return;
       }
-      await _reload();
+      setState(() {
+        _items = items;
+        _loading = false;
+        _error = null;
+      });
     } on ApiException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      if (!mounted) {
+        return;
       }
+      setState(() {
+        _loading = false;
+        _error = error;
+      });
     }
   }
 
-  Future<void> _complete(int id) async {
+  void _replace(ReservationRecord reservation) {
+    setState(() {
+      _items = [
+        for (final item in _items)
+          if (item.id == reservation.id) reservation else item,
+      ];
+    });
+  }
+
+  Future<void> _ready(ReservationRecord reservation) async {
+    if (!reservation.isPending || _acting.contains(reservation.id)) {
+      return;
+    }
+    _acting.add(reservation.id);
+    _replace(reservation.copyWith(
+      status: 'ready_for_pickup',
+      statusLabel: 'Ready for pickup',
+    ));
+    _tabs.animateTo(1);
     try {
-      await context.read<AuthController>().api.completeReservation(id);
+      final updated = await context.read<AuthController>().api.markReservationReady(reservation.id);
+      _acting.remove(reservation.id);
+      if (mounted) {
+        _replace(updated);
+      }
+    } on ApiException catch (error) {
+      _acting.remove(reservation.id);
       if (!mounted) {
         return;
       }
-      await _reload();
-    } on ApiException catch (error) {
+      _replace(reservation);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
+  Future<void> _complete(ReservationRecord reservation) async {
+    if (!reservation.isReady || _acting.contains(reservation.id)) {
+      return;
+    }
+    _acting.add(reservation.id);
+    _replace(reservation.copyWith(
+      status: 'completed',
+      statusLabel: 'Completed',
+    ));
+    _tabs.animateTo(2);
+    try {
+      final updated = await context.read<AuthController>().api.completeReservation(reservation.id);
+      _acting.remove(reservation.id);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        _replace(updated);
       }
+    } on ApiException catch (error) {
+      _acting.remove(reservation.id);
+      if (!mounted) {
+        return;
+      }
+      _replace(reservation);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 
@@ -70,46 +135,42 @@ class _FarmerReservationsScreenState extends State<FarmerReservationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 4,
-      child: Column(
-        children: [
-          const TabBar(
-            isScrollable: false,
-            labelPadding: EdgeInsets.symmetric(horizontal: 4),
-            tabs: [
-              Tab(height: AniHowSpace.tabHeight, text: 'Pending'),
-              Tab(height: AniHowSpace.tabHeight, text: 'Ready'),
-              Tab(height: AniHowSpace.tabHeight, text: 'Done'),
-              Tab(height: AniHowSpace.tabHeight, text: 'Cancelled'),
-            ],
-          ),
-          Expanded(
-            child: FutureBuilder<List<ReservationRecord>>(
-              future: _future,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState != ConnectionState.done) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('${snapshot.error}'));
-                }
-                final items = snapshot.data ?? const [];
-                return TabBarView(
-                  children: List.generate(
-                    4,
-                    (tab) => _ReservationList(
-                      items: _filter(items, tab),
-                      onReload: _reload,
-                      onReady: _ready,
-                      onComplete: _complete,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
+    return Column(
+      children: [
+        TabBar(
+          controller: _tabs,
+          isScrollable: false,
+          labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+          tabs: const [
+            Tab(height: AniHowSpace.tabHeight, text: 'Pending'),
+            Tab(height: AniHowSpace.tabHeight, text: 'Ready'),
+            Tab(height: AniHowSpace.tabHeight, text: 'Done'),
+            Tab(height: AniHowSpace.tabHeight, text: 'Cancelled'),
+          ],
+        ),
+        Expanded(child: _body()),
+      ],
+    );
+  }
+
+  Widget _body() {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(child: Text('$_error'));
+    }
+    return TabBarView(
+      controller: _tabs,
+      children: List.generate(
+        4,
+        (tab) => _ReservationList(
+          items: _filter(_items, tab),
+          acting: _acting,
+          onReload: _reload,
+          onReady: _ready,
+          onComplete: _complete,
+        ),
       ),
     );
   }
@@ -118,15 +179,17 @@ class _FarmerReservationsScreenState extends State<FarmerReservationsScreen> {
 class _ReservationList extends StatelessWidget {
   const _ReservationList({
     required this.items,
+    required this.acting,
     required this.onReload,
     required this.onReady,
     required this.onComplete,
   });
 
   final List<ReservationRecord> items;
+  final Set<int> acting;
   final Future<void> Function() onReload;
-  final Future<void> Function(int id) onReady;
-  final Future<void> Function(int id) onComplete;
+  final Future<void> Function(ReservationRecord reservation) onReady;
+  final Future<void> Function(ReservationRecord reservation) onComplete;
 
   @override
   Widget build(BuildContext context) {
@@ -180,13 +243,15 @@ class _ReservationList extends StatelessWidget {
                     const SizedBox(height: AniHowSpace.cardGap),
                     PrimaryButton(
                       label: 'Mark ready',
-                      onPressed: () => onReady(reservation.id),
+                      busy: acting.contains(reservation.id),
+                      onPressed: () => onReady(reservation),
                     ),
                   ] else if (reservation.isReady) ...[
                     const SizedBox(height: AniHowSpace.cardGap),
                     PrimaryButton(
                       label: 'Complete pickup',
-                      onPressed: () => onComplete(reservation.id),
+                      busy: acting.contains(reservation.id),
+                      onPressed: () => onComplete(reservation),
                     ),
                   ],
                 ],

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users;
 
+use App\Enums\Permission;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
@@ -29,7 +30,7 @@ class UserResource extends Resource
 
     protected static ?string $pluralModelLabel = 'accounts';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 3;
 
     public static function form(Schema $schema): Schema
     {
@@ -55,8 +56,25 @@ class UserResource extends Resource
         ];
     }
 
+    /**
+     * A Content Editor sees their own farm's roster, read-only. The policy
+     * stops them opening another farm's record; this stops the table listing
+     * one in the first place. Both are needed.
+     */
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->with('roles');
+        $query = parent::getEloquentQuery()->with(['roles', 'farm']);
+        $user = auth()->user();
+
+        if ($user === null || $user->can(Permission::ManageAccounts->value)) {
+            return $query;
+        }
+
+        return $query->where('farm_id', $user->farm_id);
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->can(Permission::ManageAccounts->value) ?? false;
     }
 }

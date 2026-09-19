@@ -23,7 +23,7 @@
                                     <tr class="border-t border-gray-100 dark:border-gray-800">
                                         <td class="py-2">{{ $row->crop }}</td>
                                         <td class="py-2 text-right">
-                                            {{ number_format((float) $row->units, 2) }} {{ $row->unit }}
+                                            {{ number_format((float) $row->units, 2) }} {{ $row->unit_of_measure }}
                                         </td>
                                         <td class="py-2 text-right">
                                             PHP {{ number_format((float) $row->revenue, 2) }}

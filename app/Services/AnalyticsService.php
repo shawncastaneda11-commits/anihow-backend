@@ -41,7 +41,9 @@ class AnalyticsService
             ->orderByDesc('units')
             ->get([
                 'crop_types.name as crop',
-                'crop_types.unit_of_measure as unit',
+                // Aliased as unit_of_measure, not unit: OrderItem casts `unit` to
+                // ListingUnit, and Eloquent applies the cast to the alias too.
+                'crop_types.unit_of_measure as unit_of_measure',
                 DB::raw('sum(order_items.quantity) as units'),
                 DB::raw('sum(order_items.line_total) as revenue'),
             ]);

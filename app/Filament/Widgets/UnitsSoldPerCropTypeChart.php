@@ -43,7 +43,7 @@ class UnitsSoldPerCropTypeChart extends ChartWidget
                     'backgroundColor' => '#16a34a',
                 ],
             ],
-            'labels' => $rows->map(fn ($row): string => $row->crop.' ('.$row->unit.')')->all(),
+            'labels' => $rows->map(fn ($row): string => $row->crop.' ('.$row->unit_of_measure.')')->all(),
         ];
     }
 

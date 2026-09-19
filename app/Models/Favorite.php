@@ -23,4 +23,9 @@ class Favorite extends Model
     {
         return $this->belongsTo(Listing::class);
     }
+
+    public function isOwnedBy(User $user): bool
+    {
+        return $this->buyer_id === $user->id;
+    }
 }

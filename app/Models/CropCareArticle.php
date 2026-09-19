@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\ArticleCategory;
+use App\Enums\ArticleStatus;
 use App\Support\ListingStorage;
 use Database\Factories\CropCareArticleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -9,41 +11,71 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
-#[Fillable(['title', 'body', 'category_id', 'image_path', 'is_active'])]
+/**
+ * Crop-care and pest-management reference content. Farm-scoped: each partner
+ * farm's Content Editor writes their own guidance, tagged to entries in the
+ * shared crop taxonomy. Read-only in the Android app.
+ *
+ * Reference content. Not a tracker, not a scheduler, not a decision engine.
+ */
+#[Fillable([
+    'farm_id',
+    'created_by',
+    'title',
+    'slug',
+    'excerpt',
+    'body',
+    'image_path',
+    'category',
+    'status',
+    'published_at',
+])]
 class CropCareArticle extends Model
 {
-    /** Virtual grouping id for tips with no category_id. Not a categories row. */
-    public const GENERAL_CATEGORY_ID = 0;
-
     /** @use HasFactory<CropCareArticleFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected function casts(): array
     {
         return [
-            'is_active' => 'boolean',
+            'category' => ArticleCategory::class,
+            'status' => ArticleStatus::class,
+            'published_at' => 'datetime',
         ];
     }
 
     protected static function booted(): void
     {
-        static::deleting(function (CropCareArticle $article): void {
+        // forceDeleted, not deleting: a soft-deleted article is still
+        // recoverable and must keep its image.
+        static::forceDeleted(function (CropCareArticle $article): void {
             if (filled($article->image_path)) {
                 ListingStorage::disk()->delete($article->image_path);
             }
         });
     }
 
-    public function category(): BelongsTo
+    public function farm(): BelongsTo
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Farm::class);
     }
 
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Articles belong to one farm but tag to the shared taxonomy, and one
+     * article may cover several crops.
+     */
+    public function cropTypes(): BelongsToMany
+    {
+        return $this->belongsToMany(CropType::class, 'article_crop_type');
     }
 
     public function imageUrl(): ?string
@@ -55,30 +87,50 @@ class CropCareArticle extends Model
         return ListingStorage::disk()->url($this->image_path);
     }
 
-    public function isOfficial(): bool
-    {
-        return $this->created_by === null;
-    }
-
     public function isOwnedBy(User $user): bool
     {
-        return $this->created_by !== null && $this->created_by === $user->id;
+        return $this->created_by === $user->id;
+    }
+
+    public function belongsToFarm(int $farmId): bool
+    {
+        return $this->farm_id === $farmId;
+    }
+
+    public function isPublished(): bool
+    {
+        return $this->status === ArticleStatus::Published;
     }
 
     /**
      * @param  Builder<CropCareArticle>  $query
      * @return Builder<CropCareArticle>
      */
-    public function scopeActive(Builder $query): Builder
+    public function scopePublished(Builder $query): Builder
     {
-        return $query->where('crop_care_articles.is_active', true);
+        return $query->where('crop_care_articles.status', ArticleStatus::Published);
     }
 
     /**
-     * One-line list summary. Stored body is not rewritten.
+     * @param  Builder<CropCareArticle>  $query
+     * @return Builder<CropCareArticle>
      */
-    public function excerpt(int $limit = 90): string
+    public function scopeForFarm(Builder $query, int $farmId): Builder
     {
+        return $query->where('crop_care_articles.farm_id', $farmId);
+    }
+
+    /**
+     * One-line list summary. The stored excerpt wins when the Content Editor
+     * has written one; otherwise this derives from the body. Body is never
+     * rewritten.
+     */
+    public function summary(int $limit = 90): string
+    {
+        if (filled($this->excerpt)) {
+            return Str::limit($this->excerpt, $limit);
+        }
+
         $firstLine = Str::of((string) $this->body)
             ->explode("\n")
             ->map(fn (string $line): string => trim($line))

@@ -24,7 +24,11 @@ class InAppNotification extends Model
     /** @use HasFactory<InAppNotificationFactory> */
     use HasFactory;
 
-    protected $table = 'notifications';
+    /**
+     * Renamed off `notifications`, which is the table Laravel's own database
+     * notification channel claims. The old name collided.
+     */
+    protected $table = 'in_app_notifications';
 
     protected function casts(): array
     {

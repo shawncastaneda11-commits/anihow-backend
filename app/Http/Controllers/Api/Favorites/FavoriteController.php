@@ -8,6 +8,7 @@ use App\Http\Requests\Api\Favorites\StoreFavoriteRequest;
 use App\Http\Resources\Api\FavoriteResource;
 use App\Models\Favorite;
 use App\Models\Listing;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -58,10 +59,13 @@ class FavoriteController extends Controller
     private function listingRelations(): array
     {
         return [
-            'listing.category',
+            'listing.cropType',
+            'listing.farm',
+            'listing.activeTawadRule',
             'listing.farmerSeller' => function ($query): void {
-                $query->withAvg('reviewsReceived', 'rating')
-                    ->withCount('reviewsReceived');
+                $visible = ['reviewsReceived' => fn (Builder $q): Builder => $q->where('is_removed', false)];
+
+                $query->withAvg($visible, 'rating')->withCount($visible);
             },
         ];
     }

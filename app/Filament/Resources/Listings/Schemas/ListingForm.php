@@ -2,74 +2,50 @@
 
 namespace App\Filament\Resources\Listings\Schemas;
 
-use App\Enums\ListingUnit;
-use App\Enums\Role;
-use App\Models\User;
-use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Select;
+use App\Models\Listing;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 
+/**
+ * Read-only. Used by the view action on the listings table. Every field is
+ * disabled because moderation is takedown, not editing.
+ */
 class ListingForm
 {
     public static function configure(Schema $schema): Schema
     {
         return $schema
             ->components([
-                Select::make('farmer_seller_id')
-                    ->label('Farmer-seller')
-                    ->relationship(
-                        name: 'farmerSeller',
-                        titleAttribute: 'name',
-                        modifyQueryUsing: fn ($query) => $query->whereHas(
-                            'roles',
-                            fn ($roles) => $roles->where('name', Role::FarmerSeller->value),
-                        ),
-                    )
-                    ->getOptionLabelFromRecordUsing(
-                        fn (User $record): string => $record->name.($record->location ? ' — '.$record->location : ''),
-                    )
-                    ->searchable()
-                    ->preload()
-                    ->required(),
-                Select::make('category_id')
-                    ->relationship('category', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->required(),
-                TextInput::make('name')
-                    ->required()
-                    ->maxLength(255),
-                Select::make('unit')
-                    ->options(ListingUnit::options())
-                    ->required()
-                    ->native(false),
+                TextInput::make('title')->disabled(),
+                TextInput::make('cropType.name')
+                    ->label('Crop type')
+                    ->disabled(),
+                TextInput::make('farmerSeller.name')
+                    ->label('Seller')
+                    ->disabled(),
+                TextInput::make('farm.name')
+                    ->label('Farm')
+                    ->disabled(),
                 TextInput::make('price_per_unit')
-                    ->label('Price per unit (PHP)')
-                    ->numeric()
-                    ->prefix('₱')
-                    ->required()
-                    ->minValue(0.01),
+                    ->label('Price per unit')
+                    ->prefix('PHP')
+                    ->disabled(),
                 TextInput::make('quantity_available')
-                    ->numeric()
-                    ->required()
-                    ->minValue(0),
+                    ->label('Quantity available')
+                    ->disabled(),
+                TextInput::make('quantity_held')
+                    ->label('Held by placed orders')
+                    ->disabled(),
                 Textarea::make('description')
                     ->rows(4)
+                    ->disabled()
                     ->columnSpanFull(),
-                FileUpload::make('image_path')
-                    ->label('Image')
-                    ->image()
-                    ->disk(config('anihow.listing_disk', 'public'))
-                    ->directory('listings')
-                    ->visibility('public')
-                    ->maxSize(2048)
+                Textarea::make('takedown_reason')
+                    ->rows(2)
+                    ->disabled()
+                    ->visible(fn (?Listing $record): bool => filled($record?->takedown_reason))
                     ->columnSpanFull(),
-                Toggle::make('is_active')
-                    ->label('Active on marketplace')
-                    ->default(true),
             ]);
     }
 }

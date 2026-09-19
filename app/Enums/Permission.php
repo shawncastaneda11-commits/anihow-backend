@@ -39,7 +39,7 @@ enum Permission: string
 
     // Crop-care reference
     case ManageOwnFarmArticles = 'manage_own_farm_articles';
-    case ManageAllArticles = 'manage_all_articles';
+    case ModerateArticles = 'moderate_articles';
 
     // Descriptive analytics
     case ViewSystemAnalytics = 'view_system_analytics';
@@ -70,7 +70,7 @@ enum Permission: string
             self::SubmitReports => 'Submit reports',
             self::ResolveReports => 'Resolve reports',
             self::ManageOwnFarmArticles => 'Manage own farm crop-care articles',
-            self::ManageAllArticles => 'Manage all crop-care articles',
+            self::ModerateArticles => 'Moderate crop-care articles',
             self::ViewSystemAnalytics => 'View system-wide analytics',
             self::ViewFarmAnalytics => 'View farm analytics',
             self::ViewOwnAnalytics => 'View own analytics',
@@ -90,7 +90,28 @@ enum Permission: string
     public static function forRole(Role $role): array
     {
         return match ($role) {
-            Role::SuperAdmin => self::cases(),
+            /*
+             * Deliberately enumerated rather than self::cases(). The Super
+             * Admin governs the system; they do not act inside it. Handing
+             * them every case gave them authorship of farm content and
+             * ownership of seller pricing, neither of which is theirs.
+             */
+            Role::SuperAdmin => [
+                self::ManageAccounts,
+                self::ApproveFarmerSeller,
+                self::SuspendAccounts,
+                self::ManageFarms,
+                self::ManageCropTypes,
+                self::SetCropPricing,
+                self::TakedownListings,
+                self::ViewAllOrders,
+                self::ModerateReviews,
+                self::ResolveReports,
+                self::ModerateArticles,
+                self::ViewSystemAnalytics,
+                self::ViewFarmAnalytics,
+                self::GenerateExports,
+            ],
 
             Role::ContentEditor => [
                 self::ManageOwnFarmProfile,

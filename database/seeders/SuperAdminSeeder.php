@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\Role;
+use App\Enums\UserStatus;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -16,7 +17,8 @@ class SuperAdminSeeder extends Seeder
                 'name' => env('SUPER_ADMIN_NAME', 'AniHow Super Admin'),
                 'password' => env('SUPER_ADMIN_PASSWORD', 'password'),
                 'phone' => env('SUPER_ADMIN_PHONE'),
-                'is_active' => true,
+                'status' => UserStatus::Active,
+                'approved_at' => now(),
                 'email_verified_at' => now(),
             ],
         );

@@ -7,10 +7,12 @@ use App\Models\CropCareArticle;
 use App\Models\User;
 
 /**
- * Crop-care content belongs to the Content Editor, scoped to their own farm.
- * Farmer-Sellers and Buyers read published articles and nothing more.
+ * Authorship belongs to the Content Editor, scoped to their own farm.
+ * The Super Admin moderates: they see every farm's articles and can unpublish
+ * one, but they do not write or rewrite farm content.
  *
- * This is the permission that moved off the Farmer-Seller in the rebuild.
+ * This mirrors listings exactly. A Super Admin takes a listing down; they do
+ * not edit a farmer's price. The same line applies here.
  */
 class CropCareArticlePolicy
 {
@@ -22,7 +24,7 @@ class CropCareArticlePolicy
 
     public function view(User $user, CropCareArticle $article): bool
     {
-        if ($user->can(Permission::ManageAllArticles->value)) {
+        if ($user->can(Permission::ModerateArticles->value)) {
             return true;
         }
 
@@ -35,32 +37,31 @@ class CropCareArticlePolicy
 
     public function create(User $user): bool
     {
-        return $user->can(Permission::ManageAllArticles->value)
-            || ($user->can(Permission::ManageOwnFarmArticles->value) && $user->farm_id !== null);
+        return $user->can(Permission::ManageOwnFarmArticles->value)
+            && $user->farm_id !== null;
     }
 
     public function update(User $user, CropCareArticle $article): bool
     {
-        if ($user->can(Permission::ManageAllArticles->value)) {
-            return true;
-        }
-
         return $this->ownsFarmOf($user, $article);
     }
 
     public function delete(User $user, CropCareArticle $article): bool
     {
-        return $this->update($user, $article);
+        return $this->ownsFarmOf($user, $article);
     }
 
-    public function publish(User $user, CropCareArticle $article): bool
+    /**
+     * Moderation: pull a published article out of the app without editing it.
+     */
+    public function moderate(User $user, CropCareArticle $article): bool
     {
-        return $this->update($user, $article);
+        return $user->can(Permission::ModerateArticles->value);
     }
 
     /**
      * Farm scope, not author scope. A farm has one Content Editor, but if that
-     * editor is replaced the successor must still own the farm's back catalogue.
+     * editor is replaced the successor still owns the farm's back catalogue.
      */
     private function ownsFarmOf(User $user, CropCareArticle $article): bool
     {

@@ -6,11 +6,11 @@ use App\Enums\CancellationReason;
 use App\Enums\NotificationType;
 use App\Enums\OrderActor;
 use App\Enums\OrderStatus;
-use App\Models\InAppNotification;
 use App\Models\Listing;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Models\User;
+use App\Support\InAppNotifier;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -33,6 +33,10 @@ use Illuminate\Validation\ValidationException;
  */
 class OrderStateMachine
 {
+    public function __construct(
+        private readonly InAppNotifier $notifier,
+    ) {}
+
     /**
      * Advance an order. Returns the refreshed order.
      *
@@ -234,17 +238,14 @@ class OrderStateMachine
             return;
         }
 
-        $recipientId = $status === OrderStatus::Placed
-            ? $order->farmer_seller_id
-            : $order->buyer_id;
+        $recipient = $status === OrderStatus::Placed
+            ? $order->farmerSeller
+            : $order->buyer;
 
-        InAppNotification::create([
-            'user_id' => $recipientId,
-            'type' => $type,
-            'title' => $type->label(),
-            'body' => "Order {$order->order_number} is now {$status->label()}.",
-            'related_id' => $order->id,
-            'related_type' => Order::class,
-        ]);
+        if ($recipient === null) {
+            return;
+        }
+
+        $this->notifier->orderStatusChanged($recipient, $order, $status);
     }
 }

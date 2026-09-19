@@ -4,7 +4,42 @@ namespace App\Enums;
 
 enum NotificationType: string
 {
-    case ReservationCreated = 'reservation_created';
-    case ReservationStatusChanged = 'reservation_status_changed';
+    // Buyer-facing
+    case OrderConfirmed = 'order_confirmed';
+    case OrderReady = 'order_ready';
+    case OrderCompleted = 'order_completed';
+    case OrderCancelled = 'order_cancelled';
+
+    // Farmer-seller facing
+    case OrderPlaced = 'order_placed';
     case ListingLowStock = 'listing_low_stock';
+    case ListingTakenDown = 'listing_taken_down';
+    case AccountApproved = 'account_approved';
+    case FloorPriceRaised = 'floor_price_raised';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::OrderConfirmed => 'Order confirmed',
+            self::OrderReady => 'Order ready',
+            self::OrderCompleted => 'Order completed',
+            self::OrderCancelled => 'Order cancelled',
+            self::OrderPlaced => 'New order placed',
+            self::ListingLowStock => 'Listing low on stock',
+            self::ListingTakenDown => 'Listing taken down',
+            self::AccountApproved => 'Account approved',
+            self::FloorPriceRaised => 'Floor price raised above your listing',
+        };
+    }
+
+    public static function forOrderStatus(OrderStatus $status): ?self
+    {
+        return match ($status) {
+            OrderStatus::Placed => self::OrderPlaced,
+            OrderStatus::Confirmed => self::OrderConfirmed,
+            OrderStatus::Ready => self::OrderReady,
+            OrderStatus::Completed => self::OrderCompleted,
+            OrderStatus::Cancelled => self::OrderCancelled,
+        };
+    }
 }

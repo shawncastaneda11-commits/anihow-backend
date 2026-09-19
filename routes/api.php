@@ -93,6 +93,7 @@ Route::middleware([
     Route::get('sales', [SaleController::class, 'index'])->name('farmer.sales.index');
     Route::post('sales', [SaleController::class, 'store'])->name('farmer.sales.store');
     Route::get('sales/{sale}', [SaleController::class, 'show'])->name('farmer.sales.show');
+    Route::delete('sales/{sale}', [SaleController::class, 'destroy'])->name('farmer.sales.destroy');
 
     Route::get('crop-care/categories', [CropCareArticleController::class, 'categories'])
         ->name('farmer.crop-care.categories');

@@ -268,6 +268,8 @@ class ApiClient {
     return _list('/farmer/sales', parse: SaleRecord.fromJson);
   }
 
+  Future<void> deleteSale(int id) => _delete('/farmer/sales/$id');
+
   Future<PagedItems<SaleRecord>> farmerSalesPaged() {
     return _listPages('/farmer/sales', parse: SaleRecord.fromJson);
   }

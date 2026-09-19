@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Pos;
 
+use App\Actions\Pos\DeletePosSaleAction;
 use App\Actions\Pos\RecordPosSaleAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Pos\StoreSaleRequest;
@@ -47,5 +48,16 @@ class SaleController extends Controller
         $sale->load('items');
 
         return new SaleResource($sale);
+    }
+
+    public function destroy(Sale $sale, DeletePosSaleAction $deletePosSale): JsonResponse
+    {
+        $this->authorize('delete', $sale);
+
+        $deletePosSale->handle($sale);
+
+        return response()->json([
+            'message' => 'Walk-in sale deleted.',
+        ]);
     }
 }

@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Enums\Role;
 use App\Models\Listing;
+use App\Models\Sale;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -65,6 +66,50 @@ class PosSaleApiTest extends TestCase
 
         $this->assertEquals('1.00', $own->fresh()->quantity_available);
         $this->assertEquals('10.00', $theirs->fresh()->quantity_available);
+    }
+
+    public function test_farmer_can_delete_a_walk_in_sale_and_stock_restores(): void
+    {
+        $farmer = $this->farmer();
+        $listing = Listing::factory()->forFarmer($farmer)->create([
+            'quantity_available' => 10,
+            'price_per_unit' => 50,
+        ]);
+        $token = $farmer->createToken('mobile')->plainTextToken;
+
+        $saleId = $this->withToken($token)->postJson('/api/farmer/sales', [
+            'items' => [
+                ['listing_id' => $listing->id, 'quantity' => 1.5],
+            ],
+        ])->json('data.id');
+
+        $this->assertSame('8.50', $listing->fresh()->quantity_available);
+
+        $this->withToken($token)
+            ->deleteJson("/api/farmer/sales/{$saleId}")
+            ->assertOk()
+            ->assertJsonPath('message', 'Walk-in sale deleted.');
+
+        $this->assertSame('10.00', $listing->fresh()->quantity_available);
+        $this->assertDatabaseMissing('sales', ['id' => $saleId]);
+    }
+
+    public function test_farmer_cannot_delete_another_farmers_sale(): void
+    {
+        $farmer = $this->farmer(['email' => 'juan@example.com']);
+        $other = $this->farmer(['email' => 'maria@example.com']);
+        $sale = Sale::factory()->for($other, 'farmerSeller')->create();
+
+        $this->withToken($farmer->createToken('mobile')->plainTextToken)
+            ->deleteJson("/api/farmer/sales/{$sale->id}")
+            ->assertForbidden();
+
+        $this->assertModelExists($sale);
+    }
+
+    public function test_unauthenticated_sale_delete_returns_401(): void
+    {
+        $this->deleteJson('/api/farmer/sales/1')->assertUnauthorized();
     }
 
     public function test_buyer_cannot_record_pos_sales(): void

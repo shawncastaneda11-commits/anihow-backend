@@ -6,9 +6,13 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Renamed off `notifications`, which is the table name Laravel's own
+     * database notification channel claims. The old name collided.
+     */
     public function up(): void
     {
-        Schema::create('notifications', function (Blueprint $table) {
+        Schema::create('in_app_notifications', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->string('type');
@@ -24,6 +28,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('notifications');
+        Schema::dropIfExists('in_app_notifications');
     }
 };

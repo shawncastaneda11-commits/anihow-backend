@@ -13,22 +13,32 @@ class RolePermissionSeeder extends Seeder
 {
     public function run(): void
     {
-        app()[PermissionRegistrar::class]->forgetCachedPermissions();
-
-        $guard = 'web';
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         foreach (PermissionEnum::cases() as $permission) {
-            Permission::findOrCreate($permission->value, $guard);
+            Permission::findOrCreate($permission->value, 'web');
         }
 
-        foreach (RoleEnum::cases() as $role) {
-            $roleModel = Role::findOrCreate($role->value, $guard);
-            $roleModel->syncPermissions(
+        foreach (RoleEnum::cases() as $roleEnum) {
+            $role = Role::findOrCreate($roleEnum->value, 'web');
+
+            // syncPermissions, not givePermissionTo. Re-running the seeder
+            // after a permission is revoked must actually revoke it.
+            $role->syncPermissions(
                 array_map(
                     fn (PermissionEnum $permission): string => $permission->value,
-                    PermissionEnum::forRole($role),
-                ),
+                    PermissionEnum::forRole($roleEnum),
+                )
             );
         }
+
+        // Remove permissions dropped from the enum so a stale row cannot keep
+        // granting access after a rename. Covers record_pos_sales and the rest
+        // of the retired set.
+        Permission::query()
+            ->whereNotIn('name', array_column(PermissionEnum::cases(), 'value'))
+            ->delete();
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }

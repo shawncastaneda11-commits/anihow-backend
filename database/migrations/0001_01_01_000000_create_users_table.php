@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
@@ -16,11 +13,29 @@ return new class extends Migration
             $table->string('name');
             $table->string('email')->unique();
             $table->string('phone')->nullable();
+            $table->string('location')->nullable();
+
+            // Storefront profile. Populated for farmer-sellers only.
+            $table->string('shop_name')->nullable();
+            $table->text('bio')->nullable();
+            $table->string('contact')->nullable();
+
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->boolean('is_active')->default(true);
+
+            // App\Enums\UserStatus. Buyers are created active; farmer-sellers
+            // and content editors start pending until a super admin approves.
+            $table->string('status')->default('pending');
+            $table->timestamp('approved_at')->nullable();
+            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('suspended_at')->nullable();
+            $table->string('suspension_reason')->nullable();
+
             $table->rememberToken();
             $table->timestamps();
+            $table->softDeletes();
+
+            $table->index('status');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
@@ -39,9 +54,6 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('users');

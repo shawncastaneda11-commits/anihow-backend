@@ -142,6 +142,42 @@ class _PosScreenState extends State<PosScreen> {
     }
   }
 
+  Future<void> _deleteSale(SaleRecord sale) async {
+    if (_busy) {
+      return;
+    }
+    final name = sale.items.isEmpty ? 'Walk-in sale' : sale.items.first.listingName;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete this sale?'),
+        content: Text('$name · ${AniHowMoney.peso(sale.total)}'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await context.read<AuthController>().api.deleteSale(sale.id);
+      if (mounted) {
+        _reload();
+      }
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -233,11 +269,14 @@ class _PosScreenState extends State<PosScreen> {
                 if (today.isEmpty) {
                   return Text('No walk-in sales recorded today.', style: theme.textTheme.bodyMedium);
                 }
-                return Column(
+                    return Column(
                   children: [
                     for (var i = 0; i < today.length; i++) ...[
                       if (i > 0) const SizedBox(height: AniHowSpace.cardGap),
-                      _SaleRow(sale: today[i]),
+                      _SaleRow(
+                        sale: today[i],
+                        onDelete: _busy ? null : () => _deleteSale(today[i]),
+                      ),
                     ],
                   ],
                 );
@@ -266,9 +305,10 @@ class _StepButton extends StatelessWidget {
 }
 
 class _SaleRow extends StatelessWidget {
-  const _SaleRow({required this.sale});
+  const _SaleRow({required this.sale, this.onDelete});
 
   final SaleRecord sale;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -291,6 +331,11 @@ class _SaleRow extends StatelessWidget {
             Text(
               AniHowMoney.peso(sale.total),
               style: Theme.of(context).textTheme.labelLarge,
+            ),
+            IconButton(
+              tooltip: 'Delete sale',
+              onPressed: onDelete,
+              icon: const Icon(Icons.delete_outline),
             ),
           ],
         ),

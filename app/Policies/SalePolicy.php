@@ -25,4 +25,9 @@ class SalePolicy
     {
         return $user->isFarmerSeller();
     }
+
+    public function delete(User $user, Sale $sale): bool
+    {
+        return $user->isFarmerSeller() && $sale->isOwnedBy($user);
+    }
 }

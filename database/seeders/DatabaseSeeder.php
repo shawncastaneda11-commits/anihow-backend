@@ -8,19 +8,15 @@ class DatabaseSeeder extends Seeder
 {
     /**
      * Seed the application's database.
+     *
+     * Reduced to roles and permissions for the marketplace rebuild. The
+     * remaining seeders reference dropped tables and changed columns; they
+     * are rewritten alongside the models.
      */
     public function run(): void
     {
         $this->call([
             RolePermissionSeeder::class,
-            SuperAdminSeeder::class,
-            CategorySeeder::class,
-            FarmerSellerSeeder::class,
-            ListingSeeder::class,
-            CropCareArticleSeeder::class,
-            BuyerSeeder::class,
-            ReservationAndSaleSeeder::class,
-            TrustAndUsabilitySeeder::class,
         ]);
     }
 }

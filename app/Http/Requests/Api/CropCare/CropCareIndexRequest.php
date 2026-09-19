@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Api\CropCare;
 
-use App\Models\Category;
+use App\Enums\ArticleCategory;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -10,7 +10,7 @@ class CropCareIndexRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->isFarmerSeller() ?? false;
+        return true;
     }
 
     /**
@@ -18,19 +18,11 @@ class CropCareIndexRequest extends FormRequest
      */
     public function rules(): array
     {
-        $categoryId = $this->integer('category_id');
-
         return [
-            'category_id' => [
-                'sometimes',
-                'integer',
-                'min:0',
-                Rule::when(
-                    $this->filled('category_id') && $categoryId > 0,
-                    [Rule::exists(Category::class, 'id')],
-                ),
-            ],
-            'search' => ['sometimes', 'string', 'max:255'],
+            'crop_type_id' => ['sometimes', 'integer', 'exists:crop_types,id'],
+            'farm_id' => ['sometimes', 'integer', 'exists:farms,id'],
+            'category' => ['sometimes', Rule::enum(ArticleCategory::class)],
+            'search' => ['sometimes', 'string', 'max:100'],
         ];
     }
 }

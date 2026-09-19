@@ -2,20 +2,16 @@
 
 namespace App\Http\Requests\Api\Listings;
 
-use App\Enums\ListingUnit;
-use App\Models\Category;
+use App\Models\CropType;
 use App\Models\Listing;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdateListingRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        $listing = $this->route('listing');
-
-        return $listing instanceof Listing
-            && ($this->user()?->can('update', $listing) ?? false);
+        return $this->user()?->can('update', $this->route('listing')) ?? false;
     }
 
     /**
@@ -24,14 +20,44 @@ class UpdateListingRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'category_id' => ['sometimes', 'required', 'integer', Rule::exists(Category::class, 'id')->where('is_active', true)],
-            'unit' => ['sometimes', 'required', Rule::enum(ListingUnit::class)],
-            'price_per_unit' => ['sometimes', 'required', 'numeric', 'min:0.01'],
-            'quantity_available' => ['sometimes', 'required', 'numeric', 'min:0'],
-            'description' => ['nullable', 'string', 'max:5000'],
+            'crop_type_id' => ['sometimes', 'integer', 'exists:crop_types,id'],
+            'title' => ['sometimes', 'string', 'max:150'],
+            'description' => ['sometimes', 'nullable', 'string', 'max:5000'],
+            'price_per_unit' => ['sometimes', 'numeric', 'gt:0', 'max:99999.99'],
+            'quantity_available' => ['sometimes', 'numeric', 'min:0', 'max:99999.99'],
             'is_active' => ['sometimes', 'boolean'],
-            'image' => ['nullable', 'image', 'max:2048'],
+            'image' => ['nullable', 'image', 'max:5120'],
+        ];
+    }
+
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                if ($validator->errors()->isNotEmpty()) {
+                    return;
+                }
+
+                $listing = $this->listing();
+
+                $cropType = $this->has('crop_type_id')
+                    ? CropType::find($this->validated('crop_type_id'))
+                    : $listing->cropType;
+
+                $price = $this->has('price_per_unit')
+                    ? (float) $this->validated('price_per_unit')
+                    : (float) $listing->price_per_unit;
+
+                if ($cropType === null || $cropType->allowsPrice($price)) {
+                    return;
+                }
+
+                $floor = number_format((float) $cropType->floor_price, 2, '.', '');
+                $validator->errors()->add(
+                    'price_per_unit',
+                    "The floor price for {$cropType->name} is PHP {$floor} per {$cropType->unit_of_measure->value}.",
+                );
+            },
         ];
     }
 
@@ -40,6 +66,24 @@ class UpdateListingRequest extends FormRequest
      */
     public function listingAttributes(): array
     {
-        return $this->safe()->except('image');
+        return collect($this->validated())
+            ->only([
+                'crop_type_id',
+                'title',
+                'description',
+                'price_per_unit',
+                'quantity_available',
+                'is_active',
+            ])
+            ->all();
+    }
+
+    private function listing(): Listing
+    {
+        $listing = $this->route('listing');
+
+        return $listing instanceof Listing
+            ? $listing->loadMissing('cropType')
+            : Listing::with('cropType')->findOrFail($listing);
     }
 }

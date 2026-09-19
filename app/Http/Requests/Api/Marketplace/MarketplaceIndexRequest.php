@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Api\Marketplace;
 
-use App\Models\Category;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -10,7 +9,7 @@ class MarketplaceIndexRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->isBuyer() ?? false;
+        return true;
     }
 
     /**
@@ -19,9 +18,10 @@ class MarketplaceIndexRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category_id' => ['sometimes', 'integer', Rule::exists(Category::class, 'id')],
-            'search' => ['sometimes', 'string', 'max:255'],
-            'sort' => ['sometimes', 'string', Rule::in(['price_asc', 'price_desc', 'freshest', 'availability'])],
+            'crop_type_id' => ['sometimes', 'integer', 'exists:crop_types,id'],
+            'farm_id' => ['sometimes', 'integer', 'exists:farms,id'],
+            'search' => ['sometimes', 'string', 'max:100'],
+            'sort' => ['sometimes', Rule::in(['freshest', 'price_asc', 'price_desc', 'availability'])],
         ];
     }
 }

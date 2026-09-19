@@ -3,20 +3,20 @@
 namespace App\Actions\Listings;
 
 use App\Models\Listing;
-use App\Models\ReservationItem;
-use App\Models\SaleItem;
 use Illuminate\Validation\ValidationException;
 
 class DeleteListingAction
 {
+    /**
+     * Soft delete. Order items snapshot everything they display, so history
+     * survives, but stock held by a placed order must be settled first or the
+     * buyer loses an order they are waiting on.
+     */
     public function handle(Listing $listing): void
     {
-        $inUse = ReservationItem::query()->where('listing_id', $listing->id)->exists()
-            || SaleItem::query()->where('listing_id', $listing->id)->exists();
-
-        if ($inUse) {
+        if ((float) $listing->quantity_held > 0) {
             throw ValidationException::withMessages([
-                'listing' => 'This listing cannot be deleted because it was used on a reservation or sale.',
+                'listing' => 'This listing has pending orders. Confirm or cancel them before deleting it.',
             ]);
         }
 

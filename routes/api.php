@@ -10,17 +10,19 @@ use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\Auth\ResendVerificationController;
 use App\Http\Controllers\Api\Auth\ResetPasswordController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
+use App\Http\Controllers\Api\Cart\CartController;
 use App\Http\Controllers\Api\CropCare\CropCareArticleController;
 use App\Http\Controllers\Api\Favorites\FavoriteController;
 use App\Http\Controllers\Api\Listings\ListingController;
+use App\Http\Controllers\Api\Listings\TawadRuleController;
 use App\Http\Controllers\Api\Listings\ToggleListingActiveController;
-use App\Http\Controllers\Api\Marketplace\CategoryController;
+use App\Http\Controllers\Api\Marketplace\CropTypeController;
 use App\Http\Controllers\Api\Marketplace\MarketplaceController;
 use App\Http\Controllers\Api\Notifications\NotificationController;
+use App\Http\Controllers\Api\Orders\BuyerOrderController;
+use App\Http\Controllers\Api\Orders\CheckoutController;
+use App\Http\Controllers\Api\Orders\FarmerOrderController;
 use App\Http\Controllers\Api\Orders\OrderHistoryController;
-use App\Http\Controllers\Api\Pos\SaleController;
-use App\Http\Controllers\Api\Reservations\BuyerReservationController;
-use App\Http\Controllers\Api\Reservations\FarmerReservationController;
 use App\Http\Controllers\Api\Reviews\ReviewController;
 use App\Http\Controllers\Api\Shop\BuyerShopController;
 use App\Http\Controllers\Api\Shop\FarmerShopController;
@@ -48,8 +50,17 @@ Route::prefix('auth')->group(function (): void {
     });
 });
 
+/*
+ * Shared. The crop taxonomy and the crop-care library are reference content
+ * that every authenticated actor reads. Crop-care is read-only here: it is
+ * written by each farm's Content Editor in the CMS.
+ */
 Route::middleware('auth:sanctum')->group(function (): void {
-    Route::get('categories', CategoryController::class)->name('categories.index');
+    Route::get('crop-types', CropTypeController::class)->name('crop-types.index');
+
+    Route::get('crop-care', [CropCareArticleController::class, 'index'])->name('crop-care.index');
+    Route::get('crop-care/{cropCareArticle}', [CropCareArticleController::class, 'show'])
+        ->name('crop-care.show');
 
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount'])
@@ -81,32 +92,22 @@ Route::middleware([
     Route::patch('listings/{listing}/active', ToggleListingActiveController::class)
         ->name('farmer.listings.toggle-active');
 
-    Route::get('reservations', [FarmerReservationController::class, 'index'])->name('farmer.reservations.index');
-    Route::get('reservations/{reservation}', [FarmerReservationController::class, 'show'])->name('farmer.reservations.show');
-    Route::patch('reservations/{reservation}/ready', [FarmerReservationController::class, 'ready'])
-        ->name('farmer.reservations.ready');
-    Route::patch('reservations/{reservation}/complete', [FarmerReservationController::class, 'complete'])
-        ->name('farmer.reservations.complete');
-    Route::patch('reservations/{reservation}/cancel', [FarmerReservationController::class, 'cancel'])
-        ->name('farmer.reservations.cancel');
+    // Tawad: a seller-published peso discount rule, one active rule per listing.
+    Route::post('listings/{listing}/tawad', [TawadRuleController::class, 'store'])
+        ->name('farmer.listings.tawad.store');
+    Route::delete('listings/{listing}/tawad/{tawadRule}', [TawadRuleController::class, 'destroy'])
+        ->name('farmer.listings.tawad.destroy');
 
-    Route::get('sales', [SaleController::class, 'index'])->name('farmer.sales.index');
-    Route::post('sales', [SaleController::class, 'store'])->name('farmer.sales.store');
-    Route::get('sales/{sale}', [SaleController::class, 'show'])->name('farmer.sales.show');
-    Route::delete('sales/{sale}', [SaleController::class, 'destroy'])->name('farmer.sales.destroy');
-
-    Route::get('crop-care/categories', [CropCareArticleController::class, 'categories'])
-        ->name('farmer.crop-care.categories');
-    Route::get('crop-care/mine', [CropCareArticleController::class, 'mine'])
-        ->name('farmer.crop-care.mine');
-    Route::get('crop-care', [CropCareArticleController::class, 'index'])->name('farmer.crop-care.index');
-    Route::post('crop-care', [CropCareArticleController::class, 'store'])->name('farmer.crop-care.store');
-    Route::get('crop-care/{cropCareArticle}', [CropCareArticleController::class, 'show'])
-        ->name('farmer.crop-care.show');
-    Route::match(['put', 'patch', 'post'], 'crop-care/{cropCareArticle}', [CropCareArticleController::class, 'update'])
-        ->name('farmer.crop-care.update');
-    Route::delete('crop-care/{cropCareArticle}', [CropCareArticleController::class, 'destroy'])
-        ->name('farmer.crop-care.destroy');
+    Route::get('orders', [FarmerOrderController::class, 'index'])->name('farmer.orders.index');
+    Route::get('orders/{order}', [FarmerOrderController::class, 'show'])->name('farmer.orders.show');
+    Route::patch('orders/{order}/confirm', [FarmerOrderController::class, 'confirm'])
+        ->name('farmer.orders.confirm');
+    Route::patch('orders/{order}/ready', [FarmerOrderController::class, 'ready'])
+        ->name('farmer.orders.ready');
+    Route::patch('orders/{order}/complete', [FarmerOrderController::class, 'complete'])
+        ->name('farmer.orders.complete');
+    Route::patch('orders/{order}/cancel', [FarmerOrderController::class, 'cancel'])
+        ->name('farmer.orders.cancel');
 
     Route::get('shop', [FarmerShopController::class, 'show'])->name('farmer.shop.show');
     Route::match(['put', 'patch'], 'shop', [FarmerShopController::class, 'update'])->name('farmer.shop.update');
@@ -119,11 +120,12 @@ Route::middleware([
     Route::get('marketplace', [MarketplaceController::class, 'index'])->name('buyer.marketplace.index');
     Route::get('marketplace/{listing}', [MarketplaceController::class, 'show'])->name('buyer.marketplace.show');
 
-    Route::get('reservations', [BuyerReservationController::class, 'index'])->name('buyer.reservations.index');
-    Route::get('reservations/{reservation}', [BuyerReservationController::class, 'show'])->name('buyer.reservations.show');
+    Route::get('cart', [CartController::class, 'index'])->name('buyer.cart.index');
 
-    Route::get('orders', [OrderHistoryController::class, 'index'])->name('buyer.orders.index');
-    Route::get('orders/{reservation}/receipt', [OrderHistoryController::class, 'receipt'])
+    Route::get('orders', [BuyerOrderController::class, 'index'])->name('buyer.orders.index');
+    Route::get('orders/history', [OrderHistoryController::class, 'index'])->name('buyer.orders.history');
+    Route::get('orders/{order}', [BuyerOrderController::class, 'show'])->name('buyer.orders.show');
+    Route::get('orders/{order}/receipt', [OrderHistoryController::class, 'receipt'])
         ->name('buyer.orders.receipt');
 
     Route::get('shops', [BuyerShopController::class, 'index'])->name('buyer.shops.index');
@@ -134,9 +136,16 @@ Route::middleware([
     Route::get('favorites', [FavoriteController::class, 'index'])->name('buyer.favorites.index');
 
     Route::middleware('verified')->group(function (): void {
-        Route::post('reservations', [BuyerReservationController::class, 'store'])->name('buyer.reservations.store');
-        Route::patch('reservations/{reservation}/cancel', [BuyerReservationController::class, 'cancel'])
-            ->name('buyer.reservations.cancel');
+        Route::post('cart', [CartController::class, 'store'])->name('buyer.cart.store');
+        Route::patch('cart/{cartItem}', [CartController::class, 'update'])->name('buyer.cart.update');
+        Route::delete('cart/{cartItem}', [CartController::class, 'destroy'])->name('buyer.cart.destroy');
+
+        // Splits the cart into one order per farmer-seller.
+        Route::post('checkout', CheckoutController::class)->name('buyer.checkout');
+
+        Route::patch('orders/{order}/cancel', [BuyerOrderController::class, 'cancel'])
+            ->name('buyer.orders.cancel');
+
         Route::post('reviews', [ReviewController::class, 'store'])->name('buyer.reviews.store');
         Route::post('favorites', [FavoriteController::class, 'store'])->name('buyer.favorites.store');
         Route::delete('favorites/{listing}', [FavoriteController::class, 'destroy'])->name('buyer.favorites.destroy');

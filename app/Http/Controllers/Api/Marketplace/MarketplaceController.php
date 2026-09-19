@@ -15,14 +15,26 @@ class MarketplaceController extends Controller
     {
         $listings = Listing::query()
             ->marketplaceVisible()
-            ->with($this->marketplaceRelations())
+            ->with($this->relations())
             ->when(
-                $request->validated('category_id'),
-                fn (Builder $query, $categoryId) => $query->where('category_id', $categoryId),
+                $request->validated('crop_type_id'),
+                fn (Builder $query, $cropTypeId) => $query->where('crop_type_id', $cropTypeId),
+            )
+            ->when(
+                $request->validated('farm_id'),
+                fn (Builder $query, $farmId) => $query->where('farm_id', $farmId),
             )
             ->when(
                 $request->validated('search'),
-                fn (Builder $query, string $search) => $query->where('name', 'like', '%'.$search.'%'),
+                fn (Builder $query, string $search) => $query->where(function (Builder $query) use ($search): void {
+                    // Search the seller's own title and the shared crop labels,
+                    // so "tomato" and "kamatis" both find the same listings.
+                    $query->where('title', 'like', '%'.$search.'%')
+                        ->orWhereHas('cropType', fn (Builder $cropType): Builder => $cropType
+                            ->where('name', 'like', '%'.$search.'%')
+                            ->orWhere('label_en', 'like', '%'.$search.'%')
+                            ->orWhere('label_fil', 'like', '%'.$search.'%'));
+                }),
             );
 
         $listings = $this->sorted($listings, $request->validated('sort') ?? 'freshest');
@@ -37,7 +49,7 @@ class MarketplaceController extends Controller
             404,
         );
 
-        $listing->load($this->marketplaceRelations());
+        $listing->load($this->relations());
 
         return new ListingResource($listing);
     }
@@ -45,13 +57,15 @@ class MarketplaceController extends Controller
     /**
      * @return array<int|string, mixed>
      */
-    private function marketplaceRelations(): array
+    private function relations(): array
     {
         return [
-            'category',
+            'cropType',
+            'farm',
+            'activeTawadRule',
             'farmerSeller' => function ($query): void {
-                $query->withAvg('reviewsReceived', 'rating')
-                    ->withCount('reviewsReceived');
+                $query->withAvg(['reviewsReceived' => fn ($q) => $q->where('is_removed', false)], 'rating')
+                    ->withCount(['reviewsReceived' => fn ($q) => $q->where('is_removed', false)]);
             },
         ];
     }

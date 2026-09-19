@@ -2,9 +2,11 @@
 
 namespace App\Http\Resources\Api;
 
+use App\Models\Listing;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/** @mixin Listing */
 class ListingResource extends JsonResource
 {
     /**
@@ -12,44 +14,31 @@ class ListingResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $sellerLoaded = $this->relationLoaded('farmerSeller');
-        $averageRating = $sellerLoaded ? $this->sellerAverageRating() : null;
-        $reviewsCount = $sellerLoaded ? $this->sellerReviewsCount() : 0;
-
         return [
             'id' => $this->id,
-            'name' => $this->name,
-            'unit' => $this->unit?->value,
-            'unit_label' => $this->unit?->label(),
-            'price_per_unit' => $this->price_per_unit,
-            'quantity_available' => $this->quantity_available,
+            'title' => $this->title,
             'description' => $this->description,
-            'image_url' => $this->imageUrl(),
+            'price_per_unit' => (float) $this->price_per_unit,
+            'quantity_available' => (float) $this->quantity_available,
+            'sellable_quantity' => $this->sellableQuantity(),
             'is_active' => $this->is_active,
-            'category' => new CategoryResource($this->whenLoaded('category')),
-            'seller' => $this->when($sellerLoaded, fn () => [
+            'status' => $this->status->value,
+            'image_url' => $this->imageUrl(),
+            'crop_type' => new CropTypeResource($this->whenLoaded('cropType')),
+            'tawad' => new TawadRuleResource($this->whenLoaded('activeTawadRule')),
+            'farm' => new FarmResource($this->whenLoaded('farm')),
+            'seller' => $this->whenLoaded('farmerSeller', fn (): array => [
                 'id' => $this->farmerSeller->id,
-                'shop_name' => $this->farmerSeller->shop_name ?: $this->farmerSeller->name,
                 'name' => $this->farmerSeller->name,
-                'location' => $this->farmerSeller->location,
-                'phone' => $this->farmerSeller->phone,
-                'average_rating' => $averageRating,
-                'reviews_count' => $reviewsCount,
+                'shop_name' => $this->farmerSeller->shop_name,
+                'average_rating' => $this->farmerSeller->averageRating(),
+                'reviews_count' => $this->farmerSeller->reviews_received_count ?? null,
             ]),
-            'average_rating' => $this->when($sellerLoaded, fn () => $averageRating),
-            'reviews_count' => $this->when($sellerLoaded, fn () => $reviewsCount),
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+            'takedown_reason' => $this->when(
+                $this->status->value === 'taken_down',
+                $this->takedown_reason,
+            ),
+            'created_at' => $this->created_at?->toIso8601String(),
         ];
-    }
-
-    private function sellerAverageRating(): ?string
-    {
-        return $this->farmerSeller->averageRating();
-    }
-
-    private function sellerReviewsCount(): int
-    {
-        return (int) ($this->farmerSeller->reviews_received_count ?? 0);
     }
 }

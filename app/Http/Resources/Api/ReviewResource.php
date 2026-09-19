@@ -2,9 +2,11 @@
 
 namespace App\Http\Resources\Api;
 
+use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/** @mixin Review */
 class ReviewResource extends JsonResource
 {
     /**
@@ -14,14 +16,11 @@ class ReviewResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'order_id' => $this->order_id,
             'rating' => $this->rating,
             'comment' => $this->comment,
-            'buyer' => $this->whenLoaded('buyer', fn () => [
-                'id' => $this->buyer->id,
-                'name' => $this->buyer->name,
-            ]),
-            'reservation_id' => $this->reservation_id,
-            'created_at' => $this->created_at,
+            'buyer_name' => $this->whenLoaded('buyer', fn (): string => $this->buyer->name),
+            'created_at' => $this->created_at?->toIso8601String(),
         ];
     }
 }

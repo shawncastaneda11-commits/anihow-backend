@@ -16,13 +16,15 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ListingController extends Controller
 {
+    private const RELATIONS = ['cropType', 'farmerSeller', 'farm', 'activeTawadRule'];
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Listing::class);
 
         $listings = $request->user()
             ->listings()
-            ->with(['category', 'farmerSeller'])
+            ->with(self::RELATIONS)
             ->latest()
             ->paginate();
 
@@ -37,7 +39,7 @@ class ListingController extends Controller
             $request->file('image'),
         );
 
-        return (new ListingResource($listing))
+        return (new ListingResource($listing->load(self::RELATIONS)))
             ->additional(['message' => 'Listing created.'])
             ->response()
             ->setStatusCode(201);
@@ -47,20 +49,23 @@ class ListingController extends Controller
     {
         $this->authorize('view', $listing);
 
-        $listing->load(['category', 'farmerSeller']);
+        $listing->load(self::RELATIONS);
 
         return new ListingResource($listing);
     }
 
-    public function update(UpdateListingRequest $request, Listing $listing, UpdateListingAction $updateListing): ListingResource
-    {
+    public function update(
+        UpdateListingRequest $request,
+        Listing $listing,
+        UpdateListingAction $updateListing,
+    ): ListingResource {
         $listing = $updateListing->handle(
             $listing,
             $request->listingAttributes(),
             $request->file('image'),
         );
 
-        return (new ListingResource($listing))
+        return (new ListingResource($listing->load(self::RELATIONS)))
             ->additional(['message' => 'Listing updated.']);
     }
 
@@ -70,8 +75,6 @@ class ListingController extends Controller
 
         $deleteListing->handle($listing);
 
-        return response()->json([
-            'message' => 'Listing deleted.',
-        ]);
+        return response()->json(['message' => 'Listing deleted.']);
     }
 }

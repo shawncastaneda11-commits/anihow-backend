@@ -2,9 +2,11 @@
 
 namespace App\Http\Resources\Api;
 
+use App\Models\CropCareArticle;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/** @mixin CropCareArticle */
 class CropCareArticleResource extends JsonResource
 {
     /**
@@ -12,35 +14,19 @@ class CropCareArticleResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $user = $request->user();
-
         return [
             'id' => $this->id,
             'title' => $this->title,
-            'excerpt' => $this->excerpt(),
-            'body' => $this->when(
-                $request->routeIs(
-                    'farmer.crop-care.show',
-                    'farmer.crop-care.store',
-                    'farmer.crop-care.update',
-                    'farmer.crop-care.mine',
-                ),
-                $this->body,
-            ),
+            'slug' => $this->slug,
+            'summary' => $this->summary(),
+            'body' => $this->body,
+            'category' => $this->category->value,
+            'category_label' => $this->category->label(),
             'image_url' => $this->imageUrl(),
-            'category' => new CategoryResource($this->whenLoaded('category')),
-            'is_official' => $this->isOfficial(),
-            'can_edit' => $user !== null && $user->can('update', $this->resource),
-            'author' => $this->when(
-                $this->relationLoaded('author') && $this->author !== null,
-                fn (): array => [
-                    'id' => $this->author->id,
-                    'name' => $this->author->name,
-                    'shop_name' => $this->author->shop_name,
-                ],
-            ),
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+            'published_at' => $this->published_at?->toIso8601String(),
+            'farm' => new FarmResource($this->whenLoaded('farm')),
+            'author_name' => $this->whenLoaded('author', fn (): ?string => $this->author?->name),
+            'crop_types' => CropTypeResource::collection($this->whenLoaded('cropTypes')),
         ];
     }
 }

@@ -2,15 +2,15 @@
 
 namespace App\Http\Requests\Api\Reviews;
 
-use App\Enums\ReservationStatus;
-use App\Models\Reservation;
+use App\Models\Order;
 use App\Models\Review;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\Validator;
 
 class StoreReviewRequest extends FormRequest
 {
+    private ?Order $resolvedOrder = null;
+
     public function authorize(): bool
     {
         return $this->user()?->can('create', Review::class) ?? false;
@@ -22,39 +22,47 @@ class StoreReviewRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'reservation_id' => ['required', 'integer', 'exists:reservations,id', Rule::unique('reviews', 'reservation_id')],
+            'order_id' => ['required', 'integer', 'exists:orders,id'],
             'rating' => ['required', 'integer', 'min:1', 'max:5'],
-            'comment' => ['nullable', 'string', 'max:2000'],
+            'comment' => ['nullable', 'string', 'max:1000'],
         ];
     }
 
-    public function withValidator(Validator $validator): void
+    /**
+     * A review unlocks at Completed, one per order, and only for the buyer on
+     * that order. All three conditions are checked here so the controller
+     * cannot be reached with a bad order.
+     */
+    public function after(): array
     {
-        $validator->after(function (Validator $validator): void {
-            if ($validator->errors()->isNotEmpty()) {
-                return;
-            }
+        return [
+            function (Validator $validator): void {
+                if ($validator->errors()->isNotEmpty()) {
+                    return;
+                }
 
-            $reservation = Reservation::query()->find($this->integer('reservation_id'));
+                $order = Order::with('review')->find($this->validated('order_id'));
 
-            if (! $reservation instanceof Reservation) {
-                return;
-            }
+                if ($order === null) {
+                    return;
+                }
 
-            if (! $reservation->isOwnedByBuyer($this->user())) {
-                $validator->errors()->add('reservation_id', 'You can only review your own reservations.');
+                if (! $this->user()->can('createForOrder', [Review::class, $order])) {
+                    $validator->errors()->add(
+                        'order_id',
+                        'You can only review your own completed orders, once each.',
+                    );
 
-                return;
-            }
+                    return;
+                }
 
-            if ($reservation->status !== ReservationStatus::Completed) {
-                $validator->errors()->add('reservation_id', 'You can only review a completed reservation.');
-            }
-        });
+                $this->resolvedOrder = $order;
+            },
+        ];
     }
 
-    public function reservation(): Reservation
+    public function order(): Order
     {
-        return Reservation::query()->findOrFail($this->integer('reservation_id'));
+        return $this->resolvedOrder ??= Order::findOrFail($this->validated('order_id'));
     }
 }

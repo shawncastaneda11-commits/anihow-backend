@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../../models/models.dart';
 import '../../state/auth_controller.dart';
+import '../../support/relative_time.dart';
 import '../../theme/anihow_space.dart';
+import '../../widgets/notification_bell.dart';
 import '../../widgets/profile_avatar_button.dart';
 import '../../widgets/status_pill.dart';
 
@@ -15,7 +17,7 @@ class OrderHistoryScreen extends StatefulWidget {
 }
 
 class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
-  late Future<List<ReservationRecord>> _future;
+  late Future<List<OrderRecord>> _future;
 
   @override
   void initState() {
@@ -26,8 +28,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Order history')),
-      body: FutureBuilder<List<ReservationRecord>>(
+      appBar: AppBar(
+        title: const Text('Order history'),
+        actions: const [NotificationBellButton()],
+      ),
+      body: FutureBuilder<List<OrderRecord>>(
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
@@ -38,7 +43,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
           }
           final items = snapshot.data ?? const [];
           if (items.isEmpty) {
-            return const Center(child: Text('No completed or cancelled orders yet.'));
+            return const Center(child: Text('No orders yet.'));
           }
           return ListView.separated(
             padding: AniHowSpace.screenPadding,
@@ -46,12 +51,29 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
             separatorBuilder: (_, _) => const SizedBox(height: AniHowSpace.cardGap),
             itemBuilder: (context, index) {
               final order = items[index];
+              final listed = order.items
+                  .map((item) => AniHowMoney.peso(item.listedPrice))
+                  .join(' · ');
               return Card(
                 child: ListTile(
-                  leading: AniHowAvatar(name: order.counterpartyName ?? 'Shop'),
-                  title: Text(order.counterpartyName ?? 'Order #${order.id}'),
-                  subtitle: Text(AniHowMoney.peso(order.total)),
-                  trailing: StatusPill.reservation(order.status, label: order.statusLabel),
+                  leading: AniHowAvatar(name: order.stallName),
+                  title: Text(order.stallName),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(order.orderNumber ?? 'Order #${order.id}'),
+                      Text(AniHowMoney.peso(order.total)),
+                      if (listed.isNotEmpty) Text('Listed $listed'),
+                      if (order.location != null && order.location!.isNotEmpty)
+                        Text(order.location!),
+                      if (order.placedAt != null) Text(relativeTime(order.placedAt)),
+                      if (order.isCancelled && order.cancellationLabel != null)
+                        Text(order.cancellationLabel!),
+                      if (order.canBeReviewed) const Text('Ready to review'),
+                    ],
+                  ),
+                  isThreeLine: true,
+                  trailing: StatusPill.order(order.status, label: order.statusLabel),
                 ),
               );
             },

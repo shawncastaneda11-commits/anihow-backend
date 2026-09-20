@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use App\Enums\Role;
+use App\Enums\UserStatus;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -38,6 +39,37 @@ class CreateFarmerSellerTest extends TestCase
             ->assertJsonPath('data.roles.0', Role::FarmerSeller->value);
 
         $this->assertNotNull(User::query()->where('email', 'juan@farm.ph')->value('email_verified_at'));
+        $this->assertDatabaseHas('users', [
+            'email' => 'juan@farm.ph',
+            'status' => UserStatus::Pending->value,
+        ]);
+
+        $this->postJson('/api/auth/login', [
+            'email' => 'juan@farm.ph',
+            'password' => 'password123',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonPath(
+                'errors.email.0',
+                'Your account is awaiting approval. You can sign in after an administrator approves it.',
+            );
+    }
+
+    public function test_approved_farmer_seller_can_log_in(): void
+    {
+        $farmer = User::factory()->create([
+            'email' => 'approved.farmer@farm.ph',
+            'status' => UserStatus::Active,
+        ]);
+        $farmer->assignRole(Role::FarmerSeller);
+
+        $this->postJson('/api/auth/login', [
+            'email' => 'approved.farmer@farm.ph',
+            'password' => 'password',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.roles.0', Role::FarmerSeller->value)
+            ->assertJsonStructure(['token']);
     }
 
     public function test_buyer_cannot_create_a_farmer_seller_account(): void

@@ -1,8 +1,11 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../config/api_config.dart';
 import '../models/models.dart';
+import 'cart_requests.dart';
+import 'tawad_requests.dart';
 
 class ApiException implements Exception {
   ApiException(this.message);
@@ -122,12 +125,12 @@ class ApiClient {
     }
   }
 
-  Future<List<ListingItem>> marketplace({String? search, int? categoryId, String? sort}) async {
+  Future<List<ListingItem>> marketplace({String? search, int? cropTypeId, String? sort}) async {
     return _list(
       '/buyer/marketplace',
       query: {
         if (search != null && search.isNotEmpty) 'search': search,
-        'category_id': ?categoryId,
+        'crop_type_id': ?cropTypeId,
         if (sort != null && sort.isNotEmpty) 'sort': sort,
       },
       parse: ListingItem.fromJson,
@@ -139,39 +142,13 @@ class ApiClient {
     return ListingItem.fromJson(_asMap(response['data'] ?? response));
   }
 
-  Future<ReservationRecord> createReservation({
-    required int listingId,
-    required String quantity,
-    String? notes,
-  }) async {
-    final response = await _post('/buyer/reservations', {
-      'items': [
-        {'listing_id': listingId, 'quantity': quantity},
-      ],
-      if (notes != null && notes.isNotEmpty) 'notes': notes,
-    });
-    return ReservationRecord.fromJson(_asMap(response['data'] ?? response));
-  }
-
-  Future<List<ReservationRecord>> buyerReservations() {
-    return _list('/buyer/reservations', parse: ReservationRecord.fromJson);
-  }
-
-  Future<ReservationRecord> buyerReservation(int id) async {
-    final response = await _get('/buyer/reservations/$id');
-    return ReservationRecord.fromJson(_asMap(response['data'] ?? response));
-  }
-
-  Future<void> cancelBuyerReservation(int id) =>
-      _patch('/buyer/reservations/$id/cancel');
-
   Future<void> submitReview({
-    required int reservationId,
+    required int orderId,
     required int rating,
     String? comment,
   }) async {
     await _post('/buyer/reviews', {
-      'reservation_id': reservationId,
+      'order_id': orderId,
       'rating': rating,
       if (comment != null && comment.isNotEmpty) 'comment': comment,
     });
@@ -232,115 +209,132 @@ class ApiClient {
 
   Future<void> deleteListing(int id) => _delete('/farmer/listings/$id');
 
-  Future<List<ReservationRecord>> farmerReservations() {
-    return _list('/farmer/reservations', parse: ReservationRecord.fromJson);
-  }
-
-  Future<PagedItems<ReservationRecord>> farmerReservationsPaged() {
-    return _listPages('/farmer/reservations', parse: ReservationRecord.fromJson);
-  }
-
-  Future<ReservationRecord> markReservationReady(int id) async {
-    final response = await _patchJson('/farmer/reservations/$id/ready');
-    return ReservationRecord.fromJson(_asMap(response['data'] ?? response));
-  }
-
-  Future<ReservationRecord> completeReservation(int id) async {
-    final response = await _patchJson('/farmer/reservations/$id/complete');
-    return ReservationRecord.fromJson(_asMap(response['data'] ?? response));
-  }
-
-  Future<SaleRecord> recordSale({
+  Future<TawadRule> saveTawad({
     required int listingId,
-    required String quantity,
-    String? notes,
+    required String type,
+    required String discountAmount,
+    String? minQuantity,
   }) async {
-    final response = await _post('/farmer/sales', {
-      'items': [
-        {'listing_id': listingId, 'quantity': quantity},
-      ],
-      if (notes != null && notes.isNotEmpty) 'notes': notes,
-    });
-    return SaleRecord.fromJson(_asMap(response['data'] ?? response));
+    final response = await _post(
+      TawadRequests.storePath(listingId),
+      TawadRequests.save(
+        type: type,
+        discountAmount: discountAmount,
+        minQuantity: minQuantity,
+      ),
+    );
+    return TawadRule.fromJson(_asMap(response['data'] ?? response));
   }
 
-  Future<List<SaleRecord>> farmerSales() {
-    return _list('/farmer/sales', parse: SaleRecord.fromJson);
+  Future<void> endTawad({required int listingId, required int tawadRuleId}) {
+    return _delete(TawadRequests.destroyPath(listingId, tawadRuleId));
   }
 
-  Future<void> deleteSale(int id) => _delete('/farmer/sales/$id');
-
-  Future<PagedItems<SaleRecord>> farmerSalesPaged() {
-    return _listPages('/farmer/sales', parse: SaleRecord.fromJson);
-  }
-
-  Future<List<CropCareCategory>> cropCareCategories() {
-    return _list('/farmer/crop-care/categories', parse: CropCareCategory.fromJson);
-  }
-
-  Future<List<CropCareArticle>> cropCare({String? search, int? categoryId}) {
-    return _list(
-      '/farmer/crop-care',
+  Future<List<CropCareArticle>> cropCare({
+    String? search,
+    String? category,
+    int? cropTypeId,
+    int? farmId,
+  }) async {
+    final pages = await _listPages(
+      '/crop-care',
       query: {
         if (search != null && search.isNotEmpty) 'search': search,
-        'category_id': ?categoryId,
+        if (category != null && category.isNotEmpty) 'category': category,
+        'crop_type_id': ?cropTypeId,
+        'farm_id': ?farmId,
       },
       parse: CropCareArticle.fromJson,
     );
+    return pages.items;
   }
 
   Future<CropCareArticle> cropCareShow(int id) async {
-    final response = await _get('/farmer/crop-care/$id');
+    final response = await _get('/crop-care/$id');
     return CropCareArticle.fromJson(_asMap(response['data'] ?? response));
   }
 
-  Future<List<CropCareArticle>> cropCareMine() {
-    return _list('/farmer/crop-care/mine', parse: CropCareArticle.fromJson);
+  Future<List<CategoryItem>> cropTypes() {
+    return _list('/crop-types', parse: CategoryItem.fromJson);
   }
 
-  Future<CropCareArticle> createCropCare({
-    required String title,
-    required String body,
-    required int categoryId,
-    String? imagePath,
+  Future<List<OrderRecord>> buyerOrders() async {
+    final pages = await _listPages('/buyer/orders', parse: OrderRecord.fromJson);
+    return pages.items;
+  }
+
+  Future<List<CartLine>> cartItems() {
+    return _list(CartRequests.cartPath, parse: CartLine.fromJson);
+  }
+
+  Future<CartLine> addCartItem({required int listingId, required String quantity}) async {
+    final response = await _post(
+      CartRequests.cartPath,
+      CartRequests.addItem(listingId: listingId, quantity: quantity),
+    );
+    return CartLine.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<CartLine> updateCartItem(int id, {required String quantity}) async {
+    final response = await _patchJson(
+      CartRequests.cartItemPath(id),
+      CartRequests.updateItem(quantity: quantity),
+    );
+    return CartLine.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<void> removeCartItem(int id) => _delete(CartRequests.cartItemPath(id));
+
+  Future<List<OrderRecord>> checkout({
+    required String fulfillmentPreference,
+    String? fulfillmentNote,
   }) async {
-    final response = await _sendListing('/farmer/crop-care', {
-      'title': title,
-      'body': body,
-      'category_id': categoryId,
-    }, imagePath: imagePath);
-    return CropCareArticle.fromJson(_asMap(response['data'] ?? response));
+    final response = await _post(
+      CartRequests.checkoutPath,
+      CartRequests.checkout(
+        fulfillmentPreference: fulfillmentPreference,
+        fulfillmentNote: fulfillmentNote,
+      ),
+    );
+    return _parseList(response, OrderRecord.fromJson);
   }
 
-  Future<CropCareArticle> updateCropCare({
-    required int id,
-    required String title,
-    required String body,
-    required int categoryId,
-    String? imagePath,
-  }) async {
-    final response = imagePath == null
-        ? await _put('/farmer/crop-care/$id', {
-            'title': title,
-            'body': body,
-            'category_id': categoryId,
-          })
-        : await _sendListing('/farmer/crop-care/$id', {
-            'title': title,
-            'body': body,
-            'category_id': categoryId,
-          }, imagePath: imagePath);
-    return CropCareArticle.fromJson(_asMap(response['data'] ?? response));
+  Future<List<OrderRecord>> farmerOrders({String? status}) async {
+    final pages = await _listPages(
+      '/farmer/orders',
+      query: {
+        if (status != null && status.isNotEmpty) 'status': status,
+      },
+      parse: OrderRecord.fromJson,
+    );
+    return pages.items;
   }
 
-  Future<void> deleteCropCare(int id) => _delete('/farmer/crop-care/$id');
-
-  Future<List<CategoryItem>> categories() {
-    return _list('/categories', parse: CategoryItem.fromJson);
+  Future<OrderRecord> farmerOrder(int id) async {
+    final response = await _get('/farmer/orders/$id');
+    return OrderRecord.fromJson(_asMap(response['data'] ?? response));
   }
 
-  Future<List<ReservationRecord>> buyerOrders() {
-    return _list('/buyer/orders', parse: ReservationRecord.fromJson);
+  Future<OrderRecord> confirmOrder(int id) => _farmerOrderAction('/farmer/orders/$id/confirm');
+
+  Future<OrderRecord> markOrderReady(int id) => _farmerOrderAction('/farmer/orders/$id/ready');
+
+  Future<OrderRecord> completeOrder(int id, {required String amountReceived}) {
+    return _farmerOrderAction('/farmer/orders/$id/complete', {
+      'amount_received': amountReceived,
+    });
+  }
+
+  Future<OrderRecord> cancelOrder(int id, {required String reason, String? note}) {
+    return _farmerOrderAction('/farmer/orders/$id/cancel', {
+      'reason': reason,
+      if (note != null && note.isNotEmpty) 'note': note,
+    });
+  }
+
+  Future<OrderRecord> _farmerOrderAction(String path, [Map<String, dynamic>? body]) async {
+    final response = await _patchJson(path, body);
+    return OrderRecord.fromJson(_asMap(response['data'] ?? response));
   }
 
   Future<ShopProfile> buyerShop(int sellerId) async {
@@ -569,9 +563,14 @@ class ApiClient {
       return data['message'] as String;
     }
     if (error.type == DioExceptionType.connectionError ||
-        error.type == DioExceptionType.connectionTimeout) {
-      return 'Cannot reach the AniHow API at ${ApiConfig.baseUrl}. '
-          'Use 10.0.2.2 on the Android emulator and keep php artisan serve running.';
+        error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.sendTimeout ||
+        error.response == null) {
+      debugPrint(
+        'AniHow API unreachable (${error.type.name}) at ${ApiConfig.baseUrl}: ${error.message}',
+      );
+      return 'Cannot connect. Check your internet connection and try again.';
     }
     return error.message ?? 'Request failed.';
   }

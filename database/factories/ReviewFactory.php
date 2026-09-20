@@ -2,7 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Models\Reservation;
 use App\Models\Review;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -20,9 +19,10 @@ class ReviewFactory extends Factory
         return [
             'buyer_id' => User::factory(),
             'farmer_seller_id' => User::factory(),
-            'reservation_id' => Reservation::factory(),
+            'order_id' => null,
             'rating' => fake()->numberBetween(1, 5),
             'comment' => fake()->optional()->sentence(),
+            'is_removed' => false,
         ];
     }
 }

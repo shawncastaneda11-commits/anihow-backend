@@ -26,7 +26,7 @@ class CareGuideCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = CategoryColor.of(article.category, listingName: article.title);
+        final accent = CategoryColor.of(article.categoryChip, listingName: article.title);
 
     return Card(
       color: AniHowColors.card,

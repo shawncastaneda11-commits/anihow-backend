@@ -21,7 +21,7 @@ class UserResource extends JsonResource
             'bio' => $this->bio,
             'contact' => $this->contact,
             'location' => $this->location,
-            'is_active' => $this->is_active,
+            'status' => $this->status->value,
             'email_verified_at' => $this->email_verified_at,
             'roles' => $this->whenLoaded('roles', fn () => $this->roles->pluck('name')->values()),
             'created_at' => $this->created_at,

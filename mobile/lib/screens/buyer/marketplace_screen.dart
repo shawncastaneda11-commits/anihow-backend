@@ -5,6 +5,7 @@ import '../../models/models.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/app_header.dart';
+import '../../widgets/cart_icon_button.dart';
 import '../../widgets/category_color.dart';
 import '../../widgets/notification_bell.dart';
 import '../../widgets/produce_card.dart';
@@ -20,16 +21,16 @@ class MarketplaceScreen extends StatefulWidget {
 
 class _MarketplaceScreenState extends State<MarketplaceScreen> {
   final _search = TextEditingController();
-  int? _categoryId;
+  int? _cropTypeId;
   String _sort = 'freshest';
   late Future<List<ListingItem>> _listings;
-  late Future<List<CategoryItem>> _categories;
+  late Future<List<CategoryItem>> _cropTypes;
 
   @override
   void initState() {
     super.initState();
     final api = context.read<AuthController>().api;
-    _categories = api.categories();
+    _cropTypes = api.cropTypes();
     _listings = api.marketplace();
   }
 
@@ -42,7 +43,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   Future<void> _reload() async {
     final future = context.read<AuthController>().api.marketplace(
           search: _search.text.trim(),
-          categoryId: _categoryId,
+          cropTypeId: _cropTypeId,
           sort: _sort,
         );
     setState(() => _listings = future);
@@ -55,7 +56,13 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       children: [
         const AppHeader(
           title: 'Marketplace',
-          trailing: NotificationBellButton(),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CartIconButton(),
+              NotificationBellButton(),
+            ],
+          ),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(
@@ -77,9 +84,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         SizedBox(
           height: 48,
           child: FutureBuilder<List<CategoryItem>>(
-            future: _categories,
+            future: _cropTypes,
             builder: (context, snapshot) {
-              final categories = snapshot.data ?? const <CategoryItem>[];
+              final cropTypes = snapshot.data ?? const <CategoryItem>[];
               return ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: AniHowSpace.screen),
@@ -88,25 +95,25 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                     padding: const EdgeInsets.only(right: 8),
                     child: FilterChip(
                       label: const Text('All'),
-                      selected: _categoryId == null,
+                      selected: _cropTypeId == null,
                       onSelected: (_) {
-                        setState(() => _categoryId = null);
+                        setState(() => _cropTypeId = null);
                         _reload();
                       },
                     ),
                   ),
-                  ...categories.map(
-                    (category) => Padding(
+                  ...cropTypes.map(
+                    (cropType) => Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: FilterChip(
                         avatar: CircleAvatar(
-                          backgroundColor: CategoryColor.of(category),
+                          backgroundColor: CategoryColor.of(cropType),
                           radius: 8,
                         ),
-                        label: Text(category.name),
-                        selected: _categoryId == category.id,
+                        label: Text(cropType.name),
+                        selected: _cropTypeId == cropType.id,
                         onSelected: (_) {
-                          setState(() => _categoryId = category.id);
+                          setState(() => _cropTypeId = cropType.id);
                           _reload();
                         },
                       ),

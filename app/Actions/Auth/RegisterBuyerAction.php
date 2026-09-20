@@ -3,6 +3,7 @@
 namespace App\Actions\Auth;
 
 use App\Enums\Role;
+use App\Enums\UserStatus;
 use App\Models\User;
 
 class RegisterBuyerAction
@@ -20,7 +21,7 @@ class RegisterBuyerAction
             'email' => $data['email'],
             'password' => $data['password'],
             'phone' => $data['phone'] ?? null,
-            'is_active' => true,
+            'status' => UserStatus::Active,
             'email_verified_at' => null,
         ]);
 

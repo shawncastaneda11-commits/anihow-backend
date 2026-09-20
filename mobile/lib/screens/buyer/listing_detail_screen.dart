@@ -4,13 +4,16 @@ import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
+import '../../state/cart_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
+import '../../widgets/cart_icon_button.dart';
 import '../../widgets/category_color.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/produce_card.dart';
 import '../../widgets/status_pill.dart';
+import 'cart_screen.dart';
 import 'shop_profile_screen.dart';
 
 class ListingDetailScreen extends StatefulWidget {
@@ -25,7 +28,7 @@ class ListingDetailScreen extends StatefulWidget {
 class _ListingDetailScreenState extends State<ListingDetailScreen> {
   final _quantity = TextEditingController(text: '1');
   late Future<ListingItem> _future;
-  bool _busy = false;
+  bool _adding = false;
 
   @override
   void initState() {
@@ -39,25 +42,46 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     super.dispose();
   }
 
-  Future<void> _reserve() async {
-    setState(() => _busy = true);
+  Future<void> _addToCart() async {
+    final quantity = _quantity.text.trim();
+    if (quantity.isEmpty || (double.tryParse(quantity) ?? 0) <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a quantity.')),
+      );
+      return;
+    }
+    if (_adding) {
+      return;
+    }
+    setState(() => _adding = true);
     try {
-      await context.read<AuthController>().api.createReservation(
+      await context.read<CartController>().add(
             listingId: widget.listingId,
-            quantity: _quantity.text.trim(),
+            quantity: quantity,
           );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Reservation placed. Pick up when marked ready.')),
-        );
+      if (!mounted) {
+        return;
       }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Added to cart.'),
+          action: SnackBarAction(
+            label: 'View cart',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CartScreen()),
+              );
+            },
+          ),
+        ),
+      );
     } on ApiException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) {
-        setState(() => _busy = false);
+        setState(() => _adding = false);
       }
     }
   }
@@ -80,7 +104,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Listing')),
+      appBar: AppBar(
+        title: const Text('Listing'),
+        actions: const [CartIconButton()],
+      ),
       body: FutureBuilder<ListingItem>(
         future: _future,
         builder: (context, snapshot) {
@@ -196,14 +223,14 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               ],
               const SizedBox(height: AniHowSpace.section),
               AniHowField(
-                label: 'Quantity to reserve',
+                label: 'Quantity',
                 child: TextField(
                   controller: _quantity,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 ),
               ),
               const SizedBox(height: AniHowSpace.fieldGap),
-              PrimaryButton(label: 'Reserve for pickup', busy: _busy, onPressed: _reserve),
+              PrimaryButton(label: 'Add to cart', onPressed: _addToCart, busy: _adding),
               const SizedBox(height: AniHowSpace.cardGap),
               OutlinedButton(onPressed: _favorite, child: const Text('Add to favorites')),
             ],

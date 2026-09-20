@@ -40,17 +40,74 @@ class UserAccount {
 }
 
 class CategoryItem {
-  const CategoryItem({required this.id, required this.name, this.slug});
+  const CategoryItem({
+    required this.id,
+    required this.name,
+    this.slug,
+    this.unit,
+    this.unitLabel,
+    this.floorPrice,
+    this.maxDiscount,
+  });
 
   final int id;
   final String name;
   final String? slug;
+  final String? unit;
+  final String? unitLabel;
+  final String? floorPrice;
+  final String? maxDiscount;
 
   factory CategoryItem.fromJson(Map<String, dynamic> json) {
     return CategoryItem(
       id: json['id'] as int,
       name: json['name'] as String? ?? '',
       slug: json['slug'] as String?,
+      unit: json['unit_of_measure'] as String?,
+      unitLabel: json['unit_label'] as String?,
+      floorPrice: json['floor_price']?.toString(),
+      maxDiscount: json['max_discount']?.toString(),
+    );
+  }
+}
+
+class TawadRule {
+  const TawadRule({
+    required this.id,
+    required this.type,
+    required this.discountAmount,
+    this.typeLabel,
+    this.minQuantity,
+    this.isActive = true,
+  });
+
+  final int id;
+  final String type;
+  final String? typeLabel;
+  final String discountAmount;
+  final String? minQuantity;
+  final bool isActive;
+
+  bool get isFlat => type == 'flat';
+  bool get isMinQuantity => type == 'min_quantity';
+
+  String get summary {
+    final value = double.tryParse(discountAmount) ?? 0;
+    final amount = '₱${value.toStringAsFixed(2)}';
+    if (isMinQuantity && minQuantity != null && minQuantity!.isNotEmpty) {
+      return '$amount off at $minQuantity and above';
+    }
+    return '$amount off this order';
+  }
+
+  factory TawadRule.fromJson(Map<String, dynamic> json) {
+    return TawadRule(
+      id: json['id'] as int,
+      type: json['type'] as String? ?? '',
+      typeLabel: json['type_label'] as String?,
+      discountAmount: '${json['discount_amount'] ?? '0'}',
+      minQuantity: json['min_quantity']?.toString(),
+      isActive: json['is_active'] == true || json['is_active'] == 1,
     );
   }
 }
@@ -58,7 +115,7 @@ class CategoryItem {
 class ListingItem {
   const ListingItem({
     required this.id,
-    required this.name,
+    required this.title,
     required this.pricePerUnit,
     required this.quantityAvailable,
     this.unit,
@@ -72,10 +129,11 @@ class ListingItem {
     this.sellerId,
     this.averageRating,
     this.reviewsCount = 0,
+    this.tawad,
   });
 
   final int id;
-  final String name;
+  final String title;
   final String? unit;
   final String? unitLabel;
   final String pricePerUnit;
@@ -89,6 +147,9 @@ class ListingItem {
   final int? sellerId;
   final String? averageRating;
   final int reviewsCount;
+  final TawadRule? tawad;
+
+  String get name => title;
 
   bool get hasRating => reviewsCount > 0 && averageRating != null && averageRating!.isNotEmpty;
 
@@ -105,7 +166,7 @@ class ListingItem {
   ListingItem copyWith({bool? isActive}) {
     return ListingItem(
       id: id,
-      name: name,
+      title: title,
       pricePerUnit: pricePerUnit,
       quantityAvailable: quantityAvailable,
       unit: unit,
@@ -119,33 +180,35 @@ class ListingItem {
       sellerId: sellerId,
       averageRating: averageRating,
       reviewsCount: reviewsCount,
+      tawad: tawad,
     );
   }
 
   factory ListingItem.fromJson(Map<String, dynamic> json) {
-    final categoryJson = json['category'];
+    final cropTypeJson = json['crop_type'];
+    final cropTypeMap = cropTypeJson is Map ? Map<String, dynamic>.from(cropTypeJson) : null;
     final sellerJson = json['seller'];
     final sellerMap = sellerJson is Map ? Map<String, dynamic>.from(sellerJson) : null;
+    final tawadJson = json['tawad'];
     return ListingItem(
       id: json['id'] as int,
-      name: json['name'] as String? ?? '',
-      unit: json['unit'] as String?,
-      unitLabel: json['unit_label'] as String?,
+      title: json['title'] as String? ?? '',
+      unit: cropTypeMap?['unit_of_measure'] as String?,
+      unitLabel: cropTypeMap?['unit_label'] as String?,
       pricePerUnit: '${json['price_per_unit'] ?? '0'}',
       quantityAvailable: '${json['quantity_available'] ?? '0'}',
       description: json['description'] as String?,
       imageUrl: json['image_url'] as String?,
       isActive: json['is_active'] == true || json['is_active'] == 1,
-      category: categoryJson is Map<String, dynamic>
-          ? CategoryItem.fromJson(categoryJson)
-          : categoryJson is Map
-              ? CategoryItem.fromJson(Map<String, dynamic>.from(categoryJson))
-              : null,
+      category: cropTypeMap == null ? null : CategoryItem.fromJson(cropTypeMap),
       sellerName: sellerMap?['shop_name'] as String? ?? sellerMap?['name'] as String?,
       sellerLocation: sellerMap?['location'] as String?,
       sellerId: _asCount(sellerMap?['id']),
       averageRating: json['average_rating']?.toString() ?? sellerMap?['average_rating']?.toString(),
       reviewsCount: _asCount(json['reviews_count']) ?? _asCount(sellerMap?['reviews_count']) ?? 0,
+      tawad: tawadJson is Map && tawadJson['id'] != null
+          ? TawadRule.fromJson(Map<String, dynamic>.from(tawadJson))
+          : null,
     );
   }
 
@@ -160,20 +223,24 @@ class ListingItem {
   }
 }
 
-class ReservationItemRow {
-  const ReservationItemRow({
+class OrderItemRow {
+  const OrderItemRow({
     required this.listingName,
     required this.quantity,
-    required this.unitPrice,
+    required this.listedPrice,
     required this.lineSubtotal,
     this.unit,
+    this.tawadAmount,
+    this.lineTotal,
   });
 
   final String listingName;
   final String quantity;
-  final String unitPrice;
+  final String listedPrice;
   final String lineSubtotal;
   final String? unit;
+  final String? tawadAmount;
+  final String? lineTotal;
 
   String get quantityLabel {
     final unit = this.unit;
@@ -183,79 +250,119 @@ class ReservationItemRow {
     return '$quantity $unit';
   }
 
-  factory ReservationItemRow.fromJson(Map<String, dynamic> json) {
-    return ReservationItemRow(
+  factory OrderItemRow.fromJson(Map<String, dynamic> json) {
+    return OrderItemRow(
       listingName: json['listing_name'] as String? ?? 'Item',
       quantity: '${json['quantity'] ?? ''}',
-      unitPrice: '${json['unit_price'] ?? ''}',
+      listedPrice: '${json['listed_price'] ?? ''}',
       lineSubtotal: '${json['line_subtotal'] ?? ''}',
       unit: json['unit'] as String?,
+      tawadAmount: json['tawad_amount']?.toString(),
+      lineTotal: json['line_total']?.toString(),
     );
   }
 }
 
-class ReservationRecord {
-  const ReservationRecord({
+class OrderRecord {
+  const OrderRecord({
     required this.id,
     required this.status,
     required this.total,
     required this.items,
+    this.orderNumber,
     this.statusLabel,
-    this.notes,
+    this.fulfillmentNote,
     this.counterpartyName,
     this.shopName,
     this.location,
     this.contact,
     this.sellerId,
-    this.createdAt,
-    this.canReview = false,
+    this.placedAt,
+    this.canBeReviewed = false,
     this.reviewRating,
     this.cancellationReason,
+    this.cancellationLabel,
+    this.allowedNext = const [],
+    this.fulfillmentPreference,
+    this.fulfillmentLabel,
+    this.amountReceived,
+    this.subtotal,
+    this.tawadTotal,
+    this.paymentMethod,
   });
 
   final int id;
+  final String? orderNumber;
   final String status;
   final String? statusLabel;
   final String total;
-  final String? notes;
+  final String? subtotal;
+  final String? tawadTotal;
+  final String? paymentMethod;
+  final String? fulfillmentNote;
+  final String? fulfillmentPreference;
+  final String? fulfillmentLabel;
   final String? counterpartyName;
   final String? shopName;
   final String? location;
   final String? contact;
   final int? sellerId;
-  final String? createdAt;
-  final bool canReview;
+  final String? placedAt;
+  final bool canBeReviewed;
   final int? reviewRating;
   final String? cancellationReason;
-  final List<ReservationItemRow> items;
+  final String? cancellationLabel;
+  final String? amountReceived;
+  final List<String> allowedNext;
+  final List<OrderItemRow> items;
 
-  factory ReservationRecord.fromJson(Map<String, dynamic> json) {
+  factory OrderRecord.fromJson(Map<String, dynamic> json) {
     final buyer = json['buyer'];
     final seller = json['seller'];
+    final farm = json['farm'];
     final review = json['review'];
     final sellerMap = seller is Map ? Map<String, dynamic>.from(seller) : null;
     final buyerMap = buyer is Map ? Map<String, dynamic>.from(buyer) : null;
+    final farmMap = farm is Map ? Map<String, dynamic>.from(farm) : null;
     final reviewMap = review is Map ? Map<String, dynamic>.from(review) : null;
-    return ReservationRecord(
+    final locationParts = [
+      farmMap?['barangay'] as String?,
+      farmMap?['municipality'] as String?,
+    ].whereType<String>().where((part) => part.isNotEmpty).toList();
+    return OrderRecord(
       id: json['id'] as int,
+      orderNumber: json['order_number'] as String?,
       status: json['status'] as String? ?? '',
       statusLabel: json['status_label'] as String?,
       total: '${json['total'] ?? '0'}',
-      notes: json['notes'] as String?,
+      subtotal: json['subtotal']?.toString(),
+      tawadTotal: json['tawad_total']?.toString(),
+      paymentMethod: json['payment_method'] as String?,
+      fulfillmentNote: json['fulfillment_note'] as String?,
+      fulfillmentPreference: json['fulfillment_preference'] as String?,
+      fulfillmentLabel: json['fulfillment_label'] as String?,
       counterpartyName: buyerMap?['name'] as String? ??
           sellerMap?['shop_name'] as String? ??
           sellerMap?['name'] as String?,
       shopName: sellerMap?['shop_name'] as String? ?? sellerMap?['name'] as String?,
-      location: sellerMap?['location'] as String?,
-      contact: sellerMap?['contact'] as String? ?? sellerMap?['phone'] as String?,
+      location: locationParts.isEmpty ? null : locationParts.join(', '),
+      contact: sellerMap?['contact'] as String? ??
+          sellerMap?['phone'] as String? ??
+          buyerMap?['contact'] as String? ??
+          buyerMap?['phone'] as String?,
       sellerId: ListingItem._asCount(sellerMap?['id']),
-      createdAt: json['created_at'] as String?,
-      canReview: json['can_review'] == true,
+      placedAt: json['placed_at'] as String?,
+      canBeReviewed: json['can_be_reviewed'] == true,
       reviewRating: reviewMap == null ? null : ListingItem._asCount(reviewMap['rating']),
       cancellationReason: json['cancellation_reason'] as String?,
+      cancellationLabel: json['cancellation_label'] as String?,
+      amountReceived: json['amount_received']?.toString(),
+      allowedNext: ((json['allowed_next'] as List?) ?? const [])
+          .map((item) => item.toString())
+          .toList(),
       items: ((json['items'] as List?) ?? const [])
           .whereType<Map>()
-          .map((item) => ReservationItemRow.fromJson(Map<String, dynamic>.from(item)))
+          .map((item) => OrderItemRow.fromJson(Map<String, dynamic>.from(item)))
           .toList(),
     );
   }
@@ -264,37 +371,183 @@ class ReservationRecord {
 
   String get itemSummary {
     if (items.isEmpty) {
-      return 'Reservation #$id';
+      return orderNumber ?? 'Order #$id';
     }
     return items.map((item) => item.listingName).join(', ');
   }
 
-  bool get isPending => status == 'pending';
-  bool get isReady => status == 'ready_for_pickup' || status == 'ready';
+  bool get isPlaced => status == 'placed';
+  bool get isConfirmed => status == 'confirmed';
+  bool get isReady => status == 'ready';
   bool get isCompleted => status == 'completed';
   bool get isCancelled => status == 'cancelled';
 
-  ReservationRecord copyWith({
+  String get buyerName => counterpartyName ?? 'Buyer';
+
+  String get listedTotal => subtotal ?? total;
+
+  String get tawadDisplay => tawadTotal ?? '0';
+
+  String get paymentLabel =>
+      paymentMethod == null || paymentMethod == 'cash_on_handover'
+          ? 'Cash on handover'
+          : paymentMethod!;
+
+  bool canAdvanceTo(String next) {
+    if (allowedNext.isNotEmpty) {
+      return allowedNext.contains(next);
+    }
+    return switch (next) {
+      'confirmed' => isPlaced,
+      'ready' => isConfirmed,
+      'completed' => isReady,
+      'cancelled' => isPlaced || isConfirmed || isReady,
+      _ => false,
+    };
+  }
+
+  OrderRecord copyWith({
     String? status,
     String? statusLabel,
+    List<String>? allowedNext,
+    bool? canBeReviewed,
+    String? cancellationReason,
+    String? cancellationLabel,
+    String? amountReceived,
   }) {
-    return ReservationRecord(
+    return OrderRecord(
       id: id,
+      orderNumber: orderNumber,
       status: status ?? this.status,
       statusLabel: statusLabel ?? this.statusLabel,
       total: total,
+      subtotal: subtotal,
+      tawadTotal: tawadTotal,
+      paymentMethod: paymentMethod,
       items: items,
-      notes: notes,
+      fulfillmentNote: fulfillmentNote,
+      fulfillmentPreference: fulfillmentPreference,
+      fulfillmentLabel: fulfillmentLabel,
       counterpartyName: counterpartyName,
       shopName: shopName,
       location: location,
       contact: contact,
       sellerId: sellerId,
-      createdAt: createdAt,
-      canReview: canReview,
+      placedAt: placedAt,
+      canBeReviewed: canBeReviewed ?? this.canBeReviewed,
       reviewRating: reviewRating,
-      cancellationReason: cancellationReason,
+      cancellationReason: cancellationReason ?? this.cancellationReason,
+      cancellationLabel: cancellationLabel ?? this.cancellationLabel,
+      amountReceived: amountReceived ?? this.amountReceived,
+      allowedNext: allowedNext ?? this.allowedNext,
     );
+  }
+}
+
+class CartLine {
+  const CartLine({
+    required this.id,
+    required this.quantity,
+    required this.listedPrice,
+    required this.lineSubtotal,
+    required this.tawadAmount,
+    required this.lineTotal,
+    this.listing,
+  });
+
+  final int id;
+  final String quantity;
+  final String listedPrice;
+  final String lineSubtotal;
+  final String tawadAmount;
+  final String lineTotal;
+  final ListingItem? listing;
+
+  int get sellerId => listing?.sellerId ?? 0;
+
+  String get sellerName => listing?.sellerName ?? 'Seller';
+
+  String get listingName => listing?.name ?? 'Item';
+
+  String get unitLabel => listing?.unitLabel ?? listing?.unit ?? '';
+
+  factory CartLine.fromJson(Map<String, dynamic> json) {
+    final listingJson = json['listing'];
+    return CartLine(
+      id: json['id'] as int,
+      quantity: '${json['quantity'] ?? ''}',
+      listedPrice: '${json['listed_price'] ?? '0'}',
+      lineSubtotal: '${json['line_subtotal'] ?? '0'}',
+      tawadAmount: '${json['tawad_amount'] ?? '0'}',
+      lineTotal: '${json['line_total'] ?? '0'}',
+      listing: listingJson is Map
+          ? ListingItem.fromJson(Map<String, dynamic>.from(listingJson))
+          : null,
+    );
+  }
+}
+
+class SellerCartGroup {
+  const SellerCartGroup({
+    required this.sellerId,
+    required this.sellerName,
+    required this.items,
+  });
+
+  final int sellerId;
+  final String sellerName;
+  final List<CartLine> items;
+
+  double get listedSubtotal => _sum((item) => item.lineSubtotal);
+
+  double get tawadTotal => _sum((item) => item.tawadAmount);
+
+  double get total => _sum((item) => item.lineTotal);
+
+  double _sum(String Function(CartLine) read) {
+    return items.fold<double>(0, (sum, item) => sum + (double.tryParse(read(item)) ?? 0));
+  }
+}
+
+class CartSnapshot {
+  const CartSnapshot({this.items = const []});
+
+  final List<CartLine> items;
+
+  bool get isEmpty => items.isEmpty;
+
+  List<SellerCartGroup> get groupsBySeller {
+    final order = <int>[];
+    final buckets = <int, List<CartLine>>{};
+    final names = <int, String>{};
+    for (final item in items) {
+      final id = item.sellerId;
+      if (!buckets.containsKey(id)) {
+        order.add(id);
+        buckets[id] = [];
+        names[id] = item.sellerName;
+      }
+      buckets[id]!.add(item);
+    }
+    return [
+      for (final id in order)
+        SellerCartGroup(
+          sellerId: id,
+          sellerName: names[id]!,
+          items: buckets[id]!,
+        ),
+    ];
+  }
+
+  int get upcomingOrderCount => groupsBySeller.length;
+
+  String get splitMessage {
+    final count = upcomingOrderCount;
+    if (count <= 1) {
+      final name = groupsBySeller.isEmpty ? 'this seller' : groupsBySeller.first.sellerName;
+      return 'This will be one order with $name.';
+    }
+    return 'This cart will become $count orders, one per seller.';
   }
 }
 
@@ -326,165 +579,83 @@ class CropCareArticle {
     required this.id,
     required this.title,
     this.body = '',
-    this.excerpt,
-    this.category,
-    this.isOfficial = true,
-    this.canEdit = false,
-    this.authorId,
+    this.summary = '',
+    this.slug,
+    this.category = '',
+    this.categoryLabel = '',
     this.authorName,
-    this.authorShopName,
     this.imageUrl,
+    this.publishedAt,
+    this.farmId,
+    this.farmName,
+    this.cropTypes = const [],
   });
 
   final int id;
   final String title;
   final String body;
-  final String? excerpt;
-  final CategoryItem? category;
-  final bool isOfficial;
-  final bool canEdit;
-  final int? authorId;
+  final String summary;
+  final String? slug;
+  final String category;
+  final String categoryLabel;
   final String? authorName;
-  final String? authorShopName;
   final String? imageUrl;
+  final String? publishedAt;
+  final int? farmId;
+  final String? farmName;
+  final List<CategoryItem> cropTypes;
+
+  CategoryItem get categoryChip => CategoryItem(
+        id: 0,
+        name: categoryLabel.isNotEmpty ? categoryLabel : category,
+        slug: category,
+      );
 
   String get authorLabel {
-    if (isOfficial) {
-      return 'Official';
+    final author = authorName?.trim();
+    if (author != null && author.isNotEmpty) {
+      return author;
     }
-    final shop = authorShopName?.trim();
-    if (shop != null && shop.isNotEmpty) {
-      return shop;
+    final farm = farmName?.trim();
+    if (farm != null && farm.isNotEmpty) {
+      return farm;
     }
-    final name = authorName?.trim();
-    if (name != null && name.isNotEmpty) {
-      return name;
-    }
-    return 'Farmer-seller';
-  }
-
-  String get summary {
-    final excerpt = this.excerpt?.trim();
-    if (excerpt != null && excerpt.isNotEmpty) {
-      return excerpt;
-    }
-    final firstLine = body
-        .split('\n')
-        .map((line) => line.trim())
-        .firstWhere((line) => line.isNotEmpty, orElse: () => '');
-    return firstLine;
+    return 'Farm';
   }
 
   factory CropCareArticle.fromJson(Map<String, dynamic> json) {
-    final categoryJson = json['category'];
-    final authorJson = json['author'];
-    final authorMap = authorJson is Map ? Map<String, dynamic>.from(authorJson) : null;
+    final farmJson = json['farm'];
+    final farmMap = farmJson is Map ? Map<String, dynamic>.from(farmJson) : null;
     return CropCareArticle(
       id: json['id'] as int,
       title: json['title'] as String? ?? '',
       body: json['body'] as String? ?? '',
-      excerpt: json['excerpt'] as String?,
-      category: categoryJson is Map
-          ? CategoryItem.fromJson(Map<String, dynamic>.from(categoryJson))
-          : null,
-      isOfficial: json['is_official'] != false,
-      canEdit: json['can_edit'] == true,
-      authorId: ListingItem._asCount(authorMap?['id']),
-      authorName: authorMap?['name'] as String?,
-      authorShopName: authorMap?['shop_name'] as String?,
+      summary: json['summary'] as String? ?? '',
+      slug: json['slug'] as String?,
+      category: json['category'] as String? ?? '',
+      categoryLabel: json['category_label'] as String? ?? '',
+      authorName: json['author_name'] as String?,
       imageUrl: json['image_url'] as String?,
+      publishedAt: json['published_at'] as String?,
+      farmId: ListingItem._asCount(farmMap?['id']),
+      farmName: farmMap?['name'] as String?,
+      cropTypes: ((json['crop_types'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((item) => CategoryItem.fromJson(Map<String, dynamic>.from(item)))
+          .toList(),
     );
   }
 }
 
 class CropCareCategory {
-  const CropCareCategory({
-    required this.id,
-    required this.name,
-    required this.tipsCount,
-    this.slug,
-  });
+  const CropCareCategory({required this.value, required this.label});
 
-  final int id;
-  final String name;
-  final String? slug;
-  final int tipsCount;
+  final String value;
+  final String label;
 
-  CategoryItem get asCategory => CategoryItem(id: id, name: name, slug: slug);
-
-  factory CropCareCategory.fromJson(Map<String, dynamic> json) {
-    return CropCareCategory(
-      id: json['id'] as int? ?? 0,
-      name: json['name'] as String? ?? '',
-      slug: json['slug'] as String?,
-      tipsCount: ListingItem._asCount(json['tips_count']) ?? 0,
-    );
-  }
-}
-
-class SaleItemRow {
-  const SaleItemRow({
-    required this.listingName,
-    required this.quantity,
-    required this.unitPrice,
-    required this.lineSubtotal,
-    this.unit,
-  });
-
-  final String listingName;
-  final String quantity;
-  final String unitPrice;
-  final String lineSubtotal;
-  final String? unit;
-
-  factory SaleItemRow.fromJson(Map<String, dynamic> json) {
-    return SaleItemRow(
-      listingName: json['listing_name'] as String? ?? 'Item',
-      quantity: '${json['quantity'] ?? ''}',
-      unitPrice: '${json['unit_price'] ?? ''}',
-      lineSubtotal: '${json['line_subtotal'] ?? ''}',
-      unit: json['unit'] as String?,
-    );
-  }
-}
-
-class SaleRecord {
-  const SaleRecord({
-    required this.id,
-    required this.total,
-    this.notes,
-    this.createdAt,
-    this.items = const [],
-  });
-
-  final int id;
-  final String total;
-  final String? notes;
-  final String? createdAt;
-  final List<SaleItemRow> items;
-
-  bool get isToday {
-    final parsed = DateTime.tryParse(createdAt ?? '');
-    if (parsed == null) {
-      return false;
-    }
-    final local = parsed.toLocal();
-    final now = DateTime.now();
-    return local.year == now.year && local.month == now.month && local.day == now.day;
-  }
-
-  factory SaleRecord.fromJson(Map<String, dynamic> json) {
-    return SaleRecord(
-      id: json['id'] as int,
-      total: '${json['total'] ?? '0'}',
-      notes: json['notes'] as String?,
-      createdAt: json['created_at'] as String?,
-      items: ((json['items'] as List?) ?? const [])
-          .whereType<Map>()
-          .map((item) => SaleItemRow.fromJson(Map<String, dynamic>.from(item)))
-          .toList(),
-    );
-  }
+  static const cropCare = CropCareCategory(value: 'crop_care', label: 'Crop care');
+  static const pestManagement = CropCareCategory(value: 'pest_management', label: 'Pest management');
+  static const filters = [cropCare, pestManagement];
 }
 
 class ShopProfile {
@@ -546,12 +717,10 @@ class ShopReview {
   final String? createdAt;
 
   factory ShopReview.fromJson(Map<String, dynamic> json) {
-    final buyer = json['buyer'];
-    final buyerMap = buyer is Map ? Map<String, dynamic>.from(buyer) : null;
     return ShopReview(
       id: json['id'] as int,
       rating: ListingItem._asCount(json['rating']) ?? 0,
-      reviewerName: buyerMap?['name'] as String? ?? 'Buyer',
+      reviewerName: json['buyer_name'] as String? ?? 'Buyer',
       comment: json['comment'] as String?,
       createdAt: json['created_at'] as String?,
     );
@@ -619,12 +788,15 @@ class AppNotification {
         related.endsWith('Listing');
   }
 
-  bool get pointsToReservation {
+  bool get pointsToOrder {
     final related = relatedType ?? '';
-    return type == 'reservation_created' ||
-        type == 'reservation_status_changed' ||
-        related == 'reservation' ||
-        related.endsWith('Reservation');
+    return type == 'order_placed' ||
+        type == 'order_confirmed' ||
+        type == 'order_ready' ||
+        type == 'order_completed' ||
+        type == 'order_cancelled' ||
+        related == 'order' ||
+        related.endsWith('Order');
   }
 
   factory AppNotification.fromJson(Map<String, dynamic> json) {

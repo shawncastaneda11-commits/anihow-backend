@@ -3,7 +3,7 @@
 namespace App\Http\Resources\Api;
 
 use App\Models\Listing;
-use App\Models\Reservation;
+use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -29,7 +29,7 @@ class InAppNotificationResource extends JsonResource
     private function relatedKind(): ?string
     {
         return match ($this->related_type) {
-            Reservation::class => 'reservation',
+            Order::class => 'order',
             Listing::class => 'listing',
             default => $this->related_type,
         };

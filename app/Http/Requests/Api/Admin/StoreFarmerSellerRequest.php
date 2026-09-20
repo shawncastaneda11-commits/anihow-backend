@@ -26,7 +26,6 @@ class StoreFarmerSellerRequest extends FormRequest
             'shop_name' => ['nullable', 'string', 'max:255'],
             'bio' => ['nullable', 'string', 'max:2000'],
             'contact' => ['nullable', 'string', 'max:30'],
-            'is_active' => ['sometimes', 'boolean'],
         ];
     }
 }

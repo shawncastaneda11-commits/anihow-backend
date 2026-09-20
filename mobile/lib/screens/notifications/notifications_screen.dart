@@ -9,11 +9,10 @@ import '../../theme/anihow_theme.dart';
 import '../../support/relative_time.dart';
 import '../buyer/listing_detail_screen.dart';
 import '../buyer/marketplace_screen.dart';
-import '../buyer/reservation_detail_screen.dart';
-import '../buyer/reservations_screen.dart';
+import '../buyer/order_history_screen.dart';
+import '../farmer/farmer_orders_screen.dart';
 import '../farmer/listing_form_screen.dart';
 import '../farmer/listings_screen.dart';
-import '../farmer/reservations_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -283,17 +282,33 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
     return;
   }
 
-  if (!isFarmer && item.pointsToReservation && item.relatedId != null) {
+  if (!isFarmer && item.pointsToOrder) {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ReservationDetailScreen(reservationId: item.relatedId!)),
+      MaterialPageRoute(builder: (_) => const OrderHistoryScreen()),
     );
     return;
   }
 
-  await _pushList(
-    context,
-    title: isFarmer ? 'Incoming orders' : 'Reservations',
-    body: isFarmer ? const FarmerReservationsScreen() : const BuyerReservationsScreen(),
+  if (isFarmer && item.pointsToOrder) {
+    if (item.relatedId != null) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => FarmerOrderDetailScreen(orderId: item.relatedId),
+        ),
+      );
+      return;
+    }
+    await _pushList(context, title: 'Incoming orders', body: const FarmerOrdersScreen());
+    return;
+  }
+
+  if (isFarmer) {
+    await _pushList(context, title: 'Incoming orders', body: const FarmerOrdersScreen());
+    return;
+  }
+
+  await Navigator.of(context).push(
+    MaterialPageRoute(builder: (_) => const OrderHistoryScreen()),
   );
 }
 

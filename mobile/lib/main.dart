@@ -7,6 +7,7 @@ import 'screens/farmer/farmer_shell.dart';
 import 'screens/login_screen.dart';
 import 'navigation/route_observer.dart';
 import 'state/auth_controller.dart';
+import 'state/cart_controller.dart';
 import 'state/preferences_controller.dart';
 import 'state/theme_controller.dart';
 import 'theme/anihow_theme.dart';
@@ -41,8 +42,8 @@ class _AniHowAppState extends State<AniHowApp> {
 
   @override
   void dispose() {
-    _auth.dispose();
     super.dispose();
+    _auth.dispose();
   }
 
   @override
@@ -50,6 +51,7 @@ class _AniHowAppState extends State<AniHowApp> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: _auth),
+        ChangeNotifierProvider(create: (_) => CartController(_auth)),
         ChangeNotifierProvider.value(value: widget.theme),
         ChangeNotifierProvider.value(value: widget.preferences),
       ],
@@ -60,6 +62,7 @@ class _AniHowAppState extends State<AniHowApp> {
             theme: AniHowTheme.light(),
             darkTheme: AniHowTheme.dark(),
             themeMode: theme.mode,
+            scaffoldMessengerKey: anihowScaffoldMessengerKey,
             navigatorObservers: [anihowRouteObserver],
             home: const _RoleGate(),
           );

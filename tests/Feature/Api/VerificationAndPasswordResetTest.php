@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use App\Enums\Role;
+use App\Models\Farm;
 use App\Models\Listing;
 use App\Models\User;
 use App\Notifications\ResetPasswordNotification;
@@ -53,14 +54,15 @@ class VerificationAndPasswordResetTest extends TestCase
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
     }
 
-    public function test_unverified_buyer_can_browse_but_cannot_create_a_reservation(): void
+    public function test_unverified_buyer_can_browse_but_cannot_add_to_cart(): void
     {
-        $farmer = User::factory()->create();
-        $farmer->assignRole(Role::FarmerSeller);
+        $farm = Farm::factory()->create();
+        $farmer = User::factory()->create(['farm_id' => $farm->id]);
+        $farmer->syncRoles(Role::FarmerSeller);
         $listing = Listing::factory()->forFarmer($farmer)->create();
 
         $buyer = User::factory()->unverified()->create();
-        $buyer->assignRole(Role::Buyer);
+        $buyer->syncRoles(Role::Buyer);
         $token = $buyer->createToken('mobile')->plainTextToken;
 
         $this->withToken($token)
@@ -68,8 +70,9 @@ class VerificationAndPasswordResetTest extends TestCase
             ->assertOk();
 
         $this->withToken($token)
-            ->postJson('/api/buyer/reservations', [
-                'items' => [['listing_id' => $listing->id, 'quantity' => 1]],
+            ->postJson('/api/buyer/cart', [
+                'listing_id' => $listing->id,
+                'quantity' => 1,
             ])
             ->assertForbidden()
             ->assertJsonPath('message', 'Your email address is not verified.');

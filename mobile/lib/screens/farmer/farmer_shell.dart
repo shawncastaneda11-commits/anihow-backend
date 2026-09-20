@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../navigation/route_observer.dart';
 import '../../state/auth_controller.dart';
 import '../../widgets/notification_bell.dart';
 import '../../widgets/profile_avatar_button.dart';
 import '../profile/profile_screen.dart';
 import 'crop_care_screen.dart';
+import 'farmer_orders_screen.dart';
 import 'listings_screen.dart';
-import 'pos_screen.dart';
-import 'reservations_screen.dart';
 
 class FarmerShell extends StatefulWidget {
   const FarmerShell({super.key});
@@ -25,11 +25,10 @@ class _FarmerShellState extends State<FarmerShell> {
     final user = context.watch<AuthController>().user;
     final pages = const [
       FarmerListingsScreen(),
-      FarmerReservationsScreen(),
-      PosScreen(),
+      FarmerOrdersScreen(),
       CropCareScreen(),
     ];
-    final titles = ['My listings', 'Incoming orders', 'Walk-in POS', 'Crop care'];
+    final titles = ['My listings', 'Incoming orders', 'Crop care'];
 
     return Scaffold(
       appBar: AppBar(
@@ -56,11 +55,13 @@ class _FarmerShellState extends State<FarmerShell> {
         ),
         child: NavigationBar(
           selectedIndex: _index,
-          onDestinationSelected: (value) => setState(() => _index = value),
+          onDestinationSelected: (value) {
+            dismissAniHowSnackBars();
+            setState(() => _index = value);
+          },
           destinations: const [
             NavigationDestination(icon: Icon(Icons.inventory_2_outlined), label: 'Listings'),
             NavigationDestination(icon: Icon(Icons.inbox_outlined), label: 'Orders'),
-            NavigationDestination(icon: Icon(Icons.point_of_sale_outlined), label: 'POS'),
             NavigationDestination(icon: Icon(Icons.menu_book_outlined), label: 'Crop care'),
           ],
         ),

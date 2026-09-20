@@ -19,6 +19,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * floor_price and max_discount are writable by the Super Admin only. Guard
  * them in the policy, not just in the form.
+ *
+ * A farm may tighten these two values for itself, never loosen them. The
+ * tightened pair is resolved by PriceGuardResolver and is what listing,
+ * tawad, checkout, and walk-in validation compare against. The values held
+ * here are the system values and the outer bound on every farm's.
  */
 #[Fillable([
     'name',
@@ -57,6 +62,15 @@ class CropType extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    /**
+     * Farms that have tightened this entry's floor or discount ceiling for
+     * themselves. Absence means the farm sits on the system values.
+     */
+    public function farmOverrides(): HasMany
+    {
+        return $this->hasMany(FarmCropTypeOverride::class);
+    }
+
     public function articles(): BelongsToMany
     {
         return $this->belongsToMany(CropCareArticle::class, 'article_crop_type');
@@ -68,18 +82,29 @@ class CropType extends Model
     }
 
     /**
-     * Bilingual scope is crop labels only. Do not widen this to other content.
+     * Bilingual scope is crop labels only. Do not widen this.
      */
     public function label(string $locale = 'en'): string
     {
         return $locale === 'fil' ? $this->label_fil : $this->label_en;
     }
 
+    /**
+     * System-level check, farm-blind. Correct for Super Admin system-wide
+     * views and for validating a farm override against its outer bound.
+     *
+     * Not correct for a listing, a tawad rule, or a checkout line: those
+     * resolve against the farm's effective floor through PriceGuardResolver,
+     * which is at or above this one. See Pass 2C.
+     */
     public function allowsPrice(float $price): bool
     {
         return $price >= (float) $this->floor_price;
     }
 
+    /**
+     * System-level check, farm-blind. Same caveat as allowsPrice().
+     */
     public function allowsDiscount(float $amount): bool
     {
         return $amount > 0 && $amount <= (float) $this->max_discount;

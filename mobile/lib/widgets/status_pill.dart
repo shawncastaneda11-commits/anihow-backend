@@ -16,11 +16,12 @@ class StatusPill extends StatelessWidget {
   final Color color;
   final Color? background;
 
-  factory StatusPill.reservation(String status, {String? label}) {
+  factory StatusPill.order(String status, {String? label}) {
     final normalized = status.toLowerCase();
     final mapped = switch (normalized) {
-      'pending' => (AniHowColors.pending, label ?? 'Pending'),
-      'ready_for_pickup' || 'ready' => (AniHowColors.ready, label ?? 'Ready'),
+      'placed' => (AniHowColors.pending, label ?? 'Placed'),
+      'confirmed' => (AniHowColors.sage, label ?? 'Confirmed'),
+      'ready' => (AniHowColors.ready, label ?? 'Ready'),
       'completed' => (AniHowColors.completed, label ?? 'Completed'),
       'cancelled' => (AniHowColors.cancelled, label ?? 'Cancelled'),
       _ => (AniHowColors.cancelled, label ?? status),

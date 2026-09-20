@@ -98,8 +98,6 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
     final api = context.read<AuthController>().api;
     final shopFuture = api.farmerShop();
     final listingsFuture = api.farmerListingsPaged();
-    final reservationsFuture = api.farmerReservationsPaged();
-    final salesFuture = api.farmerSalesPaged();
 
     final shop = await shopFuture;
 
@@ -116,22 +114,10 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
       listingsError = error.message;
     }
 
-    int? salesCount;
-    try {
-      final reservations = await reservationsFuture;
-      final sales = await salesFuture;
-      if (reservations.complete && sales.complete) {
-        salesCount = reservations.items.where((item) => item.isCompleted).length + sales.items.length;
-      }
-    } on ApiException {
-      salesCount = null;
-    }
-
     return _FarmerShopView(
       shop: shop,
       activeListings: activeListings,
       listingsCount: listingsCount,
-      salesCount: salesCount,
       listingsError: listingsError,
     );
   }
@@ -207,11 +193,10 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
               padding: AniHowSpace.screenPadding,
               children: [
                 ShopIdentityHeader(shop: shop),
-                if (view.listingsCount != null || view.salesCount != null || shop.hasRating) ...[
+                if (view.listingsCount != null || shop.hasRating) ...[
                   const SizedBox(height: AniHowSpace.section),
                   ShopStatRow(
                     listings: view.listingsCount,
-                    sales: view.salesCount,
                     rating: shop.hasRating ? shop.averageRating : null,
                   ),
                 ],
@@ -258,14 +243,12 @@ class _FarmerShopView {
     required this.shop,
     required this.activeListings,
     this.listingsCount,
-    this.salesCount,
     this.listingsError,
   });
 
   final ShopProfile shop;
   final List<ListingItem> activeListings;
   final int? listingsCount;
-  final int? salesCount;
   final String? listingsError;
 }
 

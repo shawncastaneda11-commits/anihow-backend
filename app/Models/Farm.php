@@ -76,6 +76,33 @@ class Farm extends Model
     }
 
     /**
+     * Tighten-only price guards, one row per crop type this farm has moved off
+     * the system value. A missing row, or a null column on a present row, means
+     * the system value applies.
+     */
+    public function cropTypeOverrides(): HasMany
+    {
+        return $this->hasMany(FarmCropTypeOverride::class);
+    }
+
+    /**
+     * Reads from the loaded relation when it is present, so the resolver issues
+     * no query inside a checkout loop or a Filament table row. Eager load the
+     * whole relation, not one constrained row: a constrained eager load
+     * resolves a single crop type per farm and misses on the next cart line.
+     */
+    public function overrideFor(int $cropTypeId): ?FarmCropTypeOverride
+    {
+        if ($this->relationLoaded('cropTypeOverrides')) {
+            return $this->getRelation('cropTypeOverrides')->firstWhere('crop_type_id', $cropTypeId);
+        }
+
+        return $this->cropTypeOverrides()
+            ->where('crop_type_id', $cropTypeId)
+            ->first();
+    }
+
+    /**
      * @param  Builder<Farm>  $query
      * @return Builder<Farm>
      */

@@ -2,21 +2,16 @@
 
 namespace Tests\Feature\Api;
 
-use App\Enums\ListingUnit;
-use App\Enums\Role;
-use App\Models\Category;
-use App\Models\Listing;
-use App\Models\Reservation;
-use App\Models\ReservationItem;
-use App\Models\User;
+use App\Enums\TawadType;
+use App\Models\TawadRule;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\CreatesMarketplaceActors;
 use Tests\TestCase;
 
 class FarmerListingApiTest extends TestCase
 {
+    use CreatesMarketplaceActors;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -24,121 +19,170 @@ class FarmerListingApiTest extends TestCase
         parent::setUp();
 
         $this->seed(RolePermissionSeeder::class);
-        Storage::fake(config('anihow.listing_disk'));
     }
 
-    public function test_farmer_can_create_update_toggle_and_delete_own_listing(): void
+    public function test_old_listing_body_is_rejected(): void
     {
         $farmer = $this->farmer();
-        $category = Category::factory()->create();
-        $token = $farmer->createToken('mobile')->plainTextToken;
 
-        $create = $this->withToken($token)->post('/api/farmer/listings', [
-            'name' => 'Tomato',
-            'category_id' => $category->id,
-            'unit' => ListingUnit::Kilogram->value,
-            'price_per_unit' => 65,
+        $this->asUser($farmer)
+            ->postJson('/api/farmer/listings', [
+                'name' => 'Tomato',
+                'category_id' => 1,
+                'unit' => 'kg',
+                'price_per_unit' => 65,
+                'quantity_available' => 20,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['title', 'crop_type_id']);
+    }
+
+    public function test_farmer_can_create_and_update_a_listing_with_the_live_body(): void
+    {
+        $farmer = $this->farmer();
+        $cropType = $this->cropType();
+
+        $create = $this->asUser($farmer)->postJson('/api/farmer/listings', [
+            'title' => 'Fresh kamatis, hand picked',
+            'crop_type_id' => $cropType->id,
+            'price_per_unit' => 30,
             'quantity_available' => 20,
-            'description' => 'Fresh tomatoes',
-            'image' => UploadedFile::fake()->image('tomato.jpg'),
+            'description' => 'Morning harvest.',
         ]);
 
         $create->assertCreated()
-            ->assertJsonPath('data.name', 'Tomato')
-            ->assertJsonPath('data.is_active', true);
+            ->assertJsonPath('data.title', 'Fresh kamatis, hand picked')
+            ->assertJsonPath('data.crop_type.id', $cropType->id);
 
         $listingId = $create->json('data.id');
-        Storage::disk(config('anihow.listing_disk'))->assertExists(Listing::query()->find($listingId)->image_path);
 
-        $this->withToken($token)
-            ->getJson('/api/farmer/listings')
-            ->assertOk()
-            ->assertJsonCount(1, 'data');
-
-        $this->withToken($token)
+        $this->asUser($farmer)
             ->patchJson("/api/farmer/listings/{$listingId}", [
-                'price_per_unit' => 70,
+                'title' => 'Kamatis, bagong ani',
             ])
             ->assertOk()
-            ->assertJsonPath('data.price_per_unit', '70.00');
+            ->assertJsonPath('data.title', 'Kamatis, bagong ani')
+            ->assertJsonPath('data.crop_type.id', $cropType->id);
 
-        $this->withToken($token)
-            ->patchJson("/api/farmer/listings/{$listingId}/active", [
-                'is_active' => false,
-            ])
-            ->assertOk()
-            ->assertJsonPath('data.is_active', false);
-
-        $this->withToken($token)
-            ->deleteJson("/api/farmer/listings/{$listingId}")
-            ->assertOk();
-
-        $this->assertDatabaseMissing('listings', ['id' => $listingId]);
+        $this->assertDatabaseHas('listings', [
+            'id' => $listingId,
+            'title' => 'Kamatis, bagong ani',
+            'crop_type_id' => $cropType->id,
+        ]);
     }
 
-    public function test_farmer_cannot_update_another_farmers_listing(): void
+    public function test_seller_cannot_view_or_update_another_sellers_listing(): void
     {
         $owner = $this->farmer(['email' => 'owner@example.com']);
         $intruder = $this->farmer(['email' => 'intruder@example.com']);
-        $listing = Listing::factory()->forFarmer($owner)->create();
+        $listing = $this->listingFor($owner, ['title' => 'Owner kamatis']);
 
-        $this->withToken($intruder->createToken('mobile')->plainTextToken)
+        $this->asUser($intruder)
+            ->getJson("/api/farmer/listings/{$listing->id}")
+            ->assertForbidden();
+
+        $this->asUser($intruder)
             ->patchJson("/api/farmer/listings/{$listing->id}", [
-                'name' => 'Stolen',
+                'title' => 'Stolen',
             ])
             ->assertForbidden();
 
         $this->assertDatabaseHas('listings', [
             'id' => $listing->id,
-            'name' => $listing->name,
+            'title' => 'Owner kamatis',
         ]);
     }
 
     public function test_buyer_cannot_create_a_listing(): void
     {
-        $buyer = User::factory()->create();
-        $buyer->assignRole(Role::Buyer);
-        $category = Category::factory()->create();
+        $buyer = $this->buyer();
+        $cropType = $this->cropType();
 
-        $this->withToken($buyer->createToken('mobile')->plainTextToken)
+        $this->asUser($buyer)
             ->postJson('/api/farmer/listings', [
-                'name' => 'Tomato',
-                'category_id' => $category->id,
-                'unit' => ListingUnit::Kilogram->value,
-                'price_per_unit' => 65,
+                'title' => 'Tomato',
+                'crop_type_id' => $cropType->id,
+                'price_per_unit' => 30,
                 'quantity_available' => 20,
             ])
             ->assertForbidden();
     }
 
-    public function test_returns_422_when_listing_is_used_on_a_reservation(): void
+    public function test_both_tawad_rule_types_can_be_created(): void
     {
         $farmer = $this->farmer();
-        $listing = Listing::factory()->forFarmer($farmer)->create();
-        $reservation = Reservation::factory()->create([
-            'farmer_seller_id' => $farmer->id,
-        ]);
-        ReservationItem::factory()->create([
-            'reservation_id' => $reservation->id,
-            'listing_id' => $listing->id,
-        ]);
+        $listing = $this->listingFor($farmer, ['price_per_unit' => 30]);
 
-        $this->withToken($farmer->createToken('mobile')->plainTextToken)
-            ->deleteJson("/api/farmer/listings/{$listing->id}")
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors('listing');
+        $this->asUser($farmer)
+            ->postJson("/api/farmer/listings/{$listing->id}/tawad", [
+                'type' => TawadType::Flat->value,
+                'discount_amount' => 5,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.type', TawadType::Flat->value)
+            ->assertJsonPath('data.discount_amount', 5);
 
-        $this->assertDatabaseHas('listings', ['id' => $listing->id]);
+        $this->asUser($farmer)
+            ->postJson("/api/farmer/listings/{$listing->id}/tawad", [
+                'type' => TawadType::MinimumQuantity->value,
+                'discount_amount' => 12,
+                'min_quantity' => 4,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.type', TawadType::MinimumQuantity->value)
+            ->assertJsonPath('data.min_quantity', 4);
+
+        $this->assertSame(1, $listing->tawadRules()->where('is_active', true)->count());
     }
 
-    /**
-     * @param  array<string, mixed>  $attributes
-     */
-    private function farmer(array $attributes = []): User
+    public function test_tawad_above_the_crop_type_ceiling_is_rejected(): void
     {
-        $farmer = User::factory()->create($attributes);
-        $farmer->assignRole(Role::FarmerSeller);
+        $farmer = $this->farmer();
+        $cropType = $this->cropType(['max_discount' => 20]);
+        $listing = $this->listingFor($farmer, [
+            'crop_type_id' => $cropType->id,
+            'price_per_unit' => 30,
+        ]);
 
-        return $farmer;
+        $this->asUser($farmer)
+            ->postJson("/api/farmer/listings/{$listing->id}/tawad", [
+                'type' => TawadType::Flat->value,
+                'discount_amount' => 20.01,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('discount_amount');
+    }
+
+    public function test_tawad_that_breaches_the_floor_price_is_rejected(): void
+    {
+        $farmer = $this->farmer();
+        $cropType = $this->cropType(['floor_price' => 25, 'max_discount' => 20]);
+        $listing = $this->listingFor($farmer, [
+            'crop_type_id' => $cropType->id,
+            'price_per_unit' => 30,
+        ]);
+
+        $this->asUser($farmer)
+            ->postJson("/api/farmer/listings/{$listing->id}/tawad", [
+                'type' => TawadType::Flat->value,
+                'discount_amount' => 10,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('discount_amount');
+    }
+
+    public function test_ending_a_tawad_rule_removes_it_from_the_listing(): void
+    {
+        $farmer = $this->farmer();
+        $listing = $this->listingFor($farmer, ['price_per_unit' => 30]);
+        $rule = TawadRule::factory()->for($listing)->create();
+
+        $this->asUser($farmer)
+            ->deleteJson("/api/farmer/listings/{$listing->id}/tawad/{$rule->id}")
+            ->assertOk();
+
+        $this->assertFalse($rule->fresh()->is_active);
+        $this->assertNotNull($rule->fresh()->ended_at);
+        $this->assertNull($listing->fresh()->activeTawadRule);
     }
 }

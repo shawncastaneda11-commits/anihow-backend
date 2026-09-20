@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use App\Enums\Role;
+use App\Enums\UserStatus;
 use App\Models\User;
 use App\Notifications\VerifyEmailNotification;
 use Database\Seeders\RolePermissionSeeder;
@@ -41,7 +42,7 @@ class AuthApiTest extends TestCase
 
         $this->assertDatabaseHas('users', [
             'email' => 'maria@example.com',
-            'is_active' => true,
+            'status' => UserStatus::Active->value,
         ]);
         $this->assertNull(User::query()->where('email', 'maria@example.com')->value('email_verified_at'));
         Notification::assertSentTo(
@@ -69,6 +70,27 @@ class AuthApiTest extends TestCase
         $this->assertFalse(User::query()->where('email', 'sneaky@example.com')->first()->isFarmerSeller());
     }
 
+    public function test_registered_buyer_can_log_in(): void
+    {
+        Notification::fake();
+
+        $this->postJson('/api/auth/register', [
+            'name' => 'Maria Buyer',
+            'email' => 'maria@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertCreated();
+
+        $this->postJson('/api/auth/login', [
+            'email' => 'maria@example.com',
+            'password' => 'password123',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.roles.0', Role::Buyer->value)
+            ->assertJsonPath('data.status', UserStatus::Active->value)
+            ->assertJsonStructure(['token']);
+    }
+
     public function test_any_active_role_can_log_in(): void
     {
         $farmer = User::factory()->create(['email' => 'farmer@example.com']);
@@ -84,15 +106,36 @@ class AuthApiTest extends TestCase
             ->assertJsonStructure(['token']);
     }
 
-    public function test_inactive_user_cannot_log_in(): void
+    public function test_pending_farmer_seller_cannot_log_in(): void
+    {
+        $farmer = User::factory()->pending()->create(['email' => 'pending@example.com']);
+        $farmer->syncRoles(Role::FarmerSeller);
+
+        $this->postJson('/api/auth/login', [
+            'email' => 'pending@example.com',
+            'password' => 'password',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonPath(
+                'errors.email.0',
+                'Your account is awaiting approval. You can sign in after an administrator approves it.',
+            );
+    }
+
+    public function test_suspended_user_cannot_log_in(): void
     {
         $buyer = User::factory()->inactive()->create(['email' => 'inactive@example.com']);
-        $buyer->assignRole(Role::Buyer);
+        $buyer->syncRoles(Role::Buyer);
 
         $this->postJson('/api/auth/login', [
             'email' => 'inactive@example.com',
             'password' => 'password',
-        ])->assertUnprocessable();
+        ])
+            ->assertUnprocessable()
+            ->assertJsonPath(
+                'errors.email.0',
+                'This account is suspended. Contact the AniHow administrator.',
+            );
     }
 
     public function test_authenticated_user_can_fetch_profile_and_logout(): void

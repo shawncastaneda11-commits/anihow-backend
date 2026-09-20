@@ -80,6 +80,10 @@ class ProduceCard extends StatelessWidget {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
+                          if (listing.tawad != null) ...[
+                            const SizedBox(height: AniHowSpace.labelGap),
+                            Text(listing.tawad!.summary, style: theme.textTheme.bodyMedium),
+                          ],
                           if (listing.hasRating) ...[
                             const SizedBox(height: AniHowSpace.labelGap),
                             RatingLabel(rating: listing.averageRating!),

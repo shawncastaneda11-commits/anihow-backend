@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\UserStatus;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -34,7 +35,7 @@ class UserFactory extends Factory
             'contact' => null,
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
-            'is_active' => true,
+            'status' => UserStatus::Active,
             'remember_token' => Str::random(10),
         ];
     }
@@ -52,7 +53,14 @@ class UserFactory extends Factory
     public function inactive(): static
     {
         return $this->state(fn (array $attributes) => [
-            'is_active' => false,
+            'status' => UserStatus::Suspended,
+        ]);
+    }
+
+    public function pending(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => UserStatus::Pending,
         ]);
     }
 }

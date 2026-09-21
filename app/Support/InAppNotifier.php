@@ -140,6 +140,26 @@ class InAppNotifier
         );
     }
 
+    /**
+     * The discount ceiling fell below this listing's active tawad, because the
+     * Super Admin lowered the system maximum or the farm lowered its own.
+     * Checkout skips a rule above the ceiling and charges the listed price, so
+     * without this the seller's advertised tawad stops applying unannounced.
+     * Decision 16.
+     */
+    public function tawadCeilingLowered(User $farmer, Listing $listing, float $effectiveCeiling): InAppNotification
+    {
+        $ceiling = number_format($effectiveCeiling, 2, '.', '');
+
+        return $this->send(
+            $farmer,
+            NotificationType::TawadCeilingLowered,
+            NotificationType::TawadCeilingLowered->label(),
+            "The maximum tawad for {$listing->title} is now PHP {$ceiling}. Your tawad is above it, so it will not apply at checkout until you lower it.",
+            $listing,
+        );
+    }
+
     public function listingTakenDown(User $farmer, Listing $listing): InAppNotification
     {
         $reason = filled($listing->takedown_reason)

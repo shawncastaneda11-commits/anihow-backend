@@ -21,11 +21,12 @@ PHPUnit tests use in-memory SQLite (`phpunit.xml`).
 
 ## Roles
 
-There are exactly three roles:
+There are exactly four roles:
 
-1. **`super_admin`** — one admin, Filament web panel. Manages all accounts, creates/verifies `farmer_seller` accounts, oversees marketplace, listings, and crop-care articles. Seeded; not self-registered.
-2. **`farmer_seller`** — combined farmer + seller mobile account. **Must not self-register.** Created only by `super_admin`. Manages own listings, incoming reservations, walk-in POS sales, shop profile, and read-only crop-care articles.
-3. **`buyer`** — separate mobile account. **Can self-register** with email + password. Browses the marketplace and shops, places reservations, reviews completed pickups, and keeps favorites.
+1. **`super_admin`** — Filament web panel. Accounts, approvals, economic guardrails, moderation. Not self-registered.
+2. **`content_editor`** — Filament web panel, scoped to one farm. Crop-care reference content and that farm's catalog participation. Not self-registered.
+3. **`farmer_seller`** — mobile seller account. **Must not self-register.** Created only by `super_admin`. Manages own listings, incoming orders, tawad, and shop profile.
+4. **`buyer`** — mobile buyer account. **Can self-register** with email + password. Browses the marketplace, checks out, tracks orders, and reviews completed handovers.
 
 ## Out of scope
 
@@ -73,17 +74,14 @@ CREATE DATABASE anihow CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 php artisan migrate --seed
 ```
 
-That seeds:
+`migrate --seed` only creates roles and permissions. It does **not** create any login. Juan, Maria, Pedro, Ana, and Ben from earlier drafts are not seeded and will fail with "These credentials do not match our records."
 
-- Roles + permissions (`super_admin`, `farmer_seller`, `buyer`)
-- One super admin
-- Categories (vegetables, fruit, grains, root crops, herbs)
-- Three sample farmer-sellers in General Trias, Cavite
-- Sample listings (including one inactive listing)
-- Sample crop-care articles
-- Two sample buyers
-- Sample reservations (pending, ready for pickup, completed, cancelled) and walk-in POS sales
-- Shop profiles, favorites, a sample review, and in-app notifications (including a low-stock notice)
+Create the accounts you can actually sign in with:
+
+```bash
+php artisan db:seed --class=SuperAdminSeeder
+php artisan db:seed --class=SmokeTestSeeder
+```
 
 ### 4. Run
 
@@ -94,27 +92,17 @@ php artisan serve
 - API: `http://localhost:8000/api`
 - Filament admin: `http://localhost:8000/admin`
 
-### Super admin (seeded)
+### Logins (password: `password` for every row)
 
-```ini
-SUPER_ADMIN_EMAIL=admin@anihow.local
-SUPER_ADMIN_PASSWORD=password
-```
+| Surface | Role | Email |
+| --- | --- | --- |
+| Filament `/admin` | `super_admin` | `admin@anihow.local` (override with `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD`) |
+| Filament `/admin` | `content_editor` | `smoke.editor@anihow.local` |
+| Android app | `farmer_seller` | `smoke.sellera@anihow.local` |
+| Android app | `farmer_seller` | `smoke.sellerb@anihow.local` |
+| Android app | `buyer` | `smoke.buyer@anihow.local` |
 
-### Sample farmer-sellers (password: `password`)
-
-| Name | Email | Location | Shop |
-| --- | --- | --- | --- |
-| Juan Dela Cruz | `juan@anihow.local` | San Francisco, General Trias, Cavite | Juan's Farm Stall |
-| Maria Santos | `maria.santos@anihow.local` | Tejero, General Trias, Cavite | Santos Fruit Corner |
-| Pedro Reyes | `pedro.reyes@anihow.local` | Navarro, General Trias, Cavite | Reyes Root Crops |
-
-### Sample buyers (password: `password`)
-
-| Name | Email |
-| --- | --- |
-| Ana Reyes | `ana.buyer@anihow.local` |
-| Ben Cruz | `ben.buyer@anihow.local` |
+Do not use `juan@anihow.local`, `maria.santos@anihow.local`, `pedro.reyes@anihow.local`, `ana.buyer@anihow.local`, or `ben.buyer@anihow.local`. Those seeders are leftover from the pre-rebuild schema and are not called.
 
 ## Auth API (Sanctum)
 
@@ -144,7 +132,7 @@ The verification link is a signed API URL. Opening it marks the buyer verified. 
 
 ```json
 POST /api/auth/forgot-password
-{ "email": "ana.buyer@anihow.local" }
+{ "email": "smoke.buyer@anihow.local" }
 ```
 
 The email contains `FRONTEND_URL/reset-password?token=...&email=...`. The app then POSTs `/api/auth/reset-password`. Unknown emails still return 200 so accounts are not enumerated.
@@ -321,7 +309,7 @@ Copy `.env.example`. Important variables:
 4. Set `MAIL_MAILER=smtp` and real SMTP credentials. Keep `MAIL_FROM_ADDRESS` on a domain the provider allows.
 5. Deploy this repo. `railway.json` runs `php artisan migrate --force` then `php artisan serve` on `$PORT`. Trust proxies and HTTPS are enabled in production.
 6. Add a **second service** (same image/repo) with start command `php artisan queue:work --sleep=1 --tries=3` so verification, password reset, and reservation emails actually send.
-7. Optional: `php artisan db:seed` once for demo data. Change `SUPER_ADMIN_PASSWORD` first.
+7. Optional demo logins: `php artisan db:seed --class=SuperAdminSeeder` then `php artisan db:seed --class=SmokeTestSeeder`. Change `SUPER_ADMIN_PASSWORD` first. `php artisan db:seed` alone does not create users.
 
 Worker service needs the same env vars (especially `APP_KEY`, database, and mail).
 

@@ -7,30 +7,36 @@ use App\Models\Farm;
 use App\Models\Listing;
 use App\Support\InAppNotifier;
 use App\Support\Pricing\PriceGuard;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
- * Tells sellers when a floor raise has stranded their listing. Decisions 9 and 14.
+ * Tells sellers when a guard change has stranded their listing. Decisions 9,
+ * 14, 15, and 16.
  *
- * Runs for both layers: the Super Admin raising a system floor (CropTypeObserver)
- * and a farm raising its own (SetFarmPriceOverrideAction). Both callers pass the
- * farm's effective floor before and after, so this class never has to know which
- * layer moved.
+ * Runs for both layers: the Super Admin changing a system value
+ * (CropTypeObserver) and a farm changing its own (SetFarmPriceOverrideAction).
+ * Both callers pass the farm's effective values before and after, so this class
+ * never has to know which layer moved.
  *
- * Two ways to be stranded, one notification type:
+ * Three ways to be stranded:
  *
- *   Price stranded.  The listing price was legal under the old floor and is
- *                    below the new one. Checkout now refuses the listing.
+ *   Price stranded.        The floor rose above the listing price. Checkout
+ *                          refuses the listing.
  *
- *   Tawad stranded.  The price is still legal, but the active tawad rule's worst
- *                    case now takes the unit price below the new floor. Checkout
- *                    does not refuse the order; it silently drops the discount.
- *                    That silent drop is why this case is flagged at all.
+ *   Tawad below floor.     The floor rose, the price still clears it, but the
+ *                          active rule's worst case no longer does. Checkout
+ *                          silently drops the discount.
  *
- * Newly stranded only. A listing already stranded under the old floor was
- * notified then, or predates this feature, and a second raise must not
- * re-notify it.
+ *   Tawad above ceiling.   The ceiling fell below the active rule's amount.
+ *                          Checkout silently drops the discount.
  *
- * Never moves a price, never ends a rule, never blocks the raise.
+ * Newly stranded only: a listing already stranded before the change was told
+ * then, or predates this feature. And one message per listing per change: when
+ * a single write raises the floor and lowers the ceiling together, a listing
+ * already told about the floor is not told again about the ceiling. The floor
+ * message is the more serious of the two, so it is the one that wins.
+ *
+ * Never moves a price, never ends a rule, never blocks the change.
  */
 class FlagStrandedListingsAction
 {
@@ -39,28 +45,17 @@ class FlagStrandedListingsAction
     ) {}
 
     /**
-     * @return int the number of notifications sent
+     * @return list<int> ids of the listings notified
      */
-    public function execute(Farm $farm, CropType $cropType, float $previousFloor, float $newFloor): int
+    public function floorRaised(Farm $farm, CropType $cropType, float $previousFloor, float $newFloor): array
     {
         if (PriceGuard::centavos($newFloor) <= PriceGuard::centavos($previousFloor)) {
-            return 0;
+            return [];
         }
 
-        // Taken-down listings are excluded: the seller cannot act on them, and
-        // "update the price to keep selling" would be untrue. Inactive listings
-        // are included, because a paused listing is still stranded when its
-        // seller turns it back on. Soft-deleted listings are excluded by default.
-        $listings = Listing::query()
-            ->forFarm($farm->getKey())
-            ->where('listings.crop_type_id', $cropType->getKey())
-            ->whereNull('listings.taken_down_at')
-            ->with(['farmerSeller', 'activeTawadRule'])
-            ->get();
+        $notified = [];
 
-        $sent = 0;
-
-        foreach ($listings as $listing) {
+        foreach ($this->candidates($farm, $cropType) as $listing) {
             $seller = $listing->farmerSeller;
 
             if ($seller === null) {
@@ -71,7 +66,7 @@ class FlagStrandedListingsAction
 
             if ($price >= PriceGuard::centavos($previousFloor) && $price < PriceGuard::centavos($newFloor)) {
                 $this->notifier->floorPriceRaised($seller, $listing, $newFloor);
-                $sent++;
+                $notified[] = $listing->getKey();
 
                 continue;
             }
@@ -83,10 +78,67 @@ class FlagStrandedListingsAction
                 && $rule->keepsUnitPriceAbove($listing, $previousFloor)
                 && ! $rule->keepsUnitPriceAbove($listing, $newFloor)) {
                 $this->notifier->tawadStrandedByFloor($seller, $listing, $newFloor);
-                $sent++;
+                $notified[] = $listing->getKey();
             }
         }
 
-        return $sent;
+        return $notified;
+    }
+
+    /**
+     * @param  list<int>  $alreadyNotified  listings told about the floor in this same change
+     * @return list<int> ids of the listings notified
+     */
+    public function ceilingLowered(
+        Farm $farm,
+        CropType $cropType,
+        float $previousCeiling,
+        float $newCeiling,
+        array $alreadyNotified = [],
+    ): array {
+        if (PriceGuard::centavos($newCeiling) >= PriceGuard::centavos($previousCeiling)) {
+            return [];
+        }
+
+        $notified = [];
+
+        foreach ($this->candidates($farm, $cropType) as $listing) {
+            if (in_array($listing->getKey(), $alreadyNotified, true)) {
+                continue;
+            }
+
+            $seller = $listing->farmerSeller;
+            $rule = $listing->activeTawadRule;
+
+            if ($seller === null || $rule === null) {
+                continue;
+            }
+
+            $amount = PriceGuard::centavos($rule->discount_amount);
+
+            if ($amount <= PriceGuard::centavos($previousCeiling) && $amount > PriceGuard::centavos($newCeiling)) {
+                $this->notifier->tawadCeilingLowered($seller, $listing, $newCeiling);
+                $notified[] = $listing->getKey();
+            }
+        }
+
+        return $notified;
+    }
+
+    /**
+     * Taken-down listings are excluded: the seller cannot act on them. Inactive
+     * listings are included, because a paused listing is still stranded when its
+     * seller turns it back on. Soft-deleted listings are excluded by default.
+     *
+     * @return Collection<int, Listing>
+     */
+    private function candidates(Farm $farm, CropType $cropType): Collection
+    {
+        return Listing::query()
+            ->forFarm($farm->getKey())
+            ->where('listings.crop_type_id', $cropType->getKey())
+            ->whereNull('listings.taken_down_at')
+            ->with(['farmerSeller', 'activeTawadRule'])
+            ->get();
     }
 }

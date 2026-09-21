@@ -6,6 +6,7 @@ use App\Enums\Permission;
 use App\Filament\Resources\Farms\Pages\CreateFarm;
 use App\Filament\Resources\Farms\Pages\EditFarm;
 use App\Filament\Resources\Farms\Pages\ListFarms;
+use App\Filament\Resources\Farms\RelationManagers\CropTypeOverridesRelationManager;
 use App\Filament\Resources\Farms\Schemas\FarmForm;
 use App\Filament\Resources\Farms\Tables\FarmsTable;
 use App\Models\Farm;
@@ -40,6 +41,17 @@ class FarmResource extends Resource
     public static function table(Table $table): Table
     {
         return FarmsTable::configure($table);
+    }
+
+    /**
+     * Price guards, tighten-only. Visible to holders of SetFarmPricing; the
+     * farm scope comes from getEloquentQuery() below.
+     */
+    public static function getRelations(): array
+    {
+        return [
+            'price-guards' => CropTypeOverridesRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

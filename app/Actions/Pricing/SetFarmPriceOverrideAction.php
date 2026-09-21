@@ -23,9 +23,9 @@ use Illuminate\Validation\ValidationException;
  * through a request. Same reasoning as the max() and min() kept in
  * PriceGuardResolver.
  *
- * After the write, any listing newly stranded by a higher effective floor is
- * flagged to its seller. The override itself is never blocked by what it
- * strands. Decisions 9 and 14.
+ * After the write, any listing newly stranded by a higher effective floor or a
+ * lower effective ceiling is flagged to its seller. The override itself is
+ * never blocked by what it strands. Decisions 9, 14, and 16.
  */
 class SetFarmPriceOverrideAction
 {
@@ -46,16 +46,17 @@ class SetFarmPriceOverrideAction
         $this->assertTightenOnly($cropType, $floorPrice, $maxDiscount);
 
         return DB::transaction(function () use ($farm, $cropType, $floorPrice, $maxDiscount): ?FarmCropTypeOverride {
-            // Read the floor fresh, not from a relation loaded before this call.
+            // Read the guard fresh, not from a relation loaded before this call.
             $farm->unsetRelation('cropTypeOverrides');
-            $previousFloor = $this->resolver->for($farm, $cropType)->floor;
+            $before = $this->resolver->for($farm, $cropType);
 
             $override = $this->write($farm, $cropType, $floorPrice, $maxDiscount);
 
             $farm->unsetRelation('cropTypeOverrides');
-            $newFloor = $this->resolver->for($farm, $cropType)->floor;
+            $after = $this->resolver->for($farm, $cropType);
 
-            $this->flagStranded->execute($farm, $cropType, $previousFloor, $newFloor);
+            $toldAboutFloor = $this->flagStranded->floorRaised($farm, $cropType, $before->floor, $after->floor);
+            $this->flagStranded->ceilingLowered($farm, $cropType, $before->ceiling, $after->ceiling, $toldAboutFloor);
 
             return $override;
         });
@@ -94,13 +95,13 @@ class SetFarmPriceOverrideAction
         if ($floorPrice !== null
             && PriceGuard::centavos($floorPrice) < PriceGuard::centavos($cropType->floor_price)) {
             $errors['floor_price'] = 'The farm floor price cannot be lower than the system floor of PHP '
-                .number_format((float) $cropType->floor_price, 2).'.';
+                . number_format((float) $cropType->floor_price, 2) . '.';
         }
 
         if ($maxDiscount !== null
             && PriceGuard::centavos($maxDiscount) > PriceGuard::centavos($cropType->max_discount)) {
             $errors['max_discount'] = 'The farm maximum peso discount cannot exceed the system maximum of PHP '
-                .number_format((float) $cropType->max_discount, 2).'.';
+                . number_format((float) $cropType->max_discount, 2) . '.';
         }
 
         if ($errors !== []) {

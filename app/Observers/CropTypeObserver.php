@@ -8,12 +8,12 @@ use App\Models\Farm;
 use App\Support\Pricing\PriceGuard;
 
 /**
- * The first caller of InAppNotifier::floorPriceRaised(). Until this existed, a
+ * The system-layer caller of the stranded-listing flag. Until this existed, a
  * Super Admin raising a system floor stranded listings without telling anyone.
- * Decision 14.
+ * Decisions 14 and 16.
  *
- * Each farm is evaluated on its own effective floor. A farm whose override
- * already sat above the new system floor sees no change and is not notified.
+ * Each farm is evaluated on its own effective values. A farm whose override
+ * already sat beyond the new system value sees no change and is not notified.
  */
 class CropTypeObserver
 {
@@ -23,16 +23,20 @@ class CropTypeObserver
 
     public function updated(CropType $cropType): void
     {
-        if (! $cropType->wasChanged('floor_price')) {
-            return;
-        }
-
-        // In the updated event getOriginal() still holds the pre-save value;
+        // In the updated event getOriginal() still holds the pre-save values;
         // syncOriginal() runs after this event, not before it.
-        $oldSystemFloor = (float) $cropType->getOriginal('floor_price');
-        $newSystemFloor = (float) $cropType->floor_price;
+        $oldFloor = (float) $cropType->getOriginal('floor_price');
+        $newFloor = (float) $cropType->floor_price;
+        $oldCeiling = (float) $cropType->getOriginal('max_discount');
+        $newCeiling = (float) $cropType->max_discount;
 
-        if (PriceGuard::centavos($newSystemFloor) <= PriceGuard::centavos($oldSystemFloor)) {
+        $floorRaised = $cropType->wasChanged('floor_price')
+            && PriceGuard::centavos($newFloor) > PriceGuard::centavos($oldFloor);
+
+        $ceilingLowered = $cropType->wasChanged('max_discount')
+            && PriceGuard::centavos($newCeiling) < PriceGuard::centavos($oldCeiling);
+
+        if (! $floorRaised && ! $ceilingLowered) {
             return;
         }
 
@@ -43,16 +47,38 @@ class CropTypeObserver
             // A constrained eager load is right here, unlike in the resolver
             // note: exactly one crop type is in play for this whole pass.
             ->with(['cropTypeOverrides' => fn ($query) => $query->where('crop_type_id', $cropTypeId)])
-            ->each(function (Farm $farm) use ($cropType, $cropTypeId, $oldSystemFloor, $newSystemFloor): void {
-                $farmFloor = $farm->overrideFor($cropTypeId)?->floor_price;
+            ->each(function (Farm $farm) use (
+                $cropType, $cropTypeId, $oldFloor, $newFloor, $oldCeiling, $newCeiling, $floorRaised, $ceilingLowered,
+            ): void {
+                $override = $farm->overrideFor($cropTypeId);
 
-                // PriceGuardResolver answers "what is the floor now". This needs
-                // the floor before the save as well, and the crop type has
-                // already changed, so the same max() is applied to each side.
-                $previous = max($oldSystemFloor, (float) ($farmFloor ?? $oldSystemFloor));
-                $new = max($newSystemFloor, (float) ($farmFloor ?? $newSystemFloor));
+                // PriceGuardResolver answers "what is the guard now". This needs
+                // the guard before the save as well, and the crop type has
+                // already changed, so the resolver's max() and min() are
+                // applied to each side here. If that formula changes, change
+                // this one too.
+                $toldAboutFloor = [];
 
-                $this->flagStranded->execute($farm, $cropType, $previous, $new);
+                if ($floorRaised) {
+                    $farmFloor = $override?->floor_price;
+                    $toldAboutFloor = $this->flagStranded->floorRaised(
+                        $farm,
+                        $cropType,
+                        max($oldFloor, (float) ($farmFloor ?? $oldFloor)),
+                        max($newFloor, (float) ($farmFloor ?? $newFloor)),
+                    );
+                }
+
+                if ($ceilingLowered) {
+                    $farmCeiling = $override?->max_discount;
+                    $this->flagStranded->ceilingLowered(
+                        $farm,
+                        $cropType,
+                        min($oldCeiling, (float) ($farmCeiling ?? $oldCeiling)),
+                        min($newCeiling, (float) ($farmCeiling ?? $newCeiling)),
+                        $toldAboutFloor,
+                    );
+                }
             });
     }
 }

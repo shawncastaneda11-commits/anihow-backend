@@ -268,6 +268,26 @@ class FarmPriceGuardTest extends TestCase
         $this->assertSame(0, $this->notices($tight->farmer_seller_id, NotificationType::FloorPriceRaised));
     }
 
+    // What the app is told
+
+    public function test_the_seller_is_sent_their_farms_values_beside_the_system_ones(): void
+    {
+        $farm = Farm::factory()->create();
+        $cropType = $this->kamatis();
+        $farmer = $this->farmer(['email' => 'contract@example.com'], $farm);
+        $listing = $this->listingFor($farmer, ['crop_type_id' => $cropType->id, 'price_per_unit' => 50]);
+        $this->guard($farm, $cropType, floor: 35, ceiling: 5);
+
+        // The tawad screen reads its guidance from the listing's crop type.
+        $this->asUser($farmer)
+            ->getJson("/api/farmer/listings/{$listing->id}")
+            ->assertOk()
+            ->assertJsonPath('data.crop_type.floor_price', 25)
+            ->assertJsonPath('data.crop_type.max_discount', 20)
+            ->assertJsonPath('data.crop_type.effective_floor_price', 35)
+            ->assertJsonPath('data.crop_type.effective_max_discount', 5);
+    }
+
     // Authorization
 
     public function test_a_content_editor_reaches_only_their_own_farms_guards(): void

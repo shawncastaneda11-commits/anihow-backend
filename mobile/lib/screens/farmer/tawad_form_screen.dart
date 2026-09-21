@@ -104,12 +104,12 @@ class _TawadFormScreenState extends State<TawadFormScreen> {
           Text('Listed ${AniHowMoney.peso(widget.listing.pricePerUnit)}'),
           const SizedBox(height: AniHowSpace.cardGap),
           const Text('Tawad is a peso discount on the order.'),
-          if (crop?.maxDiscount != null || crop?.floorPrice != null) ...[
+          if (crop?.sellerMaxDiscount != null || crop?.sellerFloorPrice != null) ...[
             const SizedBox(height: AniHowSpace.labelGap),
             if (crop?.maxDiscount != null)
-              Text('Maximum tawad for ${crop!.name} is ${AniHowMoney.peso(crop.maxDiscount)}.'),
+              Text('Maximum tawad for ${crop!.name} is ${AniHowMoney.peso(crop.sellerMaxDiscount)}.'),
             if (crop?.floorPrice != null)
-              Text('Unit price cannot fall below ${AniHowMoney.peso(crop!.floorPrice)}.'),
+              Text('Unit price cannot fall below ${AniHowMoney.peso(crop!.sellerFloorPrice)}.'),
           ],
           const SizedBox(height: AniHowSpace.section),
           AniHowField(

@@ -48,6 +48,8 @@ class CategoryItem {
     this.unitLabel,
     this.floorPrice,
     this.maxDiscount,
+    this.effectiveFloorPrice,
+    this.effectiveMaxDiscount,
   });
 
   final int id;
@@ -57,6 +59,8 @@ class CategoryItem {
   final String? unitLabel;
   final String? floorPrice;
   final String? maxDiscount;
+  final String? effectiveFloorPrice;
+  final String? effectiveMaxDiscount;
 
   factory CategoryItem.fromJson(Map<String, dynamic> json) {
     return CategoryItem(
@@ -67,8 +71,17 @@ class CategoryItem {
       unitLabel: json['unit_label'] as String?,
       floorPrice: json['floor_price']?.toString(),
       maxDiscount: json['max_discount']?.toString(),
+      effectiveFloorPrice: json['effective_floor_price']?.toString(),
+      effectiveMaxDiscount: json['effective_max_discount']?.toString(),
     );
   }
+
+  /// The floor this farmer-seller is held to. Falls back to the system
+  /// value when talking to an API that does not send the farm's.
+  String? get sellerFloorPrice => effectiveFloorPrice ?? floorPrice;
+
+  /// The largest tawad this farmer-seller may set. Same fallback.
+  String? get sellerMaxDiscount => effectiveMaxDiscount ?? maxDiscount;
 }
 
 class TawadRule {

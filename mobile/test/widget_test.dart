@@ -169,6 +169,56 @@ void main() {
     expect(completed.amountReceived, '30');
   });
 
+  test('walk-in order uses walk-in buyer name and no advance actions', () {
+    final named = OrderRecord.fromJson({
+      'id': 12,
+      'order_number': 'AH-260921-WALK',
+      'status': 'completed',
+      'status_label': 'Completed',
+      'source': 'walk_in',
+      'is_walk_in': true,
+      'walk_in_buyer_name': 'Aling Rosa',
+      'allowed_next': [],
+      'total': 90,
+      'subtotal': 100,
+      'tawad_total': 10,
+      'amount_received': '90',
+      'buyer': null,
+      'items': [
+        {
+          'listing_name': 'Fresh kamatis, hand picked',
+          'quantity': 3,
+          'listed_price': 30,
+          'line_subtotal': 90,
+          'unit': 'kg',
+        },
+      ],
+    });
+
+    expect(named.isWalkIn, isTrue);
+    expect(named.source, 'walk_in');
+    expect(named.buyerName, 'Aling Rosa');
+    expect(named.canAdvanceTo('confirmed'), isFalse);
+    expect(named.canAdvanceTo('ready'), isFalse);
+    expect(named.canAdvanceTo('cancelled'), isFalse);
+    expect(named.canAdvanceTo('completed'), isFalse);
+
+    final unnamed = named.copyWith();
+    final blank = OrderRecord.fromJson({
+      'id': 13,
+      'status': 'completed',
+      'source': 'walk_in',
+      'is_walk_in': true,
+      'walk_in_buyer_name': '  ',
+      'allowed_next': [],
+      'total': 30,
+      'buyer': null,
+      'items': const [],
+    });
+    expect(unnamed.buyerName, 'Aling Rosa');
+    expect(blank.buyerName, 'Walk-in customer');
+  });
+
   test('cart request shapes match the live cart and checkout endpoints', () {
     expect(CartRequests.cartPath, '/buyer/cart');
     expect(CartRequests.checkoutPath, '/buyer/checkout');

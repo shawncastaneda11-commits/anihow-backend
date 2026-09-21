@@ -332,6 +332,23 @@ class ApiClient {
     });
   }
 
+  Future<OrderRecord> recordWalkInSale({
+    required int listingId,
+    required String quantity,
+    required String amountReceived,
+    String? buyerName,
+    String? note,
+  }) async {
+    final response = await _post('/farmer/walk-in-sales', {
+      'listing_id': listingId,
+      'quantity': quantity,
+      'amount_received': amountReceived,
+      if (buyerName != null && buyerName.isNotEmpty) 'buyer_name': buyerName,
+      if (note != null && note.isNotEmpty) 'note': note,
+    });
+    return OrderRecord.fromJson(_asMap(response['data'] ?? response));
+  }
+
   Future<OrderRecord> _farmerOrderAction(String path, [Map<String, dynamic>? body]) async {
     final response = await _patchJson(path, body);
     return OrderRecord.fromJson(_asMap(response['data'] ?? response));

@@ -11,6 +11,7 @@ import '../../widgets/form_label.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
 import '../../widgets/status_pill.dart';
+import 'walk_in_sale_screen.dart';
 
 const _orderTabs = [
   (status: 'placed', label: 'Placed', empty: 'No placed orders.'),
@@ -148,6 +149,16 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen> {
     );
   }
 
+  Future<void> _openWalkIn() async {
+    final recorded = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const WalkInSaleScreen()),
+    );
+    if (!mounted || recorded != true) {
+      return;
+    }
+    await _reload();
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -155,6 +166,18 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen> {
       child: Scaffold(
         body: Column(
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AniHowSpace.screen,
+                AniHowSpace.cardGap,
+                AniHowSpace.screen,
+                0,
+              ),
+              child: PrimaryButton(
+                label: 'Record walk-in sale',
+                onPressed: _openWalkIn,
+              ),
+            ),
             const TabBar(
               isScrollable: true,
               tabs: [
@@ -283,6 +306,7 @@ class _OrderCard extends StatelessWidget {
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (order.isWalkIn) const _WalkInLabel(),
                   Text(order.orderNumber ?? 'Order #${order.id}'),
                   Text(AniHowMoney.peso(order.total)),
                   Text(order.itemSummary),
@@ -461,7 +485,9 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(order.buyerName, style: Theme.of(context).textTheme.titleMedium),
-                  if (order.contact != null && order.contact!.isNotEmpty) Text(order.contact!),
+                  if (order.isWalkIn) const _WalkInLabel(),
+                  if (!order.isWalkIn && order.contact != null && order.contact!.isNotEmpty)
+                    Text(order.contact!),
                 ],
               ),
             ),
@@ -495,6 +521,15 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
         ),
       ],
     );
+  }
+}
+
+class _WalkInLabel extends StatelessWidget {
+  const _WalkInLabel();
+
+  @override
+  Widget build(BuildContext context) {
+    return Text('Walk-in', style: Theme.of(context).textTheme.labelSmall);
   }
 }
 

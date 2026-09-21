@@ -143,6 +143,7 @@ class ListingItem {
     this.averageRating,
     this.reviewsCount = 0,
     this.tawad,
+    this.status,
   });
 
   final int id;
@@ -154,6 +155,7 @@ class ListingItem {
   final String? description;
   final String? imageUrl;
   final bool isActive;
+  final String? status;
   final CategoryItem? category;
   final String? sellerName;
   final String? sellerLocation;
@@ -176,6 +178,8 @@ class ListingItem {
     return quantity >= 5;
   }
 
+  bool get isTakenDown => status == 'taken_down';
+
   ListingItem copyWith({bool? isActive}) {
     return ListingItem(
       id: id,
@@ -187,6 +191,7 @@ class ListingItem {
       description: description,
       imageUrl: imageUrl,
       isActive: isActive ?? this.isActive,
+      status: status,
       category: category,
       sellerName: sellerName,
       sellerLocation: sellerLocation,
@@ -213,6 +218,7 @@ class ListingItem {
       description: json['description'] as String?,
       imageUrl: json['image_url'] as String?,
       isActive: json['is_active'] == true || json['is_active'] == 1,
+      status: json['status'] as String?,
       category: cropTypeMap == null ? null : CategoryItem.fromJson(cropTypeMap),
       sellerName: sellerMap?['shop_name'] as String? ?? sellerMap?['name'] as String?,
       sellerLocation: sellerMap?['location'] as String?,
@@ -302,6 +308,9 @@ class OrderRecord {
     this.subtotal,
     this.tawadTotal,
     this.paymentMethod,
+    this.source,
+    this.isWalkIn = false,
+    this.walkInBuyerName,
   });
 
   final int id;
@@ -326,6 +335,9 @@ class OrderRecord {
   final String? cancellationReason;
   final String? cancellationLabel;
   final String? amountReceived;
+  final String? source;
+  final bool isWalkIn;
+  final String? walkInBuyerName;
   final List<String> allowedNext;
   final List<OrderItemRow> items;
 
@@ -370,6 +382,9 @@ class OrderRecord {
       cancellationReason: json['cancellation_reason'] as String?,
       cancellationLabel: json['cancellation_label'] as String?,
       amountReceived: json['amount_received']?.toString(),
+      source: json['source'] as String?,
+      isWalkIn: json['is_walk_in'] == true || json['is_walk_in'] == 1,
+      walkInBuyerName: json['walk_in_buyer_name'] as String?,
       allowedNext: ((json['allowed_next'] as List?) ?? const [])
           .map((item) => item.toString())
           .toList(),
@@ -395,7 +410,16 @@ class OrderRecord {
   bool get isCompleted => status == 'completed';
   bool get isCancelled => status == 'cancelled';
 
-  String get buyerName => counterpartyName ?? 'Buyer';
+  String get buyerName {
+    if (isWalkIn) {
+      final name = walkInBuyerName?.trim();
+      if (name != null && name.isNotEmpty) {
+        return name;
+      }
+      return 'Walk-in customer';
+    }
+    return counterpartyName ?? 'Buyer';
+  }
 
   String get listedTotal => subtotal ?? total;
 
@@ -407,6 +431,9 @@ class OrderRecord {
           : paymentMethod!;
 
   bool canAdvanceTo(String next) {
+    if (isWalkIn) {
+      return false;
+    }
     if (allowedNext.isNotEmpty) {
       return allowedNext.contains(next);
     }
@@ -452,6 +479,9 @@ class OrderRecord {
       cancellationReason: cancellationReason ?? this.cancellationReason,
       cancellationLabel: cancellationLabel ?? this.cancellationLabel,
       amountReceived: amountReceived ?? this.amountReceived,
+      source: source,
+      isWalkIn: isWalkIn,
+      walkInBuyerName: walkInBuyerName,
       allowedNext: allowedNext ?? this.allowedNext,
     );
   }

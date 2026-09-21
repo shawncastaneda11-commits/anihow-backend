@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api;
 
+use App\Enums\OrderSource;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -22,6 +23,15 @@ class OrderResource extends JsonResource
             'allowed_next' => array_map(
                 fn ($status): string => $status->value,
                 $this->status->allowedNext(),
+            ),
+            'source' => ($this->source ?? OrderSource::App)->value,
+            'source_label' => ($this->source ?? OrderSource::App)->label(),
+            'is_walk_in' => $this->isWalkIn(),
+            // For the seller's own reference. Nobody else is sent it, not even
+            // the Super Admin through this API. Decision 20.
+            'walk_in_buyer_name' => $this->when(
+                (int) $request->user()?->id === (int) $this->farmer_seller_id,
+                $this->walk_in_buyer_name,
             ),
             'fulfillment_preference' => $this->fulfillment_preference->value,
             'fulfillment_label' => $this->fulfillment_preference->label(),
@@ -48,6 +58,8 @@ class OrderResource extends JsonResource
                 'shop_name' => $this->farmerSeller->shop_name,
                 'contact' => $this->farmerSeller->shopContact(),
             ]),
+            // Null on a walk-in. whenLoaded() returns null for a loaded but
+            // empty relation without calling the closure, so no buyer is fine.
             'buyer' => $this->whenLoaded('buyer', fn (): array => [
                 'id' => $this->buyer->id,
                 'name' => $this->buyer->name,

@@ -68,14 +68,29 @@ class TawadRule extends Model
     }
 
     /**
-     * Floor check, by type. A flat rule is tested against a one-unit order,
-     * which is its worst case; a minimum-quantity rule is tested at exactly
-     * its threshold. Run this at rule creation AND again at checkout.
+     * Floor check against the crop type's system floor. Farm-blind.
+     *
+     * Kept so existing callers keep working until Pass 2C repoints them at
+     * keepsUnitPriceAbove() with the farm's effective floor.
      */
     public function keepsUnitPriceAboveFloor(Listing $listing, CropType $cropType): bool
     {
+        return $this->keepsUnitPriceAbove($listing, (float) $cropType->floor_price);
+    }
+
+    /**
+     * Floor check, by type, against an explicit floor. A flat rule is tested
+     * against a one-unit order, which is its worst case; a minimum-quantity
+     * rule is tested at exactly its threshold. Run this at rule creation AND
+     * again at checkout.
+     *
+     * Pass the farm's effective floor from PriceGuardResolver. The stranded
+     * listing flag also calls this twice, with the floor before and after a
+     * raise, to tell whether the raise is what broke the rule.
+     */
+    public function keepsUnitPriceAbove(Listing $listing, float $floor): bool
+    {
         $unitPrice = (float) $listing->price_per_unit;
-        $floor = (float) $cropType->floor_price;
         $discount = (float) $this->discount_amount;
 
         $quantity = match ($this->type) {

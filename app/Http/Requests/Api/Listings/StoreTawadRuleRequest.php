@@ -5,6 +5,7 @@ namespace App\Http\Requests\Api\Listings;
 use App\Enums\TawadType;
 use App\Models\Listing;
 use App\Models\TawadRule;
+use App\Support\Pricing\PriceGuardResolver;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -38,6 +39,10 @@ class StoreTawadRuleRequest extends FormRequest
     /**
      * Ceiling and floor are checked here as well as at checkout. This one
      * gives the seller an immediate error; the checkout one is the guarantee.
+     *
+     * Both are the listing's farm's effective values: the system ceiling,
+     * lowered by the farm where it has lowered it, and the system floor,
+     * raised by the farm where it has raised it.
      */
     public function after(): array
     {
@@ -49,10 +54,11 @@ class StoreTawadRuleRequest extends FormRequest
 
                 $listing = $this->listing();
                 $cropType = $listing->cropType;
+                $guard = app(PriceGuardResolver::class)->forFarmId($listing->farm_id, $cropType);
                 $amount = (float) $this->validated('discount_amount');
 
-                if (! $cropType->allowsDiscount($amount)) {
-                    $max = number_format((float) $cropType->max_discount, 2, '.', '');
+                if (! $guard->allowsDiscount($amount)) {
+                    $max = number_format($guard->ceiling, 2, '.', '');
                     $validator->errors()->add(
                         'discount_amount',
                         "The maximum tawad for {$cropType->name} is PHP {$max}.",
@@ -67,8 +73,8 @@ class StoreTawadRuleRequest extends FormRequest
                     'min_quantity' => $this->validated('min_quantity'),
                 ]);
 
-                if (! $rule->keepsUnitPriceAboveFloor($listing, $cropType)) {
-                    $floor = number_format((float) $cropType->floor_price, 2, '.', '');
+                if (! $rule->keepsUnitPriceAbove($listing, $guard->floor)) {
+                    $floor = number_format($guard->floor, 2, '.', '');
                     $validator->errors()->add(
                         'discount_amount',
                         "This tawad would bring the unit price below the floor of PHP {$floor}.",

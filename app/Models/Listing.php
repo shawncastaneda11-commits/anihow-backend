@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Enums\ListingStatus;
 use App\Enums\UserStatus;
 use App\Support\ListingStorage;
+use App\Support\Pricing\PriceGuard;
+use App\Support\Pricing\PriceGuardResolver;
 use Database\Factories\ListingFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -131,13 +133,35 @@ class Listing extends Model
     }
 
     /**
-     * True when the Super Admin has raised the crop type's floor above this
-     * listing's price. The listing is stranded: it is not auto-corrected,
-     * because the system must never move a farmer's price for them.
+     * The floor and discount ceiling this listing is actually held to: the
+     * system values, tightened by its farm where the farm has done so.
+     *
+     * In a table or loop, eager load cropType and farm.cropTypeOverrides first,
+     * or this issues queries per row.
+     */
+    public function priceGuard(): PriceGuard
+    {
+        $resolver = app(PriceGuardResolver::class);
+
+        return $this->farm !== null
+            ? $resolver->for($this->farm, $this->cropType)
+            : $resolver->system($this->cropType);
+    }
+
+    public function effectiveFloor(): float
+    {
+        return $this->priceGuard()->floor;
+    }
+
+    /**
+     * True when a floor has risen above this listing's price, whether the
+     * Super Admin raised the system floor or the farm raised its own. The
+     * listing is stranded: it is not auto-corrected, because the system must
+     * never move a farmer's price for them.
      */
     public function isBelowFloor(): bool
     {
-        return (float) $this->price_per_unit < (float) $this->cropType->floor_price;
+        return ! $this->priceGuard()->allowsPrice($this->price_per_unit);
     }
 
     /**

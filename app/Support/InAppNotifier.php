@@ -95,19 +95,47 @@ class InAppNotifier
     }
 
     /**
-     * The Super Admin raised a crop type's floor above this listing's price.
-     * The listing is stranded and the seller has to decide, because the system
-     * never moves a farmer's price for them.
+     * A floor rose above this listing's price, either because the Super Admin
+     * raised the system floor or because the farm raised its own. The listing
+     * is stranded and the seller has to decide, because the system never moves
+     * a farmer's price for them.
+     *
+     * $effectiveFloor is the farm's floor after the raise, the number the
+     * seller's price is now validated against. Reading the crop type here would
+     * quote the system floor to a seller whose farm sits above it, and the
+     * seller would set a price that is still rejected.
      */
-    public function floorPriceRaised(User $farmer, Listing $listing): InAppNotification
+    public function floorPriceRaised(User $farmer, Listing $listing, float $effectiveFloor): InAppNotification
     {
-        $floor = number_format((float) $listing->cropType->floor_price, 2, '.', '');
+        $floor = number_format($effectiveFloor, 2, '.', '');
 
         return $this->send(
             $farmer,
             NotificationType::FloorPriceRaised,
             NotificationType::FloorPriceRaised->label(),
             "{$listing->title} is priced below the new floor of PHP {$floor}. Update the price to keep selling.",
+            $listing,
+        );
+    }
+
+    /**
+     * A floor rose, the listing price still clears it, but the active tawad
+     * rule no longer does. Checkout does not refuse the order: it silently
+     * drops the discount, so the seller's advertised tawad stops applying
+     * without anyone being told. This tells them. Decision 9.
+     *
+     * Same notification type as a stranded price, because the cause is the
+     * same event: the floor went up.
+     */
+    public function tawadStrandedByFloor(User $farmer, Listing $listing, float $effectiveFloor): InAppNotification
+    {
+        $floor = number_format($effectiveFloor, 2, '.', '');
+
+        return $this->send(
+            $farmer,
+            NotificationType::FloorPriceRaised,
+            NotificationType::FloorPriceRaised->label(),
+            "The floor for {$listing->title} rose to PHP {$floor}. Your tawad would take the price below it, so it will not apply at checkout until you lower the tawad or raise the price.",
             $listing,
         );
     }

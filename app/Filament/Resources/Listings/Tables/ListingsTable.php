@@ -19,6 +19,29 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ListingsTable
 {
+    /**
+     * The effective floor in SQL, for the "Priced below floor" filter.
+     *
+     * Mirrors PriceGuardResolver::for(): the system floor, raised by the farm's
+     * override where one exists, and never lowered by it. If that formula
+     * changes, change this one too. CASE rather than GREATEST so the same SQL
+     * runs on MySQL and on SQLite.
+     */
+    private const EFFECTIVE_FLOOR_SQL = <<<'SQL'
+        CASE
+            WHEN COALESCE(
+                (SELECT fo.floor_price FROM farm_crop_type_overrides fo
+                  WHERE fo.farm_id = listings.farm_id
+                    AND fo.crop_type_id = listings.crop_type_id),
+                crop_types.floor_price
+            ) > crop_types.floor_price
+            THEN (SELECT fo.floor_price FROM farm_crop_type_overrides fo
+                   WHERE fo.farm_id = listings.farm_id
+                     AND fo.crop_type_id = listings.crop_type_id)
+            ELSE crop_types.floor_price
+        END
+        SQL;
+
     public static function configure(Table $table): Table
     {
         return $table
@@ -46,10 +69,11 @@ class ListingsTable
                     ->money('PHP')
                     ->sortable()
                     // A listing priced below its crop type's floor is stranded,
-                    // usually because the Super Admin raised the floor.
+                    // because the Super Admin raised the system floor or the
+                    // farm raised its own.
                     ->color(fn (Listing $record): ?string => $record->isBelowFloor() ? 'danger' : null)
                     ->description(fn (Listing $record): ?string => $record->isBelowFloor()
-                        ? 'Below floor of PHP '.number_format((float) $record->cropType->floor_price, 2)
+                        ? 'Below floor of PHP '.number_format((float) $record->effectiveFloor(), 2)
                         : null),
                 TextColumn::make('quantity_available')
                     ->label('Qty')
@@ -70,6 +94,7 @@ class ListingsTable
                     ->boolean()
                     ->toggleable(),
             ])
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['cropType', 'farm.cropTypeOverrides']))
             ->filters([
                 SelectFilter::make('status')
                     ->options(ListingStatus::options()),
@@ -80,14 +105,15 @@ class ListingsTable
                     ->relationship('farm', 'name'),
                 TernaryFilter::make('is_active')
                     ->label('Seller active'),
+                // Same answer as the red price badge, computed in SQL so it can
+                // filter. Compares against the farm's effective floor, not the
+                // system floor alone.
                 Filter::make('below_floor')
                     ->label('Priced below floor')
                     ->query(fn (Builder $query): Builder => $query->whereHas(
                         'cropType',
-                        fn (Builder $cropType): Builder => $cropType->whereColumn(
-                            'crop_types.floor_price',
-                            '>',
-                            'listings.price_per_unit',
+                        fn (Builder $cropType): Builder => $cropType->whereRaw(
+                            '('.self::EFFECTIVE_FLOOR_SQL.') > listings.price_per_unit',
                         ),
                     )),
             ])

@@ -18,6 +18,11 @@ enum Permission: string
     case ManageCropTypes = 'manage_crop_types';
     case SetCropPricing = 'set_crop_pricing';
 
+    // Farm price guards, tighten-only. SetCropPricing is the system layer on
+    // the taxonomy entry; SetFarmPricing is the farm layer beneath it. Which
+    // farms a holder reaches is decided by ManageFarms, as in FarmResource.
+    case SetFarmPricing = 'set_farm_pricing';
+
     // Listings
     case ManageOwnListings = 'manage_own_listings';
     case TakedownListings = 'takedown_listings';
@@ -58,6 +63,7 @@ enum Permission: string
             self::ViewOwnFarmRoster => 'View own farm roster',
             self::ManageCropTypes => 'Manage crop taxonomy',
             self::SetCropPricing => 'Set floor price and maximum discount',
+            self::SetFarmPricing => 'Tighten a farm floor price and maximum discount',
             self::ManageOwnListings => 'Manage own listings',
             self::TakedownListings => 'Take down listings',
             self::ManageOwnTawadRules => 'Manage own tawad rules',
@@ -95,6 +101,11 @@ enum Permission: string
              * Admin governs the system; they do not act inside it. Handing
              * them every case gave them authorship of farm content and
              * ownership of seller pricing, neither of which is theirs.
+             *
+             * SetFarmPricing is governance, not seller pricing: it tightens a
+             * farm's guardrail and never sets a listing price. The Super Admin
+             * holds it so a suspended Content Editor cannot leave a farm's
+             * numbers unfixable.
              */
             Role::SuperAdmin => [
                 self::ManageAccounts,
@@ -103,6 +114,7 @@ enum Permission: string
                 self::ManageFarms,
                 self::ManageCropTypes,
                 self::SetCropPricing,
+                self::SetFarmPricing,
                 self::TakedownListings,
                 self::ViewAllOrders,
                 self::ModerateReviews,
@@ -115,6 +127,7 @@ enum Permission: string
 
             Role::ContentEditor => [
                 self::ManageOwnFarmProfile,
+                self::SetFarmPricing,
                 self::ViewOwnFarmRoster,
                 self::ManageOwnFarmArticles,
                 self::ViewFarmAnalytics,

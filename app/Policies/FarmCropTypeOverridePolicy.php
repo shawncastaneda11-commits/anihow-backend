@@ -2,33 +2,32 @@
 
 namespace App\Policies;
 
-use App\Enums\Role;
+use App\Enums\Permission;
 use App\Models\Farm;
 use App\Models\FarmCropTypeOverride;
 use App\Models\User;
 
 /**
- * Two roles reach farm price overrides, with different span.
+ * Farm price overrides, tighten-only. Decision 13.
  *
- * Super Admin writes any farm's overrides. Section 4 puts economic guardrails
- * in their column, and a suspended Content Editor would otherwise leave a
- * farm's numbers unfixable.
+ * Holding SetFarmPricing lets a user write overrides at all. Which farms they
+ * reach is decided the same way FarmResource decides it: a holder of
+ * ManageFarms reaches every farm, anyone else reaches only their own farm_id.
  *
- * Content Editor writes their own farm's overrides only.
+ * In practice that is the Super Admin across every farm, and a Content Editor
+ * inside their own. The Super Admin reaches every farm so that a suspended
+ * Content Editor cannot leave a farm's numbers unfixable.
  *
- * The span lives here and nowhere else. There is no second permission, no
- * second role, and no scope check duplicated into a FormRequest. Decision 11.
- *
- * Tighten-only is a validation concern, not an authorization one:
- * SetFarmPriceOverrideAction enforces it for both roles alike. Super Admin
- * loosens a guard by raising the system value on the crop type, which is a
- * different resource with its own policy.
+ * Tighten-only is a validation concern, not an authorization one.
+ * SetFarmPriceOverrideAction enforces it for every caller alike. Loosening a
+ * guard means changing the system value on the crop type, which is a different
+ * resource behind CropTypePolicy::setPricing.
  */
 class FarmCropTypeOverridePolicy
 {
     public function viewAny(User $user): bool
     {
-        return $this->isSuperAdmin($user) || $this->isContentEditor($user);
+        return $user->can(Permission::SetFarmPricing->value);
     }
 
     public function view(User $user, FarmCropTypeOverride $override): bool
@@ -60,24 +59,18 @@ class FarmCropTypeOverridePolicy
         return $this->reaches($user, $farm->getKey());
     }
 
-    private function reaches(User $user, ?int $farmId): bool
+    private function reaches(User $user, int|string|null $farmId): bool
     {
-        if ($this->isSuperAdmin($user)) {
+        if (! $user->can(Permission::SetFarmPricing->value)) {
+            return false;
+        }
+
+        if ($user->can(Permission::ManageFarms->value)) {
             return true;
         }
 
-        return $this->isContentEditor($user)
-            && $farmId !== null
-            && $user->farm_id === $farmId;
-    }
-
-    private function isSuperAdmin(User $user): bool
-    {
-        return $user->hasRole(Role::SuperAdmin->value);
-    }
-
-    private function isContentEditor(User $user): bool
-    {
-        return $user->hasRole(Role::ContentEditor->value);
+        return $farmId !== null
+            && $user->farm_id !== null
+            && (int) $user->farm_id === (int) $farmId;
     }
 }

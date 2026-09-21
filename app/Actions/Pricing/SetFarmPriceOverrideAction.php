@@ -6,6 +6,8 @@ use App\Models\CropType;
 use App\Models\Farm;
 use App\Models\FarmCropTypeOverride;
 use App\Support\Pricing\PriceGuard;
+use App\Support\Pricing\PriceGuardResolver;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -21,13 +23,17 @@ use Illuminate\Validation\ValidationException;
  * through a request. Same reasoning as the max() and min() kept in
  * PriceGuardResolver.
  *
- * Pass 2B part 2 hooks the listing flag pass onto the return of this action,
- * per decision 9: raising a farm floor flags every listing of that crop type
- * whose price, or whose price minus the largest applicable tawad, falls below
- * the new effective floor.
+ * After the write, any listing newly stranded by a higher effective floor is
+ * flagged to its seller. The override itself is never blocked by what it
+ * strands. Decisions 9 and 14.
  */
 class SetFarmPriceOverrideAction
 {
+    public function __construct(
+        private readonly PriceGuardResolver $resolver,
+        private readonly FlagStrandedListingsAction $flagStranded,
+    ) {}
+
     public function execute(
         Farm $farm,
         CropType $cropType,
@@ -39,6 +45,28 @@ class SetFarmPriceOverrideAction
 
         $this->assertTightenOnly($cropType, $floorPrice, $maxDiscount);
 
+        return DB::transaction(function () use ($farm, $cropType, $floorPrice, $maxDiscount): ?FarmCropTypeOverride {
+            // Read the floor fresh, not from a relation loaded before this call.
+            $farm->unsetRelation('cropTypeOverrides');
+            $previousFloor = $this->resolver->for($farm, $cropType)->floor;
+
+            $override = $this->write($farm, $cropType, $floorPrice, $maxDiscount);
+
+            $farm->unsetRelation('cropTypeOverrides');
+            $newFloor = $this->resolver->for($farm, $cropType)->floor;
+
+            $this->flagStranded->execute($farm, $cropType, $previousFloor, $newFloor);
+
+            return $override;
+        });
+    }
+
+    private function write(
+        Farm $farm,
+        CropType $cropType,
+        ?float $floorPrice,
+        ?float $maxDiscount,
+    ): ?FarmCropTypeOverride {
         // Null on both sides is the system value on both sides, which is what
         // the absence of a row already means. Delete rather than persist a
         // second encoding of one state.
@@ -47,19 +75,13 @@ class SetFarmPriceOverrideAction
                 ->where('crop_type_id', $cropType->getKey())
                 ->delete();
 
-            $farm->unsetRelation('cropTypeOverrides');
-
             return null;
         }
 
-        $override = $farm->cropTypeOverrides()->updateOrCreate(
+        return $farm->cropTypeOverrides()->updateOrCreate(
             ['crop_type_id' => $cropType->getKey()],
             ['floor_price' => $floorPrice, 'max_discount' => $maxDiscount],
         );
-
-        $farm->unsetRelation('cropTypeOverrides');
-
-        return $override;
     }
 
     private function assertTightenOnly(

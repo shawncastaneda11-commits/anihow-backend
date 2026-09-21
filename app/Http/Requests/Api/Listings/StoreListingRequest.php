@@ -4,6 +4,7 @@ namespace App\Http\Requests\Api\Listings;
 
 use App\Models\CropType;
 use App\Models\Listing;
+use App\Support\Pricing\PriceGuardResolver;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -36,6 +37,9 @@ class StoreListingRequest extends FormRequest
     /**
      * Floor price is checked here and again at checkout. This one is for the
      * seller's benefit; the checkout one is the guarantee.
+     *
+     * The floor is the seller's farm's effective floor: the system floor,
+     * raised by the farm where the farm has raised it.
      */
     public function after(): array
     {
@@ -51,8 +55,10 @@ class StoreListingRequest extends FormRequest
                     return;
                 }
 
-                if (! $cropType->allowsPrice((float) $this->validated('price_per_unit'))) {
-                    $floor = number_format((float) $cropType->floor_price, 2, '.', '');
+                $guard = app(PriceGuardResolver::class)->forFarmId($this->user()?->farm_id, $cropType);
+
+                if (! $guard->allowsPrice((float) $this->validated('price_per_unit'))) {
+                    $floor = number_format($guard->floor, 2, '.', '');
                     $validator->errors()->add(
                         'price_per_unit',
                         "The floor price for {$cropType->name} is PHP {$floor} per {$cropType->unit_of_measure->value}.",

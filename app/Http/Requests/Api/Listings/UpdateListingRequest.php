@@ -4,6 +4,7 @@ namespace App\Http\Requests\Api\Listings;
 
 use App\Models\CropType;
 use App\Models\Listing;
+use App\Support\Pricing\PriceGuardResolver;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -30,6 +31,12 @@ class UpdateListingRequest extends FormRequest
         ];
     }
 
+    /**
+     * The resulting price is checked against the listing's farm's effective
+     * floor for the resulting crop type, whichever of the two the request
+     * changes. A price left untouched is still rechecked, so a seller cannot
+     * edit the title of a stranded listing and have it pass silently.
+     */
     public function after(): array
     {
         return [
@@ -44,15 +51,21 @@ class UpdateListingRequest extends FormRequest
                     ? CropType::find($this->validated('crop_type_id'))
                     : $listing->cropType;
 
+                if ($cropType === null) {
+                    return;
+                }
+
                 $price = $this->has('price_per_unit')
                     ? (float) $this->validated('price_per_unit')
                     : (float) $listing->price_per_unit;
 
-                if ($cropType === null || $cropType->allowsPrice($price)) {
+                $guard = app(PriceGuardResolver::class)->forFarmId($listing->farm_id, $cropType);
+
+                if ($guard->allowsPrice($price)) {
                     return;
                 }
 
-                $floor = number_format((float) $cropType->floor_price, 2, '.', '');
+                $floor = number_format($guard->floor, 2, '.', '');
                 $validator->errors()->add(
                     'price_per_unit',
                     "The floor price for {$cropType->name} is PHP {$floor} per {$cropType->unit_of_measure->value}.",

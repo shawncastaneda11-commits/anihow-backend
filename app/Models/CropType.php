@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use App\Enums\ListingUnit;
+use App\Observers\CropTypeObserver;
 use Database\Factories\CropTypeFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -24,7 +26,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * tightened pair is resolved by PriceGuardResolver and is what listing,
  * tawad, checkout, and walk-in validation compare against. The values held
  * here are the system values and the outer bound on every farm's.
+ *
+ * Raising floor_price notifies every seller whose listing it newly strands.
+ * See CropTypeObserver.
  */
+#[ObservedBy([CropTypeObserver::class])]
 #[Fillable([
     'name',
     'slug',

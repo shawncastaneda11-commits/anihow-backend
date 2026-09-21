@@ -21,8 +21,9 @@ use Illuminate\Validation\ValidationException;
  * one buyer and one seller who will meet in person.
  *
  * Tawad rules apply automatically where their conditions are met. Every price
- * is revalidated here against the live crop type, not trusted from the cart:
- * a Super Admin may have raised the floor since the item was added.
+ * is revalidated here against the listing's farm's effective floor and
+ * ceiling, not trusted from the cart: the Super Admin may have raised the
+ * system floor, or the farm its own, since the item was added.
  *
  * Stock is held, not deducted. Deduction happens when the seller confirms.
  */
@@ -117,15 +118,18 @@ class CheckoutService
 
     /**
      * One cart line becomes one order item, with every display value
-     * snapshotted and every price revalidated against the live crop type.
+     * snapshotted and every price revalidated against the listing's farm's
+     * effective floor and ceiling.
      *
      * @return array<string, mixed>
      */
     private function buildLine(CartItem $item): array
     {
+        // farm.cropTypeOverrides is loaded with the locked row so the guard
+        // below resolves from memory. This runs once per cart line.
         $listing = Listing::query()
             ->whereKey($item->listing_id)
-            ->with(['cropType', 'activeTawadRule'])
+            ->with(['cropType', 'activeTawadRule', 'farm.cropTypeOverrides'])
             ->lockForUpdate()
             ->first();
 
@@ -150,10 +154,12 @@ class CheckoutService
         }
 
         $cropType = $listing->cropType;
+        $guard = $listing->priceGuard();
         $unitPrice = (float) $listing->price_per_unit;
 
-        // The Super Admin may have raised the floor since this went in the cart.
-        if (! $cropType->allowsPrice($unitPrice)) {
+        // A floor may have risen since this went in the cart, the system one
+        // or the farm's.
+        if (! $guard->allowsPrice($unitPrice)) {
             throw ValidationException::withMessages([
                 'cart' => "{$listing->title} is priced below the current floor price and cannot be ordered.",
             ]);
@@ -167,11 +173,13 @@ class CheckoutService
             $candidate = $rule->discountFor($quantity);
 
             // Second floor check, on the discounted unit price. The first ran
-            // when the rule was created; the ceiling may have moved since.
+            // when the rule was created; the floor or the ceiling may have
+            // moved since. A rule that fails is skipped, not rejected: the
+            // order goes through at the listed price. Decision 15.
             $discountedUnitPrice = ($lineSubtotal - $candidate) / $quantity;
 
-            if ($candidate <= (float) $cropType->max_discount
-                && $discountedUnitPrice >= (float) $cropType->floor_price) {
+            if ($candidate <= $guard->ceiling
+                && $discountedUnitPrice >= $guard->floor) {
                 $tawadAmount = $candidate;
             }
         }

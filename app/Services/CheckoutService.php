@@ -21,9 +21,10 @@ use Illuminate\Validation\ValidationException;
  * one buyer and one seller who will meet in person.
  *
  * Tawad rules apply automatically where their conditions are met. Every price
- * is revalidated here against the listing's farm's effective floor and
- * ceiling, not trusted from the cart: the Super Admin may have raised the
- * system floor, or the farm its own, since the item was added.
+ * is revalidated against the listing's farm's effective floor and ceiling, not
+ * trusted from the cart: the Super Admin may have raised the system floor, or
+ * the farm its own, since the item was added. The pricing itself lives in
+ * OrderLinePricer, shared with walk-in sales.
  *
  * Stock is held, not deducted. Deduction happens when the seller confirms.
  */
@@ -32,6 +33,7 @@ class CheckoutService
     public function __construct(
         private readonly OrderNumberGenerator $orderNumbers,
         private readonly InAppNotifier $notifier,
+        private readonly OrderLinePricer $pricer,
     ) {}
 
     /**
@@ -117,16 +119,15 @@ class CheckoutService
     }
 
     /**
-     * One cart line becomes one order item, with every display value
-     * snapshotted and every price revalidated against the listing's farm's
-     * effective floor and ceiling.
+     * One cart line becomes one order item. Availability and stock are checked
+     * here, in the buyer's terms; the price, floor, and tawad are the pricer's.
      *
      * @return array<string, mixed>
      */
     private function buildLine(CartItem $item): array
     {
         // farm.cropTypeOverrides is loaded with the locked row so the guard
-        // below resolves from memory. This runs once per cart line.
+        // resolves from memory. This runs once per cart line.
         $listing = Listing::query()
             ->whereKey($item->listing_id)
             ->with(['cropType', 'activeTawadRule', 'farm.cropTypeOverrides'])
@@ -153,50 +154,12 @@ class CheckoutService
             ]);
         }
 
-        $cropType = $listing->cropType;
-        $guard = $listing->priceGuard();
-        $unitPrice = (float) $listing->price_per_unit;
-
-        // A floor may have risen since this went in the cart, the system one
-        // or the farm's.
-        if (! $guard->allowsPrice($unitPrice)) {
-            throw ValidationException::withMessages([
-                'cart' => "{$listing->title} is priced below the current floor price and cannot be ordered.",
-            ]);
-        }
-
-        $lineSubtotal = $unitPrice * $quantity;
-        $rule = $listing->activeTawadRule;
-        $tawadAmount = 0.0;
-
-        if ($rule !== null && $rule->appliesTo($quantity)) {
-            $candidate = $rule->discountFor($quantity);
-
-            // Second floor check, on the discounted unit price. The first ran
-            // when the rule was created; the floor or the ceiling may have
-            // moved since. A rule that fails is skipped, not rejected: the
-            // order goes through at the listed price. Decision 15.
-            $discountedUnitPrice = ($lineSubtotal - $candidate) / $quantity;
-
-            if ($candidate <= $guard->ceiling
-                && $discountedUnitPrice >= $guard->floor) {
-                $tawadAmount = $candidate;
-            }
-        }
-
-        return [
-            'listing_id' => $listing->id,
-            'crop_type_id' => $cropType->id,
-            'listing_name' => $listing->title,
-            'unit' => $cropType->unit_of_measure,
-            'quantity' => $quantity,
-            'unit_price' => $unitPrice,
-            'line_subtotal' => $lineSubtotal,
-            'tawad_rule_id' => $tawadAmount > 0 ? $rule->id : null,
-            'tawad_type' => $tawadAmount > 0 ? $rule->type : null,
-            'tawad_amount' => $tawadAmount,
-            'line_total' => $lineSubtotal - $tawadAmount,
-        ];
+        return $this->pricer->price(
+            $listing,
+            $quantity,
+            'cart',
+            "{$listing->title} is priced below the current floor price and cannot be ordered.",
+        );
     }
 
     /**

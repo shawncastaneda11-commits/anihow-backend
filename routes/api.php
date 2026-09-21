@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\Orders\BuyerOrderController;
 use App\Http\Controllers\Api\Orders\CheckoutController;
 use App\Http\Controllers\Api\Orders\FarmerOrderController;
 use App\Http\Controllers\Api\Orders\OrderHistoryController;
+use App\Http\Controllers\Api\Orders\WalkInSaleController;
 use App\Http\Controllers\Api\Reviews\ReviewController;
 use App\Http\Controllers\Api\Shop\BuyerShopController;
 use App\Http\Controllers\Api\Shop\FarmerShopController;
@@ -108,6 +109,10 @@ Route::middleware([
         ->name('farmer.orders.complete');
     Route::patch('orders/{order}/cancel', [FarmerOrderController::class, 'cancel'])
         ->name('farmer.orders.cancel');
+
+    // Walk-in sales: an in-person sale to someone without the app, recorded
+    // after the handover. Lands in the same order ledger, directly at Completed.
+    Route::post('walk-in-sales', WalkInSaleController::class)->name('farmer.walk-in-sales.store');
 
     Route::get('shop', [FarmerShopController::class, 'show'])->name('farmer.shop.show');
     Route::match(['put', 'patch'], 'shop', [FarmerShopController::class, 'update'])->name('farmer.shop.update');

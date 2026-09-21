@@ -127,6 +127,9 @@ class CropTypeOverridesRelationManager extends RelationManager
                     ->label('Reset to system')
                     ->modalHeading('Reset to system values')
                     ->modalDescription('This crop type goes back to the system floor and system maximum tawad for this farm.')
+                    ->modalIcon('heroicon-o-arrow-uturn-left')
+                    ->modalSubmitActionLabel('Reset')
+                    ->successNotificationTitle('Reset to system values')
                     ->using(function (FarmCropTypeOverride $record, RelationManager $livewire): bool {
                         self::save($livewire, $record->crop_type_id, ['floor_price' => null, 'max_discount' => null]);
 

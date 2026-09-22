@@ -102,7 +102,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       const SizedBox(height: AniHowSpace.labelGap),
                       for (final item in group.items) ...[
                         Text(
-                          '${item.listingName} · ${item.quantity}${item.unitLabel.isEmpty ? '' : ' ${item.unitLabel}'}',
+                          [
+                            if (item.cropDisplayLabel != null) item.cropDisplayLabel!,
+                            '${item.listingName} · ${item.quantity}${item.unitLabel.isEmpty ? '' : ' ${item.unitLabel}'}',
+                          ].join(' · '),
                         ),
                         Text('Listed unit ${AniHowMoney.peso(item.listedPrice)}'),
                         PriceBreakdown(

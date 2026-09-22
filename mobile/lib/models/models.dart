@@ -53,6 +53,8 @@ class CategoryItem {
     required this.id,
     required this.name,
     this.slug,
+    this.labelEn,
+    this.labelFil,
     this.unit,
     this.unitLabel,
     this.floorPrice,
@@ -64,6 +66,8 @@ class CategoryItem {
   final int id;
   final String name;
   final String? slug;
+  final String? labelEn;
+  final String? labelFil;
   final String? unit;
   final String? unitLabel;
   final String? floorPrice;
@@ -76,6 +80,8 @@ class CategoryItem {
       id: json['id'] as int,
       name: json['name'] as String? ?? '',
       slug: json['slug'] as String?,
+      labelEn: json['label_en'] as String?,
+      labelFil: json['label_fil'] as String?,
       unit: json['unit_of_measure'] as String?,
       unitLabel: json['unit_label'] as String?,
       floorPrice: json['floor_price']?.toString(),
@@ -83,6 +89,35 @@ class CategoryItem {
       effectiveFloorPrice: json['effective_floor_price']?.toString(),
       effectiveMaxDiscount: json['effective_max_discount']?.toString(),
     );
+  }
+
+  /// Filipino crop label, then English, then taxonomy `name`.
+  String get displayLabel {
+    final fil = labelFil?.trim();
+    if (fil != null && fil.isNotEmpty) {
+      return fil;
+    }
+    final en = labelEn?.trim();
+    if (en != null && en.isNotEmpty) {
+      return en;
+    }
+    return name;
+  }
+
+  /// `Kamatis · Tomato`. Omits English when missing or identical to Filipino.
+  String get bilingualLabel {
+    final fil = labelFil?.trim();
+    final en = labelEn?.trim();
+    final primary = (fil != null && fil.isNotEmpty)
+        ? fil
+        : ((en != null && en.isNotEmpty) ? en : name);
+    if (en == null || en.isEmpty) {
+      return primary;
+    }
+    if (fil == null || fil.isEmpty || fil.toLowerCase() == en.toLowerCase()) {
+      return primary;
+    }
+    return '$primary · $en';
   }
 
   /// The floor this farmer-seller is held to. Falls back to the system
@@ -519,6 +554,15 @@ class CartLine {
   String get sellerName => listing?.sellerName ?? 'Seller';
 
   String get listingName => listing?.name ?? 'Item';
+
+  /// Filipino crop label when the cart line embeds a crop type.
+  String? get cropDisplayLabel {
+    final label = listing?.category?.displayLabel.trim();
+    if (label == null || label.isEmpty) {
+      return null;
+    }
+    return label;
+  }
 
   String get unitLabel => listing?.unitLabel ?? listing?.unit ?? '';
 

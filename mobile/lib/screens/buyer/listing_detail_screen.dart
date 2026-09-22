@@ -166,6 +166,15 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   if (listing.isLowStock) StatusPill.lowStock() else StatusPill.inStock(),
                 ],
               ),
+              if (listing.category != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  listing.category!.bilingualLabel,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                ),
+              ],
               const SizedBox(height: AniHowSpace.labelGap),
               InkWell(
                 onTap: listing.sellerId == null

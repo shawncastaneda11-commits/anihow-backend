@@ -138,7 +138,10 @@ class _CartScreenState extends State<CartScreen> {
                         contentPadding: EdgeInsets.zero,
                         title: Text(item.listingName),
                         subtitle: Text(
-                          '${item.quantity}${item.unitLabel.isEmpty ? '' : ' ${item.unitLabel}'} · listed ${AniHowMoney.peso(item.listedPrice)}',
+                          [
+                            if (item.cropDisplayLabel != null) item.cropDisplayLabel!,
+                            '${item.quantity}${item.unitLabel.isEmpty ? '' : ' ${item.unitLabel}'} · listed ${AniHowMoney.peso(item.listedPrice)}',
+                          ].join(' · '),
                         ),
                         trailing: IconButton(
                           tooltip: 'Remove',

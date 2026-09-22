@@ -280,7 +280,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                             .map(
                               (cropType) => DropdownMenuItem(
                                 value: cropType.id,
-                                child: Text(cropType.name),
+                                child: Text(cropType.bilingualLabel),
                               ),
                             )
                             .toList(),

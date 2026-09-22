@@ -209,6 +209,8 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
               ),
               if (selected != null) ...[
                 const SizedBox(height: AniHowSpace.cardGap),
+                if (selected.category != null)
+                  Text(selected.category!.displayLabel),
                 Text('Price per unit ${AniHowMoney.peso(selected.pricePerUnit)}'),
                 Text(
                   unit == null || unit.isEmpty

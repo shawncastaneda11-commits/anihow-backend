@@ -60,7 +60,7 @@ class _CropCareDetailScreenState extends State<CropCareDetailScreen> {
       return const Center(child: Text('Guide not found.'));
     }
 
-    final cropNames = article.cropTypes.map((crop) => crop.name).join(', ');
+    final cropNames = article.cropTypes.map((crop) => crop.bilingualLabel).join(', ');
     final theme = Theme.of(context);
     final cardColor = theme.cardTheme.color;
 

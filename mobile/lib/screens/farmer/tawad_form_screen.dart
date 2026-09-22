@@ -107,7 +107,7 @@ class _TawadFormScreenState extends State<TawadFormScreen> {
           if (crop?.sellerMaxDiscount != null || crop?.sellerFloorPrice != null) ...[
             const SizedBox(height: AniHowSpace.labelGap),
             if (crop?.maxDiscount != null)
-              Text('Maximum tawad for ${crop!.name} is ${AniHowMoney.peso(crop.sellerMaxDiscount)}.'),
+              Text('Maximum tawad for ${crop!.displayLabel} is ${AniHowMoney.peso(crop.sellerMaxDiscount)}.'),
             if (crop?.floorPrice != null)
               Text('Unit price cannot fall below ${AniHowMoney.peso(crop!.sellerFloorPrice)}.'),
           ],

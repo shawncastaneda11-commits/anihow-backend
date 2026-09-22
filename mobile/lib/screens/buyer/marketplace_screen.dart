@@ -110,7 +110,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                           backgroundColor: CategoryColor.of(cropType),
                           radius: 8,
                         ),
-                        label: Text(cropType.name),
+                        label: Text(cropType.displayLabel),
                         selected: _cropTypeId == cropType.id,
                         onSelected: (_) {
                           setState(() => _cropTypeId = cropType.id);

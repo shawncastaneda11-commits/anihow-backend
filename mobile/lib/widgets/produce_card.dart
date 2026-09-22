@@ -36,7 +36,8 @@ class ProduceCard extends StatelessWidget {
               )
             : CategoryColor.of(listing.category, listingName: listing.name));
     final theme = Theme.of(context);
-    final sellerLabel = listing.sellerName ?? listing.category?.name ?? 'Farm stall';
+    final sellerLabel = listing.sellerName ?? listing.category?.displayLabel ?? 'Farm stall';
+    final cropLabel = listing.category?.bilingualLabel;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -56,6 +57,15 @@ class ProduceCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(listing.name, style: theme.textTheme.titleMedium),
+                          if (cropLabel != null && cropLabel.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              cropLabel,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ],
                           if (showSeller) ...[
                             const SizedBox(height: 2),
                             GestureDetector(

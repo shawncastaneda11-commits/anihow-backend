@@ -122,8 +122,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         actions: [
           TextButton(
             style: TextButton.styleFrom(
-              foregroundColor: Colors.white,
-              disabledForegroundColor: Colors.white70,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              disabledForegroundColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
             ),
             onPressed: _busy || !hasUnread ? null : _markAllRead,
             child: const Text('Mark all read'),

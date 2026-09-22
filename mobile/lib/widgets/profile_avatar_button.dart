@@ -25,7 +25,7 @@ class ProfileAvatarButton extends StatelessWidget {
         name: name,
         radius: 16,
         backgroundColor: AniHowColors.avatarOnBrand,
-        foregroundColor: Colors.white,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
       ),
     );
   }
@@ -61,7 +61,7 @@ class AniHowAvatar extends StatelessWidget {
     return CircleAvatar(
       radius: radius,
       backgroundColor: backgroundColor ?? AniHowColors.brand,
-      foregroundColor: foregroundColor ?? Colors.white,
+      foregroundColor: foregroundColor ?? Theme.of(context).colorScheme.onPrimary,
       child: Text(
         _initials,
         style: TextStyle(

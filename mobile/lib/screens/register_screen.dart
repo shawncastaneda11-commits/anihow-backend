@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../state/auth_controller.dart';
 import '../theme/anihow_space.dart';
-import '../theme/anihow_theme.dart';
+import '../widgets/auth_layout.dart';
 import '../widgets/form_label.dart';
 import '../widgets/primary_button.dart';
 
@@ -54,11 +54,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     final error = context.watch<AuthController>().error;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Buyer registration')),
-      body: ListView(
-        padding: AniHowSpace.screenPadding,
+    return AuthLayout(
+      leading: IconButton(
+        tooltip: 'Back',
+        onPressed: () => Navigator.of(context).maybePop(),
+        icon: const Icon(Icons.arrow_back),
+      ),
+      form: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Text(
+            'Create account',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: AniHowSpace.section),
           AniHowField(label: 'Full name', child: TextField(controller: _name)),
           const SizedBox(height: AniHowSpace.fieldGap),
           AniHowField(
@@ -88,7 +99,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
           if (error != null) ...[
             const SizedBox(height: AniHowSpace.cardGap),
-            Text(error, style: const TextStyle(color: AniHowColors.fruit, fontSize: AniHowSpace.body)),
+            Text(
+              error,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontSize: AniHowSpace.body,
+              ),
+            ),
           ],
           const SizedBox(height: AniHowSpace.section),
           PrimaryButton(label: 'Register', busy: _busy, onPressed: _submit),

@@ -52,6 +52,8 @@ demo data or hand-entered test rows, so the cost is a reseed.
 php artisan migrate:fresh --seed
 ```
 
+`crop_type_id` on `farm_crop_type_overrides` restricts deletes only after `php artisan migrate:fresh`; until then the migration file and an already-migrated database disagree.
+
 Four `add_*` migrations are folded into their create migrations. A two-day-old
 project does not need an ALTER history.
 

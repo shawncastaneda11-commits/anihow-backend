@@ -6,7 +6,6 @@ class AniHowColors {
   static const Color brand = Color(0xFF1F5A3E);
   static const Color deepGreen = Color(0xFF1F5A3E);
   static const Color sage = Color(0xFF58A67D);
-  static const Color mint = Color(0xFF2E8B57);
   static const Color leafy = Color(0xFF639922);
   static const Color fruit = Color(0xFFD85A30);
   static const Color root = Color(0xFFBA7517);
@@ -16,7 +15,6 @@ class AniHowColors {
   static const Color hairline = Color(0xFFE8E4DA);
   static const Color cardBorder = Color(0xFFE5E7EB);
   static const Color photoPlaceholder = Color(0xFFE2E8F0);
-  static const Color categoryChip = Color(0xFFD1E7DD);
   static const Color text = Color(0xFF1E2421);
   static const Color muted = Color(0xFF6C757D);
   static const Color navBar = Color(0xFFFDFCFA);
@@ -54,7 +52,8 @@ class AniHowColors {
 }
 
 class AniHowTheme {
-  static const double cardRadius = AniHowSpace.radius;
+  static const String fontFamily = 'PlusJakartaSans';
+  static const double cardRadius = 16;
   static const double controlRadius = AniHowSpace.radius;
   static const EdgeInsets pagePadding = AniHowSpace.screenPadding;
 
@@ -93,22 +92,30 @@ class AniHowTheme {
     );
 
     final radius = BorderRadius.circular(cardRadius);
+    final dark = brightness == Brightness.dark;
+    // Dark accent: sage reads ≥4.5:1 on dark surfaces; brand does not.
+    final accent = dark ? AniHowColors.sage : AniHowColors.brand;
 
     return ThemeData(
       useMaterial3: true,
+      fontFamily: fontFamily,
       colorScheme: scheme,
       scaffoldBackgroundColor: background,
       canvasColor: background,
       textTheme: _textTheme(text),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: accent),
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: AniHowColors.brand,
-        foregroundColor: Colors.white,
+        foregroundColor: scheme.onPrimary,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: const TextStyle(
+        titleTextStyle: TextStyle(
+          fontFamily: fontFamily,
           fontSize: AniHowSpace.header,
           fontWeight: FontWeight.w500,
-          color: Colors.white,
+          color: scheme.onPrimary,
         ),
       ),
       cardTheme: CardThemeData(
@@ -129,16 +136,20 @@ class AniHowTheme {
         selectedColor: AniHowColors.brand.withValues(alpha: 0.16),
         side: BorderSide(color: hairline),
         labelStyle: TextStyle(
+          fontFamily: fontFamily,
           color: text,
           fontWeight: FontWeight.w600,
           fontSize: AniHowSpace.label,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: const StadiumBorder(),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: card,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(controlRadius)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(controlRadius),
+          borderSide: BorderSide(color: hairline),
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(controlRadius),
           borderSide: BorderSide(color: hairline),
@@ -151,28 +162,32 @@ class AniHowTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: AniHowColors.brand,
-          foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(controlRadius),
+          foregroundColor: scheme.onPrimary,
+          minimumSize: const Size.fromHeight(52),
+          shape: const StadiumBorder(),
+          textStyle: const TextStyle(
+            fontFamily: fontFamily,
+            fontWeight: FontWeight.w600,
+            fontSize: AniHowSpace.name,
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: AniHowSpace.name),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AniHowColors.brand,
           side: const BorderSide(color: AniHowColors.brand),
-          minimumSize: const Size.fromHeight(48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(controlRadius),
+          minimumSize: const Size.fromHeight(52),
+          shape: const StadiumBorder(),
+          textStyle: const TextStyle(
+            fontFamily: fontFamily,
+            fontWeight: FontWeight.w600,
+            fontSize: AniHowSpace.name,
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: AniHowSpace.name),
         ),
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: AniHowColors.brand,
-        foregroundColor: Colors.white,
+        foregroundColor: scheme.onPrimary,
       ),
       switchTheme: SwitchThemeData(
         materialTapTargetSize: MaterialTapTargetSize.padded,
@@ -192,16 +207,18 @@ class AniHowTheme {
         dividerColor: hairline,
         labelPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         labelStyle: const TextStyle(
+          fontFamily: fontFamily,
           fontSize: AniHowSpace.tab,
           fontWeight: FontWeight.w700,
         ),
         unselectedLabelStyle: const TextStyle(
+          fontFamily: fontFamily,
           fontSize: AniHowSpace.tab,
           fontWeight: FontWeight.w600,
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AniHowColors.navBar,
+        backgroundColor: dark ? AniHowColors.darkCard : AniHowColors.navBar,
         elevation: 0,
         shadowColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
@@ -210,14 +227,15 @@ class AniHowTheme {
         iconTheme: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return IconThemeData(
-            color: selected ? AniHowColors.brand : AniHowColors.navInactive,
+            color: selected ? accent : AniHowColors.navInactive,
           );
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return TextStyle(
+            fontFamily: fontFamily,
             fontWeight: FontWeight.w600,
-            color: selected ? AniHowColors.brand : AniHowColors.navInactive,
+            color: selected ? accent : AniHowColors.navInactive,
             fontSize: AniHowSpace.nav,
           );
         }),
@@ -227,15 +245,15 @@ class AniHowTheme {
 
   static TextTheme _textTheme(Color text) {
     return TextTheme(
-      headlineLarge: TextStyle(fontSize: AniHowSpace.headline, fontWeight: FontWeight.w800, color: text, height: 1.25),
-      headlineMedium: TextStyle(fontSize: AniHowSpace.headline, fontWeight: FontWeight.w800, color: text, height: 1.25),
-      headlineSmall: TextStyle(fontSize: AniHowSpace.headline, fontWeight: FontWeight.w800, color: text, height: 1.25),
-      titleLarge: TextStyle(fontSize: AniHowSpace.title, fontWeight: FontWeight.w700, color: text),
-      titleMedium: TextStyle(fontSize: AniHowSpace.name, fontWeight: FontWeight.w700, color: text),
-      bodyLarge: TextStyle(fontSize: AniHowSpace.body, fontWeight: FontWeight.w400, color: text, height: AniHowSpace.articleHeight),
-      bodyMedium: TextStyle(fontSize: AniHowSpace.body, fontWeight: FontWeight.w400, color: text, height: 1.4),
-      labelLarge: TextStyle(fontSize: AniHowSpace.meta, fontWeight: FontWeight.w700, color: text),
-      labelSmall: TextStyle(fontSize: AniHowSpace.label, fontWeight: FontWeight.w600, color: text.withValues(alpha: 0.7)),
+      headlineLarge: TextStyle(fontFamily: fontFamily, fontSize: AniHowSpace.headline, fontWeight: FontWeight.w700, color: text, height: 1.25),
+      headlineMedium: TextStyle(fontFamily: fontFamily, fontSize: AniHowSpace.headline, fontWeight: FontWeight.w700, color: text, height: 1.25),
+      headlineSmall: TextStyle(fontFamily: fontFamily, fontSize: AniHowSpace.headline, fontWeight: FontWeight.w700, color: text, height: 1.25),
+      titleLarge: TextStyle(fontFamily: fontFamily, fontSize: AniHowSpace.title, fontWeight: FontWeight.w600, color: text),
+      titleMedium: TextStyle(fontFamily: fontFamily, fontSize: AniHowSpace.name, fontWeight: FontWeight.w600, color: text),
+      bodyLarge: TextStyle(fontFamily: fontFamily, fontSize: AniHowSpace.body, fontWeight: FontWeight.w400, color: text, height: AniHowSpace.articleHeight),
+      bodyMedium: TextStyle(fontFamily: fontFamily, fontSize: AniHowSpace.body, fontWeight: FontWeight.w400, color: text, height: 1.4),
+      labelLarge: TextStyle(fontFamily: fontFamily, fontSize: AniHowSpace.meta, fontWeight: FontWeight.w700, color: text),
+      labelSmall: TextStyle(fontFamily: fontFamily, fontSize: AniHowSpace.label, fontWeight: FontWeight.w600, color: text.withValues(alpha: 0.7)),
     );
   }
 }

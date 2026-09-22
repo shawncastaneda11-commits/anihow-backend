@@ -1,9 +1,12 @@
+import '../theme/anihow_space.dart';
+
 class UserAccount {
   const UserAccount({
     required this.id,
     required this.name,
     required this.email,
     required this.roles,
+    this.permissions = const [],
     this.phone,
     this.shopName,
     this.emailVerifiedAt,
@@ -13,6 +16,7 @@ class UserAccount {
   final String name;
   final String email;
   final List<String> roles;
+  final List<String> permissions;
   final String? phone;
   final String? shopName;
   final String? emailVerifiedAt;
@@ -25,6 +29,9 @@ class UserAccount {
       roles: ((json['roles'] as List?) ?? const [])
           .map((role) => role.toString())
           .toList(),
+      permissions: ((json['permissions'] as List?) ?? const [])
+          .map((permission) => permission.toString())
+          .toList(),
       phone: json['phone'] as String?,
       shopName: json['shop_name'] as String?,
       emailVerifiedAt: json['email_verified_at'] as String?,
@@ -33,6 +40,8 @@ class UserAccount {
 
   bool get isBuyer => roles.contains('buyer');
   bool get isFarmerSeller => roles.contains('farmer_seller');
+  bool get canRecordWalkInSales =>
+      isFarmerSeller && permissions.contains('record_walk_in_sales');
   bool get isSuperAdmin => roles.contains('super_admin');
   bool get isVerified => emailVerifiedAt != null && emailVerifiedAt!.isNotEmpty;
   String get roleLabel =>
@@ -105,8 +114,7 @@ class TawadRule {
   bool get isMinQuantity => type == 'min_quantity';
 
   String get summary {
-    final value = double.tryParse(discountAmount) ?? 0;
-    final amount = '₱${value.toStringAsFixed(2)}';
+    final amount = AniHowMoney.peso(discountAmount);
     if (isMinQuantity && minQuantity != null && minQuantity!.isNotEmpty) {
       return '$amount off at $minQuantity and above';
     }

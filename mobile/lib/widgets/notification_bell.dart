@@ -102,7 +102,11 @@ class _NotificationBellButtonState extends State<NotificationBellButton>
       icon: Badge(
         isLabelVisible: unread > 0,
         label: Text(label),
-        child: const Icon(Icons.notifications_outlined, size: 24, color: Colors.white),
+        child: Icon(
+          Icons.notifications_outlined,
+          size: 24,
+          color: Theme.of(context).colorScheme.onPrimary,
+        ),
       ),
     );
   }

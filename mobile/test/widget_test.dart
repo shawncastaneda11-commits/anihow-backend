@@ -3,6 +3,7 @@ import 'package:anihow/config/api_config.dart';
 import 'package:anihow/models/models.dart';
 import 'package:anihow/services/cart_requests.dart';
 import 'package:anihow/services/tawad_requests.dart';
+import 'package:anihow/support/walk_in_quote.dart';
 import 'package:anihow/theme/anihow_space.dart';
 import 'package:anihow/theme/anihow_theme.dart';
 import 'package:anihow/widgets/status_pill.dart';
@@ -51,6 +52,7 @@ void main() {
     expect(AniHowSpace.tabHeight, 60);
     expect(AniHowSpace.thumb, 64);
     expect(AniHowMoney.peso(65), '₱65.00');
+    expect(AniHowMoney.peso(1250), '₱1,250.00');
     expect(AniHowMoney.rating(4), '4.0');
     expect(AniHowMoney.rating('4.50'), '4.5');
   });
@@ -366,5 +368,89 @@ void main() {
     expect(listing.tawad!.summary.toLowerCase(), isNot(contains('percent')));
     expect(listing.category?.maxDiscount, '20');
     expect(listing.category?.floorPrice, '25');
+  });
+
+  test('walk-in quote applies tawad that clears the ceiling and the floor', () {
+    final quote = WalkInQuote.forListing(_quotedListing(discount: 20, minimum: 5), '6');
+
+    expect(quote, isNotNull);
+    expect(quote!.listed, 180);
+    expect(quote.tawad, 20);
+    expect(quote.total, 160);
+  });
+
+  test('walk-in quote skips tawad below the minimum quantity', () {
+    final quote = WalkInQuote.forListing(_quotedListing(discount: 20, minimum: 5), '4');
+
+    expect(quote!.listed, 120);
+    expect(quote.tawad, 0);
+    expect(quote.total, 120);
+  });
+
+  test('walk-in quote skips tawad that breaches the ceiling or the floor', () {
+    final overCeiling = WalkInQuote.forListing(
+      _quotedListing(discount: 10, ceiling: '5'),
+      '1',
+    );
+    final underFloor = WalkInQuote.forListing(
+      _quotedListing(price: '40', discount: 10, floor: '35', type: 'flat'),
+      '1',
+    );
+
+    expect(overCeiling!.tawad, 0);
+    expect(overCeiling.total, 30);
+    expect(underFloor!.tawad, 0);
+    expect(underFloor.total, 40);
+  });
+
+  test('a buyer permission set cannot record a walk-in', () {
+    final buyer = UserAccount.fromJson({
+      'id': 1,
+      'name': 'Buyer',
+      'email': 'buyer@example.com',
+      'roles': ['buyer'],
+      'permissions': ['place_orders'],
+    });
+    final seller = UserAccount.fromJson({
+      'id': 2,
+      'name': 'Seller',
+      'email': 'seller@example.com',
+      'roles': ['farmer_seller'],
+      'permissions': ['record_walk_in_sales'],
+    });
+
+    expect(buyer.canRecordWalkInSales, isFalse);
+    expect(seller.canRecordWalkInSales, isTrue);
+  });
+}
+
+ListingItem _quotedListing({
+  String price = '30',
+  required num discount,
+  num? minimum,
+  String floor = '25',
+  String ceiling = '20',
+  String type = 'min_quantity',
+}) {
+  return ListingItem.fromJson({
+    'id': 1,
+    'title': 'Kamatis',
+    'price_per_unit': price,
+    'quantity_available': 20,
+    'crop_type': {
+      'id': 1,
+      'name': 'Kamatis',
+      'floor_price': floor,
+      'max_discount': ceiling,
+      'effective_floor_price': floor,
+      'effective_max_discount': ceiling,
+    },
+    'tawad': {
+      'id': 1,
+      'type': type,
+      'discount_amount': discount,
+      'min_quantity': minimum,
+      'is_active': true,
+    },
   });
 }

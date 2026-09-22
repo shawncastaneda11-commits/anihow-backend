@@ -6,6 +6,7 @@ use App\Actions\Pricing\SetFarmPriceOverrideAction;
 use App\Enums\ListingStatus;
 use App\Enums\OrderSource;
 use App\Enums\OrderStatus;
+use App\Enums\Role;
 use App\Enums\TawadType;
 use App\Http\Resources\Api\OrderResource;
 use App\Models\CropType;
@@ -14,6 +15,7 @@ use App\Models\Listing;
 use App\Models\Order;
 use App\Models\TawadRule;
 use App\Models\User;
+use App\Services\AnalyticsService;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
@@ -89,6 +91,33 @@ class WalkInSaleTest extends TestCase
             'amount_received' => 60,
         ])->assertCreated();
 
+        $listing->refresh();
+        $this->assertSame(8.0, (float) $listing->quantity_available);
+        $this->assertSame(0.0, (float) $listing->quantity_held);
+    }
+
+    public function test_a_completed_walk_in_cannot_be_transitioned(): void
+    {
+        $farmer = $this->farmer(['email' => 'stuck@example.com']);
+        $listing = $this->kamatisListing($farmer, price: 30, quantity: 10);
+
+        $orderId = $this->walkIn($farmer, [
+            'listing_id' => $listing->id,
+            'quantity' => 2,
+            'amount_received' => 60,
+        ])->assertCreated()->json('data.id');
+
+        $order = Order::query()->findOrFail($orderId);
+
+        $this->assertSame([], $order->status->allowedNext());
+        $this->assertSame([], $this->asUser($farmer)->getJson("/api/farmer/orders/{$orderId}")->assertOk()->json('data.allowed_next'));
+
+        $this->asUser($farmer)
+            ->patchJson("/api/farmer/orders/{$orderId}/confirm")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
+
+        $this->assertSame(OrderStatus::Completed, $order->refresh()->status);
         $listing->refresh();
         $this->assertSame(8.0, (float) $listing->quantity_available);
         $this->assertSame(0.0, (float) $listing->quantity_held);
@@ -173,6 +202,31 @@ class WalkInSaleTest extends TestCase
             'amount_received' => 40,
         ])->assertCreated()->json('data');
 
+        $this->assertEquals(0, $order['tawad_total']);
+        $this->assertEquals(40, $order['total']);
+    }
+
+    public function test_a_walk_in_skips_a_tawad_that_would_drop_the_unit_below_the_effective_floor(): void
+    {
+        $farm = Farm::factory()->create();
+        $farmer = $this->farmer(['email' => 'tawad.floor@example.com'], $farm);
+        $listing = $this->kamatisListing($farmer, price: 40, quantity: 10);
+        TawadRule::factory()->for($listing)->create([
+            'type' => TawadType::Flat,
+            'discount_amount' => 10,
+            'min_quantity' => null,
+            'is_active' => true,
+        ]);
+
+        app(SetFarmPriceOverrideAction::class)->execute($farm, $listing->cropType, 35, null);
+
+        $order = $this->walkIn($farmer, [
+            'listing_id' => $listing->id,
+            'quantity' => 1,
+            'amount_received' => 40,
+        ])->assertCreated()->json('data');
+
+        $this->assertEquals(40, $order['items'][0]['listed_price']);
         $this->assertEquals(0, $order['tawad_total']);
         $this->assertEquals(40, $order['total']);
     }
@@ -283,6 +337,25 @@ class WalkInSaleTest extends TestCase
         $this->assertSame(0, Order::query()->count());
     }
 
+    public function test_an_actor_without_record_walk_in_sales_cannot_record_one(): void
+    {
+        $farmer = $this->farmer(['email' => 'permitted@example.com']);
+        $listing = $this->kamatisListing($farmer, price: 30, quantity: 10);
+        $editor = User::factory()->create(['email' => 'editor@example.com']);
+        $editor->syncRoles(Role::ContentEditor);
+
+        $this->assertFalse($editor->can('record_walk_in_sales'));
+
+        $this->walkIn($editor, [
+            'listing_id' => $listing->id,
+            'quantity' => 1,
+            'amount_received' => 30,
+        ])->assertForbidden();
+
+        $this->assertSame(0, Order::query()->count());
+        $this->assertSame(10.0, (float) $listing->fresh()->quantity_available);
+    }
+
     // No buyer
 
     public function test_a_walk_in_cannot_be_reviewed(): void
@@ -298,7 +371,21 @@ class WalkInSaleTest extends TestCase
 
         $this->assertFalse($response->json('data.can_be_reviewed'));
 
-        $this->asUser($this->buyer())
+        $order = Order::query()->findOrFail($response->json('data.id'));
+        $buyer = $this->buyer();
+
+        $this->assertTrue($order->isWalkIn());
+        $this->assertNull($order->buyer_id);
+        $this->assertFalse($order->canBeReviewed());
+
+        $order->source = OrderSource::App;
+        $this->assertFalse($order->canBeReviewed());
+
+        $order->source = OrderSource::WalkIn;
+        $order->buyer_id = $buyer->id;
+        $this->assertFalse($order->canBeReviewed());
+
+        $this->asUser($buyer)
             ->postJson('/api/buyer/reviews', [
                 'order_id' => $response->json('data.id'),
                 'rating' => 5,
@@ -349,6 +436,56 @@ class WalkInSaleTest extends TestCase
 
         $this->assertNotNull($listed);
         $this->assertSame(OrderSource::WalkIn->value, $listed['source']);
+    }
+
+    public function test_the_four_analytics_summaries_count_a_completed_walk_in(): void
+    {
+        $farmer = $this->farmer(['email' => 'analytics@example.com']);
+        $listing = $this->kamatisListing($farmer, price: 30, quantity: 20);
+        TawadRule::factory()->for($listing)->create([
+            'type' => TawadType::MinimumQuantity,
+            'discount_amount' => 20,
+            'min_quantity' => 5,
+            'is_active' => true,
+        ]);
+
+        $this->walkIn($farmer, [
+            'listing_id' => $listing->id,
+            'quantity' => 6,
+            'amount_received' => 160,
+        ])->assertCreated();
+
+        $placed = $this->listingFor($farmer, [
+            'crop_type_id' => $listing->crop_type_id,
+            'price_per_unit' => 30,
+            'quantity_available' => 20,
+            'title' => 'Still only placed',
+        ]);
+        $this->placeOrder($this->buyer(), $placed, 4);
+
+        $analytics = app(AnalyticsService::class);
+        $units = $analytics->unitsSoldPerCropType();
+        $row = $units->firstWhere('crop', $listing->cropType->name);
+
+        $this->assertNotNull($row);
+        $this->assertEquals(6, (float) $row->units);
+        $this->assertEquals(160, (float) $row->revenue);
+
+        $today = now()->toDateString();
+        $period = $analytics->salesPerPeriod()->firstWhere('period', $today);
+        $this->assertNotNull($period);
+        $this->assertSame(1, $period->orders);
+        $this->assertEquals(160, $period->revenue);
+
+        $best = $analytics->bestSelling()->first();
+        $this->assertSame($listing->cropType->name, $best->crop);
+        $this->assertEquals(6, (float) $best->units);
+
+        $discount = $analytics->averageDiscount();
+        $this->assertSame(1, $discount['orders']);
+        $this->assertSame(1, $discount['discounted_orders']);
+        $this->assertEquals(20, $discount['total']);
+        $this->assertEquals(20, $discount['average']);
     }
 
     // Helpers. Named apart from CreatesMarketplaceActors so none shadow it.

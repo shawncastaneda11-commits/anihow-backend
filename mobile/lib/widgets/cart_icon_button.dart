@@ -5,9 +5,9 @@ import '../screens/buyer/cart_screen.dart';
 import '../state/cart_controller.dart';
 
 class CartIconButton extends StatelessWidget {
-  const CartIconButton({super.key, this.color = Colors.white});
+  const CartIconButton({super.key, this.color});
 
-  final Color color;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +26,11 @@ class CartIconButton extends StatelessWidget {
       icon: Badge(
         isLabelVisible: count > 0,
         label: Text(label),
-        child: Icon(Icons.shopping_basket_outlined, size: 24, color: color),
+        child: Icon(
+          Icons.shopping_basket_outlined,
+          size: 24,
+          color: color ?? Theme.of(context).colorScheme.onPrimary,
+        ),
       ),
     );
   }

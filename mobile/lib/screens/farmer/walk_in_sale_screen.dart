@@ -5,13 +5,16 @@ import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
+import '../../support/walk_in_quote.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/price_breakdown.dart';
 import '../../widgets/primary_button.dart';
 
 class WalkInSaleScreen extends StatefulWidget {
-  const WalkInSaleScreen({super.key});
+  const WalkInSaleScreen({super.key, this.listingId});
+
+  final int? listingId;
 
   @override
   State<WalkInSaleScreen> createState() => _WalkInSaleScreenState();
@@ -33,11 +36,19 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
   @override
   void initState() {
     super.initState();
+    _quantity.addListener(_onQuantityChanged);
     _loadListings();
+  }
+
+  void _onQuantityChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
   void dispose() {
+    _quantity.removeListener(_onQuantityChanged);
     _quantity.dispose();
     _amountReceived.dispose();
     _buyerName.dispose();
@@ -54,6 +65,14 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
     return null;
   }
 
+  WalkInQuote? get _quote {
+    final listing = _selected;
+    if (listing == null) {
+      return null;
+    }
+    return WalkInQuote.forListing(listing, _quantity.text);
+  }
+
   Future<void> _loadListings() async {
     setState(() {
       _loading = true;
@@ -65,9 +84,13 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
         return;
       }
       final sellable = items.where((listing) => !listing.isTakenDown).toList();
+      final requested = widget.listingId;
+      final selected = sellable.any((listing) => listing.id == requested)
+          ? requested
+          : (sellable.isEmpty ? null : sellable.first.id);
       setState(() {
         _listings = sellable;
-        _listingId = sellable.isEmpty ? null : sellable.first.id;
+        _listingId = selected;
         _loading = false;
         _error = null;
       });
@@ -221,7 +244,7 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
               ),
               const SizedBox(height: AniHowSpace.fieldGap),
               AniHowField(
-                label: 'Buyer name (optional)',
+                label: 'Guest name (optional)',
                 child: TextField(
                   controller: _buyerName,
                   maxLength: 100,
@@ -251,7 +274,20 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
               AniHowSpace.screen,
               AniHowSpace.screen,
             ),
-            child: PrimaryButton(label: 'Save', busy: _busy, onPressed: _save),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_quote != null) ...[
+                  PriceBreakdown(
+                    listed: _quote!.listed,
+                    tawad: _quote!.tawad,
+                    total: _quote!.total,
+                  ),
+                  const SizedBox(height: AniHowSpace.cardGap),
+                ],
+                PrimaryButton(label: 'Record sale', busy: _busy, onPressed: _save),
+              ],
+            ),
           ),
         ),
       ],

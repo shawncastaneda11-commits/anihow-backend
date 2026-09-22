@@ -1,8 +1,8 @@
-# AniHow Capstone: Project Instructions (v3.2, Manuscript Drafting)
+# AniHow Capstone: Project Instructions (v3.3, Manuscript Drafting)
 
-Supersedes v3.1 and, through it, v3 and the v2 Marketplace Rebuild instructions in full. Where this document
+Supersedes v3.2 and, through it, v3.1, v3, and the v2 Marketplace Rebuild instructions in full. Where this document
 conflicts with any earlier instruction set, working note, or prior manuscript
-section, THIS DOCUMENT WINS. v2, v3, and v3.1 are historical reference only.
+section, THIS DOCUMENT WINS. v2, v3, v3.1, and v3.2 are historical reference only.
 
 Status: system built, manuscript in drafting.
 
@@ -24,17 +24,20 @@ is changed silently.
 
 ## 2. Build state
 
-The system is implemented across three surfaces: a Laravel API (87 routes,
-four roles), a Filament CMS (eight resources, two roles on one
-policy-gated panel), and a Flutter Android application.
+The system is implemented across three surfaces: a Laravel API (52 API
+routes, four roles), a Filament CMS (eight resources, two roles on one
+policy-gated panel), and a Flutter Android application. The 52 count is
+`route:list --path=api`; the unfiltered surface, including CMS, Livewire,
+storage, and framework routes, is 88.
 
 Two test layers cover it. SmokeTestSeeder passes 26 of 26 service-level
 checks covering checkout, the per-seller cart split, tawad application,
 stock held at Placed and deducted at Confirmed, and review unlocking at
-Completed. A PHPUnit feature suite passes 46 of 46 over HTTP, covering the
-authentication gate, the client request contract, the crop-care read path,
-the buyer order resource, the farmer order state machine, checkout, tawad
-creation and validation, and seller isolation. The overlap between the two
+Completed. A PHPUnit feature suite passes 85 of 85 over HTTP (446 assertions),
+covering the authentication gate, the client request contract, the
+crop-care read path, the buyer order resource, the farmer order state
+machine, checkout, tawad creation and validation, seller isolation,
+farm-scoped price guards, and walk-in sale recording. The overlap between the two
 layers is deliberate: the seeder tests the services, the feature suite
 tests the routes, and a policy or FormRequest can fail while the service
 beneath it stays correct.
@@ -44,10 +47,20 @@ been left on the pre-rebuild API contract and could not place an order;
 nine verified passes restored it, and the full marketplace flow was walked
 end to end on a device.
 
-Two changes are specified in this document but not yet built. Farm-scoped
-floor overrides (Section 5) and walk-in sale recording (Section 7). Both
-are decided, Section 18 items 5 and 6. What is outstanding is
-implementation, not approval.
+Both changes previously listed as unbuilt are now built and verified.
+Farm-scoped tighten-only price overrides (Sections 5 and 6) ship as the
+`farm_crop_type_overrides` table, an effective-value resolver read across
+checkout, tawad, and listing validation, a Filament relation manager, a
+per-farm write policy, and a stranded-listing flag for the Super Admin.
+Walk-in sale recording (Section 7) ships as three columns on `orders`, a
+`record_walk_in_sales` permission, an order-creation path that lands a
+walk-in directly at Completed, and a farmer-side app screen. Both carry
+RefreshDatabase feature coverage and both were walked on a device.
+
+Not yet done, and outstanding before the system is a system rather than a
+build: it has run only against seeder fixtures, never against a real
+farm's data, and it is not deployed. The app has run on the emulator
+only. Section 14 names the VPS as the deployment target.
 
 Chapter 4 and Chapter 5 are not part of this manuscript. See Section 13.
 
@@ -97,9 +110,13 @@ Finance Manager (never existed; guard against reintroduction).
 **Super Admin governs:**
 - Creates, approves, suspends, and deletes all accounts including Content Editors
 - Sets the **system floor price per crop type** and the **system maximum peso
-  discount per crop type** on the shared taxonomy entry. These two fields are
-  locked to Super Admin. No other role can edit them, and no other role can set a
-  value that escapes them.
+  discount per crop type** on the shared taxonomy entry. These two system fields
+  are Super Admin's alone. No other role edits them, and no override any role sets
+  can escape them.
+- Writes farm price overrides on any farm, held to the same tighten-only rule as
+  a Content Editor. This keeps a farm's guards reachable when its Content Editor
+  is suspended or absent, and it is why the write is gated by permission and farm
+  match rather than by role name.
 - Takes down listings, resolves reports, removes reviews, suspends users
 - Reads the full order ledger and all descriptive dashboards; owns exports
 - Owns the crop taxonomy structure
@@ -154,16 +171,32 @@ it did. No gateway, no wallet, no escrow, no proceeds division.
   **Rationale to defend:** if each farm could set its own floor freely, the floor
   would stop being a guardrail. One kamatis entry, one system floor, many
   listings. Farms may tighten above that floor but never below it.
-- **Farm price overrides** are two optional nullable fields on the farm, per
-  taxonomy entry: a farm floor and a farm discount ceiling. Null means the system
-  value applies. Validation rejects a farm floor below the system floor and a farm
-  ceiling above the system maximum.
+- **Farm price overrides** live in their own table, `farm_crop_type_overrides`,
+  one row per farm per taxonomy entry, holding a nullable farm floor and a
+  nullable farm discount ceiling. A missing row, or a row with both columns null,
+  means the system value applies. `farm_id` cascades on delete, `crop_type_id`
+  restricts, and the pair is unique. There is no CHECK on this table: the
+  `crop_types` CHECK compares the system pair only, and tighten-only validation
+  in the application preserves the invariant at farm level, since effective
+  ceiling is at most the system maximum, which is below the system floor, which
+  is at most the effective floor. Validation rejects a farm floor below the
+  system floor and a farm ceiling above the system maximum.
 - **Listing** is the farmer-seller's own object, created *under* a taxonomy entry.
   Own photos, own copy, own price, own stock. This is the Shopee model: the
   taxonomy is a category tree, not a product list.
-- **Crop-care articles are farm-scoped.** Each farm's Content Editor writes their
-  own guidance, tagged to shared taxonomy entries. Article slugs are unique per
-  farm, with the farm slug in the URL path.
+- **Crop-care articles are farm-scoped in authorship, not in read access.** Each
+  farm's Content Editor writes their own guidance, tagged to shared taxonomy
+  entries; article slugs are unique per farm, with the farm slug in the URL path.
+  A draft is private to its farm. A published article is reference content
+  readable by any authenticated user, including buyers, who belong to no farm.
+  "Farm-scoped" governs who may write, edit, publish, and unpublish, not who may
+  read a published article.
+- **Multi-farm isolation is verified.** Across two farms, each farm's overrides,
+  listings, orders, figures, farm-scoped analytics, article writes, and article
+  moderation are private to that farm, and one farm's Content Editor cannot read
+  another farm's drafts. The Super Admin reads across all farms. Eight
+  RefreshDatabase checks, 138 assertions. The build supports many farms; the
+  study population is a separate question, Section 18.
 
 ---
 
@@ -524,10 +557,29 @@ Three constraints on that rule, so it stays honest:
 | 2 | Chapter 1 page cap | **Cap does not apply.** Chapter 1 targets 8 to 10 pages | The five-page cap governs the Project 2 template's condensation of this manuscript, which its own note describes as a synthesis of the approved Project 1 proposal. A cap on the summary is not a cap on the source. |
 | 3 | Theoretical Framework | **DeLone and McLean Information Systems Success Model (2003)** | The study measures delivered system quality and user acceptability. It does not measure adoption intention, which is what TAM and UTAUT measure and what this study has no instrument for. The updated D&M model's System Quality, Information Quality, and Service Quality dimensions take the four ISO/IEC 25010 characteristics directly, and User Satisfaction takes the four-point acceptability instrument. The fit is structural, not decorative. |
 | 4 | Likert boundaries | **Our four-point scale stands**: 3.50 to 4.00 Highly Acceptable, 2.50 to 3.49 Fairly Acceptable, 1.50 to 2.49 Acceptable, 1.00 to 1.49 Unacceptable | The outline's differing table sits inside a worked example from a fictional rice-genetics study. It illustrates table formatting, not a mandated instrument. Our boundaries divide the 1.00 to 4.00 range into four equal intervals, which the outline's do not. |
-| 5 | Farm-scoped price overrides | **Adopted, tighten-only** | Farms differ in quality and cost and a single national floor flattens that. Bounding the override upward keeps one Super Admin number fencing every farm in, so the guardrail argument survives intact. Reverses a v3 lock; that reversal is the point of this row. |
-| 6 | Walk-in sale recording | **Adopted, inside Module B** | Buyers without the app are real and their sales were going uncounted, which would have made the analytics describe only half the trade. Routing them into the existing order ledger avoids a sixth module and avoids the second ledger that got POS cut in the first place. Reverses part of the permanently-removed list; scoped to the recording half only. |
+| 5 | Farm-scoped price overrides | **Adopted, tighten-only. Built and verified.** | Farms differ in quality and cost and a single national floor flattens that. Bounding the override upward keeps one Super Admin number fencing every farm in, so the guardrail argument survives intact. Reverses a v3 lock; that reversal is the point of this row. |
+| 6 | Walk-in sale recording | **Adopted, inside Module B. Built and verified.** | Buyers without the app are real and their sales were going uncounted, which would have made the analytics describe only half the trade. Routing them into the existing order ledger avoids a sixth module and avoids the second ledger that got POS cut in the first place. Reverses part of the permanently-removed list; scoped to the recording half only. |
 | 7 | Scope section internal structure | Two italic-bold sub-headings: ***Scope of the Study*** and ***Limitations of the Study*** | The outline's own Chapter 2 uses italic-bold sub-topics, so the convention exists in the document. Deliberate boundaries (no payment gateway, no logistics, Android only, one pilot farm) are written inside Limitations and labelled in prose as chosen rather than imposed, which covers delimitations without a heading the outline does not have. |
 | 8 | Conceptual Framework | **Input-Process-Output model**, drawn as a figure | The outline requires a Conceptual Framework figure and gives no form. IPO is the standard form in this program, maps cleanly onto the four-objective Design, Create, Test, Evaluate pattern, and does not require a second theory. |
+
+### Open, not yet decided
+
+One item is decided in principle but not confirmed, so it is recorded here rather
+than in the log above, and nothing downstream is written on it yet.
+
+**Client scope.** The team is leaning toward adopting three additional partner
+farms alongside the PYAP Manggahan pilot, but no adoption is confirmed and it is
+not settled whether the study *evaluates* across all four farms or keeps Manggahan
+as the sole evaluated pilot with the others as future rollout. This is the
+difference between a widened study population and a roadmap note. Until it is
+settled, Section 3 keeps Manggahan as the single pilot, and Chapter 1's Project
+Context and Chapter 3's Respondents and Sampling are drafted on one pilot farm.
+The system already supports many farms (multi-farm isolation is verified, Section
+6), so this is a manuscript-scope question, not a build question. Settling it
+needs an adoption path per farm, the farms named, and Cajigas's agreement that
+the study should evaluate four farms rather than one, since that changes what the
+panel grades. When confirmed, it becomes a decision row and cascades to Section
+3, Chapter 1, and Chapter 3.
 
 ### Verified source for decision 3
 
@@ -588,8 +640,9 @@ is void.
 
 ## 22. Re-audit list
 
-Changes 1 to 13 above contradict text already drafted. These passages are stale
-until re-audited:
+The two features these passages describe are now built exactly as the spec
+predicted, so the re-audit is a rewrite against a settled system, not against a
+plan that might still shift. These passages are stale until re-audited:
 
 | Passage | What is now wrong |
 |---|---|
@@ -608,6 +661,30 @@ until re-audited:
 
 Nothing else drafted is affected. Background and Rationale's statistical and
 locale paragraphs, the objectives pattern, and every source citation stand.
+
+---
+
+## Changelog against v3.2
+
+| # | Change | Reason |
+|---|---|---|
+| 1 | Section 2 route count relabelled: 52 API routes, 88 unfiltered | "87 Laravel API routes" was the unfiltered total mislabelled as API-only. The API count under `route:list --path=api` is 52. Walk-in added one route. |
+| 2 | Section 2 test totals updated to 26 smoke and 85 feature, 446 assertions | Change A and B coverage landed |
+| 3 | Section 2 rewritten: both changes now built and verified, with the not-yet-done caveats stated | They shipped this session with RefreshDatabase coverage and device walks |
+| 4 | Section 5: Super Admin now writes farm price overrides on any farm, tighten-only | The v3.2 text locked the two fields to Super Admin with no override write, which stranded a farm's guards when its Content Editor was suspended. The build gates the write by permission and farm match, not role name. |
+| 5 | Section 6: farm overrides described as their own table, not fields on the farm | The build is a `farm_crop_type_overrides` pivot, one row per farm per crop type. The v3.2 "fields on the farm" wording was wrong. |
+| 6 | Decision log rows 5 and 6 marked built and verified | Both features are implemented, not pending |
+| 7 | Section 22 lead-in notes the features are built, so the re-audit is against a settled system | Removes the "might still shift" hedge |
+| 8 | `record_walk_in_sales` and `set_farm_pricing` named as the permissions carrying the two features | The build introduced both; `place_orders` stays buyer-only so a farmer-seller still cannot buy |
+| 9 | Section 6: crop-care "farm-scoped" clarified as authorship, not read access; published articles are system-readable | A multi-farm isolation test wrongly asserted published articles were farm-private. The policy is correct: a buyer has no farm and must read published crop-care. Test corrected, not the policy. |
+| 10 | Section 6: multi-farm isolation recorded as verified, eight checks, 138 assertions | Isolation had only ever run on one farm; two-farm coverage now confirms overrides, listings, orders, figures, analytics, writes, and moderation are farm-private |
+| 11 | Section 18: client scope added as an open, not-yet-decided item | The team is leaning toward adopting three more farms, but adoption and study-population scope are unconfirmed. Recorded open so nothing downstream is written on a guess. |
+
+**Not folded in, still open:** the `migrate:fresh` caveat. `crop_type_id` on
+`farm_crop_type_overrides` restricts deletes only after `migrate:fresh` on any
+database that applied the earlier cascade version, because that change was an
+in-place migration edit with no follow-up alter. A fresh setup is unaffected.
+Recorded in `docs/rebuild/AniHow_Build_Pass4_Migrations.md`.
 
 ---
 

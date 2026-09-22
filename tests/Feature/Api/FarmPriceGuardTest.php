@@ -7,6 +7,7 @@ use App\Enums\ListingStatus;
 use App\Enums\NotificationType;
 use App\Enums\Role;
 use App\Enums\TawadType;
+use App\Filament\Resources\Listings\ListingResource;
 use App\Models\CropType;
 use App\Models\Farm;
 use App\Models\FarmCropTypeOverride;
@@ -15,7 +16,9 @@ use App\Models\Listing;
 use App\Models\TawadRule;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Tests\Concerns\CreatesMarketplaceActors;
 use Tests\TestCase;
@@ -190,6 +193,57 @@ class FarmPriceGuardTest extends TestCase
         $this->assertSame(1, $this->notices($stranded->farmer_seller_id, NotificationType::FloorPriceRaised));
     }
 
+    public function test_a_raised_farm_floor_flags_stranded_listings_without_blocking_or_repricing(): void
+    {
+        $farm = Farm::factory()->create();
+        $cropType = $this->kamatis();
+        $editor = $this->userWithRole(Role::ContentEditor, $farm);
+        $below = $this->listingFor(
+            $this->farmer(['email' => 'below.floor@example.com'], $farm),
+            ['crop_type_id' => $cropType->id, 'price_per_unit' => 30, 'title' => 'Priced under the new floor'],
+        );
+        $clear = $this->listingFor(
+            $this->farmer(['email' => 'at.floor@example.com'], $farm),
+            ['crop_type_id' => $cropType->id, 'price_per_unit' => 35, 'title' => 'Priced at the new floor'],
+        );
+
+        $this->actingAs($editor);
+        $this->assertTrue($editor->can('manageForFarm', [FarmCropTypeOverride::class, $farm]));
+
+        $saved = $this->guard($farm, $cropType, floor: 35);
+
+        $this->assertNotNull($saved);
+        $this->assertDatabaseHas('farm_crop_type_overrides', [
+            'farm_id' => $farm->id,
+            'crop_type_id' => $cropType->id,
+            'floor_price' => 35,
+        ]);
+        $this->assertSame('30.00', $below->refresh()->price_per_unit);
+        $this->assertSame('35.00', $clear->refresh()->price_per_unit);
+
+        $below->load(['cropType', 'farm.cropTypeOverrides']);
+        $clear->load(['cropType', 'farm.cropTypeOverrides']);
+
+        // 30 still clears the system floor of 25. The flag is the farm floor.
+        $this->assertTrue($below->cropType->allowsPrice(30));
+        $this->assertTrue($below->isBelowFloor());
+        $this->assertSame(35.0, $below->effectiveFloor());
+
+        $this->assertFalse($clear->isBelowFloor());
+        $this->assertSame(35.0, $clear->effectiveFloor());
+
+        $superAdmin = $this->userWithRole(Role::SuperAdmin);
+        $this->actingAs($superAdmin);
+        $this->assertTrue(ListingResource::canAccess());
+
+        $visible = ListingResource::getEloquentQuery()->get();
+        $flagged = $visible->filter(fn (Listing $listing): bool => $listing->isBelowFloor());
+
+        $this->assertTrue($flagged->contains(fn (Listing $listing): bool => $listing->id === $below->id));
+        $this->assertFalse($flagged->contains(fn (Listing $listing): bool => $listing->id === $clear->id));
+        $this->assertTrue($visible->firstWhere('id', $below->id)->farm->relationLoaded('cropTypeOverrides'));
+    }
+
     public function test_raising_a_farm_floor_flags_a_tawad_it_breaks(): void
     {
         $farm = Farm::factory()->create();
@@ -312,7 +366,108 @@ class FarmPriceGuardTest extends TestCase
         $this->assertFalse($farmer->can('manageForFarm', [FarmCropTypeOverride::class, $farmA]));
     }
 
+    public function test_a_content_editor_can_write_an_override_on_their_own_farm(): void
+    {
+        $farm = Farm::factory()->create();
+        $cropType = $this->kamatis();
+        $editor = $this->userWithRole(Role::ContentEditor, $farm);
+
+        $this->actingAs($editor);
+        $this->assertTrue($editor->can('manageForFarm', [FarmCropTypeOverride::class, $farm]));
+
+        $this->guard($farm, $cropType, floor: 45);
+
+        $this->assertDatabaseHas('farm_crop_type_overrides', [
+            'farm_id' => $farm->id,
+            'crop_type_id' => $cropType->id,
+            'floor_price' => 45,
+        ]);
+    }
+
+    public function test_a_content_editor_cannot_write_an_override_on_another_farm(): void
+    {
+        $own = Farm::factory()->create();
+        $other = Farm::factory()->create();
+        $cropType = $this->kamatis();
+        $editor = $this->userWithRole(Role::ContentEditor, $own);
+        $existing = $this->guard($other, $cropType, floor: 30);
+
+        $this->actingAs($editor);
+
+        try {
+            Gate::forUser($editor)->authorize('manageForFarm', [FarmCropTypeOverride::class, $other]);
+            $this->guard($other, $cropType, floor: 45);
+            $this->fail('A content editor must not write another farm.');
+        } catch (AuthorizationException) {
+            // The panel calls this same permission before SetFarmPriceOverrideAction.
+        }
+
+        $this->assertFalse($editor->can('update', $existing));
+        $this->assertFalse($editor->can('delete', $existing));
+        $this->assertNotSame((int) $editor->farm_id, (int) $other->id);
+        $this->assertDatabaseHas('farm_crop_type_overrides', [
+            'farm_id' => $other->id,
+            'floor_price' => 30,
+        ]);
+        $this->assertDatabaseMissing('farm_crop_type_overrides', [
+            'farm_id' => $other->id,
+            'floor_price' => 45,
+        ]);
+    }
+
+    public function test_a_super_admin_can_write_an_override_on_any_farm(): void
+    {
+        $farm = Farm::factory()->create();
+        $cropType = $this->kamatis();
+        $superAdmin = $this->userWithRole(Role::SuperAdmin);
+
+        $this->actingAs($superAdmin);
+        $this->assertNull($superAdmin->farm_id);
+        $this->assertTrue($superAdmin->can('manageForFarm', [FarmCropTypeOverride::class, $farm]));
+
+        $this->guard($farm, $cropType, ceiling: 8);
+
+        $this->assertDatabaseHas('farm_crop_type_overrides', [
+            'farm_id' => $farm->id,
+            'crop_type_id' => $cropType->id,
+            'max_discount' => 8,
+        ]);
+    }
+
+    public function test_neither_role_can_loosen_a_farm_guard(): void
+    {
+        $cropType = $this->kamatis();
+        $editorFarm = Farm::factory()->create();
+        $adminFarm = Farm::factory()->create();
+        $editor = $this->userWithRole(Role::ContentEditor, $editorFarm);
+        $superAdmin = $this->userWithRole(Role::SuperAdmin);
+
+        $this->actingAs($editor);
+        $this->assertTrue($editor->can('manageForFarm', [FarmCropTypeOverride::class, $editorFarm]));
+        $this->assertLooseningRejected($editorFarm, $cropType);
+
+        $this->actingAs($superAdmin);
+        $this->assertTrue($superAdmin->can('manageForFarm', [FarmCropTypeOverride::class, $adminFarm]));
+        $this->assertLooseningRejected($adminFarm, $cropType);
+    }
+
     // Helpers. Named apart from CreatesMarketplaceActors so none shadow it.
+
+    private function assertLooseningRejected(Farm $farm, CropType $cropType): void
+    {
+        foreach ([[24.99, null], [null, 20.01]] as [$floor, $ceiling]) {
+            try {
+                $this->guard($farm, $cropType, floor: $floor, ceiling: $ceiling);
+                $this->fail('A farm guard must not loosen the system floor or the system maximum.');
+            } catch (ValidationException $exception) {
+                $this->assertNotEmpty($exception->errors());
+            }
+        }
+
+        $this->assertDatabaseMissing('farm_crop_type_overrides', [
+            'farm_id' => $farm->id,
+        ]);
+    }
 
     private function kamatis(): CropType
     {

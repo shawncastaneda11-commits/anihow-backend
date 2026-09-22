@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../theme/anihow_space.dart';
-import '../theme/anihow_theme.dart';
 import 'category_color.dart';
 import 'crop_care_author_chip.dart';
 
@@ -29,13 +28,12 @@ class CareGuideCard extends StatelessWidget {
         final accent = CategoryColor.of(article.categoryChip, listingName: article.title);
 
     return Card(
-      color: AniHowColors.card,
+      color: Theme.of(context).cardTheme.color,
       elevation: 0,
       shadowColor: Colors.transparent,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(_radius),
-        side: const BorderSide(color: AniHowColors.cardBorder),
       ),
       child: ListTile(
         onTap: onViewDetails,
@@ -44,7 +42,7 @@ class CareGuideCard extends StatelessWidget {
         leading: CircleAvatar(
           radius: AniHowSpace.avatar,
           backgroundColor: accent,
-          foregroundColor: Colors.white,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
           child: Text(
             '${index + 1}',
             style: const TextStyle(

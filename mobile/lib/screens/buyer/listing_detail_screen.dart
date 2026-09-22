@@ -138,8 +138,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                             errorBuilder: (_, _, _) => Center(
                               child: Text(
                                 listing.name,
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onPrimary,
                                   fontWeight: FontWeight.w800,
                                   fontSize: AniHowSpace.title,
                                 ),
@@ -150,8 +150,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                       : Center(
                           child: Text(
                             listing.name,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onPrimary,
                               fontWeight: FontWeight.w800,
                               fontSize: AniHowSpace.title,
                             ),

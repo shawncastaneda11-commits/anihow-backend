@@ -12,10 +12,9 @@ return new class extends Migration
             $table->id();
 
             $table->foreignId('farm_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('crop_type_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('crop_type_id')->constrained()->restrictOnDelete();
 
-            // Null means the system value on the crop type applies.
-            // A row where both are null is never written; see SetFarmPriceOverrideAction (Pass 2B).
+            // A missing row, or a row with both columns null, means the system values apply.
             $table->decimal('floor_price', 10, 2)->nullable();
             $table->decimal('max_discount', 10, 2)->nullable();
 

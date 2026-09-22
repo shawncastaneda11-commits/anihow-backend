@@ -64,11 +64,37 @@ class StatusPill extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          color: color,
+          color: _labelColor(context),
           fontWeight: FontWeight.w700,
           fontSize: AniHowSpace.meta,
         ),
       ),
     );
+  }
+
+  /// Darker (light) or lighter (dark) shade of [color], same hue, so text on
+  /// the 16% tint clears 4.5:1. Solid stock chips keep a dark shade in both
+  /// modes because their backgrounds stay light.
+  Color _labelColor(BuildContext context) {
+    final hsl = HSLColor.fromColor(color);
+    if (background != null) {
+      if (color == AniHowColors.lowStock) {
+        return hsl.withLightness(0.462).toColor();
+      }
+      return color;
+    }
+
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    // Lightness chosen so text on the 16% tint over card (≥4.5:1 light,
+    // readable dark). Same hue; only lightness changes.
+    final lightness = switch (color) {
+      AniHowColors.pending => dark ? 0.480 : 0.325,
+      AniHowColors.sage => dark ? 0.540 : 0.355,
+      AniHowColors.ready => dark ? 0.455 : 0.305,
+      AniHowColors.completed => dark ? 0.630 : 0.415,
+      AniHowColors.cancelled => dark ? 0.610 : 0.405,
+      _ => dark ? (hsl.lightness + 0.12).clamp(0.2, 0.85) : (hsl.lightness - 0.12).clamp(0.2, 0.85),
+    };
+    return hsl.withLightness(lightness).toColor();
   }
 }

@@ -10,6 +10,7 @@ import '../../widgets/form_label.dart';
 import '../../widgets/primary_button.dart';
 import '../../state/auth_controller.dart';
 import 'tawad_form_screen.dart';
+import 'walk_in_sale_screen.dart';
 
 class ListingFormScreen extends StatefulWidget {
   const ListingFormScreen({super.key, this.listing});
@@ -215,6 +216,16 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     }
   }
 
+  Future<void> _openWalkIn() async {
+    final listing = _listing;
+    if (listing == null) {
+      return;
+    }
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => WalkInSaleScreen(listingId: listing.id)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -343,6 +354,14 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                         const Text('No tawad on this listing.'),
                         const SizedBox(height: AniHowSpace.cardGap),
                         PrimaryButton(label: 'Set tawad', onPressed: _busy ? null : _openTawad),
+                      ],
+                      if (!_listing!.isTakenDown &&
+                          (context.watch<AuthController>().user?.canRecordWalkInSales ?? false)) ...[
+                        const SizedBox(height: AniHowSpace.section),
+                        OutlinedButton(
+                          onPressed: _busy ? null : _openWalkIn,
+                          child: const Text('Record walk-in sale'),
+                        ),
                       ],
                     ],
                   ],

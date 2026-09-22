@@ -15,6 +15,7 @@ import '../../widgets/shop_profile_parts.dart';
 import '../buyer/favorites_screen.dart';
 import '../buyer/order_history_screen.dart';
 import '../farmer/listing_form_screen.dart';
+import '../farmer/walk_in_sale_screen.dart';
 import 'settings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -159,6 +160,12 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
     }
   }
 
+  Future<void> _openWalkIn() async {
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const WalkInSaleScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -207,6 +214,13 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
                   onPressed: () => _editShop(shop),
                   child: const Text('Edit shop profile'),
                 ),
+                if (context.watch<AuthController>().user?.canRecordWalkInSales ?? false) ...[
+                  const SizedBox(height: AniHowSpace.cardGap),
+                  PrimaryButton(
+                    label: 'Record walk-in sale',
+                    onPressed: _openWalkIn,
+                  ),
+                ],
                 const SizedBox(height: AniHowSpace.section),
                 const Text(
                   'Active listings',

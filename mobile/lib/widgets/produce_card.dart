@@ -187,8 +187,8 @@ class _Fallback extends StatelessWidget {
       child: Center(
         child: Text(
           letter,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onPrimary,
             fontSize: AniHowSpace.name,
             fontWeight: FontWeight.w800,
           ),

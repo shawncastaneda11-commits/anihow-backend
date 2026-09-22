@@ -81,14 +81,20 @@ class AuthApiTest extends TestCase
             'password_confirmation' => 'password123',
         ])->assertCreated();
 
-        $this->postJson('/api/auth/login', [
+        $response = $this->postJson('/api/auth/login', [
             'email' => 'maria@example.com',
             'password' => 'password123',
-        ])
+        ]);
+
+        $response
             ->assertOk()
             ->assertJsonPath('data.roles.0', Role::Buyer->value)
             ->assertJsonPath('data.status', UserStatus::Active->value)
             ->assertJsonStructure(['token']);
+
+        $permissions = $response->json('data.permissions');
+        $this->assertContains('place_orders', $permissions);
+        $this->assertNotContains('record_walk_in_sales', $permissions);
     }
 
     public function test_any_active_role_can_log_in(): void
@@ -104,6 +110,10 @@ class AuthApiTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('data.roles.0', Role::FarmerSeller->value)
             ->assertJsonStructure(['token']);
+
+        $permissions = $response->json('data.permissions');
+        $this->assertContains('record_walk_in_sales', $permissions);
+        $this->assertNotContains('place_orders', $permissions);
     }
 
     public function test_pending_farmer_seller_cannot_log_in(): void

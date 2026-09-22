@@ -37,7 +37,7 @@ class _CropCareDetailScreenState extends State<CropCareDetailScreen> {
       builder: (context, snapshot) {
         final article = snapshot.data ?? widget.preview;
         return Scaffold(
-          backgroundColor: AniHowColors.cream,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: AppBar(title: Text(article?.title ?? 'Care guide')),
           body: _body(context, snapshot, article),
         );
@@ -61,27 +61,27 @@ class _CropCareDetailScreenState extends State<CropCareDetailScreen> {
     }
 
     final cropNames = article.cropTypes.map((crop) => crop.name).join(', ');
+    final theme = Theme.of(context);
+    final cardColor = theme.cardTheme.color;
 
     return ListView(
       padding: AniHowSpace.screenPadding,
       children: [
         Card(
-          color: AniHowColors.card,
+          color: cardColor,
           elevation: 0,
           clipBehavior: Clip.antiAlias,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: AniHowColors.cardBorder),
           ),
           child: _FeaturedMedia(imageUrl: article.imageUrl),
         ),
         const SizedBox(height: AniHowSpace.cardGap),
         Card(
-          color: AniHowColors.card,
+          color: cardColor,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: AniHowColors.cardBorder),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -117,13 +117,15 @@ class _CropCareDetailScreenState extends State<CropCareDetailScreen> {
                   Text(article.summary, style: Theme.of(context).textTheme.bodyMedium),
                 ],
                 const SizedBox(height: AniHowSpace.section),
-                const Divider(height: 1, color: AniHowColors.cardBorder),
+                Divider(height: 1, color: theme.dividerColor),
                 const SizedBox(height: AniHowSpace.section),
                 Text(
                   article.body.isEmpty ? 'No instructions yet.' : article.body,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  style: theme.textTheme.bodyLarge?.copyWith(
                         height: AniHowSpace.articleHeight,
-                        color: article.body.isEmpty ? AniHowColors.muted : AniHowColors.text,
+                        color: article.body.isEmpty
+                            ? theme.colorScheme.onSurface.withValues(alpha: 0.7)
+                            : theme.colorScheme.onSurface,
                       ),
                 ),
               ],

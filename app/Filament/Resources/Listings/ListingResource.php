@@ -59,7 +59,7 @@ class ListingResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['cropType', 'farm', 'farmerSeller', 'activeTawadRule']);
+            ->with(['cropType', 'farm.cropTypeOverrides', 'farmerSeller', 'activeTawadRule']);
     }
 
     public static function canAccess(): bool

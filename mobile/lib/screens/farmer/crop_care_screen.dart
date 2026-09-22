@@ -48,35 +48,52 @@ class _CropCareScreenState extends State<CropCareScreen> {
     );
   }
 
+  static const _allKey = '__all__';
+
+  Widget _segmentLabel(String text) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Text(text, maxLines: 1, textAlign: TextAlign.center),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final selectedKey = _category ?? _allKey;
+
     return Column(
       children: [
-        SizedBox(
-          height: 48,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: AniHowSpace.screen),
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: const Text('All'),
-                  selected: _category == null,
-                  onSelected: (_) => _selectCategory(null),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AniHowSpace.screen,
+            AniHowSpace.labelGap,
+            AniHowSpace.screen,
+            AniHowSpace.cardGap,
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<String>(
+              showSelectedIcon: false,
+              segments: [
+                ButtonSegment(value: _allKey, label: _segmentLabel('All')),
+                ButtonSegment(
+                  value: CropCareCategory.cropCare.value,
+                  label: _segmentLabel(CropCareCategory.cropCare.label),
                 ),
-              ),
-              ...CropCareCategory.filters.map(
-                (filter) => Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text(filter.label),
-                    selected: _category == filter.value,
-                    onSelected: (_) => _selectCategory(filter.value),
-                  ),
+                ButtonSegment(
+                  value: CropCareCategory.pestManagement.value,
+                  label: _segmentLabel(CropCareCategory.pestManagement.label),
                 ),
-              ),
-            ],
+              ],
+              selected: {selectedKey},
+              onSelectionChanged: (next) {
+                if (next.isEmpty) {
+                  return;
+                }
+                final value = next.first;
+                _selectCategory(value == _allKey ? null : value);
+              },
+            ),
           ),
         ),
         Expanded(

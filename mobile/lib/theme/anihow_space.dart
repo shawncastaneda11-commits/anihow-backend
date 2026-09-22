@@ -30,9 +30,22 @@ class AniHowSpace {
 }
 
 class AniHowMoney {
+  /// Pesos only: ₱ symbol, thousands separators, two decimals (e.g. ₱1,250.00).
   static String peso(Object? value) {
     final amount = value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
-    return '₱${amount.toStringAsFixed(2)}';
+    final fixed = amount.toStringAsFixed(2);
+    final parts = fixed.split('.');
+    final negative = parts[0].startsWith('-');
+    final digits = negative ? parts[0].substring(1) : parts[0];
+    final grouped = StringBuffer();
+    for (var i = 0; i < digits.length; i++) {
+      final fromEnd = digits.length - i;
+      if (i > 0 && fromEnd % 3 == 0) {
+        grouped.write(',');
+      }
+      grouped.write(digits[i]);
+    }
+    return '₱${negative ? '-' : ''}$grouped.${parts[1]}';
   }
 
   static String rating(Object? value) {

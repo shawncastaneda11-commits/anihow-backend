@@ -28,9 +28,8 @@ use Illuminate\Database\Eloquent\Model;
  * opens their own, because FarmResource scopes its query to their farm_id.
  *
  * Every write goes through SetFarmPriceOverrideAction, never a plain Eloquent
- * save, so tighten-only is enforced and newly stranded listings are flagged.
- * The form's min and max values give the user an inline error first; the
- * action is the guarantee.
+ * save. Tighten-only lives in that action alone, for the panel and for every
+ * other caller. This form does not repeat the floor or ceiling bounds.
  */
 class CropTypeOverridesRelationManager extends RelationManager
 {
@@ -61,7 +60,6 @@ class CropTypeOverridesRelationManager extends RelationManager
                     ->prefix('PHP')
                     ->nullable()
                     ->requiredWithout('max_discount')
-                    ->minValue(fn (Get $get, ?Model $record): ?float => self::systemFloor($get, $record))
                     ->helperText(fn (Get $get, ?Model $record): string => self::systemFloor($get, $record) === null
                         ? 'Choose a crop type first.'
                         : 'The system floor is PHP '.number_format(self::systemFloor($get, $record), 2)
@@ -73,8 +71,6 @@ class CropTypeOverridesRelationManager extends RelationManager
                     ->prefix('PHP')
                     ->nullable()
                     ->requiredWithout('floor_price')
-                    ->minValue(0)
-                    ->maxValue(fn (Get $get, ?Model $record): ?float => self::systemMaximum($get, $record))
                     ->helperText(fn (Get $get, ?Model $record): string => self::systemMaximum($get, $record) === null
                         ? 'Choose a crop type first.'
                         : 'The system maximum is PHP '.number_format(self::systemMaximum($get, $record), 2)

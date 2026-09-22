@@ -8,6 +8,7 @@ import '../../state/auth_controller.dart';
 import '../../support/relative_time.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/form_label.dart';
+import '../../widgets/price_breakdown.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
 import '../../widgets/status_pill.dart';
@@ -166,18 +167,19 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen> {
       child: Scaffold(
         body: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AniHowSpace.screen,
-                AniHowSpace.cardGap,
-                AniHowSpace.screen,
-                0,
+            if (context.watch<AuthController>().user?.canRecordWalkInSales ?? false)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AniHowSpace.screen,
+                  AniHowSpace.cardGap,
+                  AniHowSpace.screen,
+                  0,
+                ),
+                child: PrimaryButton(
+                  label: 'Record walk-in sale',
+                  onPressed: _openWalkIn,
+                ),
               ),
-              child: PrimaryButton(
-                label: 'Record walk-in sale',
-                onPressed: _openWalkIn,
-              ),
-            ),
             const TabBar(
               isScrollable: true,
               tabs: [
@@ -495,7 +497,11 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
           ],
         ),
         const SizedBox(height: AniHowSpace.section),
-        Text(AniHowMoney.peso(order.total), style: Theme.of(context).textTheme.headlineSmall),
+        PriceBreakdown(
+          listed: order.listedTotal,
+          tawad: order.tawadDisplay,
+          total: order.total,
+        ),
         if (order.fulfillmentLabel != null) Text(order.fulfillmentLabel!),
         if (order.fulfillmentNote != null && order.fulfillmentNote!.isNotEmpty)
           Text(order.fulfillmentNote!),
@@ -507,8 +513,9 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
         const SizedBox(height: AniHowSpace.section),
         for (final item in order.items) ...[
           Text(item.listingName, style: Theme.of(context).textTheme.titleSmall),
-          Text('${item.quantityLabel} · listed ${AniHowMoney.peso(item.listedPrice)}'),
-          Text(AniHowMoney.peso(item.lineTotal ?? item.lineSubtotal)),
+          Text(
+            '${item.quantityLabel} · ${AniHowMoney.peso(item.listedPrice)} → ${AniHowMoney.peso(item.lineSubtotal)}',
+          ),
           const SizedBox(height: AniHowSpace.cardGap),
         ],
         OrderAdvanceButtons(

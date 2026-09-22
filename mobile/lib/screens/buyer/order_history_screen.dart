@@ -6,6 +6,7 @@ import '../../state/auth_controller.dart';
 import '../../support/relative_time.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/notification_bell.dart';
+import '../../widgets/price_breakdown.dart';
 import '../../widgets/profile_avatar_button.dart';
 import '../../widgets/status_pill.dart';
 
@@ -51,9 +52,6 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
             separatorBuilder: (_, _) => const SizedBox(height: AniHowSpace.cardGap),
             itemBuilder: (context, index) {
               final order = items[index];
-              final listed = order.items
-                  .map((item) => AniHowMoney.peso(item.listedPrice))
-                  .join(' · ');
               return Card(
                 child: ListTile(
                   leading: AniHowAvatar(name: order.stallName),
@@ -62,8 +60,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(order.orderNumber ?? 'Order #${order.id}'),
-                      Text(AniHowMoney.peso(order.total)),
-                      if (listed.isNotEmpty) Text('Listed $listed'),
+                      PriceBreakdown(
+                        listed: order.listedTotal,
+                        tawad: order.tawadDisplay,
+                        total: order.total,
+                      ),
                       if (order.location != null && order.location!.isNotEmpty)
                         Text(order.location!),
                       if (order.placedAt != null) Text(relativeTime(order.placedAt)),

@@ -17,11 +17,9 @@ use Illuminate\Validation\ValidationException;
  * discount ceiling at or below the system maximum. Null on either side means
  * the system value applies.
  *
- * The AtOrAboveSystemFloor and AtOrBelowSystemMaximum rules cover the
- * FormRequest surface. The checks repeated here are the last gate, for the
- * Filament panel, the console, and any future caller that does not come
- * through a request. Same reasoning as the max() and min() kept in
- * PriceGuardResolver.
+ * Tighten-only is enforced here and nowhere else. The panel form does not
+ * repeat these bounds, and there is no second rule on a request. Same
+ * reasoning as the max() and min() kept in PriceGuardResolver.
  *
  * After the write, any listing newly stranded by a higher effective floor or a
  * lower effective ceiling is flagged to its seller. The override itself is
@@ -95,13 +93,13 @@ class SetFarmPriceOverrideAction
         if ($floorPrice !== null
             && PriceGuard::centavos($floorPrice) < PriceGuard::centavos($cropType->floor_price)) {
             $errors['floor_price'] = 'The farm floor price cannot be lower than the system floor of PHP '
-                . number_format((float) $cropType->floor_price, 2) . '.';
+                .number_format((float) $cropType->floor_price, 2).'.';
         }
 
         if ($maxDiscount !== null
             && PriceGuard::centavos($maxDiscount) > PriceGuard::centavos($cropType->max_discount)) {
             $errors['max_discount'] = 'The farm maximum peso discount cannot exceed the system maximum of PHP '
-                . number_format((float) $cropType->max_discount, 2) . '.';
+                .number_format((float) $cropType->max_discount, 2).'.';
         }
 
         if ($errors !== []) {

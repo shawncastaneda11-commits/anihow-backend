@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Api;
 
+use App\Enums\ListingStatus;
 use App\Enums\NotificationType;
+use App\Support\InAppNotifier;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesMarketplaceActors;
@@ -100,5 +102,50 @@ class NotificationApiTest extends TestCase
         $this->asUser($other)
             ->patchJson("/api/notifications/{$notificationId}/read")
             ->assertForbidden();
+    }
+
+    public function test_listing_takedown_and_restore_notify_the_seller(): void
+    {
+        $farmer = $this->farmer();
+        $listing = $this->listingFor($farmer, ['title' => 'Morning crate']);
+        $notifier = app(InAppNotifier::class);
+
+        $listing->forceFill([
+            'status' => ListingStatus::TakenDown,
+            'taken_down_at' => now(),
+            'takedown_reason' => 'Priced below the floor.',
+        ])->save();
+
+        $notifier->listingTakenDown($farmer, $listing->fresh());
+
+        $this->asUser($farmer)
+            ->getJson('/api/notifications')
+            ->assertOk()
+            ->assertJsonPath('data.0.type', NotificationType::ListingTakenDown->value)
+            ->assertJsonPath('data.0.related_id', $listing->id)
+            ->assertJsonPath('data.0.related_type', 'listing')
+            ->assertJsonPath('data.0.title', 'Listing taken down')
+            ->assertJsonPath(
+                'data.0.body',
+                'Morning crate was taken down by an administrator. Reason: Priced below the floor.',
+            );
+
+        $listing->forceFill([
+            'status' => ListingStatus::Published,
+            'taken_down_at' => null,
+            'taken_down_by' => null,
+            'takedown_reason' => null,
+        ])->save();
+
+        $notifier->listingRestored($farmer, $listing->fresh());
+
+        $this->asUser($farmer)
+            ->getJson('/api/notifications')
+            ->assertOk()
+            ->assertJsonPath('data.0.type', NotificationType::ListingRestored->value)
+            ->assertJsonPath('data.0.related_id', $listing->id)
+            ->assertJsonPath('data.0.related_type', 'listing')
+            ->assertJsonPath('data.0.title', 'Listing restored')
+            ->assertJsonPath('data.0.body', 'Morning crate was restored by an administrator.');
     }
 }

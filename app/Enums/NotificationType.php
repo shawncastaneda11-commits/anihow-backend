@@ -14,6 +14,7 @@ enum NotificationType: string
     case OrderPlaced = 'order_placed';
     case ListingLowStock = 'listing_low_stock';
     case ListingTakenDown = 'listing_taken_down';
+    case ListingRestored = 'listing_restored';
     case AccountApproved = 'account_approved';
     case FloorPriceRaised = 'floor_price_raised';
     case TawadCeilingLowered = 'tawad_ceiling_lowered';
@@ -28,6 +29,7 @@ enum NotificationType: string
             self::OrderPlaced => 'New order placed',
             self::ListingLowStock => 'Listing low on stock',
             self::ListingTakenDown => 'Listing taken down',
+            self::ListingRestored => 'Listing restored',
             self::AccountApproved => 'Account approved',
             self::FloorPriceRaised => 'Floor price raised above your listing',
             self::TawadCeilingLowered => 'Tawad limit lowered below your discount',

@@ -153,12 +153,16 @@ class ListingsTable
                     ->color('success')
                     ->requiresConfirmation()
                     ->visible(fn (Listing $record): bool => $record->status === ListingStatus::TakenDown)
-                    ->action(fn (Listing $record): bool => $record->update([
-                        'status' => ListingStatus::Published,
-                        'taken_down_at' => null,
-                        'taken_down_by' => null,
-                        'takedown_reason' => null,
-                    ])),
+                    ->action(function (Listing $record): void {
+                        $record->update([
+                            'status' => ListingStatus::Published,
+                            'taken_down_at' => null,
+                            'taken_down_by' => null,
+                            'takedown_reason' => null,
+                        ]);
+
+                        app(InAppNotifier::class)->listingRestored($record->farmerSeller, $record);
+                    }),
             ])
             ->toolbarActions([]);
     }

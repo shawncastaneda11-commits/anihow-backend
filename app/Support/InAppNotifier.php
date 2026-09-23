@@ -175,6 +175,17 @@ class InAppNotifier
         );
     }
 
+    public function listingRestored(User $farmer, Listing $listing): InAppNotification
+    {
+        return $this->send(
+            $farmer,
+            NotificationType::ListingRestored,
+            NotificationType::ListingRestored->label(),
+            "{$listing->title} was restored by an administrator.",
+            $listing,
+        );
+    }
+
     public function accountApproved(User $user): InAppNotification
     {
         return $this->send(

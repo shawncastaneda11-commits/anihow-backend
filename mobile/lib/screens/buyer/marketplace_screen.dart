@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../state/auth_controller.dart';
+import '../../state/preferences_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/async_view.dart';
@@ -63,15 +65,16 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Column(
       children: [
         AppHeader(
-          title: 'Marketplace',
+          title: s.marketplace,
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                tooltip: 'Shops',
+                tooltip: s.shops,
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const ShopsScreen()),
@@ -100,7 +103,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           child: TextField(
             controller: _search,
             decoration: InputDecoration(
-              hintText: 'Search produce',
+              hintText: s.searchProduce,
               prefixIcon: const Icon(Icons.search),
               suffixIcon: IconButton(onPressed: _reload, icon: const Icon(Icons.arrow_forward)),
             ),
@@ -120,7 +123,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: FilterChip(
-                      label: const Text('All'),
+                      label: Text(s.all),
                       selected: _cropTypeId == null,
                       onSelected: (_) {
                         setState(() => _cropTypeId = null);
@@ -136,7 +139,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                           backgroundColor: CategoryColor.of(cropType),
                           radius: 8,
                         ),
-                        label: Text(cropType.displayLabel),
+                        label: Text(
+                          cropType.labelFor(context.watch<PreferencesController>().language),
+                        ),
                         selected: _cropTypeId == cropType.id,
                         onSelected: (_) {
                           setState(() => _cropTypeId = cropType.id);
@@ -163,11 +168,11 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
               isDense: true,
               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
-            items: const [
-              DropdownMenuItem(value: 'freshest', child: Text('Freshest')),
-              DropdownMenuItem(value: 'price_asc', child: Text('Price: low to high')),
-              DropdownMenuItem(value: 'price_desc', child: Text('Price: high to low')),
-              DropdownMenuItem(value: 'availability', child: Text('In stock first')),
+            items: [
+              DropdownMenuItem(value: 'freshest', child: Text(s.freshest)),
+              DropdownMenuItem(value: 'price_asc', child: Text(s.priceLowHigh)),
+              DropdownMenuItem(value: 'price_desc', child: Text(s.priceHighLow)),
+              DropdownMenuItem(value: 'availability', child: Text(s.inStockFirst)),
             ],
             onChanged: (value) {
               if (value == null) {

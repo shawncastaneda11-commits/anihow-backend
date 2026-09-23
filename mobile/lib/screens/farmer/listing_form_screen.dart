@@ -9,6 +9,7 @@ import '../../widgets/dashed_photo_box.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/primary_button.dart';
 import '../../state/auth_controller.dart';
+import '../../state/preferences_controller.dart';
 import 'tawad_form_screen.dart';
 import 'walk_in_sale_screen.dart';
 
@@ -290,7 +291,9 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                             .map(
                               (cropType) => DropdownMenuItem(
                                 value: cropType.id,
-                                child: Text(cropType.bilingualLabel),
+                                child: Text(
+                                  cropType.labelFor(context.watch<PreferencesController>().language),
+                                ),
                               ),
                             )
                             .toList(),
@@ -336,7 +339,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                     if (floor != null && floor.isNotEmpty) ...[
                       const SizedBox(height: AniHowSpace.labelGap),
                       Text(
-                        'Floor price for ${selectedCrop!.displayLabel}: ${AniHowMoney.peso(floor)} (set by your farm)',
+                        'Floor price for ${selectedCrop!.labelFor(context.watch<PreferencesController>().language)}: ${AniHowMoney.peso(floor)} (set by your farm)',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                             ),

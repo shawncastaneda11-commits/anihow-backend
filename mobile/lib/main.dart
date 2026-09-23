@@ -10,6 +10,7 @@ import 'state/auth_controller.dart';
 import 'state/cart_controller.dart';
 import 'state/preferences_controller.dart';
 import 'state/theme_controller.dart';
+import 'support/crop_language.dart';
 import 'theme/anihow_theme.dart';
 
 Future<void> main() async {
@@ -37,11 +38,19 @@ class _AniHowAppState extends State<AniHowApp> {
   @override
   void initState() {
     super.initState();
+    widget.preferences.addListener(_syncApiLocale);
+    _syncApiLocale();
     _auth.restoreSession();
+  }
+
+  void _syncApiLocale() {
+    _auth.api.acceptLanguage =
+        widget.preferences.language == CropLanguage.filipino ? 'fil' : 'en';
   }
 
   @override
   void dispose() {
+    widget.preferences.removeListener(_syncApiLocale);
     super.dispose();
     _auth.dispose();
   }
@@ -55,10 +64,11 @@ class _AniHowAppState extends State<AniHowApp> {
         ChangeNotifierProvider.value(value: widget.theme),
         ChangeNotifierProvider.value(value: widget.preferences),
       ],
-      child: Consumer<ThemeController>(
-        builder: (context, theme, _) {
+      child: Consumer2<ThemeController, PreferencesController>(
+        builder: (context, theme, prefs, _) {
           return MaterialApp(
             title: 'AniHow',
+            locale: prefs.language.locale,
             theme: AniHowTheme.light(),
             darkTheme: AniHowTheme.dark(),
             themeMode: theme.mode,

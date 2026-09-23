@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
@@ -115,7 +116,7 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Shop')),
+      appBar: AppBar(title: Text(AppStrings.of(context).shop)),
       body: FutureBuilder<ShopProfile>(
         future: _shop,
         builder: (context, snapshot) {

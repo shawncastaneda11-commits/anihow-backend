@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
 import '../../state/cart_controller.dart';
+import '../../state/preferences_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/cart_icon_button.dart';
@@ -46,7 +48,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     final quantity = _quantity.text.trim();
     if (quantity.isEmpty || (double.tryParse(quantity) ?? 0) <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a quantity.')),
+        SnackBar(content: Text(AppStrings.read(context).enterQuantity)),
       );
       return;
     }
@@ -64,9 +66,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Added to cart.'),
+          content: Text(AppStrings.read(context).addedToCart),
           action: SnackBarAction(
-            label: 'View cart',
+            label: AppStrings.read(context).viewCart,
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const CartScreen()),
@@ -91,7 +93,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       await context.read<AuthController>().api.addFavorite(widget.listingId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Saved to favorites.')),
+          SnackBar(content: Text(AppStrings.read(context).t('Saved to favorites.', 'Nasave sa mga paborito.'))),
         );
       }
     } on ApiException catch (error) {
@@ -103,9 +105,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Listing'),
+        title: Text(s.t('Listing', 'Listing')),
         actions: const [CartIconButton()],
       ),
       body: FutureBuilder<ListingItem>(
@@ -161,13 +164,13 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               Row(
                 children: [
                   Expanded(child: Text(listing.name, style: Theme.of(context).textTheme.titleMedium)),
-                  if (listing.isLowStock) StatusPill.lowStock() else StatusPill.inStock(),
+                  if (listing.isLowStock) StatusPill.lowStock(strings: s) else StatusPill.inStock(strings: s),
                 ],
               ),
               if (listing.category != null) ...[
                 const SizedBox(height: 2),
                 Text(
-                  listing.category!.bilingualLabel,
+                  listing.category!.labelFor(context.watch<PreferencesController>().language),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
@@ -188,7 +191,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              listing.sellerName ?? 'Farm stall',
+                              listing.sellerName ?? s.t('Farm stall', 'Tindahan'),
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     fontWeight: FontWeight.w700,
                                     color: listing.sellerId == null
@@ -222,23 +225,23 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 '${AniHowMoney.peso(listing.pricePerUnit)} / ${listing.unitLabel ?? listing.unit ?? ''}',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AniHowColors.deepGreen),
               ),
-              Text('${listing.quantityAvailable} available', style: Theme.of(context).textTheme.bodyMedium),
+              Text('${listing.quantityAvailable} ${s.t('available', 'available')}', style: Theme.of(context).textTheme.bodyMedium),
               if (listing.description != null && listing.description!.isNotEmpty) ...[
                 const SizedBox(height: AniHowSpace.cardGap),
                 Text(listing.description!),
               ],
               const SizedBox(height: AniHowSpace.section),
               AniHowField(
-                label: 'Quantity',
+                label: s.quantity,
                 child: TextField(
                   controller: _quantity,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 ),
               ),
               const SizedBox(height: AniHowSpace.fieldGap),
-              PrimaryButton(label: 'Add to cart', onPressed: _addToCart, busy: _adding),
+              PrimaryButton(label: s.addToCart, onPressed: _addToCart, busy: _adding),
               const SizedBox(height: AniHowSpace.cardGap),
-              OutlinedButton(onPressed: _favorite, child: const Text('Add to favorites')),
+              OutlinedButton(onPressed: _favorite, child: Text(s.t('Add to favorites', 'Idagdag sa paborito'))),
             ],
           );
         },

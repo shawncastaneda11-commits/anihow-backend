@@ -174,7 +174,11 @@ class VerificationAndPasswordResetTest extends TestCase
         $this->withToken($response->json('token'))
             ->postJson('/api/auth/email/verification-notification')
             ->assertOk()
-            ->assertJsonPath('message', 'Verification code sent.');
+            ->assertJsonPath('message', 'Verification code sent.')
+            ->assertJsonPath(
+                'verification_code',
+                fn (mixed $code): bool => is_string($code) && (bool) preg_match('/^\d{6}$/', $code),
+            );
 
         Notification::assertSentToTimes($user, VerifyEmailNotification::class, 2);
 

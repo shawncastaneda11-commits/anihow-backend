@@ -2,6 +2,7 @@
 
 use App\Enums\Role;
 use App\Http\Controllers\Api\Admin\CreateFarmerSellerController;
+use App\Http\Controllers\Api\Auth\ChangePasswordController;
 use App\Http\Controllers\Api\Auth\ForgotPasswordController;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\LogoutController;
@@ -43,6 +44,7 @@ Route::prefix('auth')->group(function (): void {
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('logout', LogoutController::class)->name('auth.logout');
         Route::get('user', MeController::class)->name('auth.user');
+        Route::post('password', ChangePasswordController::class)->name('auth.password');
         Route::middleware('throttle:auth')->group(function (): void {
             Route::post('email/verification-notification', ResendVerificationController::class)
                 ->name('verification.send');

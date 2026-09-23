@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
@@ -16,6 +17,7 @@ import '../buyer/favorites_screen.dart';
 import '../buyer/order_history_screen.dart';
 import '../farmer/listing_form_screen.dart';
 import '../farmer/walk_in_sale_screen.dart';
+import '../faq/faq_bot_screen.dart';
 import 'settings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -24,6 +26,7 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthController>().user;
+    final s = AppStrings.of(context);
     if (user == null) {
       return const SizedBox.shrink();
     }
@@ -46,7 +49,7 @@ class ProfileScreen extends StatelessWidget {
         if (user.isBuyer) ...[
           ListTile(
             leading: const Icon(Icons.receipt_long_outlined),
-            title: const Text('Order history'),
+            title: Text(s.orderHistory),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const OrderHistoryScreen()),
@@ -54,12 +57,12 @@ class ProfileScreen extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.favorite_outline),
-            title: const Text('Favorites'),
+            title: Text(s.favorites),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => Scaffold(
-                  appBar: AppBar(title: const Text('Favorites')),
+                  appBar: AppBar(title: Text(s.favorites)),
                   body: const FavoritesScreen(),
                 ),
               ),
@@ -67,8 +70,16 @@ class ProfileScreen extends StatelessWidget {
           ),
         ],
         ListTile(
+          leading: const Icon(Icons.help_outline),
+          title: Text(s.faq),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const FaqBotScreen()),
+          ),
+        ),
+        ListTile(
           leading: const Icon(Icons.settings_outlined),
-          title: const Text('Settings'),
+          title: Text(s.settings),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const SettingsScreen()),
@@ -168,10 +179,18 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Shop profile'),
+        title: Text(s.shopProfile),
         actions: [
+          IconButton(
+            tooltip: s.faq,
+            icon: const Icon(Icons.help_outline),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const FaqBotScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => Navigator.of(context).push(
@@ -191,7 +210,7 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
           }
           final view = snapshot.data;
           if (view == null) {
-            return const Center(child: Text('Shop not found.'));
+            return Center(child: Text(s.shopNotFound));
           }
           final shop = view.shop;
           final farmName = context.watch<AuthController>().user?.farmName?.trim();
@@ -222,19 +241,19 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
                 const SizedBox(height: AniHowSpace.section),
                 OutlinedButton(
                   onPressed: () => _editShop(shop),
-                  child: const Text('Edit shop profile'),
+                  child: Text(s.editShopProfile),
                 ),
                 if (context.watch<AuthController>().user?.canRecordWalkInSales ?? false) ...[
                   const SizedBox(height: AniHowSpace.cardGap),
                   PrimaryButton(
-                    label: 'Record walk-in sale',
+                    label: s.recordWalkIn,
                     onPressed: _openWalkIn,
                   ),
                 ],
                 const SizedBox(height: AniHowSpace.section),
-                const Text(
-                  'Active listings',
-                  style: TextStyle(fontSize: AniHowSpace.name, fontWeight: FontWeight.w700),
+                Text(
+                  s.t('Active listings', 'Mga active na listing'),
+                  style: const TextStyle(fontSize: AniHowSpace.name, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: AniHowSpace.cardGap),
                 if (view.listingsError != null)
@@ -335,20 +354,21 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit shop')),
+      appBar: AppBar(title: Text(s.editShop)),
       body: ListView(
         padding: AniHowSpace.screenPadding,
         children: [
-          AniHowField(label: 'Shop name', child: TextField(controller: _name)),
+          AniHowField(label: s.shopName, child: TextField(controller: _name)),
           const SizedBox(height: AniHowSpace.fieldGap),
-          AniHowField(label: 'Bio', child: TextField(controller: _bio, maxLines: 4)),
+          AniHowField(label: s.bio, child: TextField(controller: _bio, maxLines: 4)),
           const SizedBox(height: AniHowSpace.fieldGap),
-          AniHowField(label: 'Location', child: TextField(controller: _location)),
+          AniHowField(label: s.location, child: TextField(controller: _location)),
           const SizedBox(height: AniHowSpace.fieldGap),
-          AniHowField(label: 'Contact', child: TextField(controller: _contact)),
+          AniHowField(label: s.contact, child: TextField(controller: _contact)),
           const SizedBox(height: AniHowSpace.section),
-          PrimaryButton(label: 'Save shop profile', busy: _busy, onPressed: _save),
+          PrimaryButton(label: s.saveShopProfile, busy: _busy, onPressed: _save),
         ],
       ),
     );

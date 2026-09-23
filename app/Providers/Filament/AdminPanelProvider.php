@@ -27,7 +27,11 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->brandName('AniHow')
+            ->brandLogo(fn () => view('filament.brand-logo'))
+            ->darkModeBrandLogo(fn () => view('filament.brand-logo'))
+            ->brandLogoHeight('4.5rem')
             ->login()
+            ->revealablePasswords()
             ->colors([
                 'primary' => Color::Green,
             ])

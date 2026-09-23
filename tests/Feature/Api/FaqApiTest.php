@@ -72,7 +72,7 @@ class FaqApiTest extends TestCase
             ->assertOk();
 
         $this->assertNull($response->json('data.matched_id'));
-        $this->assertStringContainsString('Chat with the stall', $response->json('data.answer'));
+        $this->assertStringContainsString('Chat with stall', $response->json('data.answer'));
         $this->assertStringNotContainsString('spray', strtolower($response->json('data.answer')));
     }
 
@@ -86,7 +86,7 @@ class FaqApiTest extends TestCase
             ->assertJsonPath('data.matched_id', null)
             ->assertJsonPath(
                 'data.answer',
-                'I can answer AniHow how-to questions. For this order, use Chat with the stall.',
+                'Tap a question below. For one order, open the order and tap Chat with stall.',
             )
             ->assertJsonPath('data.suggestions.0.id', fn ($id) => is_string($id) && $id !== '');
     }
@@ -95,6 +95,27 @@ class FaqApiTest extends TestCase
     {
         $this->getJson('/api/faq')->assertUnauthorized();
         $this->postJson('/api/faq/ask', ['question' => 'What is tawad?'])->assertUnauthorized();
+    }
+
+    public function test_filipino_accept_language_returns_tagalog_answers(): void
+    {
+        $buyer = $this->buyer();
+
+        $this->asUser($buyer)
+            ->withHeaders(['Accept-Language' => 'fil'])
+            ->getJson('/api/faq')
+            ->assertOk()
+            ->assertJsonFragment(['label' => 'Ano ang tawad?']);
+
+        $this->asUser($buyer)
+            ->withHeaders(['Accept-Language' => 'fil'])
+            ->postJson('/api/faq/ask', ['question' => 'Ano ang tawad?'])
+            ->assertOk()
+            ->assertJsonPath('data.matched_id', 'tawad_buyer')
+            ->assertJsonPath(
+                'data.answer',
+                fn (string $answer): bool => str_contains($answer, 'diskwentong piso'),
+            );
     }
 
     public function test_empty_question_is_rejected(): void

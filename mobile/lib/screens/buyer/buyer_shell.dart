@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../navigation/route_observer.dart';
 import '../../state/auth_controller.dart';
 import '../../widgets/notification_bell.dart';
@@ -22,15 +23,33 @@ class _BuyerShellState extends State<BuyerShell> {
   bool _hideVerifyBanner = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openVerifyAfterRegister());
+  }
+
+  void _openVerifyAfterRegister() {
+    final auth = context.read<AuthController>();
+    if (!auth.pendingEmailVerification || auth.user?.isVerified == true) {
+      return;
+    }
+    auth.clearPendingEmailVerification();
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const VerifyEmailScreen()),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthController>();
+    final s = AppStrings.of(context);
     final pages = const [
       MarketplaceScreen(),
       OrderHistoryScreen(),
       FavoritesScreen(),
       ProfileScreen(),
     ];
-    final titles = ['Marketplace', 'Orders', 'Favorites', 'Profile'];
+    final titles = [s.marketplace, s.orders, s.favorites, s.profile];
     final showVerifyBanner = auth.user?.isVerified == false && !_hideVerifyBanner;
 
     return Scaffold(
@@ -46,19 +65,17 @@ class _BuyerShellState extends State<BuyerShell> {
             SafeArea(
               bottom: false,
               child: MaterialBanner(
-                content: const Text(
-                  'Verify your email before ordering or saving favorites.',
-                ),
+                content: Text(s.verifyBanner),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const VerifyEmailScreen()),
                     ),
-                    child: const Text('Verify now'),
+                    child: Text(s.verifyNow),
                   ),
                   TextButton(
                     onPressed: () => setState(() => _hideVerifyBanner = true),
-                    child: const Text('OK'),
+                    child: Text(s.ok),
                   ),
                 ],
               ),
@@ -84,11 +101,11 @@ class _BuyerShellState extends State<BuyerShell> {
             dismissAniHowSnackBars();
             setState(() => _index = value);
           },
-          destinations: const [
-            NavigationDestination(icon: Icon(Icons.storefront_outlined), label: 'Market'),
-            NavigationDestination(icon: Icon(Icons.receipt_long_outlined), label: 'Orders'),
-            NavigationDestination(icon: Icon(Icons.favorite_outline), label: 'Favorites'),
-            NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
+          destinations: [
+            NavigationDestination(icon: const Icon(Icons.storefront_outlined), label: s.market),
+            NavigationDestination(icon: const Icon(Icons.receipt_long_outlined), label: s.orders),
+            NavigationDestination(icon: const Icon(Icons.favorite_outline), label: s.favorites),
+            NavigationDestination(icon: const Icon(Icons.person_outline), label: s.profile),
           ],
         ),
       ),

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
+import '../../state/preferences_controller.dart';
 import '../../support/walk_in_quote.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/form_label.dart';
@@ -215,7 +216,7 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
               if (selected != null) ...[
                 const SizedBox(height: AniHowSpace.cardGap),
                 if (selected.category != null)
-                  Text(selected.category!.displayLabel),
+                  Text(selected.category!.labelFor(context.watch<PreferencesController>().language)),
                 Text('Price per unit ${AniHowMoney.peso(selected.pricePerUnit)}'),
                 Text(
                   unit == null || unit.isEmpty

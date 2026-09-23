@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../services/order_chat_realtime.dart';
@@ -160,7 +161,8 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
   @override
   Widget build(BuildContext context) {
     final userId = context.watch<AuthController>().user?.id;
-    final title = widget.order.orderNumber ?? 'Order #${widget.order.id}';
+    final s = AppStrings.of(context);
+    final title = widget.order.orderNumber ?? '${s.order} #${widget.order.id}';
 
     return Scaffold(
       appBar: AppBar(title: Text('Chat · $title')),
@@ -174,8 +176,8 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
               child: !_canSend
                   ? Text(
                       widget.order.isWalkIn
-                          ? 'Walk-in sales have no buyer chat.'
-                          : 'This order is cancelled. Chat is read-only.',
+                          ? s.t('Walk-in sales have no buyer chat.', 'Walang chat ang walk-in sale.')
+                          : s.t('This order is cancelled. Chat is read-only.', 'Kinansela ang order. Basahin lang ang chat.'),
                       style: Theme.of(context).textTheme.bodyMedium,
                     )
                   : Row(
@@ -186,8 +188,8 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
                             minLines: 1,
                             maxLines: 4,
                             maxLength: 1000,
-                            decoration: const InputDecoration(
-                              hintText: 'Message about this order',
+                            decoration: InputDecoration(
+                              hintText: s.sendMessageHint,
                               counterText: '',
                             ),
                             textInputAction: TextInputAction.send,
@@ -196,8 +198,9 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
                         ),
                         const SizedBox(width: AniHowSpace.cardGap),
                         PrimaryButton(
-                          label: 'Send',
+                          label: s.send,
                           busy: _sending,
+                          expand: false,
                           onPressed: _send,
                         ),
                       ],
@@ -217,11 +220,11 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
       return AsyncViewError(onRetry: _reload);
     }
     if (_messages.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: AniHowSpace.screenPadding,
           child: Text(
-            'No messages yet. Say hello about the handover.',
+            AppStrings.of(context).noMessages,
             textAlign: TextAlign.center,
           ),
         ),
@@ -252,7 +255,7 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  mine ? 'You' : message.authorName,
+                  mine ? AppStrings.of(context).you : message.authorName,
                   style: Theme.of(context).textTheme.labelMedium,
                 ),
                 const SizedBox(height: 4),

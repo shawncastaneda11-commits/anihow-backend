@@ -18,17 +18,27 @@ class PriceBreakdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.bodyMedium;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Listed ${AniHowMoney.peso(listed)}', style: style),
-        Text('Tawad ${AniHowMoney.peso(tawad)}', style: style),
-        Text(
-          'Total ${AniHowMoney.peso(total)}',
-          style: style?.copyWith(fontWeight: FontWeight.w700),
+    final theme = Theme.of(context);
+    final style = theme.textTheme.bodyMedium;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Listed ${AniHowMoney.peso(listed)}', style: style),
+            Text('Tawad ${AniHowMoney.peso(tawad)}', style: style),
+            Text(
+              'Total ${AniHowMoney.peso(total)}',
+              style: style?.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

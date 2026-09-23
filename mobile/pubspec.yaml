@@ -64,6 +64,11 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  assets:
+    - assets/branding/anihow-logo.png
+    - assets/branding/anihow-mark.png
+    - assets/branding/anihow-wordmark.png
+
   fonts:
     - family: PlusJakartaSans
       fonts:

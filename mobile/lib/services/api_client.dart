@@ -42,6 +42,7 @@ class ApiClient {
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
+          options.headers['Accept-Language'] = acceptLanguage;
           if (options.data is FormData) {
             options.headers.remove('Content-Type');
           }
@@ -62,6 +63,7 @@ class ApiClient {
 
   final Dio _dio;
   final void Function() onUnauthorized;
+  String acceptLanguage = 'en';
 
   Future<void> saveToken(String token) =>
       _storage.write(key: _tokenKey, value: token);
@@ -87,7 +89,7 @@ class ApiClient {
     );
   }
 
-  Future<({UserAccount user, String token})> registerBuyer({
+  Future<({UserAccount user, String token, String? verificationCode})> registerBuyer({
     required String name,
     required String email,
     required String password,
@@ -107,6 +109,7 @@ class ApiClient {
     return (
       user: UserAccount.fromJson(_asMap(response['data'])),
       token: token,
+      verificationCode: response['verification_code'] as String?,
     );
   }
 
@@ -457,9 +460,23 @@ class ApiClient {
 
   Future<void> markAllNotificationsRead() => _post('/notifications/read-all', {});
 
-  Future<void> resendVerification() => _post('/auth/email/verification-notification', {});
+  Future<String?> resendVerification() async {
+    final response = await _post('/auth/email/verification-notification', {});
+    return response['verification_code'] as String?;
+  }
 
   Future<void> verifyEmail(String code) => _post('/auth/email/verify', {'code': code});
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String password,
+    required String passwordConfirmation,
+  }) =>
+      _post('/auth/password', {
+        'current_password': currentPassword,
+        'password': password,
+        'password_confirmation': passwordConfirmation,
+      });
 
   Future<Map<String, dynamic>> _sendListing(
     String path,

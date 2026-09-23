@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/anihow_space.dart';
 import '../theme/anihow_theme.dart';
+import 'anihow_logo.dart';
 
 class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   const AppHeader({
@@ -79,7 +80,12 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.eco, color: onPrimary, size: 36),
+                  const AniHowLogoMark(
+                    markHeight: 88,
+                    wordmarkHeight: 48,
+                    wordmarkWidth: 220,
+                    onCard: true,
+                  ),
                   const SizedBox(height: AniHowSpace.labelGap),
                   Text(
                     title,
@@ -88,7 +94,6 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                       color: onPrimary,
                       fontSize: AniHowSpace.headline,
                       fontWeight: FontWeight.w800,
-                      fontFamily: AniHowTheme.fontFamily,
                     ),
                   ),
                   if (subtitle != null) ...[
@@ -100,7 +105,6 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                         color: onPrimary.withValues(alpha: 0.86),
                         fontSize: AniHowSpace.body,
                         fontWeight: FontWeight.w500,
-                        fontFamily: AniHowTheme.fontFamily,
                       ),
                     ),
                   ],

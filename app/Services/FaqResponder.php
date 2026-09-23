@@ -11,15 +11,15 @@ class FaqResponder
     /**
      * @return array{answer: string, matched_id: ?string, suggestions: list<array{id: string, label: string}>}
      */
-    public function ask(User $user, string $question): array
+    public function ask(User $user, string $question, string $locale = 'en'): array
     {
         $role = $this->primaryAppRole($user);
-        $suggestions = FaqCatalog::chipsForRole($role);
+        $suggestions = FaqCatalog::chipsForRole($role, $locale);
         $normalized = $this->normalize($question);
 
         if ($normalized === '') {
             return [
-                'answer' => $this->fallback(),
+                'answer' => $this->fallback($role, $locale),
                 'matched_id' => null,
                 'suggestions' => $suggestions,
             ];
@@ -34,18 +34,22 @@ class FaqResponder
                 continue;
             }
 
-            $score = $this->score($normalized, $intent['keywords'], $intent['label']);
+            $score = $this->score(
+                $normalized,
+                $intent['keywords'],
+                FaqCatalog::localized($intent, $locale, 'label'),
+            );
 
             if ($score > $bestScore) {
                 $bestScore = $score;
                 $bestId = $intent['id'];
-                $bestAnswer = $intent['answer'];
+                $bestAnswer = FaqCatalog::localized($intent, $locale, 'answer');
             }
         }
 
         if ($bestScore < 1 || $bestAnswer === null) {
             return [
-                'answer' => $this->fallback(),
+                'answer' => $this->fallback($role, $locale),
                 'matched_id' => null,
                 'suggestions' => $suggestions,
             ];
@@ -61,9 +65,9 @@ class FaqResponder
     /**
      * @return list<array{id: string, label: string}>
      */
-    public function chips(User $user): array
+    public function chips(User $user, string $locale = 'en'): array
     {
-        return FaqCatalog::chipsForRole($this->primaryAppRole($user));
+        return FaqCatalog::chipsForRole($this->primaryAppRole($user), $locale);
     }
 
     private function primaryAppRole(User $user): string
@@ -129,8 +133,16 @@ class FaqResponder
         return $score;
     }
 
-    private function fallback(): string
+    private function fallback(string $role, string $locale = 'en'): string
     {
-        return 'I can answer AniHow how-to questions. For this order, use Chat with the stall.';
+        if ($role === Role::FarmerSeller->value) {
+            return $locale === 'fil'
+                ? 'Pumili ng tanong sa ibaba. Para sa isang order, buksan ang Orders at i-tap ang Chat with buyer.'
+                : 'Tap a question below. For one order, open Orders and tap Chat with buyer.';
+        }
+
+        return $locale === 'fil'
+            ? 'Pumili ng tanong sa ibaba. Para sa isang order, buksan ang order at i-tap ang Chat with stall.'
+            : 'Tap a question below. For one order, open the order and tap Chat with stall.';
     }
 }

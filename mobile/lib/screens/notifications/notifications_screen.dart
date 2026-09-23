@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
@@ -13,6 +14,7 @@ import '../buyer/marketplace_screen.dart';
 import '../buyer/buyer_order_detail_screen.dart';
 import '../buyer/order_history_screen.dart';
 import '../farmer/farmer_orders_screen.dart';
+import '../chat/order_chat_screen.dart';
 import '../farmer/listing_form_screen.dart';
 import '../farmer/listings_screen.dart';
 
@@ -120,7 +122,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final hasUnread = _items.any((item) => item.isUnread);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifications'),
+        title: Text(AppStrings.of(context).notifications),
         actions: [
           TextButton(
             style: TextButton.styleFrom(
@@ -128,7 +130,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               disabledForegroundColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
             ),
             onPressed: _busy || !hasUnread ? null : _markAllRead,
-            child: const Text('Mark all read'),
+            child: Text(AppStrings.of(context).markAllRead),
           ),
         ],
       ),
@@ -160,7 +162,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
             leading: _UnreadDot(visible: item.isUnread),
             title: Text(
-              item.title,
+              AppStrings.of(context).notificationTitle(item.type, item.title),
               style: TextStyle(
                 fontSize: AniHowSpace.name,
                 fontWeight: item.isUnread ? FontWeight.w800 : FontWeight.w600,
@@ -282,6 +284,27 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
       );
     }
     return;
+  }
+
+  if (item.type == 'order_message' && item.relatedId != null) {
+    try {
+      final order = isFarmer
+          ? await api.farmerOrder(item.relatedId!)
+          : await api.buyerOrder(item.relatedId!);
+      if (!context.mounted) {
+        return;
+      }
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => OrderChatScreen(order: order),
+        ),
+      );
+      return;
+    } on ApiException {
+      if (!context.mounted) {
+        return;
+      }
+    }
   }
 
   if (!isFarmer && item.pointsToOrder) {

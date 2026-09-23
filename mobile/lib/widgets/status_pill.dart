@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../models/models.dart';
 import '../theme/anihow_space.dart';
 import '../theme/anihow_theme.dart';
@@ -16,30 +17,30 @@ class StatusPill extends StatelessWidget {
   final Color color;
   final Color? background;
 
-  factory StatusPill.order(String status, {String? label}) {
+  factory StatusPill.order(String status, {String? label, AppStrings? strings}) {
     final normalized = status.toLowerCase();
     final mapped = switch (normalized) {
-      'placed' => (AniHowColors.pending, label ?? 'Placed'),
-      'confirmed' => (AniHowColors.sage, label ?? 'Confirmed'),
-      'ready' => (AniHowColors.ready, label ?? 'Ready'),
-      'completed' => (AniHowColors.completed, label ?? 'Completed'),
-      'cancelled' => (AniHowColors.cancelled, label ?? 'Cancelled'),
+      'placed' => (AniHowColors.pending, label ?? strings?.placed ?? 'Placed'),
+      'confirmed' => (AniHowColors.sage, label ?? strings?.confirmed ?? 'Confirmed'),
+      'ready' => (AniHowColors.ready, label ?? strings?.ready ?? 'Ready'),
+      'completed' => (AniHowColors.completed, label ?? strings?.completed ?? 'Completed'),
+      'cancelled' => (AniHowColors.cancelled, label ?? strings?.cancelled ?? 'Cancelled'),
       _ => (AniHowColors.cancelled, label ?? status),
     };
     return StatusPill(label: mapped.$2, color: mapped.$1);
   }
 
-  factory StatusPill.lowStock() {
-    return const StatusPill(
-      label: 'Low stock',
+  factory StatusPill.lowStock({AppStrings? strings}) {
+    return StatusPill(
+      label: strings?.lowStock ?? 'Low stock',
       color: AniHowColors.lowStock,
       background: AniHowColors.lowStockBg,
     );
   }
 
-  factory StatusPill.inStock() {
-    return const StatusPill(
-      label: 'In stock',
+  factory StatusPill.inStock({AppStrings? strings}) {
+    return StatusPill(
+      label: strings?.inStock ?? 'In stock',
       color: AniHowColors.inStock,
       background: AniHowColors.inStockBg,
     );

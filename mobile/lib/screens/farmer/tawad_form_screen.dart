@@ -6,6 +6,7 @@ import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../services/tawad_requests.dart';
 import '../../state/auth_controller.dart';
+import '../../state/preferences_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/primary_button.dart';
@@ -107,7 +108,7 @@ class _TawadFormScreenState extends State<TawadFormScreen> {
           if (crop?.sellerMaxDiscount != null || crop?.sellerFloorPrice != null) ...[
             const SizedBox(height: AniHowSpace.labelGap),
             if (crop?.maxDiscount != null)
-              Text('Maximum tawad for ${crop!.displayLabel} is ${AniHowMoney.peso(crop.sellerMaxDiscount)}.'),
+              Text('Maximum tawad for ${crop!.labelFor(context.watch<PreferencesController>().language)} is ${AniHowMoney.peso(crop.sellerMaxDiscount)}.'),
             if (crop?.floorPrice != null)
               Text('Unit price cannot fall below ${AniHowMoney.peso(crop!.sellerFloorPrice)}.'),
           ],

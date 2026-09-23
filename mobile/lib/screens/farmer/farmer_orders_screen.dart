@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
@@ -15,12 +16,12 @@ import '../../widgets/status_pill.dart';
 import '../chat/order_chat_screen.dart';
 import 'walk_in_sale_screen.dart';
 
-const _orderTabs = [
-  (status: 'placed', label: 'Placed', empty: 'No placed orders.'),
-  (status: 'confirmed', label: 'Confirmed', empty: 'No confirmed orders.'),
-  (status: 'ready', label: 'Ready', empty: 'No orders waiting for handover.'),
-  (status: 'completed', label: 'Completed', empty: 'No completed orders.'),
-  (status: 'cancelled', label: 'Cancelled', empty: 'No cancelled orders.'),
+List<({String status, String label, String empty})> _orderTabs(AppStrings s) => [
+  (status: 'placed', label: s.placed, empty: s.t('No placed orders.', 'Walang naka-place na order.')),
+  (status: 'confirmed', label: s.confirmed, empty: s.t('No confirmed orders.', 'Walang kumpirmadong order.')),
+  (status: 'ready', label: s.ready, empty: s.t('No orders waiting for handover.', 'Walang order na hinihintay sa handover.')),
+  (status: 'completed', label: s.completed, empty: s.t('No completed orders.', 'Walang tapos na order.')),
+  (status: 'cancelled', label: s.cancelled, empty: s.t('No cancelled orders.', 'Walang kinanselang order.')),
 ];
 
 const _sellerCancelReasons = [
@@ -167,8 +168,10 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final tabs = _orderTabs(s);
     return DefaultTabController(
-      length: _orderTabs.length,
+      length: tabs.length,
       child: Scaffold(
         body: Column(
           children: [
@@ -181,28 +184,25 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen> {
                   0,
                 ),
                 child: PrimaryButton(
-                  label: 'Record walk-in sale',
+                  label: s.recordWalkIn,
                   onPressed: _openWalkIn,
                 ),
               ),
-            const TabBar(
+            TabBar(
               isScrollable: true,
               tabs: [
-                Tab(height: AniHowSpace.tabHeight, text: 'Placed'),
-                Tab(height: AniHowSpace.tabHeight, text: 'Confirmed'),
-                Tab(height: AniHowSpace.tabHeight, text: 'Ready'),
-                Tab(height: AniHowSpace.tabHeight, text: 'Completed'),
-                Tab(height: AniHowSpace.tabHeight, text: 'Cancelled'),
+                for (final tab in tabs)
+                  Tab(height: AniHowSpace.tabHeight, text: tab.label),
               ],
             ),
-            Expanded(child: _body()),
+            Expanded(child: _body(tabs)),
           ],
         ),
       ),
     );
   }
 
-  Widget _body() {
+  Widget _body(List<({String status, String label, String empty})> tabs) {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -211,7 +211,7 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen> {
     }
     return TabBarView(
       children: [
-        for (final tab in _orderTabs)
+        for (final tab in tabs)
           _OrderList(
             items: _items.where((order) => order.status == tab.status).toList(),
             emptyLabel: tab.empty,
@@ -348,6 +348,21 @@ class _OrderCard extends StatelessWidget {
                 ],
               ),
             ),
+            if (!order.isWalkIn)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => OrderChatScreen(order: order),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.chat_bubble_outline),
+                  label: Text(AppStrings.of(context).chatWithBuyer),
+                ),
+              ),
             OrderAdvanceButtons(
               order: order,
               busy: busy,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_strings.dart';
 import '../state/auth_controller.dart';
 import '../theme/anihow_space.dart';
 import '../widgets/app_header.dart';
@@ -12,12 +13,13 @@ class AdminGateScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthController>();
+    final s = AppStrings.of(context);
 
     return Scaffold(
       body: Column(
         children: [
-          const AppHeader(
-            title: 'Super admin',
+          AppHeader(
+            title: s.superAdmin,
           ),
           Padding(
             padding: AniHowSpace.screenPadding,
@@ -25,11 +27,14 @@ class AdminGateScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Open http://127.0.0.1:8000/admin on this computer.',
+                  s.t(
+                    'Open http://127.0.0.1:8000/admin on this computer.',
+                    'Buksan ang http://127.0.0.1:8000/admin sa computer na ito.',
+                  ),
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 const SizedBox(height: AniHowSpace.section),
-                PrimaryButton(label: 'Log out', onPressed: auth.logout),
+                PrimaryButton(label: s.logOut, onPressed: auth.logout),
               ],
             ),
           ),

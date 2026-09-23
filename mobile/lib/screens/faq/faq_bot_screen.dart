@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
@@ -89,8 +90,9 @@ class _FaqBotScreenState extends State<FaqBotScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Help & contact')),
+      appBar: AppBar(title: Text(s.faqTitle)),
       body: Column(
         children: [
           Expanded(
@@ -98,14 +100,14 @@ class _FaqBotScreenState extends State<FaqBotScreen> {
               padding: AniHowSpace.screenPadding,
               children: [
                 Text(
-                  'Ask AniHow how-to questions. For a live order, use Chat with the stall.',
+                  s.faqIntro,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: AniHowSpace.section),
                 AsyncView<List<FaqSuggestion>>(
                   future: _chipsFuture,
                   onRetry: _reloadChips,
-                  emptyMessage: 'No help topics yet.',
+                  emptyMessage: s.noHelpTopics,
                   builder: (context, chips) {
                     final shown = _suggestions.isNotEmpty ? _suggestions : chips;
                     return Wrap(
@@ -170,8 +172,8 @@ class _FaqBotScreenState extends State<FaqBotScreen> {
                     child: TextField(
                       controller: _input,
                       enabled: !_asking,
-                      decoration: const InputDecoration(
-                        hintText: 'Ask a how-to question',
+                      decoration: InputDecoration(
+                        hintText: s.askHint,
                       ),
                       textInputAction: TextInputAction.send,
                       onSubmitted: _ask,
@@ -179,8 +181,9 @@ class _FaqBotScreenState extends State<FaqBotScreen> {
                   ),
                   const SizedBox(width: AniHowSpace.cardGap),
                   PrimaryButton(
-                    label: 'Ask',
+                    label: s.ask,
                     busy: _asking,
+                    expand: false,
                     onPressed: () => _ask(_input.text),
                   ),
                 ],

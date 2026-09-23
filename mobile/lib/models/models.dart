@@ -1,3 +1,4 @@
+import '../support/crop_language.dart';
 import '../theme/anihow_space.dart';
 
 class UserAccount {
@@ -100,32 +101,27 @@ class CategoryItem {
   }
 
   /// Filipino crop label, then English, then taxonomy `name`.
-  String get displayLabel {
-    final fil = labelFil?.trim();
-    if (fil != null && fil.isNotEmpty) {
-      return fil;
-    }
-    final en = labelEn?.trim();
-    if (en != null && en.isNotEmpty) {
-      return en;
-    }
-    return name;
-  }
+  String get displayLabel => labelFor(CropLanguage.filipino);
 
-  /// `Kamatis · Tomato`. Omits English when missing or identical to Filipino.
-  String get bilingualLabel {
+  /// English or Filipino crop label from Settings → Language.
+  String labelFor(CropLanguage language) {
     final fil = labelFil?.trim();
     final en = labelEn?.trim();
-    final primary = (fil != null && fil.isNotEmpty)
-        ? fil
-        : ((en != null && en.isNotEmpty) ? en : name);
-    if (en == null || en.isEmpty) {
-      return primary;
+    final hasFil = fil != null && fil.isNotEmpty;
+    final hasEn = en != null && en.isNotEmpty;
+
+    switch (language) {
+      case CropLanguage.english:
+        if (hasEn) {
+          return en;
+        }
+        return hasFil ? fil : name;
+      case CropLanguage.filipino:
+        if (hasFil) {
+          return fil;
+        }
+        return hasEn ? en : name;
     }
-    if (fil == null || fil.isEmpty || fil.toLowerCase() == en.toLowerCase()) {
-      return primary;
-    }
-    return '$primary · $en';
   }
 
   /// The floor this farmer-seller is held to. Falls back to the system
@@ -564,8 +560,10 @@ class CartLine {
   String get listingName => listing?.name ?? 'Item';
 
   /// Filipino crop label when the cart line embeds a crop type.
-  String? get cropDisplayLabel {
-    final label = listing?.category?.displayLabel.trim();
+  String? get cropDisplayLabel => cropLabel(CropLanguage.filipino);
+
+  String? cropLabel(CropLanguage language) {
+    final label = listing?.category?.labelFor(language).trim();
     if (label == null || label.isEmpty) {
       return null;
     }

@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../state/auth_controller.dart';
 import '../../state/preferences_controller.dart';
 import '../../state/theme_controller.dart';
+import '../../support/crop_language.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
+import '../../widgets/anihow_logo.dart';
 import '../../widgets/status_pill.dart';
+import 'change_password_screen.dart';
 import 'profile_screen.dart';
 import 'verify_email_screen.dart';
 import '../faq/faq_bot_screen.dart';
@@ -19,34 +23,52 @@ class SettingsScreen extends StatelessWidget {
     final theme = context.watch<ThemeController>();
     final prefs = context.watch<PreferencesController>();
     final auth = context.watch<AuthController>();
+    final s = AppStrings.of(context);
     final user = auth.user;
     final scheme = Theme.of(context).colorScheme;
+    final language = prefs.language == CropLanguage.filipino
+        ? CropLanguage.filipino
+        : CropLanguage.english;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(s.settings)),
       body: ListView(
         padding: AniHowSpace.screenPadding,
         children: [
-          const _SectionTitle('Appearance', first: true),
+          _SectionTitle(s.help, first: true),
+          _SettingsCard(
+            children: [
+              _SettingsRow(
+                icon: Icons.help_outline,
+                label: s.faq,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const FaqBotScreen(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          _SectionTitle(s.appearance),
           _SettingsCard(
             child: Padding(
               padding: AniHowSpace.cardPadding,
               child: SegmentedButton<ThemeMode>(
-                segments: const [
+                segments: [
                   ButtonSegment(
                     value: ThemeMode.light,
-                    label: FittedBox(fit: BoxFit.scaleDown, child: Text('Light')),
-                    icon: Icon(Icons.light_mode_outlined),
+                    label: FittedBox(fit: BoxFit.scaleDown, child: Text(s.light)),
+                    icon: const Icon(Icons.light_mode_outlined),
                   ),
                   ButtonSegment(
                     value: ThemeMode.dark,
-                    label: FittedBox(fit: BoxFit.scaleDown, child: Text('Dark')),
-                    icon: Icon(Icons.dark_mode_outlined),
+                    label: FittedBox(fit: BoxFit.scaleDown, child: Text(s.dark)),
+                    icon: const Icon(Icons.dark_mode_outlined),
                   ),
                   ButtonSegment(
                     value: ThemeMode.system,
-                    label: FittedBox(fit: BoxFit.scaleDown, child: Text('System')),
-                    icon: Icon(Icons.phone_android),
+                    label: FittedBox(fit: BoxFit.scaleDown, child: Text(s.system)),
+                    icon: const Icon(Icons.phone_android),
                   ),
                 ],
                 selected: {theme.mode},
@@ -54,12 +76,12 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
           ),
-          const _SectionTitle('Preferences'),
+          _SectionTitle(s.preferences),
           _SettingsCard(
             children: [
               _SettingsRow(
                 icon: Icons.notifications_outlined,
-                label: 'Notifications',
+                label: s.notifications,
                 trailing: Transform.scale(
                   scale: AniHowSpace.switchScale,
                   child: Switch(
@@ -68,76 +90,93 @@ class SettingsScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const _SettingsRow(
-                icon: Icons.language_outlined,
-                label: 'Language',
-                trailing: Text('English'),
-              ),
             ],
           ),
-          const _SectionTitle('Account'),
+          _SectionTitle(s.language),
+          _SettingsCard(
+            child: Padding(
+              padding: AniHowSpace.cardPadding,
+              child: SegmentedButton<CropLanguage>(
+                segments: [
+                  ButtonSegment(
+                    value: CropLanguage.english,
+                    label: FittedBox(fit: BoxFit.scaleDown, child: Text(s.english)),
+                  ),
+                  ButtonSegment(
+                    value: CropLanguage.filipino,
+                    label: FittedBox(fit: BoxFit.scaleDown, child: Text(s.filipinoLabel)),
+                  ),
+                ],
+                selected: {language},
+                onSelectionChanged: (value) => prefs.setLanguage(value.first),
+              ),
+            ),
+          ),
+          _SectionTitle(s.account),
           _SettingsCard(
             children: [
               if (user?.isFarmerSeller == true)
                 _SettingsRow(
                   icon: Icons.storefront_outlined,
-                  label: 'Edit profile',
+                  label: s.editProfile,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(builder: (_) => const FarmerProfileScreen()),
                   ),
                 ),
-              const _SettingsRow(
+              _SettingsRow(
                 icon: Icons.lock_outline,
-                label: 'Change password',
-                enabled: false,
-                trailing: _SoonTag(),
+                label: s.changePassword,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const ChangePasswordScreen(),
+                  ),
+                ),
               ),
               _SettingsRow(
                 icon: Icons.mail_outline,
-                label: 'Email',
+                label: s.email,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const VerifyEmailScreen(),
+                  ),
+                ),
                 trailing: user?.isVerified == true
-                    ? const StatusPill(label: 'Verified', color: AniHowColors.ready)
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const StatusPill(label: 'Unverified', color: AniHowColors.pending),
-                          TextButton(
-                            onPressed: () => Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const VerifyEmailScreen()),
-                            ),
-                            child: const Text('Resend'),
-                          ),
-                        ],
-                      ),
+                    ? StatusPill(label: s.verified, color: AniHowColors.ready)
+                    : StatusPill(label: s.unverified, color: AniHowColors.pending),
               ),
             ],
           ),
-          const _SectionTitle('About'),
+          _SectionTitle(s.about),
           _SettingsCard(
             children: [
-              const _SettingsRow(
-                icon: Icons.info_outline,
-                label: 'About AniHow',
-                trailing: Text('v1.0.0'),
-              ),
               _SettingsRow(
-                icon: Icons.help_outline,
-                label: 'Help & contact',
+                icon: Icons.info_outline,
+                label: s.aboutAniHow,
+                trailing: const Text('v1.0.0'),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => const FaqBotScreen(),
+                    builder: (_) => _SettingsCopyScreen(
+                      title: s.aboutAniHow,
+                      showBrandLogo: true,
+                      sections: [
+                        for (final section in s.aboutSections)
+                          _CopySection(title: section.title, body: section.body),
+                      ],
+                    ),
                   ),
                 ),
               ),
               _SettingsRow(
                 icon: Icons.description_outlined,
-                label: 'Terms & privacy',
+                label: s.termsPrivacy,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => const _SettingsCopyScreen(
-                      title: 'Terms & privacy',
-                      body:
-                          'AniHow is a pickup-only market hub. This page is a placeholder — no published legal document is stored in the app yet.',
+                    builder: (_) => _SettingsCopyScreen(
+                      title: s.termsPrivacy,
+                      sections: [
+                        for (final section in s.termsSections)
+                          _CopySection(title: section.title, body: section.body),
+                      ],
                     ),
                   ),
                 ),
@@ -157,7 +196,7 @@ class SettingsScreen extends StatelessWidget {
               side: BorderSide(color: scheme.error),
               minimumSize: const Size.fromHeight(48),
             ),
-            child: const Text('Log out'),
+            child: Text(s.logOut),
           ),
         ],
       ),
@@ -209,64 +248,81 @@ class _SettingsRow extends StatelessWidget {
     required this.label,
     this.trailing,
     this.onTap,
-    this.enabled = true,
   });
 
   final IconData icon;
   final String label;
   final Widget? trailing;
   final VoidCallback? onTap;
-  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      enabled: enabled,
       leading: Icon(icon),
       title: Text(label, style: Theme.of(context).textTheme.titleMedium),
-      trailing: trailing ?? (onTap == null ? null : const Icon(Icons.chevron_right)),
-      onTap: enabled ? onTap : null,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (trailing != null)
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 120),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: trailing!,
+              ),
+            ),
+          if (trailing != null && onTap != null) const SizedBox(width: 4),
+          if (onTap != null) const Icon(Icons.chevron_right),
+        ],
+      ),
+      onTap: onTap,
     );
   }
 }
 
-class _SoonTag extends StatelessWidget {
-  const _SoonTag();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: AniHowColors.cancelled.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: const Text(
-        'Soon',
-        style: TextStyle(
-          color: AniHowColors.cancelled,
-          fontWeight: FontWeight.w700,
-          fontSize: AniHowSpace.label,
-        ),
-      ),
-    );
-  }
-}
-
-class _SettingsCopyScreen extends StatelessWidget {
-  const _SettingsCopyScreen({required this.title, required this.body});
+class _CopySection {
+  const _CopySection({required this.title, required this.body});
 
   final String title;
   final String body;
+}
+
+class _SettingsCopyScreen extends StatelessWidget {
+  const _SettingsCopyScreen({
+    required this.title,
+    required this.sections,
+    this.showBrandLogo = false,
+  });
+
+  final String title;
+  final List<_CopySection> sections;
+  final bool showBrandLogo;
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: ListView(
         padding: AniHowSpace.screenPadding,
         children: [
-          Text(body, style: Theme.of(context).textTheme.bodyLarge),
+          if (showBrandLogo) ...[
+            const Center(
+              child: AniHowLogoMark(
+                markHeight: 140,
+                wordmarkHeight: 76,
+                wordmarkWidth: 300,
+              ),
+            ),
+            const SizedBox(height: AniHowSpace.section),
+          ],
+          for (var i = 0; i < sections.length; i++) ...[
+            if (i > 0) const SizedBox(height: AniHowSpace.section),
+            Text(sections[i].title, style: textTheme.titleMedium),
+            const SizedBox(height: AniHowSpace.labelGap),
+            Text(sections[i].body, style: textTheme.bodyLarge),
+          ],
         ],
       ),
     );

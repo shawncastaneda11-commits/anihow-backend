@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_strings.dart';
 import '../screens/buyer/cart_screen.dart';
 import '../state/cart_controller.dart';
 
@@ -14,7 +15,7 @@ class CartIconButton extends StatelessWidget {
     final count = context.watch<CartController>().count;
     final label = count > 99 ? '99+' : '$count';
     return IconButton(
-      tooltip: 'Cart',
+      tooltip: AppStrings.of(context).cart,
       onPressed: () {
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const CartScreen()),

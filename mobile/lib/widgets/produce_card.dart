@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'package:provider/provider.dart';
+
 import '../models/models.dart';
+import '../state/preferences_controller.dart';
 import '../theme/anihow_space.dart';
 import '../theme/anihow_theme.dart';
 import 'category_color.dart';
@@ -36,8 +39,9 @@ class ProduceCard extends StatelessWidget {
               )
             : CategoryColor.of(listing.category, listingName: listing.name));
     final theme = Theme.of(context);
-    final sellerLabel = listing.sellerName ?? listing.category?.displayLabel ?? 'Farm stall';
-    final cropLabel = listing.category?.bilingualLabel;
+    final language = context.watch<PreferencesController>().language;
+    final sellerLabel = listing.sellerName ?? listing.category?.labelFor(language) ?? 'Farm stall';
+    final cropLabel = listing.category?.labelFor(language);
 
     return Card(
       clipBehavior: Clip.antiAlias,

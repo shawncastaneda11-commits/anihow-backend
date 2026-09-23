@@ -113,9 +113,12 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
       );
       return;
     }
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final api = context.read<AuthController>().api;
     setState(() => _busy = true);
     try {
-      final order = await context.read<AuthController>().api.recordWalkInSale(
+      final order = await api.recordWalkInSale(
             listingId: listingId,
             quantity: _quantity.text.trim(),
             amountReceived: _amountReceived.text.trim(),
@@ -152,13 +155,15 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
           );
         },
       );
-      if (mounted) {
-        Navigator.of(context).pop(true);
+      if (!mounted) {
+        return;
       }
+      navigator.pop(true);
     } on ApiException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      if (!mounted) {
+        return;
       }
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
     } finally {
       if (mounted) {
         setState(() => _busy = false);

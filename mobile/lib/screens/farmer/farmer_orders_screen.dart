@@ -12,6 +12,7 @@ import '../../widgets/price_breakdown.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
 import '../../widgets/status_pill.dart';
+import '../chat/order_chat_screen.dart';
 import 'walk_in_sale_screen.dart';
 
 const _orderTabs = [
@@ -546,6 +547,19 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
             '${item.quantityLabel} · ${AniHowMoney.peso(item.listedPrice)} → ${AniHowMoney.peso(item.lineSubtotal)}',
           ),
           const SizedBox(height: AniHowSpace.cardGap),
+        ],
+        if (!order.isWalkIn) ...[
+          PrimaryButton(
+            label: 'Chat with buyer',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => OrderChatScreen(order: order),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: AniHowSpace.section),
         ],
         OrderAdvanceButtons(
           order: order,

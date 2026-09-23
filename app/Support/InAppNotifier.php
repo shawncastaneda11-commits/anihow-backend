@@ -197,6 +197,23 @@ class InAppNotifier
     }
 
     /**
+     * A new chat message reaches the other party on the order, never the
+     * sender and never the Super Admin.
+     */
+    public function orderMessage(User $recipient, Order $order, User $sender, string $body): InAppNotification
+    {
+        $preview = mb_strlen($body) > 80 ? mb_substr($body, 0, 77).'...' : $body;
+
+        return $this->send(
+            $recipient,
+            NotificationType::OrderMessage,
+            NotificationType::OrderMessage->label(),
+            "{$sender->name} on order {$order->order_number}: {$preview}",
+            $order,
+        );
+    }
+
+    /**
      * Email is a secondary channel. An unmapped type simply does not send one.
      */
     private function queueEmail(User $user, NotificationType $type, ?Model $related): void

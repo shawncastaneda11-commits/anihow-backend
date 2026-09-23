@@ -11,7 +11,9 @@ use App\Http\Controllers\Api\Auth\ResendVerificationController;
 use App\Http\Controllers\Api\Auth\ResetPasswordController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\Cart\CartController;
+use App\Http\Controllers\Api\Chat\OrderMessageController;
 use App\Http\Controllers\Api\CropCare\CropCareArticleController;
+use App\Http\Controllers\Api\Faq\FaqController;
 use App\Http\Controllers\Api\Favorites\FavoriteController;
 use App\Http\Controllers\Api\Listings\ListingController;
 use App\Http\Controllers\Api\Listings\TawadRuleController;
@@ -69,6 +71,16 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->name('notifications.read-all');
     Route::patch('notifications/{inAppNotification}/read', [NotificationController::class, 'read'])
         ->name('notifications.read');
+
+    // Order chat is gated by OrderPolicy, not by role prefix. Buyer and
+    // farmer-seller both hit the same routes for the same thread.
+    Route::get('orders/{order}/messages', [OrderMessageController::class, 'index'])
+        ->name('orders.messages.index');
+    Route::post('orders/{order}/messages', [OrderMessageController::class, 'store'])
+        ->name('orders.messages.store');
+
+    Route::get('faq', [FaqController::class, 'index'])->name('faq.index');
+    Route::post('faq/ask', [FaqController::class, 'ask'])->name('faq.ask');
 });
 
 Route::middleware([

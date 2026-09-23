@@ -3,9 +3,11 @@
 namespace App\Filament\Resources\Orders\Schemas;
 
 use App\Models\Order;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
+use Illuminate\Support\HtmlString;
 
 /**
  * Read-only. Used by the view action on the orders table.
@@ -44,6 +46,41 @@ class OrderForm
                     ->disabled()
                     ->visible(fn (?Order $record): bool => filled($record?->cancellation_note))
                     ->columnSpanFull(),
+                Placeholder::make('order_chat')
+                    ->label('Order chat')
+                    ->content(fn (?Order $record): HtmlString => self::chatContent($record))
+                    ->columnSpanFull(),
             ]);
+    }
+
+    private static function chatContent(?Order $record): HtmlString
+    {
+        if ($record === null) {
+            return new HtmlString('<span class="text-sm text-gray-500">No order selected.</span>');
+        }
+
+        if ($record->isWalkIn()) {
+            return new HtmlString(
+                '<span class="text-sm text-gray-500">Walk-in sales have no buyer chat.</span>',
+            );
+        }
+
+        $record->loadMissing('messages.author');
+
+        if ($record->messages->isEmpty()) {
+            return new HtmlString(
+                '<span class="text-sm text-gray-500">No messages yet.</span>',
+            );
+        }
+
+        $lines = $record->messages->map(function ($message): string {
+            $author = e($message->author?->name ?? 'Unknown');
+            $when = e(optional($message->created_at)?->timezone(config('app.timezone'))->format('Y-m-d H:i') ?? '');
+            $body = nl2br(e($message->body));
+
+            return "<div class=\"mb-3\"><div class=\"text-sm font-medium\">{$author} <span class=\"font-normal text-gray-500\">{$when}</span></div><div class=\"text-sm\">{$body}</div></div>";
+        })->implode('');
+
+        return new HtmlString($lines);
     }
 }

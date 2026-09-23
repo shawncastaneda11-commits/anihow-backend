@@ -32,7 +32,9 @@ return new class extends Migration
             $table->index(['farmer_seller_id', 'is_removed']);
         });
 
-        DB::statement('ALTER TABLE reviews ADD CONSTRAINT chk_reviews_rating_range CHECK (rating BETWEEN 1 AND 5)');
+        if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+            DB::statement('ALTER TABLE reviews ADD CONSTRAINT chk_reviews_rating_range CHECK (rating BETWEEN 1 AND 5)');
+        }
     }
 
     public function down(): void

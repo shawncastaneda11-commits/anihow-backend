@@ -121,6 +121,11 @@ class Order extends Model
         return $this->hasMany(OrderStatusHistory::class)->orderBy('created_at');
     }
 
+    public function messages(): HasMany
+    {
+        return $this->hasMany(OrderMessage::class)->orderBy('id');
+    }
+
     public function isWalkIn(): bool
     {
         return $this->source === OrderSource::WalkIn;

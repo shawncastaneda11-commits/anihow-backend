@@ -898,6 +898,7 @@ class AppNotification {
         type == 'order_ready' ||
         type == 'order_completed' ||
         type == 'order_cancelled' ||
+        type == 'order_message' ||
         related == 'order' ||
         related.endsWith('Order');
   }
@@ -912,6 +913,74 @@ class AppNotification {
       relatedType: json['related_type'] as String?,
       readAt: json['read_at'] as String?,
       createdAt: json['created_at'] as String?,
+    );
+  }
+}
+
+class OrderMessage {
+  const OrderMessage({
+    required this.id,
+    required this.body,
+    required this.authorId,
+    required this.authorName,
+    this.authorRole,
+    this.createdAt,
+  });
+
+  final int id;
+  final String body;
+  final int authorId;
+  final String authorName;
+  final String? authorRole;
+  final String? createdAt;
+
+  factory OrderMessage.fromJson(Map<String, dynamic> json) {
+    final author = json['author'];
+    final authorMap = author is Map ? Map<String, dynamic>.from(author) : null;
+    return OrderMessage(
+      id: json['id'] as int,
+      body: json['body'] as String? ?? '',
+      authorId: ListingItem._asCount(authorMap?['id']) ?? 0,
+      authorName: authorMap?['name'] as String? ?? 'Someone',
+      authorRole: authorMap?['role'] as String?,
+      createdAt: json['created_at'] as String?,
+    );
+  }
+}
+
+class FaqSuggestion {
+  const FaqSuggestion({required this.id, required this.label});
+
+  final String id;
+  final String label;
+
+  factory FaqSuggestion.fromJson(Map<String, dynamic> json) {
+    return FaqSuggestion(
+      id: json['id'] as String? ?? '',
+      label: json['label'] as String? ?? '',
+    );
+  }
+}
+
+class FaqAnswer {
+  const FaqAnswer({
+    required this.answer,
+    required this.suggestions,
+    this.matchedId,
+  });
+
+  final String answer;
+  final String? matchedId;
+  final List<FaqSuggestion> suggestions;
+
+  factory FaqAnswer.fromJson(Map<String, dynamic> json) {
+    return FaqAnswer(
+      answer: json['answer'] as String? ?? '',
+      matchedId: json['matched_id'] as String?,
+      suggestions: ((json['suggestions'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((item) => FaqSuggestion.fromJson(Map<String, dynamic>.from(item)))
+          .toList(),
     );
   }
 }

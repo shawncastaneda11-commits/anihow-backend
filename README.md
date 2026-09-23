@@ -87,10 +87,16 @@ php artisan db:seed --class=SmokeTestSeeder
 
 ```bash
 php artisan serve
+php artisan reverb:start
 ```
 
 - API: `http://localhost:8000/api`
 - Filament admin: `http://localhost:8000/admin`
+- Reverb (order chat): `ws://localhost:8080` — Android emulator uses `10.0.2.2:8080`
+
+Order chat needs both `serve` and `reverb:start`. The app also polls every 8 seconds while a chat screen is open if the socket drops.
+
+Settings → Help & contact opens the scripted FAQ bot (no LLM).
 
 ### Logins
 

@@ -263,6 +263,50 @@ class ApiClient {
     return pages.items;
   }
 
+  Future<OrderRecord> buyerOrder(int id) async {
+    final response = await _get('/buyer/orders/$id');
+    return OrderRecord.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<List<OrderMessage>> orderMessages(int orderId, {int? afterId}) {
+    return _list(
+      '/orders/$orderId/messages',
+      query: {
+        if (afterId != null) 'after_id': afterId,
+      },
+      parse: OrderMessage.fromJson,
+    );
+  }
+
+  Future<OrderMessage> sendOrderMessage(int orderId, {required String body}) async {
+    final response = await _post('/orders/$orderId/messages', {'body': body});
+    return OrderMessage.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<List<FaqSuggestion>> faqSuggestions() async {
+    final response = await _get('/faq');
+    final data = _asMap(response['data'] ?? response);
+    return ((data['suggestions'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((item) => FaqSuggestion.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+  }
+
+  Future<FaqAnswer> askFaq(String question) async {
+    final response = await _post('/faq/ask', {'question': question});
+    return FaqAnswer.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<Map<String, dynamic>> authorizeBroadcast({
+    required String socketId,
+    required String channelName,
+  }) {
+    return _postAbsolute(ApiConfig.broadcastingAuthUrl, {
+      'socket_id': socketId,
+      'channel_name': channelName,
+    });
+  }
+
   Future<List<CartLine>> cartItems() {
     return _list(CartRequests.cartPath, parse: CartLine.fromJson);
   }
@@ -456,6 +500,18 @@ class ApiClient {
   ) async {
     try {
       final response = await _dio.post(path, data: body);
+      return _asMap(response.data);
+    } on DioException catch (error) {
+      throw ApiException(_messageFrom(error));
+    }
+  }
+
+  Future<Map<String, dynamic>> _postAbsolute(
+    String url,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final response = await _dio.postUri(Uri.parse(url), data: body);
       return _asMap(response.data);
     } on DioException catch (error) {
       throw ApiException(_messageFrom(error));

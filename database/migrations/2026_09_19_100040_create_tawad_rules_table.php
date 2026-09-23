@@ -29,8 +29,10 @@ return new class extends Migration
             $table->index(['listing_id', 'is_active']);
         });
 
-        DB::statement('ALTER TABLE tawad_rules ADD CONSTRAINT chk_tawad_discount_positive CHECK (discount_amount > 0)');
-        DB::statement('ALTER TABLE tawad_rules ADD CONSTRAINT chk_tawad_min_quantity CHECK (min_quantity IS NULL OR min_quantity > 0)');
+        if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+            DB::statement('ALTER TABLE tawad_rules ADD CONSTRAINT chk_tawad_discount_positive CHECK (discount_amount > 0)');
+            DB::statement('ALTER TABLE tawad_rules ADD CONSTRAINT chk_tawad_min_quantity CHECK (min_quantity IS NULL OR min_quantity > 0)');
+        }
     }
 
     public function down(): void

@@ -9,6 +9,7 @@ enum NotificationType: string
     case OrderReady = 'order_ready';
     case OrderCompleted = 'order_completed';
     case OrderCancelled = 'order_cancelled';
+    case OrderMessage = 'order_message';
 
     // Farmer-seller facing
     case OrderPlaced = 'order_placed';
@@ -26,6 +27,7 @@ enum NotificationType: string
             self::OrderReady => 'Order ready',
             self::OrderCompleted => 'Order completed',
             self::OrderCancelled => 'Order cancelled',
+            self::OrderMessage => 'New order message',
             self::OrderPlaced => 'New order placed',
             self::ListingLowStock => 'Listing low on stock',
             self::ListingTakenDown => 'Listing taken down',

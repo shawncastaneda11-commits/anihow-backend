@@ -61,7 +61,7 @@ class OrderResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->with(['buyer', 'farmerSeller', 'farm', 'items']);
+            ->with(['buyer', 'farmerSeller', 'farm', 'items', 'messages.author']);
     }
 
     public static function canAccess(): bool

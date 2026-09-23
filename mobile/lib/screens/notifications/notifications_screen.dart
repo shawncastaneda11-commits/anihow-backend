@@ -10,6 +10,7 @@ import '../../widgets/async_view.dart';
 import '../../support/relative_time.dart';
 import '../buyer/listing_detail_screen.dart';
 import '../buyer/marketplace_screen.dart';
+import '../buyer/buyer_order_detail_screen.dart';
 import '../buyer/order_history_screen.dart';
 import '../farmer/farmer_orders_screen.dart';
 import '../farmer/listing_form_screen.dart';
@@ -284,6 +285,14 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
   }
 
   if (!isFarmer && item.pointsToOrder) {
+    if (item.relatedId != null) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => BuyerOrderDetailScreen(orderId: item.relatedId),
+        ),
+      );
+      return;
+    }
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const OrderHistoryScreen()),
     );

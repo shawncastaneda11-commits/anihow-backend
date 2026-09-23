@@ -9,6 +9,7 @@ import '../../theme/anihow_theme.dart';
 import '../../widgets/status_pill.dart';
 import 'profile_screen.dart';
 import 'verify_email_screen.dart';
+import '../faq/faq_bot_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -124,11 +125,7 @@ class SettingsScreen extends StatelessWidget {
                 label: 'Help & contact',
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => const _SettingsCopyScreen(
-                      title: 'Help & contact',
-                      body:
-                          'For pickup questions in General Trias, talk to the stall or email hello@anihow.local.\n\nThis page is a placeholder. There is no helpdesk API yet.',
-                    ),
+                    builder: (_) => const FaqBotScreen(),
                   ),
                 ),
               ),

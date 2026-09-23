@@ -8,6 +8,10 @@ class ApiConfig {
   static const String emulatorHost = 'http://10.0.2.2:8000';
   static const String localHost = 'http://127.0.0.1:8000';
 
+  /// Must match REVERB_APP_KEY in the API .env.
+  static const String reverbAppKey = 'anihow-reverb-key';
+  static const int reverbPort = 8080;
+
   static String get host {
     if (kIsWeb || defaultTargetPlatform == TargetPlatform.windows) {
       return localHost;
@@ -16,4 +20,13 @@ class ApiConfig {
   }
 
   static String get baseUrl => '$host/api';
+
+  static String get reverbHost {
+    if (kIsWeb || defaultTargetPlatform == TargetPlatform.windows) {
+      return '127.0.0.1';
+    }
+    return '10.0.2.2';
+  }
+
+  static String get broadcastingAuthUrl => '$host/broadcasting/auth';
 }

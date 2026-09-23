@@ -10,6 +10,8 @@ class UserAccount {
     this.phone,
     this.shopName,
     this.emailVerifiedAt,
+    this.farmId,
+    this.farmName,
   });
 
   final int id;
@@ -20,8 +22,12 @@ class UserAccount {
   final String? phone;
   final String? shopName;
   final String? emailVerifiedAt;
+  final int? farmId;
+  final String? farmName;
 
   factory UserAccount.fromJson(Map<String, dynamic> json) {
+    final farmJson = json['farm'];
+    final farmMap = farmJson is Map ? Map<String, dynamic>.from(farmJson) : null;
     return UserAccount(
       id: json['id'] as int,
       name: json['name'] as String? ?? '',
@@ -35,6 +41,8 @@ class UserAccount {
       phone: json['phone'] as String?,
       shopName: json['shop_name'] as String?,
       emailVerifiedAt: json['email_verified_at'] as String?,
+      farmId: ListingItem._asCount(farmMap?['id']),
+      farmName: farmMap?['name'] as String?,
     );
   }
 

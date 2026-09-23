@@ -2,9 +2,11 @@
 
 ## Sections 1.3 and 1.7, Draft 1
 
-Written from zero against `AniHow_Project_Instructions_v2_Marketplace_Rebuild.md`.
-No prose adapted from the Project 1 manuscript. No em dashes or en dashes.
-Version-less per Section 12.
+Written from zero against the Project Instructions. Crop-care access, farm
+visibility, listing-floor helper, restore notify, and shops directory are
+aligned to `docs/spec/AniHow_Project_Instructions_v3.4.md`. No prose adapted
+from the Project 1 manuscript. No em dashes or en dashes. Version-less per
+Section 12.
 
 ---
 
@@ -46,15 +48,17 @@ every kamatis listing regardless of which farm posted it.
 A listing is the Farmer-Seller's own object, created under a taxonomy entry. The
 Farmer-Seller supplies the photographs, the description, the price, the available
 quantity, and the availability state. The price is validated at or above the
-floor price held on the taxonomy entry. A listing publishes on creation. The
-Super Admin holds takedown power over a published listing rather than approval
-power over a pending one, so a new listing reaches buyers without an
-administrative wait.
+farm's effective floor for that crop. On the new-listing form the Farmer-Seller
+sees that floor, labeled as set by their farm. A listing publishes on creation.
+The Super Admin holds takedown power over a published listing rather than
+approval power over a pending one, so a new listing reaches buyers without an
+administrative wait. Takedown and restore each notify the seller in-app.
 
 Each Farmer-Seller operates a storefront that gathers their listings under their
-name and their farm. Buyers reach listings by crop type, by farm, by storefront,
-or by keyword search, and add them to a cart. A Farmer-Seller cannot view another
-Farmer-Seller's listings, orders, or figures.
+name. Their shop profile shows the partner farm they belong to. Buyers reach
+listings by crop type, by storefront, or by keyword search, including a shops
+directory of storefronts, and add them to a cart. A Farmer-Seller cannot view
+another Farmer-Seller's listings, orders, or figures.
 
 Tawad in AniHow is implemented as a seller-published peso discount rule rather
 than as live negotiation, because the system records transactions but does not
@@ -98,7 +102,9 @@ This module holds reference articles on crop care and pest management. Each
 partner farm's Content Editor writes and maintains that farm's own articles in
 the content management system, tags each article to entries in the shared crop
 taxonomy, and publishes or unpublishes them. Articles are read-only inside the
-Android application for both Farmer-Sellers and Buyers.
+Android application for Farmer-Sellers. A Farmer-Seller sees published articles
+from every farm, and each article names its author farm. Buyers do not read
+crop-care articles in the app.
 
 The module is reference material and nothing further. It does not track crop
 cycles or growth phases, does not schedule farm activities, does not gate any
@@ -127,9 +133,10 @@ single panel, with access restricted per resource according to the role held.
 The Super Admin creates, approves, suspends, and deletes all accounts, including
 Content Editor accounts. The Super Admin sets the floor price and the maximum
 peso discount on each taxonomy entry, owns the structure of the crop taxonomy,
-takes down listings, resolves reports, removes reviews, suspends users, reads the
-full order ledger, and reads every descriptive dashboard. Destructive actions are
-held by the Super Admin alone.
+takes down listings, restores a taken-down listing, resolves reports, removes
+reviews, suspends users, reads the full order ledger, and reads every
+descriptive dashboard. Takedown and restore each notify the seller. Destructive
+actions are held by the Super Admin alone.
 
 The Content Editor works inside one partner farm. The Content Editor writes,
 edits, tags, publishes, and unpublishes that farm's crop-care articles, maintains
@@ -165,7 +172,7 @@ device. It is the only surface available to Farmer-Sellers and Buyers.
 
 **Buyer.** An actor who browses listings, places orders, arranges handover, and
 leaves reviews. Buyer registration is open and self-service, and a Buyer holds no
-administrative or selling capability.
+administrative or selling capability. A Buyer does not read crop-care articles.
 
 **Cash on Handover.** The payment method used in AniHow. The buyer pays the
 Farmer-Seller in cash when the produce changes hands in person, and the
@@ -192,12 +199,15 @@ to a farm, and crop-care articles are owned by a farm.
 
 **Farmer-Seller.** An approved member of a partner farm who operates a storefront
 in the Android application, creates listings, sets tawad rules, and confirms and
-fulfils orders. Registration requires Super Admin approval and a farm membership
-check.
+fulfils orders. Their profile shows the partner farm they belong to. They read
+published crop-care articles from every farm. Registration requires Super Admin
+approval and a farm membership check.
 
-**Floor Price.** The minimum price per unit allowed for a crop type, set by the
-Super Admin on the taxonomy entry. No listing price and no discounted unit price
-may fall below it.
+**Floor Price.** The minimum price per unit allowed for a crop type. The Super
+Admin sets the system floor on the taxonomy entry. A farm may raise that floor
+for its own sellers. No listing price and no discounted unit price may fall
+below the farm's effective floor. The new-listing form shows that effective
+floor to the Farmer-Seller.
 
 **Fulfillment Preference.** The buyer's stated arrangement for receiving an
 order, recorded as either buyer pickup or seller delivers, with a note field for
@@ -243,7 +253,8 @@ moderates listings, reviews, and users, and reads the full order ledger and all
 descriptive dashboards.
 
 **Takedown.** The Super Admin's removal of an already published listing.
-Takedown is exercised after publication, in place of approval before it.
+Takedown is exercised after publication, in place of approval before it. The
+seller is notified on takedown and again if the listing is restored.
 
 **Tawad.** A peso discount rule published by a Farmer-Seller on their own
 listing, applied automatically at checkout when its condition is met. Two rule
@@ -270,6 +281,16 @@ and by Content Editors.
 | 8 | "farmer-seller" used throughout; "member-farmer" absent | Spec Section 2 |
 | 9 | Communal-plot, crop-cycle, POS, and reservation vocabulary absent | Spec Section 10 |
 | 10 | RA 10173 phrased "designed in accordance with" | Spec Section 11 |
+| 11 | Module C: crop-care reads are Farmer-Sellers only | v3.4. Buyer half of the old sentence was wrong. |
+| 12 | Buyer and Farmer-Seller terms: crop-care access | Buyer does not read articles. Farmer-Seller reads all published articles. |
+| 13 | Module A: farm name on profile, floor on listing form, shops directory | Additive. |
+| 14 | Module A, Module E, Takedown: restore also notifies the seller | Additive. |
+
+# Chapter 3 note (not yet drafted)
+
+Chapter 3 System Development, and the SRS if either names the auth flow, must
+describe email verification as OTP-only: a six-digit code, ten-minute expiry,
+no signed-link GET. There is no Chapter 3 draft in this repository yet.
 
 # Flags for adviser or your decision
 

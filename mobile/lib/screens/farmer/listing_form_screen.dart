@@ -135,11 +135,19 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     }
   }
 
-  String? _unitFor(List<CategoryItem> cropTypes) {
+  CategoryItem? _selectedCrop(List<CategoryItem> cropTypes) {
     for (final cropType in cropTypes) {
       if (cropType.id == _cropTypeId) {
-        return cropType.unitLabel ?? cropType.unit;
+        return cropType;
       }
+    }
+    return null;
+  }
+
+  String? _unitFor(List<CategoryItem> cropTypes) {
+    final cropType = _selectedCrop(cropTypes);
+    if (cropType != null) {
+      return cropType.unitLabel ?? cropType.unit;
     }
     return widget.listing?.unitLabel ?? widget.listing?.unit;
   }
@@ -250,7 +258,9 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
             return Center(child: Text('${snapshot.error}'));
           }
           final cropTypes = snapshot.data ?? const [];
+          final selectedCrop = _selectedCrop(cropTypes);
           final unit = _unitFor(cropTypes);
+          final floor = selectedCrop?.sellerFloorPrice;
           return Column(
             children: [
               Expanded(
@@ -323,6 +333,15 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                         ),
                       ],
                     ),
+                    if (floor != null && floor.isNotEmpty) ...[
+                      const SizedBox(height: AniHowSpace.labelGap),
+                      Text(
+                        'Floor price for ${selectedCrop!.displayLabel}: ${AniHowMoney.peso(floor)} (set by your farm)',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                            ),
+                      ),
+                    ],
                     const SizedBox(height: AniHowSpace.fieldGap),
                     AniHowField(
                       label: 'Description',

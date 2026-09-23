@@ -157,7 +157,8 @@ class AuthApiTest extends TestCase
         $this->withToken($token)
             ->getJson('/api/auth/user')
             ->assertOk()
-            ->assertJsonPath('data.email', $buyer->email);
+            ->assertJsonPath('data.email', $buyer->email)
+            ->assertJsonPath('data.farm', null);
 
         $this->withToken($token)
             ->postJson('/api/auth/logout')

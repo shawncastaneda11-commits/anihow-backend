@@ -194,12 +194,22 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
             return const Center(child: Text('Shop not found.'));
           }
           final shop = view.shop;
+          final farmName = context.watch<AuthController>().user?.farmName?.trim();
           return RefreshIndicator(
             onRefresh: _reload,
             child: ListView(
               padding: AniHowSpace.screenPadding,
               children: [
                 ShopIdentityHeader(shop: shop),
+                if (farmName != null && farmName.isNotEmpty) ...[
+                  const SizedBox(height: AniHowSpace.cardGap),
+                  Text(
+                    'Farm: $farmName',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                  ),
+                ],
                 if (view.listingsCount != null || shop.hasRating) ...[
                   const SizedBox(height: AniHowSpace.section),
                   ShopStatRow(

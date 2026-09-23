@@ -10,6 +10,6 @@ class MeController extends Controller
 {
     public function __invoke(Request $request): UserResource
     {
-        return new UserResource($request->user()->load('roles'));
+        return new UserResource($request->user()->load(['roles', 'farm']));
     }
 }

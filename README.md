@@ -92,15 +92,26 @@ php artisan serve
 - API: `http://localhost:8000/api`
 - Filament admin: `http://localhost:8000/admin`
 
-### Logins (password: `password` for every row)
+### Logins
 
-| Surface | Role | Email |
-| --- | --- | --- |
-| Filament `/admin` | `super_admin` | `admin@anihow.local` (override with `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD`) |
-| Filament `/admin` | `content_editor` | `smoke.editor@anihow.local` |
-| Android app | `farmer_seller` | `smoke.sellera@anihow.local` |
-| Android app | `farmer_seller` | `smoke.sellerb@anihow.local` |
-| Android app | `buyer` | `smoke.buyer@anihow.local` |
+Seeded after `SuperAdminSeeder` and `SmokeTestSeeder`. Password is `password` for every account unless you override `SUPER_ADMIN_PASSWORD` in `.env`.
+
+#### Filament `/admin` (`http://localhost:8000/admin`)
+
+| Role | Name | Email | Password |
+| --- | --- | --- | --- |
+| `super_admin` | AniHow Super Admin | `admin@anihow.local` | `password` |
+| `content_editor` | Smoke Content Editor | `smoke.editor@anihow.local` | `password` |
+
+`super_admin` email and password can be changed with `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD` before you run `SuperAdminSeeder`. The content editor belongs to Smoke Test Farm.
+
+#### Android app
+
+| Role | Name | Email | Password | Notes |
+| --- | --- | --- | --- | --- |
+| `farmer_seller` | Smoke Seller A | `smoke.sellera@anihow.local` | `password` | Shop: Aling Nena Produce. Farm: Smoke Test Farm. |
+| `farmer_seller` | Smoke Seller B | `smoke.sellerb@anihow.local` | `password` | Shop: Mang Tonyo Farm. Farm: Smoke Test Farm. |
+| `buyer` | Smoke Buyer | `smoke.buyer@anihow.local` | `password` | Email already verified. |
 
 Do not use `juan@anihow.local`, `maria.santos@anihow.local`, `pedro.reyes@anihow.local`, `ana.buyer@anihow.local`, or `ben.buyer@anihow.local`. Those seeders are leftover from the pre-rebuild schema and are not called.
 

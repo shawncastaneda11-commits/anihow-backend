@@ -96,17 +96,19 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen> {
     if (_acting.contains(order.id)) {
       return;
     }
+    final messenger = ScaffoldMessenger.of(context);
     setState(() => _acting.add(order.id));
     try {
       final updated = await action();
-      if (mounted) {
-        _replace(updated);
+      if (!mounted) {
+        return;
       }
+      _replace(updated);
     } on ApiException catch (error) {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
     } finally {
       if (mounted) {
         setState(() => _acting.remove(order.id));
@@ -125,24 +127,26 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen> {
   }
 
   Future<void> _complete(OrderRecord order) async {
+    final api = context.read<AuthController>().api;
     final amount = await askAmountReceived(context, order);
     if (!mounted || amount == null) {
       return;
     }
     await _run(
       order,
-      () => context.read<AuthController>().api.completeOrder(order.id, amountReceived: amount),
+      () => api.completeOrder(order.id, amountReceived: amount),
     );
   }
 
   Future<void> _cancel(OrderRecord order) async {
+    final api = context.read<AuthController>().api;
     final choice = await askCancellation(context);
     if (!mounted || choice == null) {
       return;
     }
     await _run(
       order,
-      () => context.read<AuthController>().api.cancelOrder(
+      () => api.cancelOrder(
             order.id,
             reason: choice.reason,
             note: choice.note,
@@ -254,7 +258,12 @@ class _OrderList extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onReload,
       child: ListView.separated(
-        padding: AniHowSpace.screenPadding,
+        padding: const EdgeInsets.fromLTRB(
+          AniHowSpace.screen,
+          AniHowSpace.screen,
+          AniHowSpace.screen,
+          AniHowSpace.screen + AniHowSpace.section,
+        ),
         itemCount: items.length,
         separatorBuilder: (_, _) => const SizedBox(height: AniHowSpace.cardGap),
         itemBuilder: (context, index) {
@@ -301,13 +310,32 @@ class _OrderCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: AniHowAvatar(name: order.buyerName),
-              title: Text(order.buyerName),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            InkWell(
+              onTap: onOpen,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AniHowAvatar(name: order.buyerName),
+                      const SizedBox(width: AniHowSpace.cardGap),
+                      Expanded(
+                        child: Text(
+                          order.buyerName,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                      const SizedBox(width: AniHowSpace.cardGap),
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: StatusPill.order(order.status, label: order.statusLabel),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AniHowSpace.cardGap),
                   if (order.isWalkIn) const _WalkInLabel(),
                   Text(order.orderNumber ?? 'Order #${order.id}'),
                   Text(AniHowMoney.peso(order.total)),
@@ -318,9 +346,6 @@ class _OrderCard extends StatelessWidget {
                     Text(order.cancellationLabel!),
                 ],
               ),
-              isThreeLine: true,
-              trailing: StatusPill.order(order.status, label: order.statusLabel),
-              onTap: onOpen,
             ),
             OrderAdvanceButtons(
               order: order,
@@ -390,21 +415,23 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
     if (_acting) {
       return;
     }
+    final messenger = ScaffoldMessenger.of(context);
     setState(() => _acting = true);
     try {
       final updated = await action();
-      if (mounted) {
-        setState(() {
-          _order = updated;
-          _acting = false;
-        });
+      if (!mounted) {
+        return;
       }
+      setState(() {
+        _order = updated;
+        _acting = false;
+      });
     } on ApiException catch (error) {
       if (!mounted) {
         return;
       }
       setState(() => _acting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 
@@ -425,22 +452,24 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
     if (order == null) {
       return;
     }
+    final api = context.read<AuthController>().api;
     final amount = await askAmountReceived(context, order);
     if (!mounted || amount == null) {
       return;
     }
     await _run(
-      () => context.read<AuthController>().api.completeOrder(_id, amountReceived: amount),
+      () => api.completeOrder(_id, amountReceived: amount),
     );
   }
 
   Future<void> _cancel() async {
+    final api = context.read<AuthController>().api;
     final choice = await askCancellation(context);
     if (!mounted || choice == null) {
       return;
     }
     await _run(
-      () => context.read<AuthController>().api.cancelOrder(
+      () => api.cancelOrder(
             _id,
             reason: choice.reason,
             note: choice.note,
@@ -594,45 +623,68 @@ class OrderAdvanceButtons extends StatelessWidget {
   }
 }
 
-Future<String?> askAmountReceived(BuildContext context, OrderRecord order) async {
-  final controller = TextEditingController(text: order.total);
-  try {
-    return await showDialog<String>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Cash received'),
-          content: AniHowField(
-            label: 'Amount received',
-            child: TextField(
-              controller: controller,
-              autofocus: true,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
-              decoration: InputDecoration(hintText: 'Order total ${AniHowMoney.peso(order.total)}'),
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Back')),
-            TextButton(
-              onPressed: () {
-                final amount = controller.text.trim();
-                if (amount.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Enter the cash amount received.')),
-                  );
-                  return;
-                }
-                Navigator.pop(dialogContext, amount);
-              },
-              child: const Text('Record'),
-            ),
-          ],
-        );
-      },
+Future<String?> askAmountReceived(BuildContext context, OrderRecord order) {
+  return showDialog<String>(
+    context: context,
+    builder: (_) => _AmountReceivedDialog(order: order),
+  );
+}
+
+class _AmountReceivedDialog extends StatefulWidget {
+  const _AmountReceivedDialog({required this.order});
+
+  final OrderRecord order;
+
+  @override
+  State<_AmountReceivedDialog> createState() => _AmountReceivedDialogState();
+}
+
+class _AmountReceivedDialogState extends State<_AmountReceivedDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.order.total);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Cash received'),
+      content: AniHowField(
+        label: 'Amount received',
+        child: TextField(
+          controller: _controller,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+          decoration: InputDecoration(hintText: 'Order total ${AniHowMoney.peso(widget.order.total)}'),
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Back')),
+        TextButton(
+          onPressed: () {
+            final amount = _controller.text.trim();
+            if (amount.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Enter the cash amount received.')),
+              );
+              return;
+            }
+            Navigator.pop(context, amount);
+          },
+          child: const Text('Record'),
+        ),
+      ],
     );
-  } finally {
-    controller.dispose();
   }
 }
 
@@ -644,72 +696,87 @@ class CancellationChoice {
 }
 
 Future<CancellationChoice?> askCancellation(BuildContext context) {
-  String? reason;
-  final note = TextEditingController();
   return showDialog<CancellationChoice>(
     context: context,
-    builder: (context) {
-      return StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: const Text('Cancel order'),
-            content: SingleChildScrollView(
+    builder: (_) => const _CancelOrderDialog(),
+  );
+}
+
+class _CancelOrderDialog extends StatefulWidget {
+  const _CancelOrderDialog();
+
+  @override
+  State<_CancelOrderDialog> createState() => _CancelOrderDialogState();
+}
+
+class _CancelOrderDialogState extends State<_CancelOrderDialog> {
+  String? _reason;
+  final _note = TextEditingController();
+
+  @override
+  void dispose() {
+    _note.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Cancel order'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('A no-show is a cancellation reason, not a separate status.'),
+            const SizedBox(height: AniHowSpace.cardGap),
+            RadioGroup<String>(
+              groupValue: _reason,
+              onChanged: (value) => setState(() => _reason = value),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('A no-show is a cancellation reason, not a separate status.'),
-                  const SizedBox(height: AniHowSpace.cardGap),
-                  RadioGroup<String>(
-                    groupValue: reason,
-                    onChanged: (value) => setState(() => reason = value),
-                    child: Column(
-                      children: [
-                        for (final option in _sellerCancelReasons)
-                          RadioListTile<String>(
-                            title: Text(option.label),
-                            value: option.value,
-                            contentPadding: EdgeInsets.zero,
-                            selected: reason == option.value,
-                          ),
-                      ],
+                  for (final option in _sellerCancelReasons)
+                    RadioListTile<String>(
+                      title: Text(option.label),
+                      value: option.value,
+                      contentPadding: EdgeInsets.zero,
+                      selected: _reason == option.value,
                     ),
-                  ),
-                  AniHowField(
-                    label: 'Note (optional)',
-                    child: TextField(controller: note, maxLength: 500),
-                  ),
                 ],
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Back'),
+            AniHowField(
+              label: 'Note (optional)',
+              child: TextField(controller: _note, maxLength: 500),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Back'),
+        ),
+        TextButton(
+          onPressed: () {
+            if (_reason == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Choose a cancellation reason.')),
+              );
+              return;
+            }
+            final trimmed = _note.text.trim();
+            Navigator.pop(
+              context,
+              CancellationChoice(
+                reason: _reason!,
+                note: trimmed.isEmpty ? null : trimmed,
               ),
-              TextButton(
-                onPressed: () {
-                  if (reason == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Choose a cancellation reason.')),
-                    );
-                    return;
-                  }
-                  final trimmed = note.text.trim();
-                  Navigator.pop(
-                    context,
-                    CancellationChoice(
-                      reason: reason!,
-                      note: trimmed.isEmpty ? null : trimmed,
-                    ),
-                  );
-                },
-                child: const Text('Cancel order'),
-              ),
-            ],
-          );
-        },
-      );
-    },
-  ).whenComplete(note.dispose);
+            );
+          },
+          child: const Text('Cancel order'),
+        ),
+      ],
+    );
+  }
 }

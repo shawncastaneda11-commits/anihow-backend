@@ -31,9 +31,18 @@ class MarketplaceController extends Controller
                     // so "tomato" and "kamatis" both find the same listings.
                     $query->where('title', 'like', '%'.$search.'%')
                         ->orWhereHas('cropType', fn (Builder $cropType): Builder => $cropType
-                            ->where('name', 'like', '%'.$search.'%')
-                            ->orWhere('label_en', 'like', '%'.$search.'%')
-                            ->orWhere('label_fil', 'like', '%'.$search.'%'));
+                            ->where(function (Builder $cropType) use ($search): void {
+                                $cropType->where('name', 'like', '%'.$search.'%')
+                                    ->orWhere('label_en', 'like', '%'.$search.'%')
+                                    ->orWhere('label_fil', 'like', '%'.$search.'%');
+                            }))
+                        ->orWhereHas('farm', fn (Builder $farm): Builder => $farm
+                            ->where('name', 'like', '%'.$search.'%'))
+                        ->orWhereHas('farmerSeller', fn (Builder $seller): Builder => $seller
+                            ->where(function (Builder $seller) use ($search): void {
+                                $seller->where('shop_name', 'like', '%'.$search.'%')
+                                    ->orWhere('name', 'like', '%'.$search.'%');
+                            }));
                 }),
             );
 

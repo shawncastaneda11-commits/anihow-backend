@@ -5,6 +5,7 @@ import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
+import '../../widgets/async_view.dart';
 import '../../widgets/produce_card.dart';
 import 'listing_detail_screen.dart';
 import 'shop_profile_screen.dart';
@@ -47,19 +48,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<FavoriteRecord>>(
+    return AsyncView<List<FavoriteRecord>>(
       future: _future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(child: Text('${snapshot.error}'));
-        }
-        final items = snapshot.data ?? const [];
-        if (items.isEmpty) {
-          return const Center(child: Text('No favorites yet.'));
-        }
+      onRetry: _reload,
+      emptyMessage: 'No favorites yet.',
+      builder: (context, items) {
         return RefreshIndicator(
           onRefresh: _reload,
           child: ListView.separated(

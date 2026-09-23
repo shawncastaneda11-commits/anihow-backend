@@ -6,6 +6,7 @@ import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
+import '../../widgets/async_view.dart';
 import '../../support/relative_time.dart';
 import '../buyer/listing_detail_screen.dart';
 import '../buyer/marketplace_screen.dart';
@@ -139,7 +140,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_error != null) {
-      return Center(child: Text('$_error'));
+      return AsyncViewError(onRetry: _reload);
     }
     if (_items.isEmpty) {
       return const _CaughtUpEmpty();

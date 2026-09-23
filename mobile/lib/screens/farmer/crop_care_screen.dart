@@ -5,6 +5,7 @@ import '../../models/models.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
+import '../../widgets/async_view.dart';
 import '../../widgets/care_guide_card.dart';
 import 'crop_care_detail_screen.dart';
 
@@ -97,31 +98,26 @@ class _CropCareScreenState extends State<CropCareScreen> {
           ),
         ),
         Expanded(
-          child: FutureBuilder<List<CropCareArticle>>(
+          child: AsyncView<List<CropCareArticle>>(
             future: _future,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState != ConnectionState.done) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError) {
-                return Center(child: Text('${snapshot.error}'));
-              }
-              final articles = snapshot.data ?? const [];
-              if (articles.isEmpty) {
-                return RefreshIndicator(
-                  onRefresh: _reload,
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: AniHowSpace.screenPadding,
-                    children: const [
-                      SizedBox(height: 80),
-                      Icon(Icons.menu_book_outlined, size: 48, color: AniHowColors.brand),
-                      SizedBox(height: AniHowSpace.cardGap),
-                      Text('No crop-care articles yet.', textAlign: TextAlign.center),
-                    ],
-                  ),
-                );
-              }
+            onRetry: _reload,
+            emptyMessage: 'No crop-care articles yet.',
+            emptyBuilder: (context) {
+              return RefreshIndicator(
+                onRefresh: _reload,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: AniHowSpace.screenPadding,
+                  children: const [
+                    SizedBox(height: 80),
+                    Icon(Icons.menu_book_outlined, size: 48, color: AniHowColors.brand),
+                    SizedBox(height: AniHowSpace.cardGap),
+                    Text('No crop-care articles yet.', textAlign: TextAlign.center),
+                  ],
+                ),
+              );
+            },
+            builder: (context, articles) {
               return RefreshIndicator(
                 onRefresh: _reload,
                 child: ListView.separated(
@@ -132,7 +128,6 @@ class _CropCareScreenState extends State<CropCareScreen> {
                     final article = articles[index];
                     return CareGuideCard(
                       article: article,
-                      index: index,
                       onViewDetails: () => _open(article),
                     );
                   },

@@ -32,7 +32,7 @@ class OrderChatRealtime {
           key: ApiConfig.reverbAppKey,
           port: ApiConfig.reverbPort,
         ),
-        connectionErrorHandler: (_, __, ___) {},
+        connectionErrorHandler: (_, _, _) {},
       );
       _client = client;
 

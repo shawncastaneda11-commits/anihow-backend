@@ -9,7 +9,7 @@ import '../../state/preferences_controller.dart';
 import '../../support/crop_language.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/hint_card.dart';
-import '../../widgets/price_breakdown.dart';
+import '../../widgets/order_look.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
 import 'checkout_screen.dart';
@@ -175,10 +175,11 @@ class _CartScreenState extends State<CartScreen> {
                         onTap: () => _editQuantity(item),
                       ),
                     const Divider(height: 20),
-                    PriceBreakdown(
-                      listed: group.listedSubtotal,
-                      tawad: group.tawadTotal,
+                    OrderTotalHero(
                       total: group.total,
+                      tawadLine: tawadIsActive(group.tawadTotal)
+                          ? AppStrings.of(context).tawadMinus(AniHowMoney.peso(group.tawadTotal))
+                          : null,
                     ),
                   ],
                 ),
@@ -214,7 +215,12 @@ class _CartOrderSummary extends StatelessWidget {
           children: [
             Text(AppStrings.of(context).orderSummary, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: AniHowSpace.cardGap),
-            PriceBreakdown(listed: listed, tawad: tawad, total: total),
+            OrderTotalHero(
+              total: total,
+              tawadLine: tawadIsActive(tawad)
+                  ? AppStrings.of(context).tawadMinus(AniHowMoney.peso(tawad))
+                  : null,
+            ),
           ],
         ),
       ),

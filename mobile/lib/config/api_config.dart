@@ -29,4 +29,15 @@ class ApiConfig {
   }
 
   static String get broadcastingAuthUrl => '$host/broadcasting/auth';
+
+  /// Storage URLs from Laravel use APP_URL (127.0.0.1). The emulator
+  /// cannot reach that host, so rewrite them onto [host].
+  static String? mediaUrl(String? url) {
+    if (url == null || url.isEmpty) {
+      return url;
+    }
+    return url
+        .replaceAll('http://127.0.0.1:8000', host)
+        .replaceAll('http://localhost:8000', host);
+  }
 }

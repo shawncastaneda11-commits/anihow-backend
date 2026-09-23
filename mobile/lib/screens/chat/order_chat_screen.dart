@@ -165,7 +165,7 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
     final title = widget.order.orderNumber ?? '${s.order} #${widget.order.id}';
 
     return Scaffold(
-      appBar: AppBar(title: Text('Chat · $title')),
+      appBar: AppBar(title: Text(s.chatTitle(title))),
       body: Column(
         children: [
           Expanded(child: _buildThread(userId)),

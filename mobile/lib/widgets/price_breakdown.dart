@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../theme/anihow_space.dart';
 
 /// Three lines the spec requires: listed price, tawad, final total.
@@ -19,6 +20,7 @@ class PriceBreakdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final s = AppStrings.maybeOf(context);
     final style = theme.textTheme.bodyMedium;
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -30,10 +32,10 @@ class PriceBreakdown extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Listed ${AniHowMoney.peso(listed)}', style: style),
-            Text('Tawad ${AniHowMoney.peso(tawad)}', style: style),
+            Text('${s.listed} ${AniHowMoney.peso(listed)}', style: style),
+            Text('${s.tawad} ${AniHowMoney.peso(tawad)}', style: style),
             Text(
-              'Total ${AniHowMoney.peso(total)}',
+              '${s.total} ${AniHowMoney.peso(total)}',
               style: style?.copyWith(fontWeight: FontWeight.w700),
             ),
           ],

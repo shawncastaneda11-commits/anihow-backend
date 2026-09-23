@@ -265,9 +265,12 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
         if (!context.mounted) {
           return;
         }
-        await _pushList(context, title: 'My listings', body: const FarmerListingsScreen());
+        await _pushList(context, title: AppStrings.of(context).myListings, body: const FarmerListingsScreen());
         return;
       }
+    }
+    if (!context.mounted) {
+      return;
     }
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => ListingDetailScreen(listingId: item.relatedId!)),
@@ -276,8 +279,11 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
   }
 
   if (item.pointsToListing) {
+    if (!context.mounted) {
+      return;
+    }
     if (isFarmer) {
-      await _pushList(context, title: 'My listings', body: const FarmerListingsScreen());
+      await _pushList(context, title: AppStrings.of(context).myListings, body: const FarmerListingsScreen());
     } else {
       await Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const MarketplaceScreen()),
@@ -308,6 +314,9 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
   }
 
   if (!isFarmer && item.pointsToOrder) {
+    if (!context.mounted) {
+      return;
+    }
     if (item.relatedId != null) {
       await Navigator.of(context).push(
         MaterialPageRoute(
@@ -323,6 +332,9 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
   }
 
   if (isFarmer && item.pointsToOrder) {
+    if (!context.mounted) {
+      return;
+    }
     if (item.relatedId != null) {
       await Navigator.of(context).push(
         MaterialPageRoute(
@@ -331,12 +343,15 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
       );
       return;
     }
-    await _pushList(context, title: 'Incoming orders', body: const FarmerOrdersScreen());
+    await _pushList(context, title: AppStrings.of(context).incomingOrders, body: const FarmerOrdersScreen());
     return;
   }
 
+  if (!context.mounted) {
+    return;
+  }
   if (isFarmer) {
-    await _pushList(context, title: 'Incoming orders', body: const FarmerOrdersScreen());
+    await _pushList(context, title: AppStrings.of(context).incomingOrders, body: const FarmerOrdersScreen());
     return;
   }
 

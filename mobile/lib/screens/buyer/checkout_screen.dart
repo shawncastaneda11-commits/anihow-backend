@@ -12,7 +12,7 @@ import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/hint_card.dart';
-import '../../widgets/price_breakdown.dart';
+import '../../widgets/order_look.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
 import '../chat/order_chat_screen.dart';
@@ -108,13 +108,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ],
                     const SizedBox(height: AniHowSpace.cardGap),
                     Text(s.howYouMeet, style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: AniHowSpace.labelGap),
-                    Text(
-                      s.fulfillmentHint,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                          ),
-                    ),
                     const SizedBox(height: AniHowSpace.cardGap),
                     Row(
                       children: [
@@ -138,8 +131,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       ],
                     ),
                     const SizedBox(height: AniHowSpace.section),
-                    AniHowField(
-                      label: s.agreedTimePlace,
+                    AniHowFormCard(
+                      title: s.agreedTimePlace,
                       child: TextField(
                         controller: _note,
                         maxLength: 1000,
@@ -151,18 +144,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: AniHowSpace.fieldGap),
-                    AniHowHintCard(
-                      icon: Icons.payments_outlined,
-                      title: s.payCashTitle,
-                      body: s.payCashBody,
-                      tone: AniHowHintTone.cash,
-                    ),
                     const SizedBox(height: AniHowSpace.cardGap),
                     AniHowHintCard(
-                      icon: Icons.chat_bubble_outline,
-                      title: s.chatWithStall,
-                      body: s.chatAfterPlace,
+                      icon: Icons.payments_outlined,
+                      title: s.cashAtMeetup,
+                      tone: AniHowHintTone.cash,
                     ),
                     const SizedBox(height: AniHowSpace.section),
                     PrimaryButton(
@@ -185,6 +171,7 @@ class _SellerOrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final s = AppStrings.of(context);
     return Card(
       child: Padding(
         padding: AniHowSpace.cardPadding,
@@ -193,37 +180,50 @@ class _SellerOrderCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                AniHowAvatar(name: group.sellerName),
+                AniHowAvatar(name: group.sellerName, radius: 20),
                 const SizedBox(width: AniHowSpace.cardGap),
                 Expanded(
                   child: Text(group.sellerName, style: theme.textTheme.titleMedium),
                 ),
               ],
             ),
-            const SizedBox(height: AniHowSpace.cardGap),
-            for (final item in group.items) ...[
-              Text(item.listingName, style: theme.textTheme.titleSmall),
-              Text(
-                [
-                  if (item.cropLabel(language) != null) item.cropLabel(language)!,
-                  '${item.quantity}${item.unitLabel.isEmpty ? '' : ' ${item.unitLabel}'}',
-                ].join(' · '),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            const SizedBox(height: 4),
+            for (final item in group.items)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(item.listingName, style: theme.textTheme.titleSmall),
+                          Text(
+                            [
+                              if (item.cropLabel(language) != null) item.cropLabel(language)!,
+                              '${item.quantity}${item.unitLabel.isEmpty ? '' : ' ${item.unitLabel}'}',
+                            ].join(' · '),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      AniHowMoney.peso(item.lineTotal),
+                      style: theme.textTheme.titleSmall,
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: AniHowSpace.labelGap),
-              PriceBreakdown(
-                listed: item.lineSubtotal,
-                tawad: item.tawadAmount,
-                total: item.lineTotal,
-              ),
-              const SizedBox(height: AniHowSpace.cardGap),
-            ],
-            PriceBreakdown(
-              listed: group.listedSubtotal,
-              tawad: group.tawadTotal,
+            const SizedBox(height: AniHowSpace.cardGap),
+            OrderTotalHero(
               total: group.total,
+              tawadLine: tawadIsActive(group.tawadTotal)
+                  ? s.tawadMinus(AniHowMoney.peso(group.tawadTotal))
+                  : null,
             ),
           ],
         ),
@@ -303,68 +303,98 @@ class _PlacedView extends StatelessWidget {
           const SizedBox(height: AniHowSpace.cardGap),
           AniHowHintCard(
             icon: Icons.payments_outlined,
-            title: s.payCashTitle,
-            body: s.payCashBody,
+            title: s.cashAtMeetup,
             tone: AniHowHintTone.cash,
           ),
-          const SizedBox(height: AniHowSpace.section),
+          const SizedBox(height: AniHowSpace.cardGap),
           for (final order in orders) ...[
             Card(
               child: Padding(
-                padding: AniHowSpace.cardPadding,
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Row(
                       children: [
-                        AniHowAvatar(name: order.stallName),
+                        AniHowAvatar(name: order.stallName, radius: 20),
                         const SizedBox(width: AniHowSpace.cardGap),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(order.stallName, style: Theme.of(context).textTheme.titleMedium),
-                              Text(order.orderNumber ?? 'Order #${order.id}'),
-                            ],
+                          child: Text(
+                            order.stallName,
+                            style: Theme.of(context).textTheme.titleMedium,
                           ),
                         ),
                       ],
                     ),
-                    if (order.fulfillmentLabel != null) ...[
-                      const SizedBox(height: AniHowSpace.cardGap),
-                      Text(order.fulfillmentLabel!),
-                    ],
                     const SizedBox(height: AniHowSpace.cardGap),
-                    for (final item in order.items) ...[
-                      Text(item.listingName, style: Theme.of(context).textTheme.titleSmall),
-                      Text(item.quantityLabel),
-                      const SizedBox(height: AniHowSpace.labelGap),
-                      PriceBreakdown(
-                        listed: item.lineSubtotal,
-                        tawad: item.tawadAmount ?? '0',
-                        total: item.lineTotal ?? item.lineSubtotal,
-                      ),
-                      const SizedBox(height: AniHowSpace.cardGap),
-                    ],
-                    PriceBreakdown(
-                      listed: order.listedTotal,
-                      tawad: order.tawadDisplay,
+                    OrderTotalHero(
                       total: order.total,
+                      tawadLine: tawadIsActive(order.tawadDisplay)
+                          ? s.tawadMinus(AniHowMoney.peso(order.tawadDisplay))
+                          : null,
                     ),
-                    if (!order.isWalkIn) ...[
-                      const SizedBox(height: AniHowSpace.cardGap),
-                      FilledButton.tonalIcon(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => OrderChatScreen(order: order),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.chat_bubble_outline),
-                        label: Text(s.chatWithStall),
+                    if (order.fulfillmentLabel != null)
+                      OrderMetaRow(
+                        icon: Icons.handshake_outlined,
+                        text: order.fulfillmentLabel!,
                       ),
+                    if (order.items.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      for (final item in order.items)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(item.listingName, style: Theme.of(context).textTheme.titleSmall),
+                                    Text(
+                                      item.quantityLabel,
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.68),
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                AniHowMoney.peso(item.lineTotal ?? item.lineSubtotal),
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                            ],
+                          ),
+                        ),
                     ],
+                    if (order.orderNumber != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Text(
+                          order.orderNumber!,
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                      ),
+                    if (!order.isWalkIn)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => OrderChatScreen(order: order),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                          label: Text(s.chatWithStall),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.only(top: 6, right: 8),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),

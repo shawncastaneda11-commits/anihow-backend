@@ -187,18 +187,24 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           child: AsyncView<List<ListingItem>>(
             future: _listings,
             onRetry: _reload,
-            emptyMessage: 'No listings found.',
+            emptyMessage: s.noListingsFound,
             builder: (context, items) {
               return RefreshIndicator(
                 onRefresh: _reload,
-                child: ListView.separated(
+                child: GridView.builder(
                   padding: AniHowSpace.screenPadding,
                   itemCount: items.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: AniHowSpace.cardGap),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisExtent: 292,
+                    crossAxisSpacing: AniHowSpace.cardGap,
+                    mainAxisSpacing: AniHowSpace.cardGap,
+                  ),
                   itemBuilder: (context, index) {
                     final listing = items[index];
                     return ProduceCard(
                       listing: listing,
+                      style: ProduceCardStyle.poster,
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(

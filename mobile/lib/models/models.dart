@@ -1,3 +1,4 @@
+import '../config/api_config.dart';
 import '../support/crop_language.dart';
 import '../theme/anihow_space.dart';
 
@@ -263,7 +264,7 @@ class ListingItem {
       pricePerUnit: '${json['price_per_unit'] ?? '0'}',
       quantityAvailable: '${json['quantity_available'] ?? '0'}',
       description: json['description'] as String?,
-      imageUrl: json['image_url'] as String?,
+      imageUrl: ApiConfig.mediaUrl(json['image_url'] as String?),
       isActive: json['is_active'] == true || json['is_active'] == 1,
       status: json['status'] as String?,
       category: cropTypeMap == null ? null : CategoryItem.fromJson(cropTypeMap),
@@ -736,7 +737,7 @@ class CropCareArticle {
       category: json['category'] as String? ?? '',
       categoryLabel: json['category_label'] as String? ?? '',
       authorName: json['author_name'] as String?,
-      imageUrl: json['image_url'] as String?,
+      imageUrl: ApiConfig.mediaUrl(json['image_url'] as String?),
       publishedAt: json['published_at'] as String?,
       farmId: ListingItem._asCount(farmMap?['id']),
       farmName: farmMap?['name'] as String?,

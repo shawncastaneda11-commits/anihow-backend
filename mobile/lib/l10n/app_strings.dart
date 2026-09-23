@@ -19,6 +19,14 @@ class AppStrings {
     return AppStrings(language == CropLanguage.filipino);
   }
 
+  factory AppStrings.maybeOf(BuildContext context) {
+    try {
+      return AppStrings.of(context);
+    } catch (_) {
+      return const AppStrings(false);
+    }
+  }
+
   String t(String english, String tagalog) => filipino ? tagalog : english;
 
   String get settings => t('Settings', 'Mga setting');
@@ -112,6 +120,20 @@ class AppStrings {
   String get verifyNow => t('Verify now', 'Beripikahin ngayon');
 
   String get shopProfile => t('Shop profile', 'Profile ng tindahan');
+  String get roleBuyer => t('Buyer', 'Buyer');
+  String get roleFarmer => t('Farmer-seller', 'Magsasaka-tindahan');
+  String farmLine(String name) => t('Farm: $name', 'Bukid: $name');
+  String get activeListings => t('Active listings', 'Mga active na listing');
+  String get noActiveListings => t('No active listings', 'Walang active na listing');
+  String get noBioYet => t('No bio yet', 'Wala pang bio');
+  String get noLocationYet => t('No location yet', 'Wala pang lokasyon');
+  String get noContactYet => t('No contact yet', 'Wala pang contact');
+  String get pickupOnly => t('Pickup only', 'Pickup lang');
+  String get callToPickup => t(
+        'Call to coordinate pickup at the stall.',
+        'Tumawag para mag-usap tungkol sa pickup sa stall.',
+      );
+  String get reviews => t('Reviews', 'Mga review');
   String get orderHistory => t('Order history', 'Kasaysayan ng order');
 
   String get back => t('Back', 'Bumalik');
@@ -138,6 +160,17 @@ class AppStrings {
   String get tawad => t('Tawad', 'Tawad');
   String get total => t('Total', 'Kabuuan');
   String get noOrders => t('No orders yet.', 'Wala pang order.');
+  String get noFavorites => t('No favorites yet.', 'Wala pang paborito.');
+  String get noListingsFound => t('No listings found.', 'Walang nahanap na listing.');
+  String get nothingHere => t('Nothing here yet.', 'Wala pa rito.');
+  String get somethingWentWrong => t('Something went wrong.', 'May nangyaring mali.');
+  String get retry => t('Retry', 'Subukan ulit');
+  String get farmStall => t('Farm stall', 'Tindahan');
+  String listingNumber(int id) => t('Listing #$id', 'Listing #$id');
+  String chatTitle(String title) => t('Chat · $title', 'Chat · $title');
+  String reviewsCount(int count) => count == 1
+      ? t('(1 review)', '(1 review)')
+      : t('($count reviews)', '($count review)');
   String get chatWithStall => t('Chat with stall', 'Makipag-chat sa tindahan');
   String get chatWithBuyer => t('Chat with buyer', 'Makipag-chat sa buyer');
   String get order => t('Order', 'Order');
@@ -227,6 +260,55 @@ class AppStrings {
   String get shopNotFound => t('Shop not found.', 'Hindi nahanap ang tindahan.');
   String get couldNotOpenPhone => t('Could not open the phone app.', 'Hindi mabuksan ang phone app.');
   String get readyToReview => t('Ready to review', 'Puwede nang i-review');
+  String get items => t('Items', 'Mga item');
+  String get cashAtMeetup => t('Cash at meetup', 'Cash sa pagkikita');
+  String tawadMinus(String peso) => t('Tawad −$peso', 'Tawad −$peso');
+  String get walkIn => t('Walk-in', 'Walk-in');
+  String get confirmOrder => t('Confirm order', 'Kumpirmahin ang order');
+  String get markReady => t('Mark ready', 'Markahang ready');
+  String get completeHandover => t('Complete handover', 'Tapusin ang handover');
+  String get cancelOrder => t('Cancel order', 'Kanselahin ang order');
+  String get pleaseWait => t('Please wait…', 'Sandali…');
+  String get cashReceived => t('Cash received', 'Cash na natanggap');
+  String cashReceivedLine(String peso) => t('Cash received $peso', 'Cash na natanggap $peso');
+  String orderTotalHint(String peso) => t('Order total $peso', 'Kabuuan ng order $peso');
+  String get enterCashReceived => t(
+        'Enter the cash amount received.',
+        'Ilagay ang cash na natanggap.',
+      );
+  String get record => t('Record', 'Itala');
+  String get cancelReasonHint => t(
+        'A no-show is a cancellation reason, not a separate status.',
+        'Ang no-show ay rason ng kanselasyon, hindi hiwalay na status.',
+      );
+  String get chooseCancelReason => t(
+        'Choose a cancellation reason.',
+        'Pumili ng rason ng kanselasyon.',
+      );
+  String get sellerDeclined => t('Declined by farmer-seller', 'Tinanggihan ng seller');
+  String get noShowHandover => t('No-show at handover', 'Hindi dumating sa handover');
+  String get otherReason => t('Other', 'Iba');
+  String get reviewUnlocked => t(
+        'Review unlocked for the buyer',
+        'Puwede nang mag-review ang buyer',
+      );
+  String buyerRated(Object rating) => t('Buyer rated $rating', 'Rating ng buyer: $rating');
+  String get orderNotFound => t('Order not found.', 'Hindi nahanap ang order.');
+  String get noPlacedOrders => t('No placed orders.', 'Walang naka-place na order.');
+  String get noConfirmedOrders => t('No confirmed orders.', 'Walang kumpirmadong order.');
+  String get noReadyOrders => t(
+        'No orders waiting for handover.',
+        'Walang order na hinihintay sa handover.',
+      );
+  String get noCompletedOrders => t('No completed orders.', 'Walang tapos na order.');
+  String get noCancelledOrders => t('No cancelled orders.', 'Walang kinanselang order.');
+
+  String sellerCancelReason(String value) => switch (value) {
+        'seller_declined' => sellerDeclined,
+        'no_show' => noShowHandover,
+        'other' => otherReason,
+        _ => value,
+      };
   String get showMore => t('Show more', 'Magpakita pa');
   String get loading => t('Loading…', 'Naglo-load…');
   String get superAdmin => t('Super admin', 'Super admin');
@@ -236,6 +318,72 @@ class AppStrings {
   String get deleteListing => t('Delete listing', 'Tanggalin ang listing');
   String get deleteListingAsk => t('Delete this listing?', 'Tanggalin ang listing na ito?');
   String get endTawadAsk => t('End this tawad?', 'Tapusin ang tawad na ito?');
+  String get addPhoto => t('Add photo', 'Magdagdag ng larawan');
+  String get listingPhotoHint => t(
+        'A clear photo helps buyers pick your produce.',
+        'Mas madaling piliin ng buyer kung may malinaw na larawan.',
+      );
+  String get listingDetails => t('Listing details', 'Detalye ng listing');
+  String unitLine(String unit) => t('Unit: $unit', 'Yunit: $unit');
+  String floorPriceFor(String crop, String peso) => t(
+        'Floor price for $crop: $peso (set by your farm)',
+        'Floor price para sa $crop: $peso (itinakda ng farm)',
+      );
+  String get tawadHint => t(
+        'Tawad is a peso discount on the order.',
+        'Peso-diskwento ang tawad sa order.',
+      );
+  String get tawadKeepPrice => t(
+        'Orders already confirmed keep the price they were confirmed at.',
+        'Ang na-confirm nang order ay nagtatago ng presyong nakumpirma.',
+      );
+  String get tawadReplaceNote => t(
+        'Saving replaces any current rule on this listing.',
+        'Kapag nai-save, papalitan ang kasalukuyang tawad sa listing na ito.',
+      );
+  String get ruleType => t('Rule type', 'Uri ng rule');
+  String get tawadFlat => t('Flat peso off per order', 'Flat na bawas bawat order');
+  String get tawadMinQty => t('Peso off at a minimum quantity', 'Bawas kapag may minimum na dami');
+  String get pesoOff => t('Peso amount off', 'Halagang ibabawas');
+  String get minQuantity => t('Minimum quantity', 'Minimum na dami');
+  String get saveTawad => t('Save tawad', 'I-save ang tawad');
+  String get enterPesoOff => t(
+        'Enter a peso amount greater than zero.',
+        'Maglagay ng halagang higit sa zero.',
+      );
+  String get enterMinQty => t(
+        'Enter the minimum quantity for this tawad.',
+        'Ilagay ang minimum na dami para sa tawad na ito.',
+      );
+  String maxTawadFor(String crop, String peso) => t(
+        'Maximum tawad for $crop is $peso.',
+        'Pinakamataas na tawad para sa $crop ay $peso.',
+      );
+  String unitFloor(String peso) => t(
+        'Unit price cannot fall below $peso.',
+        'Hindi puwedeng bumaba ang presyo sa $peso.',
+      );
+  String get chooseListing => t('Choose a listing.', 'Pumili ng listing.');
+  String get walkInRecorded => t('Walk-in sale recorded', 'Naitala na ang walk-in sale');
+  String get noWalkInListings => t(
+        'No listings available for a walk-in sale.',
+        'Walang listing para sa walk-in sale.',
+      );
+  String get listingLabel => t('Listing', 'Listing');
+  String get amountReceived => t('Amount received', 'Halagang natanggap');
+  String amountReceivedLine(String peso) => t('Amount received $peso', 'Halagang natanggap $peso');
+  String get guestName => t('Guest name (optional)', 'Pangalan ng bisita (opsyonal)');
+  String get guestNameHint => t('For your reference only', 'Para sa tala mo lang');
+  String get noteOptional => t('Note (optional)', 'Tala (opsyonal)');
+  String get recordSale => t('Record sale', 'Itala ang benta');
+  String get walkInCashHint => t(
+        'Count the cash, then type the amount. AniHow only records it.',
+        'Bilangin ang cash, tapos i-type ang halaga. Nagtatala lang ang AniHow.',
+      );
+  String pricePerUnit(String peso) => t('Price per unit $peso', 'Presyo bawat yunit $peso');
+  String availableQty(String qty, String? unit) => unit == null || unit.isEmpty
+      ? t('Available $qty', 'Available $qty')
+      : t('Available $qty $unit', 'Available $qty $unit');
   String get sales => t('Sales', 'Benta');
   String get rating => t('Rating', 'Rating');
 

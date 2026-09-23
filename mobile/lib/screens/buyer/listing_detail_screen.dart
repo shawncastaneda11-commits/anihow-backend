@@ -10,10 +10,10 @@ import '../../state/preferences_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/cart_icon_button.dart';
-import '../../widgets/category_color.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/produce_card.dart';
+import '../../widgets/produce_photo.dart';
 import '../../widgets/status_pill.dart';
 import 'cart_screen.dart';
 import 'shop_profile_screen.dart';
@@ -121,43 +121,15 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             return Center(child: Text('${snapshot.error}'));
           }
           final listing = snapshot.data!;
-          final accent = CategoryColor.of(listing.category, listingName: listing.name);
           return ListView(
             padding: AniHowSpace.screenPadding,
             children: [
               AspectRatio(
-                aspectRatio: 16 / 9,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: accent,
-                    borderRadius: BorderRadius.circular(AniHowSpace.radius),
-                  ),
-                  child: listing.imageUrl != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(AniHowSpace.radius),
-                          child: Image.network(
-                            listing.imageUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Center(
-                              child: Text(
-                                listing.name,
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                      color: Theme.of(context).colorScheme.onPrimary,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                              ),
-                            ),
-                          ),
-                        )
-                      : Center(
-                          child: Text(
-                            listing.name,
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  color: Theme.of(context).colorScheme.onPrimary,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                          ),
-                        ),
+                aspectRatio: 4 / 3,
+                child: ProducePhoto(
+                  listing: listing,
+                  borderRadius: BorderRadius.circular(AniHowTheme.cardRadius),
+                  iconSize: 64,
                 ),
               ),
               const SizedBox(height: AniHowSpace.section),
@@ -221,11 +193,34 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 ),
               ),
               const SizedBox(height: AniHowSpace.cardGap),
-              Text(
-                '${AniHowMoney.peso(listing.pricePerUnit)} / ${listing.unitLabel ?? listing.unit ?? ''}',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AniHowColors.deepGreen),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF1A2A22)
+                      : const Color(0xFFEDF6F0),
+                  borderRadius: BorderRadius.circular(AniHowSpace.radius),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${AniHowMoney.peso(listing.pricePerUnit)} / ${listing.unitLabel ?? listing.unit ?? ''}',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: AniHowColors.brand,
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                      ),
+                      Text(
+                        '${listing.quantityAvailable} ${s.t('available', 'available')}',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              Text('${listing.quantityAvailable} ${s.t('available', 'available')}', style: Theme.of(context).textTheme.bodyMedium),
               if (listing.description != null && listing.description!.isNotEmpty) ...[
                 const SizedBox(height: AniHowSpace.cardGap),
                 Text(listing.description!),

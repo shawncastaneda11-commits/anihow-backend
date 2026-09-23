@@ -26,11 +26,22 @@ class CategoryColor {
     return AniHowColors.sage;
   }
 
-  static IconData iconOf(CategoryItem? category) {
+  static IconData iconOf(CategoryItem? category, {String? listingName}) {
     final haystack = [
       category?.slug ?? '',
       category?.name ?? '',
+      listingName ?? '',
     ].join(' ').toLowerCase();
+
+    if (haystack.contains('tomato') || haystack.contains('kamatis')) {
+      return Icons.eco;
+    }
+    if (haystack.contains('mango') || haystack.contains('mangga')) {
+      return Icons.spa;
+    }
+    if (haystack.contains('banana') || haystack.contains('saging')) {
+      return Icons.spa;
+    }
 
     if (haystack.contains('fruit')) {
       return Icons.spa;

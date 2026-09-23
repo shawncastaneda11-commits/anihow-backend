@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
@@ -48,10 +49,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return AsyncView<List<FavoriteRecord>>(
       future: _future,
       onRetry: _reload,
-      emptyMessage: 'No favorites yet.',
+      emptyMessage: s.noFavorites,
       builder: (context, items) {
         return RefreshIndicator(
           onRefresh: _reload,
@@ -63,10 +65,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               final favorite = items[index];
               final listing = favorite.listing;
               if (listing == null) {
-                return ListTile(title: Text('Listing #${favorite.listingId}'));
+                return ListTile(title: Text(s.listingNumber(favorite.listingId)));
               }
               return ProduceCard(
                 listing: listing,
+                style: ProduceCardStyle.poster,
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(

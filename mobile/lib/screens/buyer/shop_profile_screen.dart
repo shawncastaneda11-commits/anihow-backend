@@ -108,7 +108,7 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
     final opened = await launchUrl(Uri(scheme: 'tel', path: digits));
     if (!opened && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open the phone app.')),
+        SnackBar(content: Text(AppStrings.read(context).couldNotOpenPhone)),
       );
     }
   }
@@ -123,22 +123,28 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
           return AsyncView<ShopProfile>.snapshot(
             snapshot: snapshot,
             onRetry: _reload,
-            emptyMessage: 'Shop not found.',
+            emptyMessage: AppStrings.of(context).shopNotFound,
             builder: (context, shop) {
+              final s = AppStrings.of(context);
               return RefreshIndicator(
                 onRefresh: _reload,
                 child: ListView(
                   padding: AniHowSpace.screenPadding,
                   children: [
-                    ShopIdentityHeader(shop: shop),
+                    Card(
+                      child: Padding(
+                        padding: AniHowSpace.cardPadding,
+                        child: ShopIdentityHeader(shop: shop),
+                      ),
+                    ),
                     const SizedBox(height: AniHowSpace.section),
                     Text(
-                      'Pickup only',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                      s.pickupOnly,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: AniHowSpace.labelGap),
                     Text(
-                      'Call to coordinate pickup at the stall.',
+                      s.callToPickup,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     if (shop.contact != null && shop.contact!.isNotEmpty) ...[
@@ -154,8 +160,8 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                     ],
                     const SizedBox(height: AniHowSpace.section),
                     Text(
-                      'Active listings',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                      s.activeListings,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: AniHowSpace.cardGap),
                     if (shop.listings.isEmpty)
@@ -179,8 +185,8 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                       ),
                     const SizedBox(height: AniHowSpace.section),
                     Text(
-                      'Reviews',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                      s.reviews,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: AniHowSpace.cardGap),
                     if (_loadingReviews)

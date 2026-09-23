@@ -14,6 +14,14 @@ void main() {
     expect(ApiConfig.baseUrl.endsWith('/api'), isTrue);
   });
 
+  test('media URLs from Laravel localhost are rewritten to the API host', () {
+    expect(
+      ApiConfig.mediaUrl('http://127.0.0.1:8000/storage/listings/tomato.jpg'),
+      '${ApiConfig.host}/storage/listings/tomato.jpg',
+    );
+    expect(ApiConfig.mediaUrl(null), isNull);
+  });
+
   test('warm agricultural palette tokens', () {
     expect(AniHowColors.brand.toARGB32(), 0xFF1F5A3E);
     expect(AniHowColors.cream.toARGB32(), 0xFFF8F6F0);

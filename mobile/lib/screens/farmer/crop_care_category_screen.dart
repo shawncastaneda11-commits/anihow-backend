@@ -78,7 +78,6 @@ class _CropCareCategoryScreenState extends State<CropCareCategoryScreen> {
                 final article = articles[index];
                 return CareGuideCard(
                   article: article,
-                  index: index,
                   onViewDetails: () {
                     Navigator.of(context).push(
                       MaterialPageRoute<void>(

@@ -138,11 +138,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                             errorBuilder: (_, _, _) => Center(
                               child: Text(
                                 listing.name,
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onPrimary,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: AniHowSpace.title,
-                                ),
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                      color: Theme.of(context).colorScheme.onPrimary,
+                                      fontWeight: FontWeight.w800,
+                                    ),
                               ),
                             ),
                           ),
@@ -150,11 +149,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                       : Center(
                           child: Text(
                             listing.name,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onPrimary,
-                              fontWeight: FontWeight.w800,
-                              fontSize: AniHowSpace.title,
-                            ),
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  color: Theme.of(context).colorScheme.onPrimary,
+                                  fontWeight: FontWeight.w800,
+                                ),
                           ),
                         ),
                 ),
@@ -191,13 +189,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                           children: [
                             Text(
                               listing.sellerName ?? 'Farm stall',
-                              style: TextStyle(
-                                fontSize: AniHowSpace.body,
-                                fontWeight: FontWeight.w700,
-                                color: listing.sellerId == null
-                                    ? null
-                                    : AniHowColors.deepGreen,
-                              ),
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: listing.sellerId == null
+                                        ? null
+                                        : AniHowColors.deepGreen,
+                                  ),
                             ),
                             if (listing.sellerLocation != null)
                               Text(

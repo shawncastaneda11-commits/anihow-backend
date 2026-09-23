@@ -21,8 +21,7 @@ class CartIconButton extends StatelessWidget {
         );
       },
       padding: EdgeInsets.zero,
-      visualDensity: VisualDensity.compact,
-      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+      constraints: const BoxConstraints.tightFor(width: 48, height: 48),
       icon: Badge(
         isLabelVisible: count > 0,
         label: Text(label),

@@ -71,13 +71,16 @@ class ProduceCard extends StatelessWidget {
                             GestureDetector(
                               onTap: onSellerTap,
                               behavior: HitTestBehavior.opaque,
-                              child: Text(
-                                sellerLabel,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: onSellerTap == null
-                                      ? theme.colorScheme.onSurface.withValues(alpha: 0.7)
-                                      : AniHowColors.deepGreen,
-                                  fontWeight: onSellerTap == null ? FontWeight.w500 : FontWeight.w700,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                child: Text(
+                                  sellerLabel,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: onSellerTap == null
+                                        ? theme.colorScheme.onSurface.withValues(alpha: 0.7)
+                                        : AniHowColors.deepGreen,
+                                    fontWeight: onSellerTap == null ? FontWeight.w500 : FontWeight.w700,
+                                  ),
                                 ),
                               ),
                             ),

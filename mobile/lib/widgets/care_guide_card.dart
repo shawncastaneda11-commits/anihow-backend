@@ -9,14 +9,12 @@ class CareGuideCard extends StatelessWidget {
   const CareGuideCard({
     super.key,
     required this.article,
-    required this.index,
     required this.onViewDetails,
     this.onEdit,
     this.onDelete,
   });
 
   final CropCareArticle article;
-  final int index;
   final VoidCallback onViewDetails;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
@@ -43,13 +41,7 @@ class CareGuideCard extends StatelessWidget {
           radius: AniHowSpace.avatar,
           backgroundColor: accent,
           foregroundColor: Theme.of(context).colorScheme.onPrimary,
-          child: Text(
-            '${index + 1}',
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: AniHowSpace.name,
-            ),
-          ),
+          child: const Icon(Icons.eco_outlined),
         ),
         title: Text(
           article.title,

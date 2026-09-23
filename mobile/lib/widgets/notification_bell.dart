@@ -97,8 +97,7 @@ class _NotificationBellButtonState extends State<NotificationBellButton>
       tooltip: 'Notifications',
       onPressed: _openInbox,
       padding: EdgeInsets.zero,
-      visualDensity: VisualDensity.compact,
-      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+      constraints: const BoxConstraints.tightFor(width: 48, height: 48),
       icon: Badge(
         isLabelVisible: unread > 0,
         label: Text(label),

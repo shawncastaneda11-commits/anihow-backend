@@ -19,8 +19,7 @@ class ProfileAvatarButton extends StatelessWidget {
       tooltip: 'Profile',
       onPressed: onPressed,
       padding: EdgeInsets.zero,
-      visualDensity: VisualDensity.compact,
-      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+      constraints: const BoxConstraints.tightFor(width: 48, height: 48),
       icon: AniHowAvatar(
         name: name,
         radius: 16,

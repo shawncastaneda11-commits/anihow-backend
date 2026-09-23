@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -5,12 +7,14 @@ import '../../models/models.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/app_header.dart';
+import '../../widgets/async_view.dart';
 import '../../widgets/cart_icon_button.dart';
 import '../../widgets/category_color.dart';
 import '../../widgets/notification_bell.dart';
 import '../../widgets/produce_card.dart';
 import 'listing_detail_screen.dart';
 import 'shop_profile_screen.dart';
+import 'shops_screen.dart';
 
 class MarketplaceScreen extends StatefulWidget {
   const MarketplaceScreen({super.key});
@@ -29,9 +33,14 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   @override
   void initState() {
     super.initState();
-    final api = context.read<AuthController>().api;
-    _cropTypes = api.cropTypes();
-    _listings = api.marketplace();
+    _cropTypes = context.read<AuthController>().api.cropTypes();
+    _listings = Completer<List<ListingItem>>().future;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _reload();
+    });
   }
 
   @override
@@ -46,7 +55,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           cropTypeId: _cropTypeId,
           sort: _sort,
         );
-    setState(() => _listings = future);
+    setState(() {
+      _listings = future;
+    });
     await future;
   }
 
@@ -54,13 +65,28 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const AppHeader(
+        AppHeader(
           title: 'Marketplace',
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CartIconButton(),
-              NotificationBellButton(),
+              IconButton(
+                tooltip: 'Shops',
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ShopsScreen()),
+                  );
+                },
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(width: 48, height: 48),
+                icon: Icon(
+                  Icons.storefront,
+                  size: 24,
+                  color: Theme.of(context).colorScheme.onPrimary,
+                ),
+              ),
+              const CartIconButton(),
+              const NotificationBellButton(),
             ],
           ),
         ),
@@ -153,19 +179,11 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           ),
         ),
         Expanded(
-          child: FutureBuilder<List<ListingItem>>(
+          child: AsyncView<List<ListingItem>>(
             future: _listings,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState != ConnectionState.done) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError) {
-                return Center(child: Text('${snapshot.error}'));
-              }
-              final items = snapshot.data ?? const [];
-              if (items.isEmpty) {
-                return const Center(child: Text('No listings found.'));
-              }
+            onRetry: _reload,
+            emptyMessage: 'No listings found.',
+            builder: (context, items) {
               return RefreshIndicator(
                 onRefresh: _reload,
                 child: ListView.separated(

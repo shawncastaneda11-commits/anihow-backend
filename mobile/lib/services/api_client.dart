@@ -354,6 +354,10 @@ class ApiClient {
     return OrderRecord.fromJson(_asMap(response['data'] ?? response));
   }
 
+  Future<List<ShopProfile>> buyerShops() {
+    return _list('/buyer/shops', parse: ShopProfile.fromJson);
+  }
+
   Future<ShopProfile> buyerShop(int sellerId) async {
     final response = await _get('/buyer/shops/$sellerId');
     return ShopProfile.fromJson(_asMap(response['data'] ?? response));
@@ -410,6 +414,8 @@ class ApiClient {
   Future<void> markAllNotificationsRead() => _post('/notifications/read-all', {});
 
   Future<void> resendVerification() => _post('/auth/email/verification-notification', {});
+
+  Future<void> verifyEmail(String code) => _post('/auth/email/verify', {'code': code});
 
   Future<Map<String, dynamic>> _sendListing(
     String path,

@@ -8,6 +8,7 @@ import 'favorites_screen.dart';
 import 'marketplace_screen.dart';
 import 'order_history_screen.dart';
 import '../profile/profile_screen.dart';
+import '../profile/verify_email_screen.dart';
 
 class BuyerShell extends StatefulWidget {
   const BuyerShell({super.key});
@@ -30,6 +31,7 @@ class _BuyerShellState extends State<BuyerShell> {
       ProfileScreen(),
     ];
     final titles = ['Marketplace', 'Orders', 'Favorites', 'Profile'];
+    final showVerifyBanner = auth.user?.isVerified == false && !_hideVerifyBanner;
 
     return Scaffold(
       appBar: _index == 0 || _index == 1
@@ -40,19 +42,36 @@ class _BuyerShellState extends State<BuyerShell> {
             ),
       body: Column(
         children: [
-          if (auth.user?.isVerified == false && !_hideVerifyBanner)
-            MaterialBanner(
-              content: const Text(
-                'Verify your email before ordering or saving favorites.',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => setState(() => _hideVerifyBanner = true),
-                  child: const Text('OK'),
+          if (showVerifyBanner)
+            SafeArea(
+              bottom: false,
+              child: MaterialBanner(
+                content: const Text(
+                  'Verify your email before ordering or saving favorites.',
                 ),
-              ],
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const VerifyEmailScreen()),
+                    ),
+                    child: const Text('Verify now'),
+                  ),
+                  TextButton(
+                    onPressed: () => setState(() => _hideVerifyBanner = true),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
             ),
-          Expanded(child: pages[_index]),
+          Expanded(
+            child: showVerifyBanner
+                ? MediaQuery.removePadding(
+                    context: context,
+                    removeTop: true,
+                    child: pages[_index],
+                  )
+                : pages[_index],
+          ),
         ],
       ),
       bottomNavigationBar: DecoratedBox(

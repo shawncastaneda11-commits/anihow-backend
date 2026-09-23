@@ -78,6 +78,11 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  Future<void> refreshUser() async {
+    user = await api.currentUser();
+    notifyListeners();
+  }
+
   Future<void> logout() async {
     await api.logout();
     user = null;

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
 import '../../state/preferences_controller.dart';
 import '../../state/theme_controller.dart';
@@ -9,6 +8,7 @@ import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/status_pill.dart';
 import 'profile_screen.dart';
+import 'verify_email_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -32,9 +32,21 @@ class SettingsScreen extends StatelessWidget {
               padding: AniHowSpace.cardPadding,
               child: SegmentedButton<ThemeMode>(
                 segments: const [
-                  ButtonSegment(value: ThemeMode.light, label: Text('Light'), icon: Icon(Icons.light_mode_outlined)),
-                  ButtonSegment(value: ThemeMode.dark, label: Text('Dark'), icon: Icon(Icons.dark_mode_outlined)),
-                  ButtonSegment(value: ThemeMode.system, label: Text('System'), icon: Icon(Icons.phone_android)),
+                  ButtonSegment(
+                    value: ThemeMode.light,
+                    label: FittedBox(fit: BoxFit.scaleDown, child: Text('Light')),
+                    icon: Icon(Icons.light_mode_outlined),
+                  ),
+                  ButtonSegment(
+                    value: ThemeMode.dark,
+                    label: FittedBox(fit: BoxFit.scaleDown, child: Text('Dark')),
+                    icon: Icon(Icons.dark_mode_outlined),
+                  ),
+                  ButtonSegment(
+                    value: ThemeMode.system,
+                    label: FittedBox(fit: BoxFit.scaleDown, child: Text('System')),
+                    icon: Icon(Icons.phone_android),
+                  ),
                 ],
                 selected: {theme.mode},
                 onSelectionChanged: (value) => theme.setMode(value.first),
@@ -89,7 +101,9 @@ class SettingsScreen extends StatelessWidget {
                         children: [
                           const StatusPill(label: 'Unverified', color: AniHowColors.pending),
                           TextButton(
-                            onPressed: () => _resendVerification(context, auth),
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const VerifyEmailScreen()),
+                            ),
                             child: const Text('Resend'),
                           ),
                         ],
@@ -151,21 +165,6 @@ class SettingsScreen extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  Future<void> _resendVerification(BuildContext context, AuthController auth) async {
-    try {
-      await auth.api.resendVerification();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Verification email queued. Check the mail log.')),
-        );
-      }
-    } on ApiException catch (error) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
-      }
-    }
   }
 }
 

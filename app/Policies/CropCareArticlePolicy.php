@@ -18,8 +18,9 @@ class CropCareArticlePolicy
 {
     public function viewAny(User $user): bool
     {
-        // Reference content is readable by every authenticated actor.
-        return true;
+        return $user->isFarmerSeller()
+            || $user->can(Permission::ModerateArticles->value)
+            || $user->can(Permission::ManageOwnFarmArticles->value);
     }
 
     public function view(User $user, CropCareArticle $article): bool
@@ -32,7 +33,7 @@ class CropCareArticlePolicy
             return true;
         }
 
-        return $article->isPublished();
+        return $article->isPublished() && ! $user->isBuyer();
     }
 
     public function create(User $user): bool

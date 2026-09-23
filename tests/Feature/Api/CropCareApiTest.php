@@ -87,4 +87,47 @@ class CropCareApiTest extends TestCase
     {
         $this->getJson('/api/crop-care')->assertUnauthorized();
     }
+
+    public function test_a_buyer_cannot_list_crop_care(): void
+    {
+        $buyer = $this->buyer();
+
+        $this->asUser($buyer)
+            ->getJson('/api/crop-care')
+            ->assertForbidden();
+    }
+
+    public function test_a_buyer_cannot_view_a_published_crop_care_article(): void
+    {
+        $farm = $this->farm();
+        $editor = $this->farmer([], $farm);
+        $article = CropCareArticle::factory()->forFarm($farm, $editor)->create([
+            'title' => 'Keeping tomato plants productive',
+            'category' => ArticleCategory::CropCare,
+        ]);
+
+        $buyer = $this->buyer();
+
+        $this->asUser($buyer)
+            ->getJson("/api/crop-care/{$article->id}")
+            ->assertForbidden();
+    }
+
+    public function test_a_farmer_seller_can_view_another_farms_published_article(): void
+    {
+        $farmB = $this->farm();
+        $editorB = $this->farmer([], $farmB);
+        $article = CropCareArticle::factory()->forFarm($farmB, $editorB)->create([
+            'title' => 'Farm B care',
+            'category' => ArticleCategory::CropCare,
+        ]);
+
+        $farmerA = $this->farmer();
+
+        $this->asUser($farmerA)
+            ->getJson("/api/crop-care/{$article->id}")
+            ->assertOk()
+            ->assertJsonPath('data.title', 'Farm B care')
+            ->assertJsonPath('data.farm.id', $farmB->id);
+    }
 }

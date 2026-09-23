@@ -20,6 +20,8 @@ class CropCareArticleController extends Controller
 {
     public function index(CropCareIndexRequest $request): AnonymousResourceCollection
     {
+        $this->authorize('viewAny', CropCareArticle::class);
+
         $articles = CropCareArticle::query()
             ->published()
             ->with(['farm', 'author', 'cropTypes'])

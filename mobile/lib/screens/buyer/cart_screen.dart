@@ -114,6 +114,9 @@ class _CartScreenState extends State<CartScreen> {
       return const Center(child: Text('Your cart is empty.'));
     }
     final groups = cart.snapshot.groupsBySeller;
+    final listed = groups.fold<double>(0, (sum, group) => sum + group.listedSubtotal);
+    final tawad = groups.fold<double>(0, (sum, group) => sum + group.tawadTotal);
+    final total = groups.fold<double>(0, (sum, group) => sum + group.total);
     return RefreshIndicator(
       onRefresh: cart.reload,
       child: ListView(
@@ -127,13 +130,13 @@ class _CartScreenState extends State<CartScreen> {
           for (final group in groups) ...[
             Text(group.sellerName, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: AniHowSpace.labelGap),
-            for (final item in group.items)
-              Card(
-                child: Padding(
-                  padding: AniHowSpace.cardPadding,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
+            Card(
+              child: Padding(
+                padding: AniHowSpace.cardPadding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final item in group.items)
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text(item.listingName),
@@ -152,29 +155,52 @@ class _CartScreenState extends State<CartScreen> {
                         ),
                         onTap: () => _editQuantity(item),
                       ),
-                      PriceBreakdown(
-                        listed: item.lineSubtotal,
-                        tawad: item.tawadAmount,
-                        total: item.lineTotal,
-                      ),
-                    ],
-                  ),
+                    const SizedBox(height: AniHowSpace.cardGap),
+                    const Divider(height: 1),
+                    const SizedBox(height: AniHowSpace.cardGap),
+                    PriceBreakdown(
+                      listed: group.listedSubtotal,
+                      tawad: group.tawadTotal,
+                      total: group.total,
+                    ),
+                  ],
                 ),
               ),
-            Padding(
-              padding: const EdgeInsets.only(
-                top: AniHowSpace.labelGap,
-                bottom: AniHowSpace.section,
-              ),
-              child: PriceBreakdown(
-                listed: group.listedSubtotal,
-                tawad: group.tawadTotal,
-                total: group.total,
-              ),
             ),
+            const SizedBox(height: AniHowSpace.section),
           ],
+          _CartOrderSummary(listed: listed, tawad: tawad, total: total),
         ],
       ),
+    );
+  }
+}
+
+class _CartOrderSummary extends StatelessWidget {
+  const _CartOrderSummary({
+    required this.listed,
+    required this.tawad,
+    required this.total,
+  });
+
+  final double listed;
+  final double tawad;
+  final double total;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Divider(),
+        const SizedBox(height: AniHowSpace.cardGap),
+        Text('Order Summary', style: textTheme.labelLarge),
+        const SizedBox(height: AniHowSpace.labelGap),
+        Text('Listed ${AniHowMoney.peso(listed)}', style: textTheme.labelSmall),
+        Text('Tawad ${AniHowMoney.peso(tawad)}', style: textTheme.labelSmall),
+        Text('Total ${AniHowMoney.peso(total)}', style: textTheme.titleMedium),
+      ],
     );
   }
 }

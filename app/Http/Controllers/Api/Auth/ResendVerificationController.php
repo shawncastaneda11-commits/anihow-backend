@@ -19,7 +19,7 @@ class ResendVerificationController extends Controller
         $request->user()->sendEmailVerificationNotification();
 
         return response()->json([
-            'message' => 'Verification link sent.',
+            'message' => 'Verification code sent.',
         ]);
     }
 }

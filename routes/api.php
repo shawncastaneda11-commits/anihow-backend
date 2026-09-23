@@ -38,16 +38,15 @@ Route::prefix('auth')->group(function (): void {
         Route::post('reset-password', ResetPasswordController::class)->name('auth.reset-password');
     });
 
-    Route::get('email/verify/{id}/{hash}', VerifyEmailController::class)
-        ->middleware('signed')
-        ->name('verification.verify');
-
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('logout', LogoutController::class)->name('auth.logout');
         Route::get('user', MeController::class)->name('auth.user');
-        Route::post('email/verification-notification', ResendVerificationController::class)
-            ->middleware('throttle:auth')
-            ->name('verification.send');
+        Route::middleware('throttle:auth')->group(function (): void {
+            Route::post('email/verification-notification', ResendVerificationController::class)
+                ->name('verification.send');
+            Route::post('email/verify', VerifyEmailController::class)
+                ->name('verification.verify');
+        });
     });
 });
 

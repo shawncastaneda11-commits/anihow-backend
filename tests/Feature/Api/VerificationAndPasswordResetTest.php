@@ -2,15 +2,17 @@
 
 namespace Tests\Feature\Api;
 
+use App\Actions\Auth\SendEmailVerificationCodeAction;
 use App\Enums\Role;
 use App\Models\Farm;
 use App\Models\Listing;
 use App\Models\User;
 use App\Notifications\ResetPasswordNotification;
+use App\Notifications\VerifyEmailNotification;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class VerificationAndPasswordResetTest extends TestCase
@@ -24,11 +26,11 @@ class VerificationAndPasswordResetTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
     }
 
-    public function test_buyer_can_verify_email_via_signed_link(): void
+    public function test_buyer_can_verify_email_via_otp_code(): void
     {
         Notification::fake();
 
-        $this->postJson('/api/auth/register', [
+        $response = $this->postJson('/api/auth/register', [
             'name' => 'Maria Buyer',
             'email' => 'maria@example.com',
             'password' => 'password123',
@@ -38,20 +40,180 @@ class VerificationAndPasswordResetTest extends TestCase
         $user = User::query()->where('email', 'maria@example.com')->first();
         $this->assertFalse($user->hasVerifiedEmail());
 
-        $url = URL::temporarySignedRoute(
-            'verification.verify',
-            now()->addMinutes(60),
-            [
-                'id' => $user->id,
-                'hash' => sha1($user->getEmailForVerification()),
-            ],
-        );
+        $code = null;
+        Notification::assertSentTo($user, VerifyEmailNotification::class, function (VerifyEmailNotification $notification) use (&$code): bool {
+            $code = $notification->code;
 
-        $this->getJson($url)
+            return (bool) preg_match('/^\d{6}$/', $notification->code);
+        });
+
+        $this->withToken($response->json('token'))
+            ->postJson('/api/auth/email/verify', [
+                'code' => $code,
+            ])
             ->assertOk()
             ->assertJsonPath('message', 'Email verified.');
 
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_verify_rejects_a_wrong_code(): void
+    {
+        Notification::fake();
+
+        $response = $this->postJson('/api/auth/register', [
+            'name' => 'Maria Buyer',
+            'email' => 'wrongcode@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertCreated();
+
+        $user = User::query()->where('email', 'wrongcode@example.com')->first();
+
+        $code = null;
+        Notification::assertSentTo($user, VerifyEmailNotification::class, function (VerifyEmailNotification $notification) use (&$code): bool {
+            $code = $notification->code;
+
+            return (bool) preg_match('/^\d{6}$/', $notification->code);
+        });
+
+        $wrongCode = $code === '000000' ? '111111' : '000000';
+
+        $this->withToken($response->json('token'))
+            ->postJson('/api/auth/email/verify', [
+                'code' => $wrongCode,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.code.0', 'The verification code is invalid or has expired.');
+
+        $this->assertFalse($user->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_verify_rejects_an_expired_or_missing_code(): void
+    {
+        Notification::fake();
+
+        $response = $this->postJson('/api/auth/register', [
+            'name' => 'Maria Buyer',
+            'email' => 'expired@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertCreated();
+
+        $user = User::query()->where('email', 'expired@example.com')->first();
+
+        Cache::forget(SendEmailVerificationCodeAction::CACHE_PREFIX.$user->getKey());
+
+        $this->withToken($response->json('token'))
+            ->postJson('/api/auth/email/verify', [
+                'code' => '123456',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.code.0', 'The verification code is invalid or has expired.');
+
+        $this->assertFalse($user->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_verify_on_an_already_verified_user_is_idempotent(): void
+    {
+        Notification::fake();
+
+        $response = $this->postJson('/api/auth/register', [
+            'name' => 'Maria Buyer',
+            'email' => 'already@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertCreated();
+
+        $user = User::query()->where('email', 'already@example.com')->first();
+
+        $code = null;
+        Notification::assertSentTo($user, VerifyEmailNotification::class, function (VerifyEmailNotification $notification) use (&$code): bool {
+            $code = $notification->code;
+
+            return (bool) preg_match('/^\d{6}$/', $notification->code);
+        });
+
+        $this->withToken($response->json('token'))
+            ->postJson('/api/auth/email/verify', [
+                'code' => $code,
+            ])
+            ->assertOk()
+            ->assertJsonPath('message', 'Email verified.');
+
+        $this->withToken($response->json('token'))
+            ->postJson('/api/auth/email/verify', [
+                'code' => '000000',
+            ])
+            ->assertOk()
+            ->assertJsonPath('message', 'Email is already verified.');
+
+        $this->assertTrue($user->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_resend_sends_a_fresh_code(): void
+    {
+        Notification::fake();
+
+        $response = $this->postJson('/api/auth/register', [
+            'name' => 'Maria Buyer',
+            'email' => 'resend@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertCreated();
+
+        $user = User::query()->where('email', 'resend@example.com')->first();
+
+        $firstCode = null;
+        Notification::assertSentTo($user, VerifyEmailNotification::class, function (VerifyEmailNotification $notification) use (&$firstCode): bool {
+            $firstCode = $notification->code;
+
+            return (bool) preg_match('/^\d{6}$/', $notification->code);
+        });
+
+        $this->withToken($response->json('token'))
+            ->postJson('/api/auth/email/verification-notification')
+            ->assertOk()
+            ->assertJsonPath('message', 'Verification code sent.');
+
+        Notification::assertSentToTimes($user, VerifyEmailNotification::class, 2);
+
+        $newestCode = Notification::sent($user, VerifyEmailNotification::class)->last()->code;
+
+        $this->withToken($response->json('token'))
+            ->postJson('/api/auth/email/verify', [
+                'code' => $newestCode,
+            ])
+            ->assertOk()
+            ->assertJsonPath('message', 'Email verified.');
+
+        $this->assertTrue($user->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_verify_requires_a_six_digit_code(): void
+    {
+        Notification::fake();
+
+        $response = $this->postJson('/api/auth/register', [
+            'name' => 'Maria Buyer',
+            'email' => 'digits@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertCreated();
+
+        $this->withToken($response->json('token'))
+            ->postJson('/api/auth/email/verify', [
+                'code' => '12',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('code');
+
+        $this->withToken($response->json('token'))
+            ->postJson('/api/auth/email/verify', [
+                'code' => 'abcdef',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('code');
     }
 
     public function test_unverified_buyer_can_browse_but_cannot_add_to_cart(): void

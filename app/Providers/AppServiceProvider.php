@@ -4,7 +4,6 @@ namespace App\Providers;
 
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
-use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -60,17 +59,6 @@ class AppServiceProvider extends ServiceProvider
 
     private function configureAuthUrls(): void
     {
-        VerifyEmail::createUrlUsing(function (User $notifiable): string {
-            return URL::temporarySignedRoute(
-                'verification.verify',
-                now()->addMinutes((int) config('auth.verification.expire', 60)),
-                [
-                    'id' => $notifiable->getKey(),
-                    'hash' => sha1($notifiable->getEmailForVerification()),
-                ],
-            );
-        });
-
         ResetPassword::createUrlUsing(function (User $notifiable, string $token): string {
             $base = rtrim((string) config('anihow.frontend_url'), '/');
 

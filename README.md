@@ -1,5 +1,7 @@
 # AniHow API
 
+[![CI](https://github.com/shawncastaneda11-commits/anihow-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/shawncastaneda11-commits/anihow-backend/actions/workflows/ci.yml)
+
 Laravel REST API for a farmers' digital market hub in General Trias, Cavite.
 
 Mobile clients are Flutter (Android). The single `super_admin` uses the Filament web panel at `/admin`.
@@ -17,7 +19,7 @@ Current scope is **Phase 5**: Phases 1–4 product APIs plus production hardenin
 | Spatie laravel-permission | 8.x |
 | Filament | 5.x |
 
-PHPUnit tests use in-memory SQLite (`phpunit.xml`).
+PHPUnit tests use in-memory SQLite (`phpunit.xml`). GitHub Actions CI runs Pint and the PHP suite, plus `flutter analyze` and `flutter test` in `/mobile`.
 
 ## Roles
 

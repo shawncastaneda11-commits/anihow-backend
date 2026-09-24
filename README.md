@@ -126,6 +126,34 @@ Seeded after `SuperAdminSeeder` and `SmokeTestSeeder`. Password is `password` fo
 
 Do not use `juan@anihow.local`, `maria.santos@anihow.local`, `pedro.reyes@anihow.local`, `ana.buyer@anihow.local`, or `ben.buyer@anihow.local`. Those seeders are leftover from the pre-rebuild schema and are not called.
 
+## Demo data
+
+Realistic Cavite fixtures for a local defense: PYAP Manggahan Chapter, four farmer-sellers, crop types, listings, ~35 days of checkout/OSM order history, reviews, announcements, crop-care articles, and a farm FAQ override.
+
+**Never run this on the production server.** It is not called from `DatabaseSeeder`.
+
+```bash
+php artisan db:seed --class=DemoSeeder
+```
+
+Safe to re-run (updateOrCreate / firstOrCreate; order history is written once). Shared password for every `@demo.anihow.local` account: `password`.
+
+| Role | Name | Email |
+| --- | --- | --- |
+| `content_editor` | Elena Ramos | `elena.ramos@demo.anihow.local` |
+| `farmer_seller` | Nena Villanueva | `nena.villanueva@demo.anihow.local` |
+| `farmer_seller` | Antonio Ramirez | `antonio.ramirez@demo.anihow.local` |
+| `farmer_seller` | Rosa Mendoza | `rosa.mendoza@demo.anihow.local` |
+| `farmer_seller` | Jun Bautista | `jun.bautista@demo.anihow.local` |
+| `buyer` | Carla Santos | `carla.santos@demo.anihow.local` |
+| `buyer` | Miguel Reyes | `miguel.reyes@demo.anihow.local` |
+| `buyer` | Ana Dela Cruz | `ana.delacruz@demo.anihow.local` |
+| `buyer` | Paolo Garcia | `paolo.garcia@demo.anihow.local` |
+| `buyer` | Liza Ramos | `liza.ramos@demo.anihow.local` |
+| `buyer` | Benito Cruz | `benito.cruz@demo.anihow.local` |
+
+Filament `/admin` still uses `admin@anihow.local` from `SuperAdminSeeder` (password `password` unless you set `SUPER_ADMIN_PASSWORD`). The content editor above can also sign in to `/admin` for the PYAP farm.
+
 ## Auth API (Sanctum)
 
 Send `Accept: application/json`. After login/register, send `Authorization: Bearer {token}`.

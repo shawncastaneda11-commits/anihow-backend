@@ -449,6 +449,7 @@ class AppStrings {
             'Bumaba ang limit ng tawad kaysa sa diskwento mo',
           ),
         'farm_announcement' => t('Farm announcement', 'Anunsyo ng bukid'),
+        'faq_entry_moderated' => t('FAQ answer moderated', 'May binago sa sagot sa FAQ'),
         _ => fallback,
       };
 

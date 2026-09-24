@@ -2,19 +2,24 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Faq\ModerateFaqEntryAction;
+use App\Enums\NotificationType;
 use App\Enums\Role;
 use App\Filament\Resources\FaqEntries\FaqEntryResource;
 use App\Models\FaqEntry;
 use App\Models\Farm;
+use App\Models\InAppNotification;
 use App\Models\User;
 use Database\Seeders\FaqEntrySeeder;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
+use Tests\Concerns\CreatesMarketplaceActors;
 use Tests\TestCase;
 
 class FaqEntryTest extends TestCase
 {
+    use CreatesMarketplaceActors;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -79,12 +84,21 @@ class FaqEntryTest extends TestCase
         $this->assertFalse($visible->contains($other->id));
     }
 
-    public function test_a_super_admin_can_manage_system_rows_but_not_farm_rows(): void
+    public function test_a_super_admin_can_moderate_farm_rows_but_cannot_edit_their_text(): void
     {
-        [$farmA] = $this->twoFarms();
+        [$farmA, $farmB] = $this->twoFarms();
+        $editorA = $this->staff(Role::ContentEditor, $farmA);
+        $editorB = $this->staff(Role::ContentEditor, $farmB);
         $admin = $this->staff(Role::SuperAdmin);
         $system = FaqEntry::query()->whereNull('farm_id')->where('intent_key', 'pickup')->firstOrFail();
-        $farmRow = FaqEntry::factory()->forFarm($farmA)->forIntent('shed_hours')->create();
+        $farmRow = FaqEntry::factory()
+            ->forFarm($farmA)
+            ->forIntent('walk_in')
+            ->forRoles([Role::FarmerSeller->value])
+            ->create([
+                'label' => 'What is a walk-in sale?',
+                'answer' => 'Farm A walk-in: record it at the shed.',
+            ]);
 
         $this->assertTrue(Gate::forUser($admin)->allows('create', FaqEntry::class));
         $this->assertTrue(Gate::forUser($admin)->allows('view', $system));
@@ -92,7 +106,46 @@ class FaqEntryTest extends TestCase
         $this->assertTrue(Gate::forUser($admin)->allows('delete', $system));
         $this->assertTrue(Gate::forUser($admin)->allows('view', $farmRow));
         $this->assertTrue(Gate::forUser($admin)->denies('update', $farmRow));
-        $this->assertTrue(Gate::forUser($admin)->denies('delete', $farmRow));
+        $this->assertTrue(Gate::forUser($admin)->allows('delete', $farmRow));
+        $this->assertTrue(Gate::forUser($admin)->allows('deactivate', $farmRow));
+        $this->assertTrue(Gate::forUser($admin)->denies('deactivate', $system));
+        $this->assertTrue(Gate::forUser($editorA)->denies('deactivate', $farmRow));
+        $this->assertTrue(Gate::forUser($editorA)->denies('update', $system));
+        $this->assertTrue(Gate::forUser($editorA)->denies('delete', $system));
+        $this->assertTrue(Gate::forUser($editorB)->denies('update', $farmRow));
+        $this->assertTrue(Gate::forUser($editorB)->denies('delete', $farmRow));
+
+        $originalAnswer = $farmRow->answer;
+        $this->assertTrue(Gate::forUser($admin)->denies('update', $farmRow));
+        $this->assertSame($originalAnswer, $farmRow->fresh()->answer);
+
+        app(ModerateFaqEntryAction::class)->deactivate($admin, $farmRow);
+
+        $this->assertFalse($farmRow->fresh()->is_active);
+        $this->assertSame(1, $this->moderationNotices($editorA->id));
+        $this->assertSame(0, $this->moderationNotices($editorB->id));
+
+        $farmerA = $this->farmer([], $farmA);
+        $this->asUser($farmerA)
+            ->postJson('/api/faq/ask', ['question' => 'What is a walk-in sale?'])
+            ->assertOk()
+            ->assertJsonPath('data.matched_id', 'walk_in')
+            ->assertJsonPath(
+                'data.answer',
+                fn (string $answer): bool => str_contains($answer, 'Record walk-in sale')
+                    && ! str_contains($answer, 'Farm A walk-in'),
+            );
+
+        $otherRow = FaqEntry::factory()
+            ->forFarm($farmA)
+            ->forIntent('shed_hours')
+            ->create(['label' => 'When is the shed open?']);
+
+        app(ModerateFaqEntryAction::class)->deleteFarmRow($admin, $otherRow);
+
+        $this->assertNull(FaqEntry::query()->find($otherRow->id));
+        $this->assertSame(2, $this->moderationNotices($editorA->id));
+        $this->assertSame(0, $this->moderationNotices($editorB->id));
     }
 
     /**
@@ -112,5 +165,13 @@ class FaqEntryTest extends TestCase
         $user->syncRoles($role);
 
         return $user;
+    }
+
+    private function moderationNotices(int $userId): int
+    {
+        return InAppNotification::query()
+            ->where('user_id', $userId)
+            ->where('type', NotificationType::FaqEntryModerated->value)
+            ->count();
     }
 }

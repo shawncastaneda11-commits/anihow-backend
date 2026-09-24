@@ -20,6 +20,7 @@ enum NotificationType: string
     case FloorPriceRaised = 'floor_price_raised';
     case TawadCeilingLowered = 'tawad_ceiling_lowered';
     case FarmAnnouncement = 'farm_announcement';
+    case FaqEntryModerated = 'faq_entry_moderated';
 
     public function label(): string
     {
@@ -37,6 +38,7 @@ enum NotificationType: string
             self::FloorPriceRaised => 'Floor price raised above your listing',
             self::TawadCeilingLowered => 'Tawad limit lowered below your discount',
             self::FarmAnnouncement => 'Farm announcement',
+            self::FaqEntryModerated => 'FAQ answer moderated',
         };
     }
 

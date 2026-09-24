@@ -7,9 +7,10 @@ use App\Models\FaqEntry;
 use App\Models\User;
 
 /**
- * Super Admins write system-wide rows (farm_id null). Content Editors write
- * farmer-seller rows for their own farm, and may read system rows so they
- * know what they are overriding. Neither role writes the other's rows.
+ * Super Admins write system-wide rows and moderate farm rows: they may
+ * deactivate or delete a farm override, but they do not rewrite farm text.
+ * Content Editors write farmer-seller rows for their own farm and may read
+ * system rows so they know what they are overriding.
  */
 class FaqEntryPolicy
 {
@@ -45,7 +46,19 @@ class FaqEntryPolicy
 
     public function delete(User $user, FaqEntry $faqEntry): bool
     {
+        if ($this->managesSystem($user)) {
+            return true;
+        }
+
         return $this->writes($user, $faqEntry);
+    }
+
+    /**
+     * Moderation: hide or restore a farm override without editing its copy.
+     */
+    public function deactivate(User $user, FaqEntry $faqEntry): bool
+    {
+        return $this->managesSystem($user) && ! $faqEntry->isSystemWide();
     }
 
     private function writes(User $user, FaqEntry $faqEntry): bool

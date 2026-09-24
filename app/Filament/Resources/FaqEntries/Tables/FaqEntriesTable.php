@@ -2,8 +2,12 @@
 
 namespace App\Filament\Resources\FaqEntries\Tables;
 
+use App\Actions\Faq\ModerateFaqEntryAction;
+use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\FaqEntry;
+use App\Models\User;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -69,13 +73,71 @@ class FaqEntriesTable
                 ViewAction::make(),
                 EditAction::make()
                     ->visible(fn (FaqEntry $record): bool => auth()->user()?->can('update', $record) ?? false),
+                Action::make('deactivate')
+                    ->label('Deactivate')
+                    ->icon('heroicon-o-eye-slash')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->visible(fn (FaqEntry $record): bool => $record->is_active
+                        && (auth()->user()?->can('deactivate', $record) ?? false))
+                    ->action(function (FaqEntry $record): void {
+                        $user = auth()->user();
+
+                        if (! $user instanceof User) {
+                            return;
+                        }
+
+                        app(ModerateFaqEntryAction::class)->deactivate($user, $record);
+                    }),
+                Action::make('reactivate')
+                    ->label('Reactivate')
+                    ->icon('heroicon-o-eye')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->visible(fn (FaqEntry $record): bool => ! $record->is_active
+                        && (auth()->user()?->can('deactivate', $record) ?? false))
+                    ->action(function (FaqEntry $record): void {
+                        $user = auth()->user();
+
+                        if (! $user instanceof User) {
+                            return;
+                        }
+
+                        app(ModerateFaqEntryAction::class)->reactivate($user, $record);
+                    }),
+                Action::make('moderateDelete')
+                    ->label('Delete')
+                    ->icon('heroicon-o-trash')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->visible(fn (FaqEntry $record): bool => self::superAdminModeratesFarmRow($record))
+                    ->action(function (FaqEntry $record): void {
+                        $user = auth()->user();
+
+                        if (! $user instanceof User) {
+                            return;
+                        }
+
+                        app(ModerateFaqEntryAction::class)->deleteFarmRow($user, $record);
+                    }),
                 DeleteAction::make()
-                    ->visible(fn (FaqEntry $record): bool => auth()->user()?->can('delete', $record) ?? false),
+                    ->visible(fn (FaqEntry $record): bool => (auth()->user()?->can('delete', $record) ?? false)
+                        && ! self::superAdminModeratesFarmRow($record)),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    private static function superAdminModeratesFarmRow(FaqEntry $record): bool
+    {
+        $user = auth()->user();
+
+        return $user !== null
+            && $user->can(Permission::ManageSystemFaq->value)
+            && ! $record->isSystemWide()
+            && $user->can('delete', $record);
     }
 }

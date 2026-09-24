@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Enums\NotificationType;
 use App\Enums\OrderStatus;
 use App\Mail\ListingLowStockMail;
+use App\Models\Farm;
 use App\Models\FarmAnnouncement;
 use App\Models\InAppNotification;
 use App\Models\Listing;
@@ -216,6 +217,25 @@ class InAppNotifier
      * A new chat message reaches the other party on the order, never the
      * sender and never the Super Admin.
      */
+    /**
+     * Super Admin hid or removed a farm FAQ override. The farm's Content
+     * Editor is told; farmer-sellers are not.
+     */
+    public function faqEntryModerated(User $editor, string $label, bool $deleted, ?Farm $farm = null): InAppNotification
+    {
+        $body = $deleted
+            ? "FAQ \"{$label}\" was deleted."
+            : "FAQ \"{$label}\" was deactivated.";
+
+        return $this->send(
+            $editor,
+            NotificationType::FaqEntryModerated,
+            NotificationType::FaqEntryModerated->label(),
+            $body,
+            $farm,
+        );
+    }
+
     public function orderMessage(User $recipient, Order $order, User $sender, string $body): InAppNotification
     {
         $preview = mb_strlen($body) > 80 ? mb_substr($body, 0, 77).'...' : $body;

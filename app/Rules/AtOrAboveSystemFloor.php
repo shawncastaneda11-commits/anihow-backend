@@ -12,9 +12,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
  */
 class AtOrAboveSystemFloor implements ValidationRule
 {
-    public function __construct(private readonly CropType $cropType)
-    {
-    }
+    public function __construct(private readonly CropType $cropType) {}
 
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
@@ -24,7 +22,7 @@ class AtOrAboveSystemFloor implements ValidationRule
 
         if (PriceGuard::centavos($value) < PriceGuard::centavos($this->cropType->floor_price)) {
             $fail('The farm floor price for :attribute cannot be lower than the system floor of PHP '
-                . number_format((float) $this->cropType->floor_price, 2) . '.');
+                .number_format((float) $this->cropType->floor_price, 2).'.');
         }
     }
 }

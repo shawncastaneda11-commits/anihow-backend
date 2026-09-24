@@ -6,11 +6,13 @@ use App\Enums\Permission;
 use App\Enums\Role;
 use App\Enums\UserStatus;
 use App\Models\User;
+use App\Support\InAppNotifier;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -77,7 +79,7 @@ class UsersTable
                             'approved_by' => auth()->id(),
                         ]);
 
-                        app(\App\Support\InAppNotifier::class)->accountApproved($record);
+                        app(InAppNotifier::class)->accountApproved($record);
                     }),
                 Action::make('suspend')
                     ->icon('heroicon-o-no-symbol')
@@ -87,7 +89,7 @@ class UsersTable
                         && ! $record->isSuperAdmin()
                         && auth()->user()->can(Permission::SuspendAccounts->value))
                     ->form([
-                        \Filament\Forms\Components\TextInput::make('suspension_reason')
+                        TextInput::make('suspension_reason')
                             ->required()
                             ->maxLength(255),
                     ])

@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Notifications\VerifyEmailNotification;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class SendEmailVerificationCodeAction
 {
@@ -49,10 +50,30 @@ class SendEmailVerificationCodeAction
     }
 
     /**
-     * Show the code in the app only when Gmail/SMTP is not ready.
+     * Show the code in the JSON body only on local/testing when no
+     * outbound mailer is configured. Never in any other environment.
      */
     public static function shouldExposeCode(): bool
     {
-        return ! self::isMailConfigured();
+        return app()->environment(['local', 'testing']) && ! self::isMailConfigured();
+    }
+
+    /**
+     * Staging/production must deliver the OTP by email. If mail is not
+     * configured there, register and resend fail instead of leaking the code.
+     */
+    public static function mailRequiredButMissing(): bool
+    {
+        return ! app()->environment(['local', 'testing']) && ! self::isMailConfigured();
+    }
+
+    public static function unavailableMessage(): string
+    {
+        return 'Email verification is temporarily unavailable. Please try again later.';
+    }
+
+    public static function logUnavailable(): void
+    {
+        Log::error('Email verification is unavailable because outbound mail is not configured.');
     }
 }

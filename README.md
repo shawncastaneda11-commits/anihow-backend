@@ -456,7 +456,7 @@ php artisan reverb:restart
 - `APP_ENV=production` so smoke seeders never run
 - `APP_DEBUG=false`
 - `APP_TIMEZONE=Asia/Manila`
-- `MAIL_*` for Gmail SMTP
+- `MAIL_*` for Gmail SMTP. `MAIL_*` must be set before going live; without it, buyer verification is disabled.
 - `RATE_LIMIT_AUTH` left at `5`
 
 ## Deploy on Railway

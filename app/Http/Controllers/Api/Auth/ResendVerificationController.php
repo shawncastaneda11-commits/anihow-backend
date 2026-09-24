@@ -17,6 +17,14 @@ class ResendVerificationController extends Controller
             ]);
         }
 
+        if (SendEmailVerificationCodeAction::mailRequiredButMissing()) {
+            SendEmailVerificationCodeAction::logUnavailable();
+
+            return response()->json([
+                'message' => SendEmailVerificationCodeAction::unavailableMessage(),
+            ], 503);
+        }
+
         $code = $sendCode->handle($request->user());
         $payload = [
             'message' => 'Verification code sent.',

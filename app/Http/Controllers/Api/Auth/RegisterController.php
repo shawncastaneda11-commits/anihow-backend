@@ -15,6 +15,15 @@ class RegisterController extends Controller
     {
         $result = $registerBuyer->handle($request->validated());
         $user = $result['user'];
+
+        if (SendEmailVerificationCodeAction::mailRequiredButMissing()) {
+            SendEmailVerificationCodeAction::logUnavailable();
+
+            return response()->json([
+                'message' => SendEmailVerificationCodeAction::unavailableMessage(),
+            ], 503);
+        }
+
         $token = $user->createToken($request->input('device_name', 'mobile'))->plainTextToken;
 
         $extra = [

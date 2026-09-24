@@ -411,6 +411,23 @@ class AppStrings {
       ? t('Available $qty', 'Available $qty')
       : t('Available $qty $unit', 'Available $qty $unit');
   String get sales => t('Sales', 'Benta');
+  String get mySales => t('My Sales', 'Aking Benta');
+  String get mySalesEmpty => t(
+        'No completed sales yet. Completed orders and walk-ins will show here.',
+        'Wala pang tapos na benta. Dito lalabas ang completed na order at walk-in.',
+      );
+  String get completedOrders => t('Completed orders', 'Tapos na order');
+  String get unitsSold => t('Units sold', 'Nabentang yunit');
+  String get grossSales => t('Gross sales', 'Kabuuang benta');
+  String get averageTawad => t('Average tawad', 'Karaniwang tawad');
+  String get salesThisPeriod => t('Sales this period', 'Benta sa panahong ito');
+  String get topCrops => t('Top crops', 'Pinakamabentang pananim');
+  String get bestSellers => t('Best sellers', 'Pinakamabenta');
+  String get walkInShare => t('Walk-in vs app', 'Walk-in laban sa app');
+  String get walkInSales => t('Walk-in sales', 'Benta sa walk-in');
+  String get appSales => t('App sales', 'Benta sa app');
+  String get periodWeek => t('Week', 'Linggo');
+  String get periodMonth => t('Month', 'Buwan');
   String get rating => t('Rating', 'Rating');
 
   String orderStatus(String status) => switch (status.toLowerCase()) {

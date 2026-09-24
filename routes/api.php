@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\Cart\CartController;
 use App\Http\Controllers\Api\Chat\OrderMessageController;
 use App\Http\Controllers\Api\CropCare\CropCareArticleController;
 use App\Http\Controllers\Api\Faq\FaqController;
+use App\Http\Controllers\Api\Farmer\FarmerAnalyticsController;
 use App\Http\Controllers\Api\Farmer\FarmerAnnouncementController;
 use App\Http\Controllers\Api\Farms\FarmController;
 use App\Http\Controllers\Api\Favorites\FavoriteController;
@@ -136,6 +137,8 @@ Route::middleware([
 
     Route::get('announcements', [FarmerAnnouncementController::class, 'index'])
         ->name('farmer.announcements.index');
+
+    Route::get('analytics', FarmerAnalyticsController::class)->name('farmer.analytics');
 });
 
 Route::middleware([

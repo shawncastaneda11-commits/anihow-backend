@@ -40,6 +40,7 @@ void main() {
     expect(english.settings, 'Settings');
     expect(filipino.settings, 'Mga setting');
     expect(filipino.faq, 'Mga tanong');
+    expect(filipino.mySales, 'Aking Benta');
     expect(filipino.unverified, 'Hindi pa');
     expect(filipino.logOut, 'Mag-log out');
   });

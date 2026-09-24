@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\OrderSource;
 use App\Enums\OrderStatus;
 use App\Enums\Permission;
 use App\Models\Order;
@@ -174,6 +175,70 @@ class AnalyticsService
             'total' => round($total, 2),
             'orders' => $orders,
             'discounted_orders' => $discounted,
+        ];
+    }
+
+    /**
+     * Completed-order headline figures. Gross sales is the sum of order
+     * totals, the same cash figure SalesOverviewWidget charts.
+     *
+     * @return array{completed_orders: int, units_sold: float, gross_sales: float, average_discount: float}
+     */
+    public function completedSummary(?User $viewer = null, ?int $days = null): array
+    {
+        $query = $this->orderQuery($viewer);
+
+        if ($days !== null) {
+            $query->where('orders.completed_at', '>=', now()->subDays($days));
+        }
+
+        $orders = (clone $query)->count();
+        $gross = (float) (clone $query)->sum('orders.total');
+        $units = (float) $this->unitsSoldPerCropType($viewer, $days)->sum('units');
+
+        return [
+            'completed_orders' => $orders,
+            'units_sold' => round($units, 2),
+            'gross_sales' => round($gross, 2),
+            'average_discount' => $this->averageDiscount($viewer, $days)['average'],
+        ];
+    }
+
+    /**
+     * Walk-in vs app completed orders in the window.
+     *
+     * @return array{walk_in_orders: int, walk_in_sales: float, app_orders: int, app_sales: float}
+     */
+    public function walkInShare(?User $viewer = null, ?int $days = null): array
+    {
+        $query = $this->orderQuery($viewer);
+
+        if ($days !== null) {
+            $query->where('orders.completed_at', '>=', now()->subDays($days));
+        }
+
+        $walkInOrders = 0;
+        $walkInSales = 0.0;
+        $appOrders = 0;
+        $appSales = 0.0;
+
+        foreach ((clone $query)->get(['source', 'total']) as $order) {
+            $total = (float) $order->total;
+
+            if ($order->source === OrderSource::WalkIn) {
+                $walkInOrders++;
+                $walkInSales += $total;
+            } else {
+                $appOrders++;
+                $appSales += $total;
+            }
+        }
+
+        return [
+            'walk_in_orders' => $walkInOrders,
+            'walk_in_sales' => round($walkInSales, 2),
+            'app_orders' => $appOrders,
+            'app_sales' => round($appSales, 2),
         ];
     }
 

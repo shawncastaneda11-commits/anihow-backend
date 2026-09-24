@@ -439,6 +439,11 @@ class ApiClient {
     return _list('/farmer/announcements', parse: FarmAnnouncement.fromJson);
   }
 
+  Future<FarmerAnalytics> farmerAnalytics({String period = 'week'}) async {
+    final response = await _get('/farmer/analytics', query: {'period': period});
+    return FarmerAnalytics.fromJson(_asMap(response['data'] ?? response));
+  }
+
   Future<ShopProfile> updateFarmerShop(Map<String, dynamic> body) async {
     try {
       final response = await _dio.patch('/farmer/shop', data: body);

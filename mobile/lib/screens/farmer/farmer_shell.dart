@@ -10,6 +10,7 @@ import '../faq/faq_bot_screen.dart';
 import '../profile/profile_screen.dart';
 import 'crop_care_screen.dart';
 import 'farmer_orders_screen.dart';
+import 'farmer_sales_screen.dart';
 import 'listings_screen.dart';
 
 class FarmerShell extends StatefulWidget {
@@ -29,9 +30,10 @@ class _FarmerShellState extends State<FarmerShell> {
     final pages = const [
       FarmerListingsScreen(),
       FarmerOrdersScreen(),
+      FarmerSalesScreen(),
       CropCareScreen(),
     ];
-    final titles = [s.myListings, s.incomingOrders, s.cropCare];
+    final titles = [s.myListings, s.incomingOrders, s.mySales, s.cropCare];
 
     return Scaffold(
       appBar: AppBar(
@@ -74,6 +76,7 @@ class _FarmerShellState extends State<FarmerShell> {
           destinations: [
             NavigationDestination(icon: const Icon(Icons.inventory_2_outlined), label: s.listings),
             NavigationDestination(icon: const Icon(Icons.inbox_outlined), label: s.orders),
+            NavigationDestination(icon: const Icon(Icons.insights_outlined), label: s.mySales),
             NavigationDestination(icon: const Icon(Icons.menu_book_outlined), label: s.cropCare),
           ],
         ),

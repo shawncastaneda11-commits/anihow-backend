@@ -1131,6 +1131,148 @@ class FaqSuggestion {
   }
 }
 
+class FarmerAnalyticsSummary {
+  const FarmerAnalyticsSummary({
+    required this.completedOrders,
+    required this.unitsSold,
+    required this.grossSales,
+    required this.averageDiscount,
+  });
+
+  final int completedOrders;
+  final double unitsSold;
+  final double grossSales;
+  final double averageDiscount;
+
+  bool get isEmpty => completedOrders == 0 && unitsSold == 0 && grossSales == 0;
+
+  factory FarmerAnalyticsSummary.fromJson(Map<String, dynamic> json) {
+    return FarmerAnalyticsSummary(
+      completedOrders: ListingItem._asCount(json['completed_orders']) ?? 0,
+      unitsSold: _asDouble(json['units_sold']),
+      grossSales: _asDouble(json['gross_sales']),
+      averageDiscount: _asDouble(json['average_discount']),
+    );
+  }
+}
+
+class FarmerSalesPoint {
+  const FarmerSalesPoint({
+    required this.period,
+    required this.orders,
+    required this.revenue,
+  });
+
+  final String period;
+  final int orders;
+  final double revenue;
+
+  factory FarmerSalesPoint.fromJson(Map<String, dynamic> json) {
+    return FarmerSalesPoint(
+      period: json['period'] as String? ?? '',
+      orders: ListingItem._asCount(json['orders']) ?? 0,
+      revenue: _asDouble(json['revenue']),
+    );
+  }
+}
+
+class FarmerCropSales {
+  const FarmerCropSales({
+    required this.crop,
+    required this.units,
+    required this.revenue,
+    this.unit,
+  });
+
+  final String crop;
+  final String? unit;
+  final double units;
+  final double revenue;
+
+  factory FarmerCropSales.fromJson(Map<String, dynamic> json) {
+    return FarmerCropSales(
+      crop: json['crop'] as String? ?? '',
+      unit: json['unit'] as String?,
+      units: _asDouble(json['units']),
+      revenue: _asDouble(json['revenue']),
+    );
+  }
+}
+
+class FarmerWalkInShare {
+  const FarmerWalkInShare({
+    required this.walkInOrders,
+    required this.walkInSales,
+    required this.appOrders,
+    required this.appSales,
+  });
+
+  final int walkInOrders;
+  final double walkInSales;
+  final int appOrders;
+  final double appSales;
+
+  factory FarmerWalkInShare.fromJson(Map<String, dynamic> json) {
+    return FarmerWalkInShare(
+      walkInOrders: ListingItem._asCount(json['walk_in_orders']) ?? 0,
+      walkInSales: _asDouble(json['walk_in_sales']),
+      appOrders: ListingItem._asCount(json['app_orders']) ?? 0,
+      appSales: _asDouble(json['app_sales']),
+    );
+  }
+}
+
+class FarmerAnalytics {
+  const FarmerAnalytics({
+    required this.period,
+    required this.summary,
+    required this.salesPerPeriod,
+    required this.unitsPerCropType,
+    required this.bestSelling,
+    required this.walkInShare,
+  });
+
+  final String period;
+  final FarmerAnalyticsSummary summary;
+  final List<FarmerSalesPoint> salesPerPeriod;
+  final List<FarmerCropSales> unitsPerCropType;
+  final List<FarmerCropSales> bestSelling;
+  final FarmerWalkInShare walkInShare;
+
+  bool get isEmpty => summary.isEmpty;
+
+  factory FarmerAnalytics.fromJson(Map<String, dynamic> json) {
+    return FarmerAnalytics(
+      period: json['period'] as String? ?? 'week',
+      summary: FarmerAnalyticsSummary.fromJson(
+        json['summary'] is Map ? Map<String, dynamic>.from(json['summary'] as Map) : <String, dynamic>{},
+      ),
+      salesPerPeriod: ((json['sales_per_period'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((item) => FarmerSalesPoint.fromJson(Map<String, dynamic>.from(item)))
+          .toList(),
+      unitsPerCropType: ((json['units_per_crop_type'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((item) => FarmerCropSales.fromJson(Map<String, dynamic>.from(item)))
+          .toList(),
+      bestSelling: ((json['best_selling'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((item) => FarmerCropSales.fromJson(Map<String, dynamic>.from(item)))
+          .toList(),
+      walkInShare: FarmerWalkInShare.fromJson(
+        json['walk_in_share'] is Map ? Map<String, dynamic>.from(json['walk_in_share'] as Map) : <String, dynamic>{},
+      ),
+    );
+  }
+}
+
+double _asDouble(Object? value) {
+  if (value is num) {
+    return value.toDouble();
+  }
+  return double.tryParse('$value') ?? 0;
+}
+
 class FaqAnswer {
   const FaqAnswer({
     required this.answer,

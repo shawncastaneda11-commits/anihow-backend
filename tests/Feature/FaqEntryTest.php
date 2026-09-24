@@ -121,7 +121,10 @@ class FaqEntryTest extends TestCase
 
         app(ModerateFaqEntryAction::class)->deactivate($admin, $farmRow);
 
-        $this->assertFalse($farmRow->fresh()->is_active);
+        $hidden = $farmRow->fresh();
+        $this->assertTrue($hidden->is_active);
+        $this->assertTrue($hidden->isModerated());
+        $this->assertSame($admin->id, $hidden->moderated_by);
         $this->assertSame(1, $this->moderationNotices($editorA->id));
         $this->assertSame(0, $this->moderationNotices($editorB->id));
 
@@ -148,6 +151,72 @@ class FaqEntryTest extends TestCase
         $this->assertSame(0, $this->moderationNotices($editorB->id));
     }
 
+    public function test_a_content_editor_cannot_undo_super_admin_moderation_by_toggling_active(): void
+    {
+        [$farmA] = $this->twoFarms();
+        $editor = $this->staff(Role::ContentEditor, $farmA);
+        $admin = $this->staff(Role::SuperAdmin);
+        $farmRow = FaqEntry::factory()
+            ->forFarm($farmA)
+            ->forIntent('walk_in')
+            ->forRoles([Role::FarmerSeller->value])
+            ->create([
+                'label' => 'What is a walk-in sale?',
+                'answer' => 'Farm A walk-in: record it at the shed.',
+                'is_active' => true,
+            ]);
+        $farmer = $this->farmer([], $farmA);
+
+        app(ModerateFaqEntryAction::class)->deactivate($admin, $farmRow);
+
+        $this->assertTrue(Gate::forUser($editor)->allows('update', $farmRow->fresh()));
+        $this->assertTrue(Gate::forUser($editor)->denies('deactivate', $farmRow->fresh()));
+
+        $farmRow->update([
+            'is_active' => true,
+            'answer' => 'Farm A walk-in: fixed copy at the shed.',
+            'moderated_at' => null,
+            'moderated_by' => null,
+        ]);
+
+        $stillHidden = $farmRow->fresh();
+        $this->assertTrue($stillHidden->is_active);
+        $this->assertTrue($stillHidden->isModerated());
+        $this->assertSame($admin->id, $stillHidden->moderated_by);
+        $this->assertSame('Farm A walk-in: fixed copy at the shed.', $stillHidden->answer);
+
+        $this->asUser($farmer)
+            ->postJson('/api/faq/ask', ['question' => 'What is a walk-in sale?'])
+            ->assertOk()
+            ->assertJsonPath('data.matched_id', 'walk_in')
+            ->assertJsonPath(
+                'data.answer',
+                fn (string $answer): bool => str_contains($answer, 'Record walk-in sale')
+                    && ! str_contains($answer, 'Farm A walk-in'),
+            );
+
+        app(ModerateFaqEntryAction::class)->notifySuperAdminsOfEditorRevision($stillHidden);
+
+        $this->assertSame(1, $this->moderationNotices($admin->id, 'updated after moderation'));
+        $this->assertSame(0, $this->moderationNotices($editor->id, 'updated after moderation'));
+
+        app(ModerateFaqEntryAction::class)->reactivate($admin, $stillHidden);
+
+        $live = $stillHidden->fresh();
+        $this->assertNull($live->moderated_at);
+        $this->assertNull($live->moderated_by);
+        $this->assertTrue($live->is_active);
+
+        $this->asUser($farmer)
+            ->postJson('/api/faq/ask', ['question' => 'What is a walk-in sale?'])
+            ->assertOk()
+            ->assertJsonPath('data.matched_id', 'walk_in')
+            ->assertJsonPath(
+                'data.answer',
+                fn (string $answer): bool => str_contains($answer, 'Farm A walk-in: fixed copy'),
+            );
+    }
+
     /**
      * @return array{0: Farm, 1: Farm}
      */
@@ -167,11 +236,15 @@ class FaqEntryTest extends TestCase
         return $user;
     }
 
-    private function moderationNotices(int $userId): int
+    private function moderationNotices(int $userId, ?string $bodyContains = null): int
     {
         return InAppNotification::query()
             ->where('user_id', $userId)
             ->where('type', NotificationType::FaqEntryModerated->value)
+            ->when(
+                $bodyContains !== null,
+                fn ($query) => $query->where('body', 'like', '%'.$bodyContains.'%'),
+            )
             ->count();
     }
 }

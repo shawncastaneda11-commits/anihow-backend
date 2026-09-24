@@ -214,10 +214,6 @@ class InAppNotifier
     }
 
     /**
-     * A new chat message reaches the other party on the order, never the
-     * sender and never the Super Admin.
-     */
-    /**
      * Super Admin hid or removed a farm FAQ override. The farm's Content
      * Editor is told; farmer-sellers are not.
      */
@@ -236,6 +232,21 @@ class InAppNotifier
         );
     }
 
+    public function faqEntryUpdatedAfterModeration(User $admin, string $label, ?Farm $farm = null): InAppNotification
+    {
+        return $this->send(
+            $admin,
+            NotificationType::FaqEntryModerated,
+            NotificationType::FaqEntryModerated->label(),
+            "FAQ answer updated after moderation: {$label}",
+            $farm,
+        );
+    }
+
+    /**
+     * A new chat message reaches the other party on the order, never the
+     * sender and never the Super Admin.
+     */
     public function orderMessage(User $recipient, Order $order, User $sender, string $body): InAppNotification
     {
         $preview = mb_strlen($body) > 80 ? mb_substr($body, 0, 77).'...' : $body;

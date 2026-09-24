@@ -34,12 +34,23 @@ class FaqEntry extends Model
             'keywords' => 'array',
             'sort_order' => 'integer',
             'is_active' => 'boolean',
+            'moderated_at' => 'datetime',
         ];
     }
 
     public function farm(): BelongsTo
     {
         return $this->belongsTo(Farm::class);
+    }
+
+    public function moderator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'moderated_by');
+    }
+
+    public function isModerated(): bool
+    {
+        return $this->moderated_at !== null;
     }
 
     public function isSystemWide(): bool
@@ -74,7 +85,9 @@ class FaqEntry extends Model
      */
     public function scopeActive(Builder $query): Builder
     {
-        return $query->where('faq_entries.is_active', true);
+        return $query
+            ->where('faq_entries.is_active', true)
+            ->whereNull('faq_entries.moderated_at');
     }
 
     /**

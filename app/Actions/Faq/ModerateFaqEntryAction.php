@@ -17,7 +17,11 @@ class ModerateFaqEntryAction
     {
         Gate::forUser($actor)->authorize('deactivate', $entry);
 
-        $entry->update(['is_active' => false]);
+        $entry->forceFill([
+            'moderated_at' => now(),
+            'moderated_by' => $actor->id,
+        ])->save();
+
         $this->notifyEditor($entry, deleted: false);
     }
 
@@ -25,7 +29,10 @@ class ModerateFaqEntryAction
     {
         Gate::forUser($actor)->authorize('deactivate', $entry);
 
-        $entry->update(['is_active' => true]);
+        $entry->forceFill([
+            'moderated_at' => null,
+            'moderated_by' => null,
+        ])->save();
     }
 
     public function deleteFarmRow(User $actor, FaqEntry $entry): void
@@ -38,6 +45,27 @@ class ModerateFaqEntryAction
 
         $this->notifyEditor($entry, deleted: true);
         $entry->delete();
+    }
+
+    /**
+     * The farm editor revised a hidden override. Super Admins review it
+     * before they reactivate.
+     */
+    public function notifySuperAdminsOfEditorRevision(FaqEntry $entry): void
+    {
+        if (! $entry->isModerated()) {
+            return;
+        }
+
+        $entry->loadMissing('farm');
+
+        User::permission(Permission::ManageSystemFaq->value)
+            ->get()
+            ->each(fn (User $admin) => $this->notifier->faqEntryUpdatedAfterModeration(
+                $admin,
+                $entry->label,
+                $entry->farm,
+            ));
     }
 
     private function notifyEditor(FaqEntry $entry, bool $deleted): void

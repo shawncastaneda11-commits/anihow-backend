@@ -4,7 +4,9 @@ namespace App\Filament\Resources\FaqEntries\Schemas;
 
 use App\Enums\Permission;
 use App\Enums\Role;
+use App\Models\FaqEntry;
 use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -21,6 +23,16 @@ class FaqEntryForm
 
         return $schema
             ->components([
+                Placeholder::make('moderation_notice')
+                    ->label('')
+                    ->content(function (?FaqEntry $record): string {
+                        $date = $record?->moderated_at?->toFormattedDateString() ?? '';
+
+                        return "Hidden by the Super Admin on {$date}. Edit the answer, then ask the Super Admin to reactivate it.";
+                    })
+                    ->visible(fn (?FaqEntry $record): bool => $record?->isModerated() ?? false)
+                    ->columnSpanFull(),
+
                 TextInput::make('intent_key')
                     ->label('Intent key')
                     ->required()
@@ -92,7 +104,9 @@ class FaqEntryForm
                 Toggle::make('is_active')
                     ->label('Active')
                     ->default(true)
-                    ->helperText('Inactive rows are hidden from the FAQ bot.'),
+                    ->helperText(fn (?FaqEntry $record): string => $record?->isModerated()
+                        ? 'Your Active toggle does not override Super Admin hide.'
+                        : 'Inactive rows are hidden from the FAQ bot.'),
             ]);
     }
 }

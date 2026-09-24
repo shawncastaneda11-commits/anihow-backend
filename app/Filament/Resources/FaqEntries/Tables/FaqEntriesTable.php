@@ -47,6 +47,11 @@ class FaqEntriesTable
                 IconColumn::make('is_active')
                     ->label('Active')
                     ->boolean(),
+                TextColumn::make('moderated_at')
+                    ->label('Moderation')
+                    ->badge()
+                    ->state(fn (FaqEntry $record): ?string => $record->isModerated() ? 'Hidden by admin' : null)
+                    ->color('danger'),
                 TextColumn::make('sort_order')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -78,7 +83,7 @@ class FaqEntriesTable
                     ->icon('heroicon-o-eye-slash')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->visible(fn (FaqEntry $record): bool => $record->is_active
+                    ->visible(fn (FaqEntry $record): bool => ! $record->isModerated()
                         && (auth()->user()?->can('deactivate', $record) ?? false))
                     ->action(function (FaqEntry $record): void {
                         $user = auth()->user();
@@ -94,7 +99,7 @@ class FaqEntriesTable
                     ->icon('heroicon-o-eye')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->visible(fn (FaqEntry $record): bool => ! $record->is_active
+                    ->visible(fn (FaqEntry $record): bool => $record->isModerated()
                         && (auth()->user()?->can('deactivate', $record) ?? false))
                     ->action(function (FaqEntry $record): void {
                         $user = auth()->user();

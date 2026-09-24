@@ -119,4 +119,23 @@ class StoragePruneOrphansTest extends TestCase
         $disk->assertExists($kept);
         $disk->assertExists($images->thumbnailPath($kept));
     }
+
+    public function test_prune_orphans_keeps_files_referenced_only_by_listing_photos(): void
+    {
+        $images = app(ImageVariants::class);
+        $listing = $this->listingFor($this->farmer());
+        $path = $images->store(UploadedFile::fake()->image('extra.jpg', 400, 300), 'listings');
+        $listing->photos()->create([
+            'path' => $path,
+            'sort_order' => 1,
+        ]);
+
+        $this->assertNull($listing->image_path);
+
+        Artisan::call('storage:prune-orphans');
+
+        $disk = Storage::disk(ListingStorage::diskName());
+        $disk->assertExists($path);
+        $disk->assertExists($images->thumbnailPath($path));
+    }
 }

@@ -6,6 +6,7 @@ use App\Models\CropCareArticle;
 use App\Models\Farm;
 use App\Models\FarmPhoto;
 use App\Models\Listing;
+use App\Models\ListingPhoto;
 use App\Support\ImageVariants;
 use App\Support\ListingStorage;
 use Illuminate\Console\Attributes\Description;
@@ -70,6 +71,7 @@ class PruneOrphanImages extends Command
             ->merge(Listing::query()->withTrashed()->whereNotNull('image_path')->pluck('image_path'))
             ->merge(Farm::query()->whereNotNull('cover_photo_path')->pluck('cover_photo_path'))
             ->merge(FarmPhoto::query()->whereNotNull('path')->pluck('path'))
+            ->merge(ListingPhoto::query()->whereNotNull('path')->pluck('path'))
             ->merge(CropCareArticle::query()->withTrashed()->whereNotNull('image_path')->pluck('image_path'))
             ->filter(fn (mixed $path): bool => is_string($path) && $path !== '')
             ->map(fn (string $path): string => str_replace('\\', '/', $path))

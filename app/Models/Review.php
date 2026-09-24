@@ -39,12 +39,12 @@ class Review extends Model
 
     public function buyer(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'buyer_id');
+        return $this->belongsTo(User::class, 'buyer_id')->withTrashed();
     }
 
     public function farmerSeller(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'farmer_seller_id');
+        return $this->belongsTo(User::class, 'farmer_seller_id')->withTrashed();
     }
 
     public function order(): BelongsTo

@@ -10,6 +10,7 @@ class UserAccount {
     required this.roles,
     this.permissions = const [],
     this.phone,
+    this.location,
     this.shopName,
     this.emailVerifiedAt,
     this.farmId,
@@ -22,6 +23,7 @@ class UserAccount {
   final List<String> roles;
   final List<String> permissions;
   final String? phone;
+  final String? location;
   final String? shopName;
   final String? emailVerifiedAt;
   final int? farmId;
@@ -41,6 +43,7 @@ class UserAccount {
           .map((permission) => permission.toString())
           .toList(),
       phone: json['phone'] as String?,
+      location: json['location'] as String?,
       shopName: json['shop_name'] as String?,
       emailVerifiedAt: json['email_verified_at'] as String?,
       farmId: ListingItem._asCount(farmMap?['id']),
@@ -56,6 +59,32 @@ class UserAccount {
   bool get isVerified => emailVerifiedAt != null && emailVerifiedAt!.isNotEmpty;
   String get roleLabel =>
       roles.isEmpty ? 'unknown' : roles.first.replaceAll('_', ' ');
+}
+
+class AccountDeletionRequest {
+  const AccountDeletionRequest({
+    required this.id,
+    required this.status,
+    this.reason,
+    this.rejectionNote,
+  });
+
+  final int id;
+  final String status;
+  final String? reason;
+  final String? rejectionNote;
+
+  bool get isPending => status == 'pending';
+  bool get isRejected => status == 'rejected';
+
+  factory AccountDeletionRequest.fromJson(Map<String, dynamic> json) {
+    return AccountDeletionRequest(
+      id: json['id'] as int,
+      status: json['status'] as String? ?? '',
+      reason: json['reason'] as String?,
+      rejectionNote: json['rejection_note'] as String?,
+    );
+  }
 }
 
 class CategoryItem {

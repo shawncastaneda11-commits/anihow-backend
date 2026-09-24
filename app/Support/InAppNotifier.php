@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Enums\NotificationType;
 use App\Enums\OrderStatus;
 use App\Mail\ListingLowStockMail;
+use App\Models\AccountDeletionRequest;
 use App\Models\Farm;
 use App\Models\FarmAnnouncement;
 use App\Models\InAppNotification;
@@ -261,6 +262,33 @@ class InAppNotifier
      * A new chat message reaches the other party on the order, never the
      * sender and never the Super Admin.
      */
+    public function accountDeletionRequested(User $admin, User $requester, Model $request): InAppNotification
+    {
+        return $this->send(
+            $admin,
+            NotificationType::AccountDeletionRequested,
+            NotificationType::AccountDeletionRequested->label(),
+            "{$requester->name} requested deletion of their account.",
+            $request,
+        );
+    }
+
+    public function accountDeletionRejected(User $user, Model $request): InAppNotification
+    {
+        $note = $request instanceof AccountDeletionRequest
+            ? $request->rejection_note
+            : null;
+        $suffix = filled($note) ? " {$note}" : '';
+
+        return $this->send(
+            $user,
+            NotificationType::AccountDeletionRejected,
+            NotificationType::AccountDeletionRejected->label(),
+            "Your account deletion request was rejected.{$suffix}",
+            $request,
+        );
+    }
+
     public function orderMessage(User $recipient, Order $order, User $sender, string $body): InAppNotification
     {
         $preview = mb_strlen($body) > 80 ? mb_substr($body, 0, 77).'...' : $body;

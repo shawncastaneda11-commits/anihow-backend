@@ -65,6 +65,10 @@ enum Permission: string
     case ViewOwnAnalytics = 'view_own_analytics';
     case GenerateExports = 'generate_exports';
 
+    // Data-subject rights for app users (buyers and farmer-sellers)
+    case ExportOwnData = 'export_own_data';
+    case RequestAccountDeletion = 'request_account_deletion';
+
     public function label(): string
     {
         return match ($this) {
@@ -98,6 +102,8 @@ enum Permission: string
             self::ViewFarmAnalytics => 'View farm analytics',
             self::ViewOwnAnalytics => 'View own analytics',
             self::GenerateExports => 'Generate exports',
+            self::ExportOwnData => 'Export own data',
+            self::RequestAccountDeletion => 'Request account deletion',
         };
     }
 
@@ -161,6 +167,8 @@ enum Permission: string
                 self::RecordWalkInSales,
                 self::ViewOwnAnalytics,
                 self::SubmitReports,
+                self::ExportOwnData,
+                self::RequestAccountDeletion,
             ],
 
             Role::Buyer => [
@@ -168,6 +176,8 @@ enum Permission: string
                 self::PlaceOrders,
                 self::WriteReviews,
                 self::SubmitReports,
+                self::ExportOwnData,
+                self::RequestAccountDeletion,
             ],
         };
     }

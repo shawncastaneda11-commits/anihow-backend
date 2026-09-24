@@ -89,6 +89,43 @@ class AppStrings {
         'Enter your current password, then choose a new one.',
         'Ilagay ang kasalukuyang password, tapos pumili ng bago.',
       );
+  String get myData => t('My data', 'Aking datos');
+  String get saveProfile => t('Save profile', 'I-save ang profile');
+  String get profileUpdated => t('Profile updated.', 'Na-update na ang profile.');
+  String get emailNotEditable => t(
+        'Email cannot be changed here. It is your verified login.',
+        'Hindi mababago ang email dito. Ito ang beripikadong login mo.',
+      );
+  String get shopEditedSeparately => t(
+        'Shop name and storefront are edited from Edit profile.',
+        'Ang pangalan ng tindahan ay dine-edit sa I-edit ang profile.',
+      );
+  String get downloadMyData => t('Download my data', 'I-download ang aking datos');
+  String get dataSavedTo => t('Saved to', 'Nai-save sa');
+  String get requestAccountDeletion => t(
+        'Request account deletion',
+        'Humiling ng pagbura ng account',
+      );
+  String get deletionKeptHint => t(
+        'Order records stay, shown as “Deleted user”, so the farm ledger stays accurate. Your profile, cart, favorites and notifications are removed.',
+        'Nanatili ang mga order, ipapakita bilang “Deleted user”, para manatiling tama ang ledger ng bukid. Mabubura ang profile, cart, paborito at mga abiso.',
+      );
+  String get confirmDeletionTitle => t(
+        'Delete your account?',
+        'Burahin ang account mo?',
+      );
+  String get confirmDeletionBody => t(
+        'A Super Admin will review this. You can cancel while it is pending. Open orders must be finished first.',
+        'Susuriin ito ng Super Admin. Maaari mo itong kanselahin habang pending. Dapat tapos na ang mga bukas na order.',
+      );
+  String get confirmDeletion => t('Send request', 'Ipadala ang kahilingan');
+  String get deletionRequested => t(
+        'Deletion requested. Waiting for a Super Admin.',
+        'Nahiling na ang pagbura. Hinihintay ang Super Admin.',
+      );
+  String get cancelDeletionRequest => t('Cancel request', 'Kanselahin ang kahilingan');
+  String get deletionCancelled => t('Request cancelled.', 'Kinansela ang kahilingan.');
+  String get deletionRejected => t('Request rejected', 'Tinanggihan ang kahilingan');
 
   String get faqTitle => t('FAQ', 'Mga tanong');
   String get faqIntro => t(
@@ -501,6 +538,14 @@ class AppStrings {
           ),
         'farm_announcement' => t('Farm announcement', 'Anunsyo ng bukid'),
         'faq_entry_moderated' => t('FAQ answer moderated', 'May binago sa sagot sa FAQ'),
+        'account_deletion_requested' => t(
+            'Account deletion requested',
+            'May humiling ng pagbura ng account',
+          ),
+        'account_deletion_rejected' => t(
+            'Account deletion request rejected',
+            'Tinanggihan ang kahilingan sa pagbura ng account',
+          ),
         _ => fallback,
       };
 

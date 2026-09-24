@@ -62,6 +62,14 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute((int) config('anihow.rate_limit_auth', 5))
                 ->by($email.'|'.$request->ip());
         });
+
+        RateLimiter::for('data-export', function (Request $request) {
+            if (app()->runningUnitTests()) {
+                return Limit::none();
+            }
+
+            return Limit::perHour(3)->by($request->user()?->id ?: $request->ip());
+        });
     }
 
     private function configureAuthUrls(): void

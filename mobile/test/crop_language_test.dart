@@ -55,6 +55,8 @@ void main() {
     expect(filipino.salesWindow('2026-09-18', '2026-09-24'), 'Set 18 hanggang Set 24');
     expect(filipino.unverified, 'Hindi pa');
     expect(filipino.logOut, 'Mag-log out');
+    expect(english.myData, 'My data');
+    expect(filipino.myData, 'Aking datos');
   });
 
   testWidgets('Settings has English and Filipino only, and Filipino copy', (tester) async {

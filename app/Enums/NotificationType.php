@@ -22,6 +22,8 @@ enum NotificationType: string
     case TawadCeilingLowered = 'tawad_ceiling_lowered';
     case FarmAnnouncement = 'farm_announcement';
     case FaqEntryModerated = 'faq_entry_moderated';
+    case AccountDeletionRequested = 'account_deletion_requested';
+    case AccountDeletionRejected = 'account_deletion_rejected';
 
     public function label(): string
     {
@@ -41,6 +43,8 @@ enum NotificationType: string
             self::TawadCeilingLowered => 'Tawad limit lowered below your discount',
             self::FarmAnnouncement => 'Farm announcement',
             self::FaqEntryModerated => 'FAQ answer moderated',
+            self::AccountDeletionRequested => 'Account deletion requested',
+            self::AccountDeletionRejected => 'Account deletion request rejected',
         };
     }
 

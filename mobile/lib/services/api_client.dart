@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -117,6 +120,47 @@ class ApiClient {
     final response = await _get('/auth/user');
     return UserAccount.fromJson(_asMap(response['data'] ?? response));
   }
+
+  Future<UserAccount> updateProfile({
+    required String name,
+    String? phone,
+    String? location,
+  }) async {
+    final response = await _patchJson('/auth/user', {
+      'name': name,
+      'phone': phone,
+      'location': location,
+    });
+    return UserAccount.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<Map<String, dynamic>> exportOwnData() => _get('/auth/user/export');
+
+  Future<String> saveOwnDataExport() async {
+    final data = await exportOwnData();
+    final date = DateTime.now().toIso8601String().split('T').first;
+    final file = File('${Directory.systemTemp.path}/anihow-my-data-$date.json');
+    await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data));
+    return file.path;
+  }
+
+  Future<AccountDeletionRequest?> deletionRequest() async {
+    final response = await _get('/auth/user/deletion-request');
+    final data = response['data'];
+    if (data is Map) {
+      return AccountDeletionRequest.fromJson(Map<String, dynamic>.from(data));
+    }
+    return null;
+  }
+
+  Future<AccountDeletionRequest> requestAccountDeletion({String? reason}) async {
+    final response = await _post('/auth/user/deletion-request', {
+      if (reason != null && reason.isNotEmpty) 'reason': reason,
+    });
+    return AccountDeletionRequest.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<void> cancelAccountDeletion() => _delete('/auth/user/deletion-request');
 
   Future<void> logout() async {
     try {

@@ -2,7 +2,9 @@
 
 use App\Enums\Role;
 use App\Http\Controllers\Api\Admin\CreateFarmerSellerController;
+use App\Http\Controllers\Api\Auth\AccountDeletionRequestController;
 use App\Http\Controllers\Api\Auth\ChangePasswordController;
+use App\Http\Controllers\Api\Auth\ExportOwnDataController;
 use App\Http\Controllers\Api\Auth\ForgotPasswordController;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\LogoutController;
@@ -10,6 +12,7 @@ use App\Http\Controllers\Api\Auth\MeController;
 use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\Auth\ResendVerificationController;
 use App\Http\Controllers\Api\Auth\ResetPasswordController;
+use App\Http\Controllers\Api\Auth\UpdateProfileController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\Cart\CartController;
 use App\Http\Controllers\Api\Chat\OrderMessageController;
@@ -47,6 +50,16 @@ Route::prefix('auth')->group(function (): void {
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('logout', LogoutController::class)->name('auth.logout');
         Route::get('user', MeController::class)->name('auth.user');
+        Route::patch('user', UpdateProfileController::class)->name('auth.user.update');
+        Route::get('user/export', ExportOwnDataController::class)
+            ->middleware('throttle:data-export')
+            ->name('auth.user.export');
+        Route::get('user/deletion-request', [AccountDeletionRequestController::class, 'show'])
+            ->name('auth.user.deletion-request.show');
+        Route::post('user/deletion-request', [AccountDeletionRequestController::class, 'store'])
+            ->name('auth.user.deletion-request.store');
+        Route::delete('user/deletion-request', [AccountDeletionRequestController::class, 'destroy'])
+            ->name('auth.user.deletion-request.destroy');
         Route::post('password', ChangePasswordController::class)->name('auth.password');
         Route::middleware('throttle:auth')->group(function (): void {
             Route::post('email/verification-notification', ResendVerificationController::class)

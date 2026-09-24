@@ -11,6 +11,7 @@ import '../../theme/anihow_theme.dart';
 import '../../widgets/anihow_logo.dart';
 import '../../widgets/status_pill.dart';
 import 'change_password_screen.dart';
+import 'my_data_screen.dart';
 import 'profile_screen.dart';
 import 'verify_email_screen.dart';
 import '../faq/faq_bot_screen.dart';
@@ -121,6 +122,14 @@ class SettingsScreen extends StatelessWidget {
                   label: s.editProfile,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(builder: (_) => const FarmerProfileScreen()),
+                  ),
+                ),
+              if (user?.isBuyer == true || user?.isFarmerSeller == true)
+                _SettingsRow(
+                  icon: Icons.shield_outlined,
+                  label: s.myData,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(builder: (_) => const MyDataScreen()),
                   ),
                 ),
               _SettingsRow(

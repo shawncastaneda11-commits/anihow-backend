@@ -76,6 +76,11 @@ class Farm extends Model
         return $this->hasMany(FarmPhoto::class)->orderBy('sort_order');
     }
 
+    public function announcements(): HasMany
+    {
+        return $this->hasMany(FarmAnnouncement::class);
+    }
+
     public function coverPhotoUrl(): ?string
     {
         if (! filled($this->cover_photo_path)) {

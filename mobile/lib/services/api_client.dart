@@ -275,7 +275,7 @@ class ApiClient {
     return _list(
       '/orders/$orderId/messages',
       query: {
-        if (afterId != null) 'after_id': afterId,
+        'after_id': ?afterId,
       },
       parse: OrderMessage.fromJson,
     );
@@ -433,6 +433,10 @@ class ApiClient {
   Future<FarmProfile> farm(int farmId) async {
     final response = await _get('/farms/$farmId');
     return FarmProfile.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<List<FarmAnnouncement>> farmerAnnouncements() {
+    return _list('/farmer/announcements', parse: FarmAnnouncement.fromJson);
   }
 
   Future<ShopProfile> updateFarmerShop(Map<String, dynamic> body) async {

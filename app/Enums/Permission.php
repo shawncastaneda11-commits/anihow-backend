@@ -51,6 +51,9 @@ enum Permission: string
     case ManageOwnFarmArticles = 'manage_own_farm_articles';
     case ModerateArticles = 'moderate_articles';
 
+    // Farm announcements
+    case ManageOwnFarmAnnouncements = 'manage_own_farm_announcements';
+
     // Descriptive analytics
     case ViewSystemAnalytics = 'view_system_analytics';
     case ViewFarmAnalytics = 'view_farm_analytics';
@@ -83,6 +86,7 @@ enum Permission: string
             self::ResolveReports => 'Resolve reports',
             self::ManageOwnFarmArticles => 'Manage own farm crop-care articles',
             self::ModerateArticles => 'Moderate crop-care articles',
+            self::ManageOwnFarmAnnouncements => 'Manage own farm announcements',
             self::ViewSystemAnalytics => 'View system-wide analytics',
             self::ViewFarmAnalytics => 'View farm analytics',
             self::ViewOwnAnalytics => 'View own analytics',
@@ -126,6 +130,7 @@ enum Permission: string
                 self::ModerateReviews,
                 self::ResolveReports,
                 self::ModerateArticles,
+                self::ManageOwnFarmAnnouncements,
                 self::ViewSystemAnalytics,
                 self::ViewFarmAnalytics,
                 self::GenerateExports,
@@ -136,6 +141,7 @@ enum Permission: string
                 self::SetFarmPricing,
                 self::ViewOwnFarmRoster,
                 self::ManageOwnFarmArticles,
+                self::ManageOwnFarmAnnouncements,
                 self::ViewFarmAnalytics,
             ],
 

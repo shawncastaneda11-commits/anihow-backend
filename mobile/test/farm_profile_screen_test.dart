@@ -39,6 +39,14 @@ void main() {
             storefronts: [
               FarmStorefront(id: 4, shopName: 'Nena Stall'),
             ],
+            announcements: [
+              FarmAnnouncement(
+                id: 9,
+                title: 'Harvest day Saturday',
+                body: 'Bring crates by 6am.',
+                isPinned: true,
+              ),
+            ],
           ),
         ),
       ),
@@ -50,6 +58,8 @@ void main() {
     expect(find.text('Morning harvest.'), findsOneWidget);
     expect(find.text('Barangay hall'), findsOneWidget);
     expect(find.text('Nena Stall'), findsOneWidget);
+    expect(find.text('Harvest day Saturday'), findsOneWidget);
+    expect(find.text('Bring crates by 6am.'), findsOneWidget);
     expect(find.byKey(const Key('farm-cover')), findsOneWidget);
     expect(find.byKey(const Key('farm-cover-fallback')), findsNothing);
   });

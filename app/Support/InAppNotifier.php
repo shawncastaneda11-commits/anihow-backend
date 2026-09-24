@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Enums\NotificationType;
 use App\Enums\OrderStatus;
 use App\Mail\ListingLowStockMail;
+use App\Models\FarmAnnouncement;
 use App\Models\InAppNotification;
 use App\Models\Listing;
 use App\Models\Order;
@@ -193,6 +194,21 @@ class InAppNotifier
             NotificationType::AccountApproved,
             NotificationType::AccountApproved->label(),
             'Your account has been approved. You can now sign in and start selling.',
+        );
+    }
+
+    /**
+     * A currently-active farm announcement reaches that farm's farmer-sellers.
+     * Buyers are never notified.
+     */
+    public function farmAnnouncement(User $farmer, FarmAnnouncement $announcement): InAppNotification
+    {
+        return $this->send(
+            $farmer,
+            NotificationType::FarmAnnouncement,
+            $announcement->title,
+            $announcement->body,
+            $announcement,
         );
     }
 

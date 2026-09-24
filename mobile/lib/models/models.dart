@@ -815,6 +815,41 @@ class ShopProfile {
   }
 }
 
+class FarmAnnouncement {
+  const FarmAnnouncement({
+    required this.id,
+    required this.title,
+    required this.body,
+    this.audience,
+    this.startsAt,
+    this.endsAt,
+    this.isPinned = false,
+    this.createdAt,
+  });
+
+  final int id;
+  final String title;
+  final String body;
+  final String? audience;
+  final String? startsAt;
+  final String? endsAt;
+  final bool isPinned;
+  final String? createdAt;
+
+  factory FarmAnnouncement.fromJson(Map<String, dynamic> json) {
+    return FarmAnnouncement(
+      id: json['id'] as int,
+      title: json['title'] as String? ?? '',
+      body: json['body'] as String? ?? '',
+      audience: json['audience'] as String?,
+      startsAt: json['starts_at'] as String?,
+      endsAt: json['ends_at'] as String?,
+      isPinned: json['is_pinned'] == true || json['is_pinned'] == 1 || json['is_pinned'] == '1',
+      createdAt: json['created_at'] as String?,
+    );
+  }
+}
+
 class FarmPhotoItem {
   const FarmPhotoItem({
     required this.id,
@@ -871,6 +906,7 @@ class FarmProfile {
     this.photos = const [],
     this.farmerSellersCount = 0,
     this.storefronts = const [],
+    this.announcements = const [],
   });
 
   final int id;
@@ -887,6 +923,7 @@ class FarmProfile {
   final List<FarmPhotoItem> photos;
   final int farmerSellersCount;
   final List<FarmStorefront> storefronts;
+  final List<FarmAnnouncement> announcements;
 
   bool get hasCoverPhoto => coverPhotoUrl != null && coverPhotoUrl!.isNotEmpty;
 
@@ -920,6 +957,10 @@ class FarmProfile {
       storefronts: ((json['storefronts'] as List?) ?? const [])
           .whereType<Map>()
           .map((item) => FarmStorefront.fromJson(Map<String, dynamic>.from(item)))
+          .toList(),
+      announcements: ((json['announcements'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((item) => FarmAnnouncement.fromJson(Map<String, dynamic>.from(item)))
           .toList(),
     );
   }
@@ -1010,6 +1051,13 @@ class AppNotification {
     return type == 'listing_low_stock' ||
         related == 'listing' ||
         related.endsWith('Listing');
+  }
+
+  bool get pointsToAnnouncement {
+    final related = relatedType ?? '';
+    return type == 'farm_announcement' ||
+        related == 'farm_announcement' ||
+        related.endsWith('FarmAnnouncement');
   }
 
   bool get pointsToOrder {

@@ -136,6 +136,11 @@ class AppStrings {
         'Message the seller through your order chat.',
         'I-message ang tindahan sa chat ng iyong order.',
       );
+  String get announcements => t('Announcements', 'Mga anunsyo');
+  String get viewAnnouncements => t('View announcements', 'Tingnan ang mga anunsyo');
+  String get noAnnouncements => t('No announcements right now.', 'Walang anunsyo ngayon.');
+  String get dismissAnnouncement => t('Dismiss', 'Isara');
+  String get announcementPinned => t('Pinned', 'Naka-pin');
   String get activeListings => t('Active listings', 'Mga active na listing');
   String get noActiveListings => t('No active listings', 'Walang active na listing');
   String get noBioYet => t('No bio yet', 'Wala pang bio');
@@ -435,6 +440,7 @@ class AppStrings {
             'Tawad limit lowered below your discount',
             'Bumaba ang limit ng tawad kaysa sa diskwento mo',
           ),
+        'farm_announcement' => t('Farm announcement', 'Anunsyo ng bukid'),
         _ => fallback,
       };
 

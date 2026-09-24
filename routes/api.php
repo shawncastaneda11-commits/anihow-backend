@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\Cart\CartController;
 use App\Http\Controllers\Api\Chat\OrderMessageController;
 use App\Http\Controllers\Api\CropCare\CropCareArticleController;
 use App\Http\Controllers\Api\Faq\FaqController;
+use App\Http\Controllers\Api\Farmer\FarmerAnnouncementController;
 use App\Http\Controllers\Api\Farms\FarmController;
 use App\Http\Controllers\Api\Favorites\FavoriteController;
 use App\Http\Controllers\Api\Listings\ListingController;
@@ -132,6 +133,9 @@ Route::middleware([
 
     Route::get('shop', [FarmerShopController::class, 'show'])->name('farmer.shop.show');
     Route::match(['put', 'patch'], 'shop', [FarmerShopController::class, 'update'])->name('farmer.shop.update');
+
+    Route::get('announcements', [FarmerAnnouncementController::class, 'index'])
+        ->name('farmer.announcements.index');
 });
 
 Route::middleware([

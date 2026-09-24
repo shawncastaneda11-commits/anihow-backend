@@ -19,6 +19,7 @@ enum NotificationType: string
     case AccountApproved = 'account_approved';
     case FloorPriceRaised = 'floor_price_raised';
     case TawadCeilingLowered = 'tawad_ceiling_lowered';
+    case FarmAnnouncement = 'farm_announcement';
 
     public function label(): string
     {
@@ -35,6 +36,7 @@ enum NotificationType: string
             self::AccountApproved => 'Account approved',
             self::FloorPriceRaised => 'Floor price raised above your listing',
             self::TawadCeilingLowered => 'Tawad limit lowered below your discount',
+            self::FarmAnnouncement => 'Farm announcement',
         };
     }
 

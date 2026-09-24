@@ -15,6 +15,7 @@ import '../buyer/buyer_order_detail_screen.dart';
 import '../buyer/order_history_screen.dart';
 import '../farmer/farmer_orders_screen.dart';
 import '../chat/order_chat_screen.dart';
+import '../farmer/farm_announcements_screen.dart';
 import '../farmer/listing_form_screen.dart';
 import '../farmer/listings_screen.dart';
 
@@ -249,6 +250,18 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
   final user = context.read<AuthController>().user;
   final api = context.read<AuthController>().api;
   final isFarmer = user?.isFarmerSeller == true;
+
+  if (isFarmer && item.pointsToAnnouncement) {
+    if (!context.mounted) {
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => FarmAnnouncementsScreen(highlightId: item.relatedId),
+      ),
+    );
+    return;
+  }
 
   if (item.pointsToListing && item.relatedId != null) {
     if (isFarmer) {

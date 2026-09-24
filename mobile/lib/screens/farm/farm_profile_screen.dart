@@ -173,6 +173,22 @@ class FarmProfileView extends StatelessWidget {
                   tone: AniHowHintTone.brand,
                 ),
               ],
+              if (farm.announcements.isNotEmpty) ...[
+                const SizedBox(height: AniHowSpace.section),
+                Text(s.announcements, style: theme.textTheme.titleMedium),
+                const SizedBox(height: AniHowSpace.cardGap),
+                ...farm.announcements.map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
+                    child: AniHowHintCard(
+                      icon: item.isPinned ? Icons.push_pin_outlined : Icons.campaign_outlined,
+                      title: item.title,
+                      body: item.body,
+                      tone: AniHowHintTone.brand,
+                    ),
+                  ),
+                ),
+              ],
               if (contactPerson != null && contactPerson.isNotEmpty) ...[
                 const SizedBox(height: AniHowSpace.section),
                 Text(s.farmContact, style: theme.textTheme.titleMedium),

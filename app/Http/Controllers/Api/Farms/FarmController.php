@@ -17,6 +17,11 @@ class FarmController extends Controller
 
         $farm->load([
             'photos',
+            'announcements' => fn ($query) => $query
+                ->publicAudience()
+                ->active()
+                ->orderByDesc('is_pinned')
+                ->orderByDesc('created_at'),
             'farmerSellers' => fn ($query) => $query
                 ->where('status', UserStatus::Active)
                 ->orderByRaw('coalesce(shop_name, name)'),

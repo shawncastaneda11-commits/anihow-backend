@@ -27,6 +27,7 @@ class FarmAnnouncementFactory extends Factory
             'starts_at' => null,
             'ends_at' => null,
             'is_pinned' => false,
+            'notified_at' => null,
         ];
     }
 

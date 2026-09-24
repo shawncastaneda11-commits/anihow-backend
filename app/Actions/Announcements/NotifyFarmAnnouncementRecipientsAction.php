@@ -13,7 +13,9 @@ class NotifyFarmAnnouncementRecipientsAction
 
     public function handle(FarmAnnouncement $announcement): void
     {
-        if (! $announcement->isCurrentlyActive()) {
+        $announcement->refresh();
+
+        if ($announcement->notified_at !== null || ! $announcement->isCurrentlyActive()) {
             return;
         }
 
@@ -23,5 +25,7 @@ class NotifyFarmAnnouncementRecipientsAction
             ->where('status', UserStatus::Active)
             ->get()
             ->each(fn (User $seller) => $this->notifier->farmAnnouncement($seller, $announcement));
+
+        $announcement->update(['notified_at' => now()]);
     }
 }

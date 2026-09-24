@@ -21,7 +21,6 @@ class FarmerListingsScreen extends StatefulWidget {
 class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
   List<ListingItem> _items = const [];
   List<FarmAnnouncement> _announcements = const [];
-  int? _dismissedAnnouncementId;
   bool _loading = true;
   Object? _error;
   final Set<int> _toggling = {};
@@ -120,19 +119,10 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
     };
   }
 
-  FarmAnnouncement? get _bannerAnnouncement {
-    for (final item in _announcements) {
-      if (item.id != _dismissedAnnouncementId) {
-        return item;
-      }
-    }
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
-    final banner = _bannerAnnouncement;
+    final userId = context.watch<AuthController>().user?.id;
 
     return DefaultTabController(
       length: 3,
@@ -143,7 +133,7 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
         ),
         body: Column(
           children: [
-            if (banner != null)
+            if (userId != null && _announcements.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AniHowSpace.screen,
@@ -151,10 +141,10 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
                   AniHowSpace.screen,
                   0,
                 ),
-                child: FarmAnnouncementBanner(
-                  announcement: banner,
+                child: FarmerAnnouncementHomeBanner(
+                  userId: userId,
+                  announcements: _announcements,
                   onOpen: () => openFarmAnnouncements(context),
-                  onDismiss: () => setState(() => _dismissedAnnouncementId = banner.id),
                 ),
               ),
             Align(

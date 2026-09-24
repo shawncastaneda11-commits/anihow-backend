@@ -13,6 +13,7 @@ use App\Models\InAppNotification;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Tests\Concerns\CreatesMarketplaceActors;
 use Tests\TestCase;
@@ -27,6 +28,13 @@ class FarmAnnouncementTest extends TestCase
         parent::setUp();
 
         $this->seed(RolePermissionSeeder::class);
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
     }
 
     public function test_a_content_editor_can_create_and_manage_announcements_for_their_own_farm_only(): void
@@ -199,6 +207,44 @@ class FarmAnnouncementTest extends TestCase
         app(NotifyFarmAnnouncementRecipientsAction::class)->handle($upcoming);
 
         $this->assertSame(0, $this->notices($seller->id));
+    }
+
+    public function test_a_scheduled_announcement_notifies_once_when_it_goes_live(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-09-24 08:00:00'));
+
+        [$farmA, $farmB] = $this->twoFarms();
+        $sellerA = $this->farmer(['email' => 'seller.a@example.com'], $farmA);
+        $sellerB = $this->farmer(['email' => 'seller.b@example.com'], $farmB);
+        $announcement = FarmAnnouncement::factory()->forFarm($farmA)->create([
+            'title' => 'Harvest day Saturday',
+            'starts_at' => now()->addHour(),
+            'ends_at' => now()->addDays(2),
+        ]);
+
+        app(NotifyFarmAnnouncementRecipientsAction::class)->handle($announcement);
+
+        $this->assertSame(0, $this->notices($sellerA->id));
+        $this->assertSame(0, $this->notices($sellerB->id));
+        $this->assertNull($announcement->fresh()->notified_at);
+
+        Carbon::setTestNow(now()->addHour());
+
+        $this->artisan('announcements:notify-due')->assertSuccessful();
+
+        $this->assertSame(1, $this->notices($sellerA->id));
+        $this->assertSame(0, $this->notices($sellerB->id));
+        $this->assertNotNull($announcement->fresh()->notified_at);
+
+        $this->artisan('announcements:notify-due')->assertSuccessful();
+
+        $this->assertSame(1, $this->notices($sellerA->id));
+
+        $announcement->update(['title' => 'Harvest day Saturday (updated)']);
+        app(NotifyFarmAnnouncementRecipientsAction::class)->handle($announcement->fresh());
+
+        $this->assertSame(1, $this->notices($sellerA->id));
+        $this->assertSame(0, $this->notices($sellerB->id));
     }
 
     public function test_farmer_announcements_are_pinned_first_then_newest(): void

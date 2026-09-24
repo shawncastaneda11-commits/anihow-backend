@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'starts_at',
     'ends_at',
     'is_pinned',
+    'notified_at',
 ])]
 class FarmAnnouncement extends Model
 {
@@ -32,6 +33,7 @@ class FarmAnnouncement extends Model
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
             'is_pinned' => 'boolean',
+            'notified_at' => 'datetime',
         ];
     }
 

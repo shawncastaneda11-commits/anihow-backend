@@ -6,13 +6,12 @@ import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
-import '../../support/relative_time.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/produce_card.dart';
-import '../../widgets/report_sheet.dart';
 import '../../widgets/shop_profile_parts.dart';
+import '../../widgets/shop_review_tile.dart';
 import '../farm/farm_profile_screen.dart';
 import 'listing_detail_screen.dart';
 
@@ -301,7 +300,7 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                       ..._reviews.map(
                         (review) => Padding(
                           padding: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
-                          child: _ReviewCard(review: review),
+                          child: ShopReviewTile(review: review),
                         ),
                       ),
                       if (_page < _lastPage)
@@ -316,70 +315,6 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
             },
           );
         },
-      ),
-    );
-  }
-}
-
-class _ReviewCard extends StatelessWidget {
-  const _ReviewCard({required this.review});
-
-  final ShopReview review;
-
-  @override
-  Widget build(BuildContext context) {
-    final time = relativeTime(review.createdAt);
-    return Card(
-      child: Padding(
-        padding: AniHowSpace.cardPadding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    review.reviewerName,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                ),
-                if (time.isNotEmpty)
-                  Text(
-                    time,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w400,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                  ),
-                if (!review.isOwn)
-                  TextButton(
-                    style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-                    onPressed: () => showReportSheet(
-                      context,
-                      targetType: 'review',
-                      targetId: review.id,
-                    ),
-                    child: Text(AppStrings.of(context).report),
-                  ),
-              ],
-            ),
-            const SizedBox(height: AniHowSpace.labelGap),
-            Row(
-              children: [
-                for (var index = 1; index <= 5; index++)
-                  Icon(
-                    index <= review.rating ? Icons.star_rounded : Icons.star_outline_rounded,
-                    size: 16,
-                    color: AniHowColors.pending,
-                  ),
-              ],
-            ),
-            if (review.comment != null && review.comment!.isNotEmpty) ...[
-              const SizedBox(height: AniHowSpace.labelGap),
-              Text(review.comment!, style: Theme.of(context).textTheme.bodyMedium),
-            ],
-          ],
-        ),
       ),
     );
   }

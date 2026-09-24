@@ -152,6 +152,7 @@ Route::middleware([
     Route::post('walk-in-sales', WalkInSaleController::class)->name('farmer.walk-in-sales.store');
 
     Route::get('shop', [FarmerShopController::class, 'show'])->name('farmer.shop.show');
+    Route::get('shop/reviews', [FarmerShopController::class, 'reviews'])->name('farmer.shop.reviews');
     Route::match(['put', 'patch'], 'shop', [FarmerShopController::class, 'update'])->name('farmer.shop.update');
 
     Route::get('announcements', [FarmerAnnouncementController::class, 'index'])

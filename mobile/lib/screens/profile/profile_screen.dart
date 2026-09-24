@@ -19,6 +19,7 @@ import '../../widgets/status_pill.dart';
 import '../buyer/favorites_screen.dart';
 import '../buyer/order_history_screen.dart';
 import '../farmer/listing_form_screen.dart';
+import '../farmer/shop_reviews_screen.dart';
 import '../farmer/walk_in_sale_screen.dart';
 import '../faq/faq_bot_screen.dart';
 import '../farm/farm_profile_screen.dart';
@@ -379,6 +380,32 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
               rating: shop.hasRating ? shop.averageRating : null,
             ),
           ],
+          const SizedBox(height: AniHowSpace.cardGap),
+          ListTile(
+            key: const ValueKey('farmer-shop-reviews'),
+            contentPadding: EdgeInsets.zero,
+            minTileHeight: 48,
+            leading: const Icon(Icons.rate_review_outlined),
+            title: Text(s.reviews),
+            trailing: Text('${shop.reviewsCount}'),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ShopReviewsScreen(
+                    preview: _previewing
+                        ? PagedShopReviews(
+                            reviews: const [],
+                            currentPage: 1,
+                            lastPage: 1,
+                            averageRating: shop.averageRating,
+                            reviewsCount: shop.reviewsCount,
+                          )
+                        : null,
+                  ),
+                ),
+              );
+            },
+          ),
           const SizedBox(height: AniHowSpace.cardGap),
           ShopAboutCard(shop: shop, onCall: _call),
           const SizedBox(height: AniHowSpace.cardGap),

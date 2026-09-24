@@ -203,6 +203,7 @@ class AppStrings {
         'Tumawag para mag-usap tungkol sa pickup sa stall.',
       );
   String get reviews => t('Reviews', 'Mga review');
+  String get noReviewsYet => t('No reviews yet.', 'Wala pang review.');
   String get orderHistory => t('Order history', 'Kasaysayan ng order');
 
   String get back => t('Back', 'Bumalik');

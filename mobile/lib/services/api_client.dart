@@ -478,8 +478,16 @@ class ApiClient {
     return ShopProfile.fromJson(_asMap(response['data'] ?? response));
   }
 
-  Future<PagedShopReviews> shopReviews(int sellerId, {int page = 1}) async {
-    final response = await _get('/buyer/shops/$sellerId/reviews', query: {'page': page});
+  Future<PagedShopReviews> shopReviews(int sellerId, {int page = 1}) {
+    return _pagedShopReviews('/buyer/shops/$sellerId/reviews', page: page);
+  }
+
+  Future<PagedShopReviews> farmerShopReviews({int page = 1}) {
+    return _pagedShopReviews('/farmer/shop/reviews', page: page);
+  }
+
+  Future<PagedShopReviews> _pagedShopReviews(String path, {int page = 1}) async {
+    final response = await _get(path, query: {'page': page});
     final meta = _asMap(response['meta']);
     return PagedShopReviews(
       reviews: ((response['data'] as List?) ?? const [])

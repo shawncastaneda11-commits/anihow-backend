@@ -56,7 +56,7 @@ class ExportOrderLedgerAction
         ]);
 
         return $this->csv->stream($filename, function ($handle) use ($query): void {
-            fputcsv($handle, self::COLUMNS);
+            fputcsv($handle, $this->csv->row(self::COLUMNS));
 
             (clone $query)
                 ->with(['farm', 'farmerSeller', 'buyer'])
@@ -64,7 +64,7 @@ class ExportOrderLedgerAction
                 ->orderBy('id')
                 ->chunkById(200, function ($orders) use ($handle): void {
                     foreach ($orders as $order) {
-                        fputcsv($handle, $this->row($order));
+                        fputcsv($handle, $this->csv->row($this->row($order)));
                     }
                 });
         });
@@ -91,10 +91,10 @@ class ExportOrderLedgerAction
             $order->completed_at?->toDateTimeString(),
             $order->cancelled_at?->toDateTimeString(),
             $order->cancellation_reason?->value,
-            $order->subtotal,
-            $order->tawad_total,
-            $order->total,
-            $order->amount_received,
+            (float) $order->subtotal,
+            (float) $order->tawad_total,
+            (float) $order->total,
+            $order->amount_received === null ? null : (float) $order->amount_received,
             $order->fulfillment_preference->value,
         ];
     }

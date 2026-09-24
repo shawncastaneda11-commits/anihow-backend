@@ -8,11 +8,13 @@ use App\Enums\ExportType;
 use App\Enums\Role;
 use App\Filament\Resources\ExportLogs\ExportLogResource;
 use App\Filament\Resources\Orders\OrderResource;
+use App\Models\CropType;
 use App\Models\ExportLog;
 use App\Models\Farm;
 use App\Models\Order;
 use App\Models\User;
 use App\Services\AnalyticsService;
+use App\Support\CsvDownload;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -215,6 +217,71 @@ class ExportCsvTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_ledger_csv_prefixes_formula_injection_in_text_and_leaves_numbers(): void
+    {
+        $admin = $this->staff(Role::SuperAdmin);
+        $farmer = $this->farmer([
+            'shop_name' => '=HYPERLINK("http://x","y")',
+        ]);
+        $listing = $this->listingFor($farmer, ['price_per_unit' => 30, 'quantity_available' => 10]);
+
+        $this->asUser($farmer)
+            ->postJson('/api/farmer/walk-in-sales', [
+                'listing_id' => $listing->id,
+                'quantity' => 1,
+                'amount_received' => 30,
+                'buyer_name' => '+cmd',
+            ])
+            ->assertCreated();
+
+        $csv = $this->csvBody(app(ExportOrderLedgerAction::class)->download($admin, Order::query()));
+        $row = $this->firstDataRow($csv, ExportOrderLedgerAction::COLUMNS);
+
+        $this->assertSame('\'=HYPERLINK("http://x","y")', $row['seller_shop_name']);
+        $this->assertSame('\'+cmd', $row['buyer_name']);
+        $this->assertIsNumeric($row['subtotal']);
+        $this->assertIsNumeric($row['total']);
+        $this->assertIsNumeric($row['amount_received']);
+        $this->assertStringStartsNotWith("'", $row['subtotal']);
+        $this->assertStringStartsNotWith("'", $row['total']);
+        $this->assertEquals(30, $row['total']);
+    }
+
+    public function test_analytics_csv_prefixes_a_formula_crop_label_and_leaves_numbers(): void
+    {
+        $admin = $this->staff(Role::SuperAdmin);
+        $farmer = $this->farmer();
+        $cropType = CropType::factory()->create([
+            'name' => '@Nightshade',
+            'floor_price' => 25,
+            'max_discount' => 20,
+        ]);
+        $listing = $this->listingFor($farmer, [
+            'crop_type_id' => $cropType->id,
+            'price_per_unit' => 40,
+            'quantity_available' => 10,
+        ]);
+        $this->completeOrder($farmer, $this->placeOrder($this->buyer(), $listing, 2), 80);
+
+        $csv = $this->csvBody(app(ExportAnalyticsAction::class)->download(
+            $admin,
+            now()->startOfDay()->subDays(29),
+            now()->endOfDay(),
+        ));
+
+        $this->assertStringContainsString("'@Nightshade", $csv);
+        $this->assertDoesNotMatchRegularExpression('/(?<!\')@Nightshade/', $csv);
+
+        $sanitiser = app(CsvDownload::class);
+        $this->assertSame(["'@Nightshade", 2.0], $sanitiser->row(['@Nightshade', 2.0]));
+        $this->assertSame([-10.5], $sanitiser->row([-10.5]));
+
+        $units = $this->sectionSum($csv, 'Units sold per crop type', 2);
+        $revenue = $this->sectionSum($csv, 'Units sold per crop type', 3);
+        $this->assertEquals(2, $units);
+        $this->assertEquals(80, $revenue);
+    }
+
     public function test_content_editor_cannot_export_another_farms_orders_through_the_action(): void
     {
         $farmA = Farm::factory()->create();
@@ -244,6 +311,33 @@ class ExportCsvTest extends TestCase
         $response->sendContent();
 
         return (string) ob_get_clean();
+    }
+
+    /**
+     * @param  list<string>  $columns
+     * @return array<string, string>
+     */
+    private function firstDataRow(string $csv, array $columns): array
+    {
+        $lines = preg_split('/\R/', $csv) ?: [];
+
+        foreach ($lines as $line) {
+            $line = ltrim($line, "\xEF\xBB\xBF");
+
+            if ($line === '' || str_starts_with($line, implode(',', $columns))) {
+                continue;
+            }
+
+            $cells = str_getcsv($line);
+
+            if (count($cells) < count($columns)) {
+                continue;
+            }
+
+            return array_combine($columns, array_slice($cells, 0, count($columns)));
+        }
+
+        $this->fail('Expected a ledger data row.');
     }
 
     private function sectionSum(string $csv, string $heading, int $column): float

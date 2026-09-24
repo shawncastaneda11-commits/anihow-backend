@@ -41,35 +41,49 @@ class ExportAnalyticsAction
         ]);
 
         return $this->csv->stream($filename, function ($handle) use ($units, $sales, $best, $discount): void {
-            fputcsv($handle, ['Units sold per crop type']);
-            fputcsv($handle, ['crop', 'unit', 'units', 'revenue']);
+            fputcsv($handle, $this->csv->row(['Units sold per crop type']));
+            fputcsv($handle, $this->csv->row(['crop', 'unit', 'units', 'revenue']));
             foreach ($units as $row) {
-                fputcsv($handle, [$row->crop, $row->unit_of_measure, $row->units, $row->revenue]);
+                fputcsv($handle, $this->csv->row([
+                    $row->crop,
+                    $row->unit_of_measure,
+                    (float) $row->units,
+                    (float) $row->revenue,
+                ]));
             }
 
             fputcsv($handle, []);
-            fputcsv($handle, ['Sales per period']);
-            fputcsv($handle, ['period', 'orders', 'revenue']);
+            fputcsv($handle, $this->csv->row(['Sales per period']));
+            fputcsv($handle, $this->csv->row(['period', 'orders', 'revenue']));
             foreach ($sales as $row) {
-                fputcsv($handle, [$row->period, $row->orders, $row->revenue]);
+                fputcsv($handle, $this->csv->row([
+                    $row->period,
+                    (int) $row->orders,
+                    (float) $row->revenue,
+                ]));
             }
 
             fputcsv($handle, []);
-            fputcsv($handle, ['Best-selling produce']);
-            fputcsv($handle, ['crop', 'unit', 'units', 'revenue']);
+            fputcsv($handle, $this->csv->row(['Best-selling produce']));
+            fputcsv($handle, $this->csv->row(['crop', 'unit', 'units', 'revenue']));
             foreach ($best as $row) {
-                fputcsv($handle, [$row->crop, $row->unit_of_measure, $row->units, $row->revenue]);
+                fputcsv($handle, $this->csv->row([
+                    $row->crop,
+                    $row->unit_of_measure,
+                    (float) $row->units,
+                    (float) $row->revenue,
+                ]));
             }
 
             fputcsv($handle, []);
-            fputcsv($handle, ['Average discount']);
-            fputcsv($handle, ['average', 'total', 'orders', 'discounted_orders']);
-            fputcsv($handle, [
+            fputcsv($handle, $this->csv->row(['Average discount']));
+            fputcsv($handle, $this->csv->row(['average', 'total', 'orders', 'discounted_orders']));
+            fputcsv($handle, $this->csv->row([
                 $discount['average'],
                 $discount['total'],
                 $discount['orders'],
                 $discount['discounted_orders'],
-            ]);
+            ]));
         });
     }
 }

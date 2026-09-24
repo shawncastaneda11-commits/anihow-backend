@@ -1,0 +1,71 @@
+// Figure 5. Use case diagram of AniHow (v3.5).
+digraph G {
+  graph [rankdir=LR, nodesep=0.16, ranksep=1.1, pad=0.3, fontname="Liberation Sans", newrank=true];
+  node  [fontname="Liberation Sans", fontsize=11];
+  edge  [arrowhead=none, penwidth=1.0, color="#333333"];
+
+  node [shape=box, style="filled", penwidth=1.4, fontsize=13, width=1.6];
+  sa [label="Super Admin",    fillcolor="#E1E6ED"];
+  ce [label="Content Editor", fillcolor="#E1E6ED"];
+  fs [label="Farmer-Seller",  fillcolor="#E8E6E0"];
+  by [label="Buyer",          fillcolor="#E8E6E0"];
+
+  subgraph cluster_sys {
+    label="AniHow System"; style="rounded"; color="#777777"; fontsize=14;
+    node [shape=ellipse, style="solid", penwidth=1.1, width=2.3, height=0.55, fontsize=11];
+
+    // Super Admin (CMS)
+    sa1 [label="Manage user accounts"];
+    sa2 [label="Set system price guards"];
+    sa3 [label="Manage crop taxonomy"];
+    sa4 [label="Moderate listings, reviews,\nand farm FAQ answers"];
+    sa5 [label="Manage system\nFAQ answers"];
+    sa6 [label="Process account\ndeletion requests"];
+    sa7 [label="View ledger and analytics;\nexport CSV"];
+    sa8 [label="Read order chat\nthreads"];
+
+    // Content Editor (CMS, own farm)
+    ce1 [label="Manage crop-care\narticles"];
+    ce2 [label="Manage farm profile\nand gallery"];
+    ce3 [label="Post farm\nannouncements"];
+    ce4 [label="Manage farm\nFAQ answers"];
+    ce5 [label="Set farm price guards"];
+    ce6 [label="View farm roster\nand analytics"];
+
+    // Farmer-Seller (app)
+    fs1 [label="Manage listings\nand tawad"];
+    fs2 [label="Process orders"];
+    fs3 [label="Record walk-in sale"];
+    fs4 [label="Read crop-care\narticles"];
+    fs5 [label="Read farm\nannouncements"];
+    fs6 [label="View My Sales"];
+
+    // Shared by both app users
+    sh1 [label="Chat about an order"];
+    sh2 [label="Ask the FAQ helper"];
+    sh3 [label="Manage my data (correct,\ndownload, request deletion)"];
+
+    // Buyer (app)
+    by1 [label="Browse and search\nlistings"];
+    by2 [label="View storefront\nand farm page"];
+    by3 [label="Place and cancel\norders"];
+    by4 [label="Choose fulfillment"];
+    by5 [label="Leave review"];
+  }
+
+  sa -> {sa1 sa2 sa3 sa4 sa5 sa6 sa7 sa8};
+  ce -> {ce1 ce2 ce3 ce4 ce5 ce6};
+  {fs1 fs2 fs3 fs4 fs5 fs6 sh1 sh2 sh3} -> fs;
+  {sh1 sh2 sh3 by1 by2 by3 by4 by5} -> by;
+
+  // two columns: CMS use cases (left) and app use cases (right)
+  {rank=same; sa ce}
+  {rank=same; sa1 sa2 sa3 sa4 sa5 sa6 sa7 sa8 ce1 ce2 ce3 ce4 ce5 ce6}
+  {rank=same; fs1 fs2 fs3 fs4 fs5 fs6 sh1 sh2 sh3 by1 by2 by3 by4 by5}
+  {rank=same; fs by}
+  edge [style=invis];
+  sa1 -> fs1; sa2 -> fs2; sa3 -> fs3; sa4 -> fs4; sa5 -> fs5; sa6 -> fs6; sa7 -> sh1;
+  sa8 -> sh2; ce1 -> sh3; ce2 -> by1; ce3 -> by2; ce4 -> by3; ce5 -> by4; ce6 -> by5;
+  sa1 -> sa2 -> sa3 -> sa4 -> sa5 -> sa6 -> sa7 -> sa8 -> ce1 -> ce2 -> ce3 -> ce4 -> ce5 -> ce6 [constraint=false];
+  fs1 -> fs2 -> fs3 -> fs4 -> fs5 -> fs6 -> sh1 -> sh2 -> sh3 -> by1 -> by2 -> by3 -> by4 -> by5 [constraint=false];
+}

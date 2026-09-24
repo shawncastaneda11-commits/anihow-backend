@@ -1,0 +1,33 @@
+// Figure 6. Context diagram (data flow diagram, level 0) of AniHow (v3.5).
+digraph G {
+  graph [rankdir=LR, nodesep=0.7, ranksep=2.2, pad=0.3, fontname="Liberation Sans", newrank=true];
+  node  [fontname="Liberation Sans", fontsize=13];
+  edge  [penwidth=1.1, arrowsize=0.75, color="#333333", fontname="Liberation Sans", fontsize=10];
+
+  node [shape=box, style="filled", penwidth=1.4, width=1.8, height=0.6];
+  sa [label="Super Admin",    fillcolor="#E1E6ED"];
+  ce [label="Content Editor", fillcolor="#E1E6ED"];
+  fs [label="Farmer-Seller",  fillcolor="#E8E6E0"];
+  by [label="Buyer",          fillcolor="#E8E6E0"];
+  em [label="Email Service\n(Gmail SMTP)", fillcolor="#F2F2F2"];
+
+  sys [shape=circle, style="filled", fillcolor="#F4F4F4", penwidth=1.8, width=2.3, fixedsize=true,
+       label="0\n\nAniHow\nSystem", fontsize=15];
+
+  sa -> sys [label="approvals, system price guards,\ntaxonomy, moderation, system FAQ\nanswers, deletion decisions"];
+  sys -> sa [label="order ledger, analytics, reports,\nCSV exports, deletion requests"];
+
+  ce -> sys [label="articles, farm profile and photos,\nfarm price guards, announcements,\nfarm FAQ answers"];
+  sys -> ce [label="farm roster, farm analytics,\nmoderation notices"];
+
+  sys -> fs [label="orders, crop-care articles, announcements,\nMy Sales figures, chat messages,\nnotifications, FAQ answers, data export"];
+  sys -> fs [dir=back, label="listings, tawad rules, order updates,\nwalk-in sales, chat messages,\nprofile corrections, deletion requests"];
+
+  sys -> by [label="listings, farm pages, order status,\nchat messages, notifications,\nFAQ answers, data export"];
+  sys -> by [dir=back, label="registration, orders, cancellations,\nreviews, chat messages, FAQ questions,\nprofile corrections, deletion requests"];
+
+  sys -> em [label="verification codes, password\nresets, deletion notices,\nlow-stock alerts"];
+
+  {rank=same; sa ce}
+  {rank=same; fs by em}
+}

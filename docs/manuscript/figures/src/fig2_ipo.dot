@@ -1,0 +1,33 @@
+// Figure 2. Conceptual framework of the study (Input-Process-Output).
+digraph G {
+  graph [rankdir=LR, nodesep=0.6, ranksep=0.55, pad=0.3, fontname="Liberation Sans"];
+  node  [shape=box, style="rounded", penwidth=1.5, fixedsize=true, width=3.7, height=3.45, labelloc="t", fontname="Liberation Sans", fontsize=12];
+  edge  [penwidth=1.3, arrowsize=0.9, color="#222222", fontname="Liberation Sans", fontsize=12];
+
+  input [label=<<TABLE BORDER="0" CELLSPACING="0" CELLPADDING="5">
+    <TR><TD><B><FONT POINT-SIZE="16">INPUT</FONT></B></TD></TR><HR/>
+    <TR><TD ALIGN="LEFT" BALIGN="LEFT">&#8226; Needs of the partner farm's members<BR/>   and local buyers: selling, order<BR/>   coordination, crop-care reference,<BR/>   and reporting</TD></TR>
+    <TR><TD ALIGN="LEFT" BALIGN="LEFT">&#8226; System data: crop taxonomy, listings,<BR/>   orders, tawad rules, crop-care articles,<BR/>   farm announcements, FAQ answers</TD></TR>
+    <TR><TD ALIGN="LEFT" BALIGN="LEFT">&#8226; Tools: Flutter, Laravel, Sanctum,<BR/>   Spatie Permission, Filament,<BR/>   Laravel Reverb, MySQL</TD></TR>
+    <TR><TD ALIGN="LEFT" BALIGN="LEFT">&#8226; Standards: ISO/IEC 25010:2023,<BR/>   Data Privacy Act of 2012</TD></TR>
+  </TABLE>>];
+
+  process [label=<<TABLE BORDER="0" CELLSPACING="0" CELLPADDING="5">
+    <TR><TD><B><FONT POINT-SIZE="16">PROCESS</FONT></B></TD></TR><HR/>
+    <TR><TD ALIGN="LEFT" BALIGN="LEFT">&#8226; Design: architecture, database,<BR/>   four-actor access model, shared<BR/>   taxonomy with two-level price<BR/>   guards, interfaces</TD></TR>
+    <TR><TD ALIGN="LEFT" BALIGN="LEFT">&#8226; Develop: the five modules,<BR/>   iterative and incremental</TD></TR>
+    <TR><TD ALIGN="LEFT" BALIGN="LEFT">&#8226; Test: module functions, role-based<BR/>   access, multi-farm isolation,<BR/>   end-to-end marketplace flow</TD></TR>
+    <TR><TD ALIGN="LEFT" BALIGN="LEFT">&#8226; Evaluate: ISO/IEC 25010:2023<BR/>   on a four-point Likert scale</TD></TR>
+  </TABLE>>];
+
+  output [label=<<TABLE BORDER="0" CELLSPACING="0" CELLPADDING="5">
+    <TR><TD><B><FONT POINT-SIZE="16">OUTPUT</FONT></B></TD></TR><HR/>
+    <TR><TD ALIGN="LEFT" BALIGN="LEFT">&#8226; AniHow: a mobile and web-based<BR/>   digital market hub with<BR/>   descriptive analytics</TD></TR>
+    <TR><TD ALIGN="LEFT" BALIGN="LEFT">&#8226; Evaluated for acceptability<BR/>   by its respondents</TD></TR>
+    <TR><TD ALIGN="LEFT" BALIGN="LEFT">&#8226; Serves local farmer-sellers<BR/>   and buyers in Cavite</TD></TR>
+    <TR><TD ALIGN="LEFT" BALIGN="LEFT">&#8226; PYAP Manggahan Chapter<BR/>   as the pilot partner</TD></TR>
+  </TABLE>>];
+
+  input -> process; process -> output;
+  output:s -> input:s [constraint=false, label=<<I>Feedback</I>>];
+}

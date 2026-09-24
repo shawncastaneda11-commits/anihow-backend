@@ -530,7 +530,7 @@ the SRS):**
 | Laravel Reverb | 1.12.0 |
 | Dart SDK constraint | ^3.13.3 |
 | Flutter | 3.47.4 |
-| MySQL | [TEAM INPUT: from the VPS] |
+| MySQL | 8.4 (planned for the VPS; install this version) |
 
 **Server processes on the VPS (all four are required):**
 1. Nginx + PHP-FPM serving the Laravel application over HTTPS.
@@ -774,9 +774,8 @@ drafts are not repeated.
 Resolved from the previous manuscript and Appendices B to D (see A15): locale,
 COSEL's full name, IT-expert count, farmer-seller estimate, instrument and
 validators, use period and administration mode, minors and consent, retention,
-adviser session dates, college name. Still open: external-buyer recruitment and
-target N; total buyer respondents; MySQL version; VPS provider and deployment
-date. Appendix D's header fields are still placeholders.
+adviser session dates, college name. Set as team plans (A16, confirm with the
+adviser): buyers; MySQL 8.4; deployment before the evaluation window. Appendix D's header fields are still placeholders.
 
 ---
 
@@ -837,3 +836,4 @@ was updated only where noted.
 | A13 | Table 3, Representative Test Cases (15 cases mapped to the automated suite, all Passed). | none (docs) | Chapter 3 Testing Procedure marker resolved. |
 | A14 | Abstract drafted: 296 words, block format, 1.5 spacing, SDG 2 (target 2.3) named, five keywords. | none (docs) | New front-matter page; revise once results exist if the program requires. |
 | A15 | Chapter 3 filled from the previous manuscript and Appendices B to D: locale (Barangay Manggahan urban garden, crops, buyers, farm price), COSEL full name, three to five IT experts, farmer-sellers estimated at four or five, one bilingual instrument, five-day window, online and printed administration, minors with parental consent and assent (Appendices H, I), records destroyed after the final defense, sessions of July 8 and July 15, 2026. | none (docs) | Five markers remain. |
+| A16 | Last Chapter 3 markers set as plans: buyers are Cavite adults with an Android phone, 10 community (chapter's regular customers, invited through the chapter) and 10 external (no prior purchase, researchers' networks and a social media announcement), 20 in total; MySQL 8.4 on the VPS; VPS at least 2 vCPU, 4 GB RAM, 40 GB SSD; deployment before the evaluation window, within August to December 2026. | none (docs) | No TEAM INPUT markers remain in Chapter 3. |

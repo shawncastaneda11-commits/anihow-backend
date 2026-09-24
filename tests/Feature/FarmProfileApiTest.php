@@ -53,6 +53,7 @@ class FarmProfileApiTest extends TestCase
             ->assertJsonPath('data.name', 'Manggahan Farm')
             ->assertJsonPath('data.description', 'Morning harvest.')
             ->assertJsonPath('data.contact_person', 'Aling Nena')
+            ->assertJsonMissingPath('data.contact_number')
             ->assertJsonPath('data.pickup_point', 'Barangay hall')
             ->assertJsonPath('data.cover_photo_url', ListingStorage::disk()->url('farms/cover.jpg'))
             ->assertJsonPath('data.photos.0.caption', 'Tomatoes at dawn')
@@ -128,5 +129,57 @@ class FarmProfileApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.farm.id', $farm->id)
             ->assertJsonPath('data.farm.name', 'Manggahan Farm');
+    }
+
+    public function test_a_buyer_does_not_receive_the_farm_contact_number(): void
+    {
+        $farm = Farm::factory()->create([
+            'contact_person' => 'Aling Nena',
+            'contact_number' => '09171230001',
+        ]);
+        $seller = $this->farmer(['shop_name' => 'Nena Stall'], $farm);
+        $listing = $this->listingFor($seller, ['is_active' => true]);
+        $buyer = $this->buyer();
+
+        $this->asUser($buyer)
+            ->getJson('/api/farms/'.$farm->id)
+            ->assertOk()
+            ->assertJsonPath('data.contact_person', 'Aling Nena')
+            ->assertJsonMissingPath('data.contact_number');
+
+        $this->asUser($buyer)
+            ->getJson('/api/buyer/shops/'.$seller->id)
+            ->assertOk()
+            ->assertJsonPath('data.farm.contact_person', 'Aling Nena')
+            ->assertJsonMissingPath('data.farm.contact_number');
+
+        $this->asUser($buyer)
+            ->getJson('/api/buyer/marketplace/'.$listing->id)
+            ->assertOk()
+            ->assertJsonPath('data.farm.contact_person', 'Aling Nena')
+            ->assertJsonMissingPath('data.farm.contact_number');
+    }
+
+    public function test_a_farmer_seller_receives_the_contact_number_only_for_their_own_farm(): void
+    {
+        $farmA = Farm::factory()->create(['contact_number' => '09171230001']);
+        $farmB = Farm::factory()->create(['contact_number' => '09181230002']);
+        $sellerA = $this->farmer(['shop_name' => 'Nena Stall'], $farmA);
+        $this->farmer(['email' => 'other.seller@example.com'], $farmB);
+
+        $this->asUser($sellerA)
+            ->getJson('/api/farms/'.$farmA->id)
+            ->assertOk()
+            ->assertJsonPath('data.contact_number', '09171230001');
+
+        $this->asUser($sellerA)
+            ->getJson('/api/farmer/shop')
+            ->assertOk()
+            ->assertJsonPath('data.farm.contact_number', '09171230001');
+
+        $this->asUser($sellerA)
+            ->getJson('/api/farms/'.$farmB->id)
+            ->assertOk()
+            ->assertJsonMissingPath('data.contact_number');
     }
 }

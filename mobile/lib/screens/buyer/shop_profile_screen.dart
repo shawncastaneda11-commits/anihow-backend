@@ -138,7 +138,7 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                         child: ShopIdentityHeader(shop: shop),
                       ),
                     ),
-                    if (shop.farmId != null) ...[
+                    if (shop.farmId != null && shop.farmIsActive) ...[
                       const SizedBox(height: AniHowSpace.cardGap),
                       FarmLinkChip(
                         farmId: shop.farmId!,
@@ -146,6 +146,9 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                             ? s.farm
                             : s.farmLine(shop.farmName!),
                       ),
+                    ] else if (shop.farmName != null && shop.farmName!.isNotEmpty) ...[
+                      const SizedBox(height: AniHowSpace.cardGap),
+                      Text(s.farmLine(shop.farmName!), style: Theme.of(context).textTheme.bodyMedium),
                     ],
                     const SizedBox(height: AniHowSpace.section),
                     Text(

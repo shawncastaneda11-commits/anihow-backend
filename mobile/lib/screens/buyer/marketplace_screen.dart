@@ -196,7 +196,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                   itemCount: items.length,
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    mainAxisExtent: 268,
+                    mainAxisExtent: 292,
                     crossAxisSpacing: AniHowSpace.cardGap,
                     mainAxisSpacing: AniHowSpace.cardGap,
                   ),

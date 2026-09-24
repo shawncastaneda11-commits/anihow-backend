@@ -188,6 +188,10 @@ class FarmProfileView extends StatelessWidget {
                   )
                 else
                   SelectableText(contactPerson, style: theme.textTheme.bodyMedium),
+                if (_isBuyer(context)) ...[
+                  const SizedBox(height: AniHowSpace.labelGap),
+                  Text(s.farmContactBuyerHint, style: theme.textTheme.bodyMedium),
+                ],
               ],
               const SizedBox(height: AniHowSpace.section),
               Text(s.farmPhotos, style: theme.textTheme.titleMedium),
@@ -230,6 +234,14 @@ class FarmProfileView extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  bool _isBuyer(BuildContext context) {
+    try {
+      return context.watch<AuthController>().user?.isBuyer ?? false;
+    } on ProviderNotFoundException {
+      return false;
+    }
   }
 }
 

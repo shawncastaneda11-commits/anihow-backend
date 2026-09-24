@@ -27,12 +27,15 @@ class FarmForm
                     ->helperText('Used in article URLs, so two farms can publish a guide with the same title.'),
                 Textarea::make('description')
                     ->rows(4)
-                    ->columnSpanFull(),
+                    ->columnSpanFull()
+                    ->helperText('Shown publicly in the app.'),
                 TextInput::make('contact_person')
-                    ->maxLength(150),
+                    ->maxLength(150)
+                    ->helperText('Shown publicly in the app.'),
                 TextInput::make('contact_number')
                     ->tel()
-                    ->maxLength(30),
+                    ->maxLength(30)
+                    ->helperText("Visible only to this farm's farmer-sellers and the Super Admin."),
                 TextInput::make('address')
                     ->maxLength(255),
                 TextInput::make('barangay')
@@ -43,7 +46,7 @@ class FarmForm
                 TextInput::make('pickup_point')
                     ->maxLength(255)
                     ->columnSpanFull()
-                    ->helperText('Where buyers meet sellers. Free text: no map, no route, no coordinates.'),
+                    ->helperText('Shown publicly in the app. Where buyers meet sellers. Free text: no map, no route, no coordinates.'),
                 FileUpload::make('cover_photo_path')
                     ->label('Cover photo')
                     ->image()
@@ -51,7 +54,8 @@ class FarmForm
                     ->directory('farms')
                     ->visibility('public')
                     ->maxSize(2048)
-                    ->columnSpanFull(),
+                    ->columnSpanFull()
+                    ->helperText('Shown publicly in the app.'),
                 Toggle::make('is_active')
                     ->label('Active')
                     ->default(true),

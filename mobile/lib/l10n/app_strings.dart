@@ -132,6 +132,10 @@ class AppStrings {
   String get noFarmPhotos => t('No photos yet', 'Wala pang larawan');
   String get noFarmStorefronts => t('No storefronts yet', 'Wala pang tindahan');
   String get farmContact => t('Contact person', 'Contact person');
+  String get farmContactBuyerHint => t(
+        'Message the seller through your order chat.',
+        'I-message ang tindahan sa chat ng iyong order.',
+      );
   String get activeListings => t('Active listings', 'Mga active na listing');
   String get noActiveListings => t('No active listings', 'Walang active na listing');
   String get noBioYet => t('No bio yet', 'Wala pang bio');

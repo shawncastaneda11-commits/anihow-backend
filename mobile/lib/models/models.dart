@@ -773,6 +773,7 @@ class ShopProfile {
     this.listings = const [],
     this.farmId,
     this.farmName,
+    this.farmIsActive = false,
   });
 
   final int id;
@@ -786,6 +787,7 @@ class ShopProfile {
   final List<ListingItem> listings;
   final int? farmId;
   final String? farmName;
+  final bool farmIsActive;
 
   bool get hasRating => reviewsCount > 0 && averageRating != null && averageRating!.isNotEmpty;
 
@@ -807,6 +809,8 @@ class ShopProfile {
           .toList(),
       farmId: ListingItem._asCount(farmMap?['id']),
       farmName: farmMap?['name'] as String?,
+      farmIsActive: farmMap != null &&
+          (farmMap['is_active'] == true || farmMap['is_active'] == 1 || farmMap['is_active'] == '1'),
     );
   }
 }
@@ -863,6 +867,7 @@ class FarmProfile {
     this.municipality,
     this.pickupPoint,
     this.coverPhotoUrl,
+    this.isActive = true,
     this.photos = const [],
     this.farmerSellersCount = 0,
     this.storefronts = const [],
@@ -878,6 +883,7 @@ class FarmProfile {
   final String? municipality;
   final String? pickupPoint;
   final String? coverPhotoUrl;
+  final bool isActive;
   final List<FarmPhotoItem> photos;
   final int farmerSellersCount;
   final List<FarmStorefront> storefronts;
@@ -904,6 +910,7 @@ class FarmProfile {
       municipality: json['municipality'] as String?,
       pickupPoint: json['pickup_point'] as String?,
       coverPhotoUrl: ApiConfig.mediaUrl(json['cover_photo_url'] as String?),
+      isActive: json['is_active'] == true || json['is_active'] == 1 || json['is_active'] == '1',
       photos: ((json['photos'] as List?) ?? const [])
           .whereType<Map>()
           .map((item) => FarmPhotoItem.fromJson(Map<String, dynamic>.from(item)))

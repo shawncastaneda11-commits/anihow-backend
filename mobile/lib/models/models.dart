@@ -1230,9 +1230,13 @@ class FarmerAnalytics {
     required this.unitsPerCropType,
     required this.bestSelling,
     required this.walkInShare,
+    this.windowStart,
+    this.windowEnd,
   });
 
   final String period;
+  final String? windowStart;
+  final String? windowEnd;
   final FarmerAnalyticsSummary summary;
   final List<FarmerSalesPoint> salesPerPeriod;
   final List<FarmerCropSales> unitsPerCropType;
@@ -1244,6 +1248,8 @@ class FarmerAnalytics {
   factory FarmerAnalytics.fromJson(Map<String, dynamic> json) {
     return FarmerAnalytics(
       period: json['period'] as String? ?? 'week',
+      windowStart: json['window_start'] as String?,
+      windowEnd: json['window_end'] as String?,
       summary: FarmerAnalyticsSummary.fromJson(
         json['summary'] is Map ? Map<String, dynamic>.from(json['summary'] as Map) : <String, dynamic>{},
       ),

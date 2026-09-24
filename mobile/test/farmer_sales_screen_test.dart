@@ -20,6 +20,8 @@ Widget _app({required Widget home}) {
 
 const _empty = FarmerAnalytics(
   period: 'week',
+  windowStart: '2026-09-18',
+  windowEnd: '2026-09-24',
   summary: FarmerAnalyticsSummary(
     completedOrders: 0,
     unitsSold: 0,
@@ -39,6 +41,8 @@ const _empty = FarmerAnalytics(
 
 const _populated = FarmerAnalytics(
   period: 'week',
+  windowStart: '2026-09-18',
+  windowEnd: '2026-09-24',
   summary: FarmerAnalyticsSummary(
     completedOrders: 2,
     unitsSold: 4,
@@ -75,6 +79,8 @@ void main() {
 
     final s = AppStrings(false);
     expect(find.byKey(const Key('sales-empty')), findsOneWidget);
+    expect(find.byKey(const Key('sales-window')), findsOneWidget);
+    expect(find.text(s.salesWindow('2026-09-18', '2026-09-24')), findsOneWidget);
     expect(find.text(s.mySalesEmpty), findsOneWidget);
     expect(find.byKey(const Key('sales-chart')), findsNothing);
     expect(tester.getSize(find.byKey(const Key('sales-period-week'))).height, 48);
@@ -91,6 +97,8 @@ void main() {
 
     final s = AppStrings(false);
     expect(find.byKey(const Key('sales-empty')), findsNothing);
+    expect(find.byKey(const Key('sales-window')), findsOneWidget);
+    expect(find.text(s.salesWindow('2026-09-18', '2026-09-24')), findsOneWidget);
     expect(find.byKey(const Key('sales-chart')), findsOneWidget);
     expect(find.text(s.completedOrders), findsOneWidget);
     expect(find.text(s.grossSales), findsOneWidget);

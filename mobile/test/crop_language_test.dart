@@ -41,6 +41,8 @@ void main() {
     expect(filipino.settings, 'Mga setting');
     expect(filipino.faq, 'Mga tanong');
     expect(filipino.mySales, 'Aking Benta');
+    expect(english.salesWindow('2026-09-18', '2026-09-24'), 'Sep 18 to Sep 24');
+    expect(filipino.salesWindow('2026-09-18', '2026-09-24'), 'Set 18 hanggang Set 24');
     expect(filipino.unverified, 'Hindi pa');
     expect(filipino.logOut, 'Mag-log out');
   });

@@ -12,22 +12,25 @@ class FarmerAnalyticsController extends Controller
     public function __invoke(FarmerAnalyticsRequest $request, AnalyticsService $analytics): FarmerAnalyticsResource
     {
         $period = $request->validated('period', 'week');
-        $days = $period === 'month' ? 30 : 7;
+        $since = $period === 'month'
+            ? now()->startOfDay()->subDays(29)
+            : now()->startOfDay()->subDays(6);
         $grouping = $period === 'month' ? 'week' : 'day';
-        $periods = $period === 'month' ? 5 : 7;
         $user = $request->user();
 
         return new FarmerAnalyticsResource([
             'period' => $period,
-            'summary' => $analytics->completedSummary($user, $days),
-            'sales_per_period' => $analytics->salesPerPeriod($user, $grouping, $periods)
+            'window_start' => $since->toDateString(),
+            'window_end' => now()->toDateString(),
+            'summary' => $analytics->completedSummary($user, since: $since),
+            'sales_per_period' => $analytics->salesPerPeriod($user, $grouping, since: $since)
                 ->map(fn (object $row): array => [
                     'period' => $row->period,
                     'orders' => (int) $row->orders,
                     'revenue' => (float) $row->revenue,
                 ])
                 ->all(),
-            'units_per_crop_type' => $analytics->unitsSoldPerCropType($user, $days)
+            'units_per_crop_type' => $analytics->unitsSoldPerCropType($user, since: $since)
                 ->map(fn (object $row): array => [
                     'crop' => $row->crop,
                     'unit' => $row->unit_of_measure,
@@ -35,7 +38,7 @@ class FarmerAnalyticsController extends Controller
                     'revenue' => (float) $row->revenue,
                 ])
                 ->all(),
-            'best_selling' => $analytics->bestSelling($user, $period)
+            'best_selling' => $analytics->bestSelling($user, $period, since: $since)
                 ->map(fn (object $row): array => [
                     'crop' => $row->crop,
                     'unit' => $row->unit_of_measure,
@@ -43,7 +46,7 @@ class FarmerAnalyticsController extends Controller
                     'revenue' => (float) $row->revenue,
                 ])
                 ->all(),
-            'walk_in_share' => $analytics->walkInShare($user, $days),
+            'walk_in_share' => $analytics->walkInShare($user, since: $since),
         ]);
     }
 }

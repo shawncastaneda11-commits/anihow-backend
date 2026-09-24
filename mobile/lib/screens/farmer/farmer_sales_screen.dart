@@ -64,16 +64,28 @@ class _FarmerSalesScreenState extends State<FarmerSalesScreen> {
     return AsyncView<FarmerAnalytics>(
       future: _future,
       onRetry: _reload,
-      isEmpty: (data) => data.isEmpty,
-      emptyBuilder: (context) => _SalesEmpty(
-        period: _period,
-        onPeriod: _setPeriod,
-      ),
       builder: (context, data) {
+        if (data.isEmpty) {
+          return ListView(
+            key: const Key('sales-empty'),
+            padding: AniHowSpace.screenPadding,
+            children: [
+              _PeriodToggle(period: _period, onChanged: _setPeriod),
+              _WindowLine(start: data.windowStart, end: data.windowEnd),
+              const SizedBox(height: AniHowSpace.section),
+              AniHowHintCard(
+                icon: Icons.insights_outlined,
+                title: s.mySalesEmpty,
+              ),
+            ],
+          );
+        }
+
         return ListView(
           padding: AniHowSpace.screenPadding,
           children: [
             _PeriodToggle(period: _period, onChanged: _setPeriod),
+            _WindowLine(start: data.windowStart, end: data.windowEnd),
             const SizedBox(height: AniHowSpace.cardGap),
             _SummaryTiles(summary: data.summary),
             const SizedBox(height: AniHowSpace.section),
@@ -103,27 +115,25 @@ class _FarmerSalesScreenState extends State<FarmerSalesScreen> {
   }
 }
 
-class _SalesEmpty extends StatelessWidget {
-  const _SalesEmpty({required this.period, required this.onPeriod});
+class _WindowLine extends StatelessWidget {
+  const _WindowLine({required this.start, required this.end});
 
-  final String period;
-  final Future<void> Function(String period) onPeriod;
+  final String? start;
+  final String? end;
 
   @override
   Widget build(BuildContext context) {
-    final s = AppStrings.of(context);
+    if (start == null || end == null || start!.isEmpty || end!.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
-    return ListView(
-      key: const Key('sales-empty'),
-      padding: AniHowSpace.screenPadding,
-      children: [
-        _PeriodToggle(period: period, onChanged: onPeriod),
-        const SizedBox(height: AniHowSpace.section),
-        AniHowHintCard(
-          icon: Icons.insights_outlined,
-          title: s.mySalesEmpty,
-        ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Text(
+        AppStrings.of(context).salesWindow(start!, end!),
+        key: const Key('sales-window'),
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
     );
   }
 }

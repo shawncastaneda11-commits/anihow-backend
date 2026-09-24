@@ -428,6 +428,25 @@ class AppStrings {
   String get appSales => t('App sales', 'Benta sa app');
   String get periodWeek => t('Week', 'Linggo');
   String get periodMonth => t('Month', 'Buwan');
+  String salesWindow(String startIso, String endIso) {
+    final start = DateTime.tryParse(startIso);
+    final end = DateTime.tryParse(endIso);
+    if (start == null || end == null) {
+      return t('$startIso to $endIso', '$startIso hanggang $endIso');
+    }
+
+    return t(
+      '${_shortMonth(start, english: true)} ${start.day} to ${_shortMonth(end, english: true)} ${end.day}',
+      '${_shortMonth(start, english: false)} ${start.day} hanggang ${_shortMonth(end, english: false)} ${end.day}',
+    );
+  }
+
+  String _shortMonth(DateTime date, {required bool english}) {
+    const en = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const fil = ['Ene', 'Peb', 'Mar', 'Abr', 'May', 'Hun', 'Hul', 'Ago', 'Set', 'Okt', 'Nob', 'Dis'];
+
+    return (english ? en : fil)[date.month - 1];
+  }
   String get rating => t('Rating', 'Rating');
 
   String orderStatus(String status) => switch (status.toLowerCase()) {

@@ -14,6 +14,8 @@ use App\Models\User;
 use App\Services\AnalyticsService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Mail\Mailable;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class DemoSeederTest extends TestCase
@@ -57,6 +59,26 @@ class DemoSeederTest extends TestCase
             ->count();
 
         $this->assertSame(0, $mismatched);
+    }
+
+    public function test_demo_seeder_sends_and_queues_no_mail_to_demo_addresses(): void
+    {
+        Mail::fake();
+
+        $this->seed(DemoSeeder::class);
+
+        $demoEmails = User::query()
+            ->where('email', 'like', '%'.DemoSeeder::EMAIL_DOMAIN)
+            ->pluck('email');
+
+        $this->assertNotEmpty($demoEmails);
+
+        foreach ($demoEmails as $email) {
+            Mail::assertNotOutgoing(Mailable::class, $email);
+        }
+
+        Mail::assertNothingSent();
+        Mail::assertNothingQueued();
     }
 
     /**

@@ -50,33 +50,49 @@ class DemoSeeder extends Seeder
             return;
         }
 
-        $this->call(RolePermissionSeeder::class);
+        $previous = [
+            'mail.default' => config('mail.default'),
+            'broadcasting.default' => config('broadcasting.default'),
+            'queue.default' => config('queue.default'),
+        ];
 
-        $farm = $this->farm();
-        $this->photos($farm);
+        config([
+            'mail.default' => 'log',
+            'broadcasting.default' => 'null',
+            'queue.default' => 'sync',
+        ]);
 
-        $crops = $this->cropTypes();
-        app(SetFarmPriceOverrideAction::class)->execute($farm, $crops['kamatis'], 40.00, null);
+        try {
+            $this->call(RolePermissionSeeder::class);
 
-        $editor = $this->contentEditor($farm);
-        $sellers = $this->sellers($farm);
-        $buyers = $this->buyers();
-        $listings = $this->listings($sellers, $crops, $farm);
-        $this->tawadRules($listings);
+            $farm = $this->farm();
+            $this->photos($farm);
 
-        if (! $this->demoHistoryExists()) {
-            $this->seedHistory($buyers, $sellers, $listings);
+            $crops = $this->cropTypes();
+            app(SetFarmPriceOverrideAction::class)->execute($farm, $crops['kamatis'], 40.00, null);
+
+            $editor = $this->contentEditor($farm);
+            $sellers = $this->sellers($farm);
+            $buyers = $this->buyers();
+            $listings = $this->listings($sellers, $crops, $farm);
+            $this->tawadRules($listings);
+
+            if (! $this->demoHistoryExists()) {
+                $this->seedHistory($buyers, $sellers, $listings);
+            }
+
+            $this->announcements($farm, $editor);
+            $this->articles($farm, $editor, $crops);
+            $this->faqOverride($farm);
+
+            CartItem::query()
+                ->whereIn('buyer_id', collect($buyers)->pluck('id'))
+                ->delete();
+
+            $this->report($farm, $sellers, $buyers, $editor);
+        } finally {
+            config($previous);
         }
-
-        $this->announcements($farm, $editor);
-        $this->articles($farm, $editor, $crops);
-        $this->faqOverride($farm);
-
-        CartItem::query()
-            ->whereIn('buyer_id', collect($buyers)->pluck('id'))
-            ->delete();
-
-        $this->report($farm, $sellers, $buyers, $editor);
     }
 
     private function mayRun(): bool
@@ -905,6 +921,7 @@ class DemoSeeder extends Seeder
         $this->command?->line('Completed orders (35d): '.$summary['completed_orders']
             .'  Gross sales: PHP '.number_format($summary['gross_sales'], 2)
             .'  Units: '.$summary['units_sold']);
+        $this->command?->line('Emails and broadcasts were suppressed while seeding.');
         $this->command?->warn('Never run DemoSeeder on the production server.');
     }
 }

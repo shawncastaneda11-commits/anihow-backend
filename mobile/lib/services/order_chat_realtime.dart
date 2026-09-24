@@ -27,7 +27,7 @@ class OrderChatRealtime {
     try {
       final client = PusherChannelsClient.websocket(
         options: PusherChannelsOptions.fromHost(
-          scheme: 'ws',
+          scheme: ApiConfig.reverbScheme,
           host: ApiConfig.reverbHost,
           key: ApiConfig.reverbAppKey,
           port: ApiConfig.reverbPort,

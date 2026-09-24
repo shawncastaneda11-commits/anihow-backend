@@ -367,21 +367,47 @@ That ticks `announcements:notify-due` (and later the stale-order sweep).
 
 ### Reverb over Nginx
 
-Proxy Reverb's WebSocket port (`REVERB_SERVER_PORT`) with `Upgrade` and `Connection` headers. The app's `REVERB_HOST` / `REVERB_PORT` / `REVERB_SCHEME` must point at the public `wss` endpoint, not `localhost`.
+Prefer a dedicated subdomain (e.g. `ws.example.com`) whose server block proxies `location /` to `127.0.0.1:${REVERB_SERVER_PORT}` with the `Upgrade` / `Connection` headers. That way both the WebSocket path (`/app`) and Laravel's HTTP publish path (`/apps`) reach Reverb.
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name ws.example.com;
+
+    location / {
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_pass http://127.0.0.1:8080;
+    }
+}
+```
+
+On a shared domain instead, proxy **both** `/app` and `/apps` the same way:
 
 ```nginx
 location /app {
     proxy_http_version 1.1;
     proxy_set_header Host $host;
-    proxy_set_header Scheme $scheme;
-    proxy_set_header SERVER_PORT $server_port;
-    proxy_set_header REMOTE_ADDR $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+    proxy_pass http://127.0.0.1:8080;
+}
+
+location /apps {
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "Upgrade";
     proxy_pass http://127.0.0.1:8080;
 }
 ```
+
+`REVERB_HOST` / `REVERB_PORT` / `REVERB_SCHEME` in the **server** `.env` are what Laravel uses to publish to Reverb. Set them to the public wss endpoint (e.g. `ws.example.com` / `443` / `https`), not `localhost`. The Android app's endpoints are set at build time (see Flutter release build below), not from this `.env`.
 
 ### Post-deploy
 
@@ -419,6 +445,19 @@ Worker service needs the same env vars (especially `APP_KEY`, database, and mail
 
 ```bash
 php artisan test
+```
+
+### Flutter release build
+
+Endpoints are compile-time `--dart-define` values. Omit them for emulator defaults (`10.0.2.2:8000`, Reverb `ws` on `8080`).
+
+```bash
+flutter build apk --release \
+  --dart-define=API_BASE_URL=https://api.example.com \
+  --dart-define=REVERB_HOST=ws.example.com \
+  --dart-define=REVERB_PORT=443 \
+  --dart-define=REVERB_SCHEME=wss \
+  --dart-define=REVERB_APP_KEY=...
 ```
 
 ### Flutter testing

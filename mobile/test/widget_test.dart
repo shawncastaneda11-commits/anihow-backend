@@ -11,7 +11,14 @@ import 'package:anihow/widgets/status_pill.dart';
 void main() {
   test('Android emulator API host is 10.0.2.2', () {
     expect(ApiConfig.emulatorHost, 'http://10.0.2.2:8000');
+    expect(ApiConfig.localHost, 'http://127.0.0.1:8000');
+    expect(ApiConfig.hasReleaseApi, isFalse);
     expect(ApiConfig.baseUrl.endsWith('/api'), isTrue);
+    expect(ApiConfig.broadcastingAuthUrl.endsWith('/broadcasting/auth'), isTrue);
+    expect(ApiConfig.reverbPort, 8080);
+    expect(ApiConfig.reverbScheme, 'ws');
+    expect(ApiConfig.reverbAppKey, 'anihow-reverb-key');
+    expect(ApiConfig.reverbHost, anyOf('10.0.2.2', '127.0.0.1'));
   });
 
   test('media URLs from Laravel localhost are rewritten to the API host', () {

@@ -771,12 +771,12 @@ drafts are not repeated.
 
 ### E. Open team inputs carried in the drafts
 
-Research Locale description and COSEL's full name; external-buyer recruitment
-and target N; IT-expert count; respondent counts; instrument version and
-validators; use period and administration mode; minors and consent; retention
-period; adviser validation session dates; VPS provider and deployment date;
-MySQL version; the college name in Research Locale (the template
-filename suggests College of Computer Studies).
+Resolved from the previous manuscript and Appendices B to D (see A15): locale,
+COSEL's full name, IT-expert count, farmer-seller estimate, instrument and
+validators, use period and administration mode, minors and consent, retention,
+adviser session dates, college name. Still open: external-buyer recruitment and
+target N; total buyer respondents; MySQL version; VPS provider and deployment
+date. Appendix D's header fields are still placeholders.
 
 ---
 
@@ -836,3 +836,4 @@ was updated only where noted.
 | A12 | Declaration of AI Use names Cursor (code and tests) and Claude (code review, coding-assistant instructions, manuscript drafting and editing, reference checks, Figures 1 to 8). | none (docs) | Chapter 3 marker resolved; team to confirm. |
 | A13 | Table 3, Representative Test Cases (15 cases mapped to the automated suite, all Passed). | none (docs) | Chapter 3 Testing Procedure marker resolved. |
 | A14 | Abstract drafted: 296 words, block format, 1.5 spacing, SDG 2 (target 2.3) named, five keywords. | none (docs) | New front-matter page; revise once results exist if the program requires. |
+| A15 | Chapter 3 filled from the previous manuscript and Appendices B to D: locale (Barangay Manggahan urban garden, crops, buyers, farm price), COSEL full name, three to five IT experts, farmer-sellers estimated at four or five, one bilingual instrument, five-day window, online and printed administration, minors with parental consent and assent (Appendices H, I), records destroyed after the final defense, sessions of July 8 and July 15, 2026. | none (docs) | Five markers remain. |

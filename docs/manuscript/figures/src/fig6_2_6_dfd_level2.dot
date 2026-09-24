@@ -1,0 +1,59 @@
+// Data flow diagram, level 2, process 6.0 Manage Farm Content and Help.
+digraph G {
+  graph [rankdir=LR, nodesep=0.25, ranksep=0.9, pad=0.25, fontname="Liberation Sans", newrank=true];
+  node  [fontname="Liberation Sans", fontsize=11];
+  edge  [penwidth=0.9, arrowsize=0.6, color="#333333", fontname="Liberation Sans", fontsize=8.5];
+  q6a [shape=circle, style=filled, fillcolor="#F4F4F4", penwidth=1.4, fixedsize=true, width=1.35, fontsize=10.5, label="6.1\n\nMaintain\nFarm\nProfile"];
+  ce_q6a [shape=box, style=filled, fillcolor="#E1E6ED", penwidth=1.2, width=1.35, height=0.42, label="Content Editor*"];
+  sa_q6a [shape=box, style=filled, fillcolor="#E1E6ED", penwidth=1.2, width=1.35, height=0.42, label="Super Admin*"];
+  D2_q6a [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D2</B></TD><TD SIDES="TB" ALIGN="LEFT">Farms</TD></TR></TABLE>>];
+  q6b [shape=circle, style=filled, fillcolor="#F4F4F4", penwidth=1.4, fixedsize=true, width=1.35, fontsize=10.5, label="6.2\n\nPublish\nCrop-Care\nArticles"];
+  ce_q6b [shape=box, style=filled, fillcolor="#E1E6ED", penwidth=1.2, width=1.35, height=0.42, label="Content Editor*"];
+  sa_q6b [shape=box, style=filled, fillcolor="#E1E6ED", penwidth=1.2, width=1.35, height=0.42, label="Super Admin*"];
+  D11_q6b [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D11</B></TD><TD SIDES="TB" ALIGN="LEFT">Crop-Care Articles</TD></TR></TABLE>>];
+  fs_q6b [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.42, label="Farmer-Seller*"];
+  q6c [shape=circle, style=filled, fillcolor="#F4F4F4", penwidth=1.4, fixedsize=true, width=1.35, fontsize=10.5, label="6.3\n\nPost Farm\nAnnounce-\nments"];
+  ce_q6c [shape=box, style=filled, fillcolor="#E1E6ED", penwidth=1.2, width=1.35, height=0.42, label="Content Editor*"];
+  fs_q6c [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.42, label="Farmer-Seller*"];
+  D12_q6c [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D12</B></TD><TD SIDES="TB" ALIGN="LEFT">Farm Announcements</TD></TR></TABLE>>];
+  sch_q6c [shape=box, style=filled, fillcolor="#F2F2F2", penwidth=1.2, width=1.35, height=0.42, label="Scheduler"];
+  D8_q6c [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D8</B></TD><TD SIDES="TB" ALIGN="LEFT">Notifications</TD></TR></TABLE>>];
+  q6d [shape=circle, style=filled, fillcolor="#F4F4F4", penwidth=1.4, fixedsize=true, width=1.35, fontsize=10.5, label="6.4\n\nManage\nFAQ\nAnswers"];
+  ce_q6d [shape=box, style=filled, fillcolor="#E1E6ED", penwidth=1.2, width=1.35, height=0.42, label="Content Editor*"];
+  sa_q6d [shape=box, style=filled, fillcolor="#E1E6ED", penwidth=1.2, width=1.35, height=0.42, label="Super Admin*"];
+  D13_q6d [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D13</B></TD><TD SIDES="TB" ALIGN="LEFT">FAQ Entries*</TD></TR></TABLE>>];
+  q6e [shape=circle, style=filled, fillcolor="#F4F4F4", penwidth=1.4, fixedsize=true, width=1.35, fontsize=10.5, label="6.5\n\nAnswer\nQuestions"];
+  fs_q6e [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.42, label="Farmer-Seller*"];
+  D13_q6e [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D13</B></TD><TD SIDES="TB" ALIGN="LEFT">FAQ Entries*</TD></TR></TABLE>>];
+  by_q6e [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.42, label="Buyer"];
+  ce_q6a -> q6a [label="profile, pickup point,\ncover and photos"];
+  sa_q6a -> q6a [label="any farm profile"];
+  q6a -> D2_q6a [label="profile, photos"];
+  ce_q6b -> q6b [label="articles, crop tags"];
+  sa_q6b -> q6b [label="unpublish"];
+  q6b -> D11_q6b [label="articles, status"];
+  q6b -> D11_q6b [label="published articles", dir=back];
+  fs_q6b -> q6b [label="articles from\nall farms", dir=back];
+  ce_q6c -> q6c [label="announcement, audience,\nschedule, pin"];
+  q6c -> D12_q6c [label="announcements"];
+  sch_q6c -> q6c [label="five-minute check"];
+  q6c -> D12_q6c [label="due announcements", dir=back];
+  q6c -> D8_q6c [label="notices to own\nfarm sellers"];
+  fs_q6c -> q6c [label="announcements", dir=back];
+  sa_q6d -> q6d [label="system answers,\ndeactivate, remove"];
+  ce_q6d -> q6d [label="farm answers\nand overrides"];
+  q6d -> D13_q6d [label="answers"];
+  ce_q6d -> q6d [label="moderation notice", dir=back];
+  by_q6e -> q6e [label="question"];
+  fs_q6e -> q6e [label="question"];
+  q6e -> D13_q6e [label="system answers,\nfarm overrides", dir=back];
+  by_q6e -> q6e [label="answer or\nsuggestions", dir=back];
+  fs_q6e -> q6e [label="answer or\nsuggestions", dir=back];
+  {rank=same; ce_q6a; sa_q6a; ce_q6b; sa_q6b; fs_q6b; ce_q6c; sch_q6c; fs_q6c; sa_q6d; ce_q6d; by_q6e; fs_q6e}
+  {rank=same; D2_q6a; D11_q6b; D12_q6c; D8_q6c; D13_q6d; D13_q6e}
+  {rank=same; q6a; q6b; q6c; q6d; q6e}
+  q6a -> q6b [style=invis, weight=10];
+  q6b -> q6c [style=invis, weight=10];
+  q6c -> q6d [style=invis, weight=10];
+  q6d -> q6e [style=invis, weight=10];
+}

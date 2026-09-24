@@ -1,0 +1,35 @@
+// Data flow diagram, level 2, process 5.0 Coordinate Orders and Notify.
+digraph G {
+  graph [rankdir=LR, nodesep=0.25, ranksep=0.9, pad=0.25, fontname="Liberation Sans", newrank=true];
+  node  [fontname="Liberation Sans", fontsize=11];
+  edge  [penwidth=0.9, arrowsize=0.6, color="#333333", fontname="Liberation Sans", fontsize=8.5];
+  q5a [shape=circle, style=filled, fillcolor="#F4F4F4", penwidth=1.4, fixedsize=true, width=1.35, fontsize=10.5, label="5.1\n\nExchange\nOrder\nChat"];
+  by_q5a [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.42, label="Buyer*"];
+  fs_q5a [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.42, label="Farmer-Seller*"];
+  D6_q5a [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D6</B></TD><TD SIDES="TB" ALIGN="LEFT">Orders</TD></TR></TABLE>>];
+  D7_q5a [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D7</B></TD><TD SIDES="TB" ALIGN="LEFT">Order Messages</TD></TR></TABLE>>];
+  sa_q5a [shape=box, style=filled, fillcolor="#E1E6ED", penwidth=1.2, width=1.35, height=0.42, label="Super Admin"];
+  q5b [shape=circle, style=filled, fillcolor="#F4F4F4", penwidth=1.4, fixedsize=true, width=1.35, fontsize=10.5, label="5.2\n\nDeliver\nNotifications"];
+  by_q5b [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.42, label="Buyer*"];
+  fs_q5b [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.42, label="Farmer-Seller*"];
+  D8_q5b [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D8</B></TD><TD SIDES="TB" ALIGN="LEFT">Notifications</TD></TR></TABLE>>];
+  by_q5a -> q5a [label="message"];
+  fs_q5a -> q5a [label="message"];
+  q5a -> D6_q5a [label="order parties,\nstatus", dir=back];
+  q5a -> D7_q5a [label="message"];
+  q5a -> D7_q5a [label="thread", dir=back];
+  by_q5a -> q5a [label="live messages", dir=back];
+  fs_q5a -> q5a [label="live messages", dir=back];
+  sa_q5a -> q5a [label="thread (read only)", dir=back];
+  q5a -> q5b [label="new message", constraint=false];
+  q5b -> D8_q5b [label="notifications", dir=back];
+  by_q5b -> q5b [label="read marks"];
+  fs_q5b -> q5b [label="read marks"];
+  q5b -> D8_q5b [label="read status"];
+  by_q5b -> q5b [label="notifications,\nunread count", dir=back];
+  fs_q5b -> q5b [label="notifications,\nunread count", dir=back];
+  {rank=same; by_q5a; fs_q5a; sa_q5a; by_q5b; fs_q5b}
+  {rank=same; D6_q5a; D7_q5a; D8_q5b}
+  {rank=same; q5a; q5b}
+  q5a -> q5b [style=invis, weight=10];
+}

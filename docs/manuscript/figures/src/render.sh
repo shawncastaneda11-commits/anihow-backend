@@ -3,6 +3,7 @@
 # Needs Graphviz (dot, neato) and the Liberation Sans font.
 set -euo pipefail
 python3 src/gen_fig7.py
+python3 src/gen_dfd.py
 for src in src/fig*.dot; do
   name=$(basename "$src" .dot)
   engine=dot

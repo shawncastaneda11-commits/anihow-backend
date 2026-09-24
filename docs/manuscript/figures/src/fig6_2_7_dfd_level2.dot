@@ -1,0 +1,29 @@
+// Data flow diagram, level 2, process 7.0 Report Analytics and Exports.
+digraph G {
+  graph [rankdir=LR, nodesep=0.25, ranksep=0.9, pad=0.25, fontname="Liberation Sans", newrank=true];
+  node  [fontname="Liberation Sans", fontsize=11];
+  edge  [penwidth=0.9, arrowsize=0.6, color="#333333", fontname="Liberation Sans", fontsize=8.5];
+  q7a [shape=circle, style=filled, fillcolor="#F4F4F4", penwidth=1.4, fixedsize=true, width=1.35, fontsize=10.5, label="7.1\n\nSummarize\nSales"];
+  D6_q7a [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D6</B></TD><TD SIDES="TB" ALIGN="LEFT">Orders*</TD></TR></TABLE>>];
+  sa_q7a [shape=box, style=filled, fillcolor="#E1E6ED", penwidth=1.2, width=1.35, height=0.42, label="Super Admin*"];
+  ce_q7a [shape=box, style=filled, fillcolor="#E1E6ED", penwidth=1.2, width=1.35, height=0.42, label="Content Editor"];
+  fs_q7a [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.42, label="Farmer-Seller"];
+  q7b [shape=circle, style=filled, fillcolor="#F4F4F4", penwidth=1.4, fixedsize=true, width=1.35, fontsize=10.5, label="7.2\n\nExport\nCSV Files"];
+  D6_q7b [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D6</B></TD><TD SIDES="TB" ALIGN="LEFT">Orders*</TD></TR></TABLE>>];
+  sa_q7b [shape=box, style=filled, fillcolor="#E1E6ED", penwidth=1.2, width=1.35, height=0.42, label="Super Admin*"];
+  D14_q7b [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D14</B></TD><TD SIDES="TB" ALIGN="LEFT">Export Logs</TD></TR></TABLE>>];
+  q7a -> D6_q7a [label="completed orders,\nwalk-ins included", dir=back];
+  sa_q7a -> q7a [label="system-wide\ndashboard", dir=back];
+  ce_q7a -> q7a [label="own farm\ndashboard", dir=back];
+  fs_q7a -> q7a [label="My Sales,\n7 or 30 days", dir=back];
+  q7a -> q7b [label="summaries", constraint=false];
+  sa_q7b -> q7b [label="ledger or analytics\nexport, filters"];
+  q7b -> D6_q7b [label="order ledger", dir=back];
+  sa_q7b -> q7b [label="CSV file\n(no contact data)", dir=back];
+  q7b -> D14_q7b [label="export entry"];
+  q7b -> D14_q7b [label="export history", dir=back];
+  {rank=same; sa_q7a; ce_q7a; fs_q7a; sa_q7b}
+  {rank=same; D6_q7a; D6_q7b; D14_q7b}
+  {rank=same; q7a; q7b}
+  q7a -> q7b [style=invis, weight=10];
+}

@@ -48,6 +48,14 @@ class AppStrings {
   String get verified => t('Verified', 'Beripikado');
   String get unverified => t('Unverified', 'Hindi pa');
   String get about => t('About', 'Tungkol');
+  String get misconfiguredBuildTitle => t(
+        'This build is not connected to a server',
+        'Hindi nakakonekta sa server ang build na ito',
+      );
+  String get misconfiguredBuildBody => t(
+        'Please install the official AniHow app from your farm or the project team.',
+        'I-install ang opisyal na AniHow app mula sa inyong bukid o sa project team.',
+      );
   String get aboutAniHow => t('About AniHow', 'Tungkol sa AniHow');
   String get termsPrivacy => t('Terms & privacy', 'Mga tuntunin at privacy');
   String get logOut => t('Log out', 'Mag-log out');

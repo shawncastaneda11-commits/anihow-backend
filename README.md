@@ -460,6 +460,8 @@ flutter build apk --release \
   --dart-define=REVERB_APP_KEY=...
 ```
 
+A release build without these defines shows a "not connected to a server" screen by design.
+
 ### Flutter testing
 
 Everyday (skips live API tests):

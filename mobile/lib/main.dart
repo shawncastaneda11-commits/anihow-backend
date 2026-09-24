@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'config/api_config.dart';
 import 'screens/admin_gate_screen.dart';
 import 'screens/buyer/buyer_shell.dart';
 import 'screens/farmer/farmer_shell.dart';
 import 'screens/login_screen.dart';
+import 'screens/misconfigured_build_screen.dart';
 import 'navigation/route_observer.dart';
 import 'state/auth_controller.dart';
 import 'state/cart_controller.dart';
@@ -15,6 +17,11 @@ import 'theme/anihow_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final problem = ApiConfig.configurationProblem();
+  if (problem != null) {
+    runApp(MisconfiguredBuildApp(reason: problem));
+    return;
+  }
   final theme = ThemeController();
   final preferences = PreferencesController();
   await theme.load();

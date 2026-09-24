@@ -285,7 +285,7 @@ class PrivacyRightsTest extends TestCase
 
         app(ApproveAccountDeletionRequestAction::class)->handle($admin, $deletion);
 
-        Mail::assertSent(AccountDeletionCompletedMail::class, function (AccountDeletionCompletedMail $mail): bool {
+        Mail::assertQueued(AccountDeletionCompletedMail::class, function (AccountDeletionCompletedMail $mail): bool {
             return $mail->hasTo('tony@example.com')
                 && $mail->recipientName === 'Mang Tonyo';
         });
@@ -332,7 +332,7 @@ class PrivacyRightsTest extends TestCase
         Mail::fake();
 
         $admin = $this->staff(Role::SuperAdmin);
-        $farmer = $this->farmer();
+        $farmer = $this->farmer(['name' => 'Mang Tonyo', 'email' => 'tony@example.com']);
         $listing = $this->listingFor($farmer, ['price_per_unit' => 30, 'quantity_available' => 10]);
         $this->asUser($farmer)->postJson('/api/auth/user/deletion-request')->assertCreated();
         $deletion = AccountDeletionRequest::query()->where('user_id', $farmer->id)->firstOrFail();
@@ -347,8 +347,36 @@ class PrivacyRightsTest extends TestCase
         }
 
         $this->assertFalse($farmer->fresh()->trashed());
+        $this->assertSame('Mang Tonyo', $farmer->fresh()->name);
+        $this->assertSame('tony@example.com', $farmer->fresh()->email);
         $this->assertSame(AccountDeletionStatus::Pending, $deletion->fresh()->status);
-        Mail::assertNothingSent();
+        Mail::assertNothingQueued();
+    }
+
+    public function test_approving_the_same_request_twice_fails_and_anonymises_once(): void
+    {
+        Mail::fake();
+
+        $admin = $this->staff(Role::SuperAdmin);
+        $buyer = $this->buyer(['name' => 'Ana Buyer', 'email' => 'ana@example.com']);
+        $this->asUser($buyer)->postJson('/api/auth/user/deletion-request')->assertCreated();
+        $deletion = AccountDeletionRequest::query()->where('user_id', $buyer->id)->firstOrFail();
+
+        app(ApproveAccountDeletionRequestAction::class)->handle($admin, $deletion);
+
+        try {
+            app(ApproveAccountDeletionRequestAction::class)->handle($admin, $deletion);
+            $this->fail('A second approval should fail.');
+        } catch (ValidationException $exception) {
+            $this->assertSame(
+                'This request has already been processed.',
+                $exception->errors()['status'][0],
+            );
+        }
+
+        $this->assertSame(1, User::withTrashed()->where('email', "deleted-{$buyer->id}@anihow.invalid")->count());
+        $this->assertSame(AccountDeletionStatus::Completed, $deletion->fresh()->status);
+        Mail::assertQueued(AccountDeletionCompletedMail::class, 1);
     }
 
     public function test_reject_keeps_the_account_and_notifies(): void

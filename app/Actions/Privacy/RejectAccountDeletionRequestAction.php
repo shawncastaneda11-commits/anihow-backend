@@ -6,6 +6,7 @@ use App\Enums\AccountDeletionStatus;
 use App\Models\AccountDeletionRequest;
 use App\Models\User;
 use App\Support\InAppNotifier;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
@@ -25,12 +26,27 @@ class RejectAccountDeletionRequestAction
             ]);
         }
 
-        $request->update([
-            'status' => AccountDeletionStatus::Rejected,
-            'rejection_note' => $note,
-            'processed_by' => $admin->id,
-            'processed_at' => now(),
-        ]);
+        DB::transaction(function () use ($admin, $request, $note): void {
+            $locked = AccountDeletionRequest::query()
+                ->whereKey($request->id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($locked === null || ! $locked->isPending()) {
+                throw ValidationException::withMessages([
+                    'status' => 'This request has already been processed.',
+                ]);
+            }
+
+            $locked->update([
+                'status' => AccountDeletionStatus::Rejected,
+                'rejection_note' => $note,
+                'processed_by' => $admin->id,
+                'processed_at' => now(),
+            ]);
+        });
+
+        $request->refresh();
 
         $subject = $request->user;
 

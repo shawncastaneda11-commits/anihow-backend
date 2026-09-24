@@ -3,19 +3,16 @@
 namespace App\Actions\Privacy;
 
 use App\Enums\UserStatus;
-use App\Mail\AccountDeletionCompletedMail;
 use App\Models\TawadRule;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AnonymizeUserAction
 {
     /**
-     * Irreversible. The original email is mailed first so the notice still
-     * reaches the person, then the address is replaced.
+     * Irreversible mutations only. The caller owns the transaction and the
+     * completion mail, so a failed SMTP cannot roll this back.
      */
     public function handle(User $user): void
     {
@@ -25,44 +22,37 @@ class AnonymizeUserAction
             ]);
         }
 
-        $originalEmail = $user->email;
-        $originalName = $user->name;
+        $user->listings()->update(['is_active' => false]);
 
-        Mail::to($originalEmail)->send(new AccountDeletionCompletedMail($originalName));
+        TawadRule::query()
+            ->where('is_active', true)
+            ->whereIn('listing_id', $user->listings()->select('id'))
+            ->update([
+                'is_active' => false,
+                'ended_at' => now(),
+            ]);
 
-        DB::transaction(function () use ($user): void {
-            $user->listings()->update(['is_active' => false]);
+        $user->cartItems()->delete();
+        $user->favorites()->delete();
+        $user->inAppNotifications()->delete();
+        $user->tokens()->delete();
 
-            TawadRule::query()
-                ->where('is_active', true)
-                ->whereIn('listing_id', $user->listings()->select('id'))
-                ->update([
-                    'is_active' => false,
-                    'ended_at' => now(),
-                ]);
+        $user->forceFill([
+            'name' => 'Deleted user',
+            'email' => "deleted-{$user->id}@anihow.invalid",
+            'phone' => null,
+            'location' => null,
+            'shop_name' => null,
+            'bio' => null,
+            'contact' => null,
+            'password' => Str::password(32),
+            'status' => UserStatus::Suspended,
+            'suspended_at' => now(),
+            'suspension_reason' => 'Account deletion completed',
+            'email_verified_at' => null,
+            'remember_token' => Str::random(40),
+        ])->save();
 
-            $user->cartItems()->delete();
-            $user->favorites()->delete();
-            $user->inAppNotifications()->delete();
-            $user->tokens()->delete();
-
-            $user->forceFill([
-                'name' => 'Deleted user',
-                'email' => "deleted-{$user->id}@anihow.invalid",
-                'phone' => null,
-                'location' => null,
-                'shop_name' => null,
-                'bio' => null,
-                'contact' => null,
-                'password' => Str::password(32),
-                'status' => UserStatus::Suspended,
-                'suspended_at' => now(),
-                'suspension_reason' => 'Account deletion completed',
-                'email_verified_at' => null,
-                'remember_token' => Str::random(40),
-            ])->save();
-
-            $user->delete();
-        });
+        $user->delete();
     }
 }

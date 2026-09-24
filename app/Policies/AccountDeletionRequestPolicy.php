@@ -33,7 +33,6 @@ class AccountDeletionRequestPolicy
 
     public function process(User $user, AccountDeletionRequest $accountDeletionRequest): bool
     {
-        return $user->can(Permission::ManageAccounts->value)
-            && $accountDeletionRequest->isPending();
+        return $user->can(Permission::ManageAccounts->value);
     }
 }

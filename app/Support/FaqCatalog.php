@@ -3,8 +3,8 @@
 namespace App\Support;
 
 /**
- * Scripted FAQ intents. Keyword matching only. No LLM, no crop-care article
- * bodies. Role gates keep buyer answers separate from farmer-seller answers.
+ * Seed source for system-wide FAQ rows. Runtime matching reads FaqEntry
+ * through FaqResponder — do not call this class from the app path.
  */
 class FaqCatalog
 {
@@ -114,29 +114,5 @@ class FaqCatalog
                 'answer_fil' => 'I-tap ang tab na Pangangalaga ng pananim sa ilalim ng app. Basahin doon ang mga gabay. Hindi kinokopya ng FAQ ang mga artikulong iyon.',
             ],
         ];
-    }
-
-    public static function localized(array $intent, string $locale, string $key): string
-    {
-        if ($locale === 'fil' && filled($intent[$key.'_fil'] ?? null)) {
-            return (string) $intent[$key.'_fil'];
-        }
-
-        return (string) $intent[$key];
-    }
-
-    /**
-     * @return list<array{id: string, label: string}>
-     */
-    public static function chipsForRole(string $role, string $locale = 'en'): array
-    {
-        return collect(self::intents())
-            ->filter(fn (array $intent): bool => in_array($role, $intent['roles'], true))
-            ->map(fn (array $intent): array => [
-                'id' => $intent['id'],
-                'label' => self::localized($intent, $locale, 'label'),
-            ])
-            ->values()
-            ->all();
     }
 }

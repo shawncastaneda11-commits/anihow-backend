@@ -81,6 +81,11 @@ class Farm extends Model
         return $this->hasMany(FarmAnnouncement::class);
     }
 
+    public function faqEntries(): HasMany
+    {
+        return $this->hasMany(FaqEntry::class);
+    }
+
     public function coverPhotoUrl(): ?string
     {
         if (! filled($this->cover_photo_path)) {

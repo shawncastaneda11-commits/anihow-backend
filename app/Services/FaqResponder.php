@@ -3,8 +3,9 @@
 namespace App\Services;
 
 use App\Enums\Role;
+use App\Models\FaqEntry;
 use App\Models\User;
-use App\Support\FaqCatalog;
+use Illuminate\Support\Collection;
 
 class FaqResponder
 {
@@ -13,13 +14,13 @@ class FaqResponder
      */
     public function ask(User $user, string $question, string $locale = 'en'): array
     {
-        $role = $this->primaryAppRole($user);
-        $suggestions = FaqCatalog::chipsForRole($role, $locale);
+        $intents = $this->resolvedIntents($user);
+        $suggestions = $this->chipsFrom($intents, $locale);
         $normalized = $this->normalize($question);
 
         if ($normalized === '') {
             return [
-                'answer' => $this->fallback($role, $locale),
+                'answer' => $this->fallback($this->primaryAppRole($user), $locale),
                 'matched_id' => null,
                 'suggestions' => $suggestions,
             ];
@@ -29,27 +30,23 @@ class FaqResponder
         $bestScore = 0;
         $bestAnswer = null;
 
-        foreach (FaqCatalog::intents() as $intent) {
-            if (! in_array($role, $intent['roles'], true)) {
-                continue;
-            }
-
+        foreach ($intents as $intent) {
             $score = $this->score(
                 $normalized,
-                $intent['keywords'],
-                FaqCatalog::localized($intent, $locale, 'label'),
+                $intent->keywords ?? [],
+                $intent->localized($locale, 'label'),
             );
 
             if ($score > $bestScore) {
                 $bestScore = $score;
-                $bestId = $intent['id'];
-                $bestAnswer = FaqCatalog::localized($intent, $locale, 'answer');
+                $bestId = $intent->intent_key;
+                $bestAnswer = $intent->localized($locale, 'answer');
             }
         }
 
         if ($bestScore < 1 || $bestAnswer === null) {
             return [
-                'answer' => $this->fallback($role, $locale),
+                'answer' => $this->fallback($this->primaryAppRole($user), $locale),
                 'matched_id' => null,
                 'suggestions' => $suggestions,
             ];
@@ -67,7 +64,61 @@ class FaqResponder
      */
     public function chips(User $user, string $locale = 'en'): array
     {
-        return FaqCatalog::chipsForRole($this->primaryAppRole($user), $locale);
+        return $this->chipsFrom($this->resolvedIntents($user), $locale);
+    }
+
+    /**
+     * Active system rows for the user's role, then farm overrides (same
+     * intent_key wins) and farm-only intents. Buyers have no farm, so they
+     * receive system rows only.
+     *
+     * @return Collection<int, FaqEntry>
+     */
+    public function resolvedIntents(User $user): Collection
+    {
+        $role = $this->primaryAppRole($user);
+
+        $resolved = FaqEntry::query()
+            ->active()
+            ->systemWide()
+            ->forRole($role)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->keyBy('intent_key');
+
+        if ($user->farm_id === null) {
+            return $resolved->values();
+        }
+
+        $farmEntries = FaqEntry::query()
+            ->active()
+            ->forFarm((int) $user->farm_id)
+            ->forRole($role)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        foreach ($farmEntries as $entry) {
+            $resolved->put($entry->intent_key, $entry);
+        }
+
+        return $resolved->values();
+    }
+
+    /**
+     * @param  Collection<int, FaqEntry>  $intents
+     * @return list<array{id: string, label: string}>
+     */
+    private function chipsFrom(Collection $intents, string $locale): array
+    {
+        return $intents
+            ->map(fn (FaqEntry $intent): array => [
+                'id' => $intent->intent_key,
+                'label' => $intent->localized($locale, 'label'),
+            ])
+            ->values()
+            ->all();
     }
 
     private function primaryAppRole(User $user): string

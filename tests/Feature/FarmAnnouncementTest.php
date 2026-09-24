@@ -247,6 +247,23 @@ class FarmAnnouncementTest extends TestCase
         $this->assertSame(0, $this->notices($sellerB->id));
     }
 
+    public function test_calling_the_notify_action_twice_does_not_double_notify(): void
+    {
+        [$farmA] = $this->twoFarms();
+        $sellerA = $this->farmer(['email' => 'seller.a@example.com'], $farmA);
+        $sellerA2 = $this->farmer(['email' => 'seller.a2@example.com'], $farmA);
+        $announcement = FarmAnnouncement::factory()->forFarm($farmA)->create([
+            'title' => 'Harvest day Saturday',
+        ]);
+
+        $action = app(NotifyFarmAnnouncementRecipientsAction::class);
+        $action->handle($announcement);
+        $action->handle($announcement->fresh());
+
+        $this->assertSame(1, $this->notices($sellerA->id));
+        $this->assertSame(1, $this->notices($sellerA2->id));
+    }
+
     public function test_farmer_announcements_are_pinned_first_then_newest(): void
     {
         [$farmA] = $this->twoFarms();

@@ -88,13 +88,18 @@ php artisan db:seed --class=SmokeTestSeeder
 ```bash
 php artisan serve
 php artisan reverb:start
+php artisan queue:work
+php artisan schedule:work
 ```
+
+- `php artisan serve` — API + Filament. Without it, the app and `/admin` have nothing to talk to.
+- `php artisan reverb:start` — live order chat. Without it, the app falls back to 8s polling.
+- `php artisan queue:work` — queued emails (OTP, password reset, low-stock). Without it, those mails sit in the `jobs` table.
+- `php artisan schedule:work` — scheduled farm announcements (later the stale-order sweep). Without it, a future `starts_at` never notifies.
 
 - API: `http://localhost:8000/api`
 - Filament admin: `http://localhost:8000/admin`
 - Reverb (order chat): `ws://localhost:8080` — Android emulator uses `10.0.2.2:8080`
-
-Order chat needs both `serve` and `reverb:start`. The app also polls every 8 seconds while a chat screen is open if the socket drops.
 
 Settings → Help & contact opens the scripted FAQ bot (no LLM).
 
@@ -317,6 +322,86 @@ Copy `.env.example`. Important variables:
 | `CORS_ALLOWED_ORIGINS` | `*` | your Flutter web origin(s), comma-separated |
 | `RATE_LIMIT_AUTH` / `RATE_LIMIT_API` | `5` / `60` | same unless you need to tune |
 | `SUPER_ADMIN_*` | seed credentials | change the password |
+
+## Deploy on a VPS
+
+Nginx + PHP-FPM serving `public/`. HTTPS is required.
+
+### Supervisor
+
+Two programs, both with autorestart. Same working directory and `.env` as the app.
+
+`queue-work` — queued emails (OTP, password reset, low-stock):
+
+```ini
+[program:anihow-queue]
+command=php artisan queue:work --sleep=1 --tries=3
+directory=/path/to/anihow-backend
+autostart=true
+autorestart=true
+user=www-data
+redirect_stderr=true
+stdout_logfile=/var/log/anihow-queue.log
+```
+
+`reverb` — live order chat:
+
+```ini
+[program:anihow-reverb]
+command=php artisan reverb:start
+directory=/path/to/anihow-backend
+autostart=true
+autorestart=true
+user=www-data
+redirect_stderr=true
+stdout_logfile=/var/log/anihow-reverb.log
+```
+
+### Cron
+
+```
+* * * * * cd /path/to/anihow-backend && php artisan schedule:run >> /dev/null 2>&1
+```
+
+That ticks `announcements:notify-due` (and later the stale-order sweep).
+
+### Reverb over Nginx
+
+Proxy Reverb's WebSocket port (`REVERB_SERVER_PORT`) with `Upgrade` and `Connection` headers. The app's `REVERB_HOST` / `REVERB_PORT` / `REVERB_SCHEME` must point at the public `wss` endpoint, not `localhost`.
+
+```nginx
+location /app {
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header Scheme $scheme;
+    proxy_set_header SERVER_PORT $server_port;
+    proxy_set_header REMOTE_ADDR $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+    proxy_pass http://127.0.0.1:8080;
+}
+```
+
+### Post-deploy
+
+```bash
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan storage:link
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+php artisan queue:restart
+php artisan reverb:restart
+```
+
+### Environment
+
+- `APP_ENV=production` so smoke seeders never run
+- `APP_DEBUG=false`
+- `MAIL_*` for Gmail SMTP
+- `RATE_LIMIT_AUTH` left at `5`
 
 ## Deploy on Railway
 

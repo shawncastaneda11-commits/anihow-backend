@@ -63,7 +63,7 @@ digraph G {
   by_p3 -> p3 [label="searches, favorites"];
   by_p3 -> p3 [label="listings, storefronts,\nfarm pages, reviews", dir=back];
   fs_p3 -> p3 [label="shop profile"];
-  fs_p3 -> p3 [label="farm page", dir=back];
+  fs_p3 -> p3 [label="farm page,\nown shop reviews", dir=back];
   p3 -> D4_p3 [label="active listings", dir=back];
   p3 -> D2_p3 [label="farm profiles", dir=back];
   p3 -> D9_p3 [label="shop reviews", dir=back];

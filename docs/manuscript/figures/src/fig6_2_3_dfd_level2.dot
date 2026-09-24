@@ -34,6 +34,7 @@ digraph G {
   by_q3b -> q3b [label="storefront, reviews", dir=back];
   fs_q3b -> q3b [label="shop profile\nupdates"];
   q3b -> D1_q3b [label="shop profile"];
+  fs_q3b -> q3b [label="own shop reviews,\nrating", dir=back];
   by_q3c -> q3c [label="farm selection"];
   fs_q3c -> q3c [label="farm selection"];
   q3c -> D2_q3c [label="profile, photos,\ncontact number", dir=back];

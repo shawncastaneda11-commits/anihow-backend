@@ -77,23 +77,23 @@
 <!-- by_q3a -->
 <g id="node2" class="node">
 <title>by_q3a</title>
-<polygon fill="#e8e6e0" stroke="black" stroke-width="1.2" points="97,-462.5 0,-462.5 0,-432.5 97,-432.5 97,-462.5"/>
-<text text-anchor="middle" x="48.5" y="-444.7" font-family="Liberation Sans" font-size="11.00">Buyer*</text>
+<polygon fill="#e8e6e0" stroke="black" stroke-width="1.2" points="97,-448.5 0,-448.5 0,-418.5 97,-418.5 97,-448.5"/>
+<text text-anchor="middle" x="48.5" y="-430.7" font-family="Liberation Sans" font-size="11.00">Buyer*</text>
 </g>
 <!-- by_q3a&#45;&gt;q3a -->
 <g id="edge1" class="edge">
 <title>by_q3a&#45;&gt;q3a</title>
-<path fill="none" stroke="#333333" stroke-width="0.9" d="M97,-447.5C136.63,-447.5 193.08,-447.5 234.43,-447.5"/>
-<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="234.68,-449.6 240.68,-447.5 234.68,-445.4 234.68,-449.6"/>
-<text text-anchor="middle" x="169" y="-458.7" font-family="Liberation Sans" font-size="8.50">keywords, crop type,</text>
-<text text-anchor="middle" x="169" y="-449.7" font-family="Liberation Sans" font-size="8.50">sort</text>
+<path fill="none" stroke="#333333" stroke-width="0.9" d="M97,-436.28C136.63,-438.6 193.08,-441.91 234.43,-444.33"/>
+<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="234.56,-446.44 240.68,-444.7 234.81,-442.25 234.56,-446.44"/>
+<text text-anchor="middle" x="169" y="-453.7" font-family="Liberation Sans" font-size="8.50">keywords, crop type,</text>
+<text text-anchor="middle" x="169" y="-444.7" font-family="Liberation Sans" font-size="8.50">sort</text>
 </g>
 <!-- by_q3a&#45;&gt;q3a -->
 <g id="edge5" class="edge">
 <title>by_q3a&#45;&gt;q3a</title>
-<path fill="none" stroke="#333333" stroke-width="0.9" d="M103.16,-437.61C112.09,-436.32 121.29,-435.2 130,-434.5 164.56,-431.73 173.44,-431.73 208,-434.5 218.87,-435.37 230.48,-436.9 241.4,-438.6"/>
-<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="102.64,-435.57 97.02,-438.53 103.27,-439.72 102.64,-435.57"/>
-<text text-anchor="middle" x="169" y="-436.7" font-family="Liberation Sans" font-size="8.50">matching listings</text>
+<path fill="none" stroke="#333333" stroke-width="0.9" d="M103.25,-425.25C134.04,-421.82 173.33,-419.64 208,-424.5 219.66,-426.13 232,-429.04 243.42,-432.24"/>
+<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="102.93,-423.17 97.21,-425.95 103.41,-427.35 102.93,-423.17"/>
+<text text-anchor="middle" x="169" y="-426.7" font-family="Liberation Sans" font-size="8.50">matching listings</text>
 </g>
 <!-- D4_q3b -->
 <g id="node8" class="node">
@@ -162,36 +162,44 @@
 <!-- by_q3b -->
 <g id="node7" class="node">
 <title>by_q3b</title>
-<polygon fill="#e8e6e0" stroke="black" stroke-width="1.2" points="97,-349.5 0,-349.5 0,-319.5 97,-319.5 97,-349.5"/>
-<text text-anchor="middle" x="48.5" y="-331.7" font-family="Liberation Sans" font-size="11.00">Buyer*</text>
+<polygon fill="#e8e6e0" stroke="black" stroke-width="1.2" points="97,-384.5 0,-384.5 0,-354.5 97,-354.5 97,-384.5"/>
+<text text-anchor="middle" x="48.5" y="-366.7" font-family="Liberation Sans" font-size="11.00">Buyer*</text>
 </g>
 <!-- by_q3b&#45;&gt;q3b -->
 <g id="edge6" class="edge">
 <title>by_q3b&#45;&gt;q3b</title>
-<path fill="none" stroke="#333333" stroke-width="0.9" d="M97.07,-332.25C128.58,-330.58 170.8,-327.98 208,-324.5 216.77,-323.68 226.06,-322.66 235.1,-321.59"/>
-<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="235.6,-323.65 241.3,-320.85 235.1,-319.48 235.6,-323.65"/>
-<text text-anchor="middle" x="169" y="-331.7" font-family="Liberation Sans" font-size="8.50">shop selection</text>
+<path fill="none" stroke="#333333" stroke-width="0.9" d="M97.34,-373.88C129.33,-375.32 172.01,-374.33 208,-363.5 220.77,-359.66 233.57,-353.29 245.09,-346.4"/>
+<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="246.27,-348.14 250.28,-343.21 244.07,-344.56 246.27,-348.14"/>
+<text text-anchor="middle" x="169" y="-375.7" font-family="Liberation Sans" font-size="8.50">shop selection</text>
 </g>
 <!-- by_q3b&#45;&gt;q3b -->
 <g id="edge10" class="edge">
 <title>by_q3b&#45;&gt;q3b</title>
-<path fill="none" stroke="#333333" stroke-width="0.9" d="M103.35,-320.03C112.2,-318.16 121.31,-316.54 130,-315.5 167.02,-311.07 209.26,-311.05 240.82,-312.01"/>
-<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="102.7,-318.02 97.28,-321.36 103.59,-322.12 102.7,-318.02"/>
-<text text-anchor="middle" x="169" y="-317.7" font-family="Liberation Sans" font-size="8.50">storefront, reviews</text>
+<path fill="none" stroke="#333333" stroke-width="0.9" d="M103.04,-357.18C144.75,-347.58 202.07,-334.39 241.9,-325.22"/>
+<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="102.38,-355.18 97,-358.57 103.32,-359.27 102.38,-355.18"/>
+<text text-anchor="middle" x="169" y="-351.7" font-family="Liberation Sans" font-size="8.50">storefront, reviews</text>
 </g>
 <!-- fs_q3b -->
 <g id="node11" class="node">
 <title>fs_q3b</title>
-<polygon fill="#e8e6e0" stroke="black" stroke-width="1.2" points="97,-288.5 0,-288.5 0,-258.5 97,-258.5 97,-288.5"/>
-<text text-anchor="middle" x="48.5" y="-270.7" font-family="Liberation Sans" font-size="11.00">Farmer&#45;Seller*</text>
+<polygon fill="#e8e6e0" stroke="black" stroke-width="1.2" points="97,-306.5 0,-306.5 0,-276.5 97,-276.5 97,-306.5"/>
+<text text-anchor="middle" x="48.5" y="-288.7" font-family="Liberation Sans" font-size="11.00">Farmer&#45;Seller*</text>
 </g>
 <!-- fs_q3b&#45;&gt;q3b -->
 <g id="edge11" class="edge">
 <title>fs_q3b&#45;&gt;q3b</title>
-<path fill="none" stroke="#333333" stroke-width="0.9" d="M97.03,-275.8C128.71,-277.95 171.14,-282 208,-289.5 217.62,-291.46 227.72,-294.11 237.4,-296.95"/>
-<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="237.01,-299.03 243.36,-298.74 238.22,-295 237.01,-299.03"/>
-<text text-anchor="middle" x="169" y="-300.7" font-family="Liberation Sans" font-size="8.50">shop profile</text>
-<text text-anchor="middle" x="169" y="-291.7" font-family="Liberation Sans" font-size="8.50">updates</text>
+<path fill="none" stroke="#333333" stroke-width="0.9" d="M97,-296.07C136.84,-299.9 193.69,-305.38 235.09,-309.36"/>
+<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="234.91,-311.45 241.09,-309.94 235.31,-307.27 234.91,-311.45"/>
+<text text-anchor="middle" x="169" y="-316.7" font-family="Liberation Sans" font-size="8.50">shop profile</text>
+<text text-anchor="middle" x="169" y="-307.7" font-family="Liberation Sans" font-size="8.50">updates</text>
+</g>
+<!-- fs_q3b&#45;&gt;q3b -->
+<g id="edge13" class="edge">
+<title>fs_q3b&#45;&gt;q3b</title>
+<path fill="none" stroke="#333333" stroke-width="0.9" d="M103.21,-278.77C134.14,-273.41 173.59,-269.97 208,-277.5 221.07,-280.36 234.56,-285.55 246.66,-291.16"/>
+<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="102.67,-276.73 97.14,-279.86 103.41,-280.86 102.67,-276.73"/>
+<text text-anchor="middle" x="169" y="-288.7" font-family="Liberation Sans" font-size="8.50">own shop reviews,</text>
+<text text-anchor="middle" x="169" y="-279.7" font-family="Liberation Sans" font-size="8.50">rating</text>
 </g>
 <!-- D2_q3c -->
 <g id="node14" class="node">
@@ -203,7 +211,7 @@
 <text text-anchor="start" x="540" y="-179.7" font-family="Liberation Sans" font-size="11.00">Farms*</text>
 </g>
 <!-- q3c&#45;&gt;D2_q3c -->
-<g id="edge15" class="edge">
+<g id="edge16" class="edge">
 <title>q3c&#45;&gt;D2_q3c</title>
 <path fill="none" stroke="#333333" stroke-width="0.9" d="M344.15,-181.71C389.99,-181.9 455.13,-182.15 497.96,-182.32"/>
 <polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="344.11,-179.61 338.1,-181.69 344.09,-183.81 344.11,-179.61"/>
@@ -220,7 +228,7 @@
 <text text-anchor="start" x="505" y="-125.7" font-family="Liberation Sans" font-size="11.00">Farm Announcements</text>
 </g>
 <!-- q3c&#45;&gt;D12_q3c -->
-<g id="edge16" class="edge">
+<g id="edge17" class="edge">
 <title>q3c&#45;&gt;D12_q3c</title>
 <path fill="none" stroke="#333333" stroke-width="0.9" d="M342.19,-166.66C351.73,-164.12 361.64,-161.62 371,-159.5 400.87,-152.73 433.93,-146.45 462.96,-141.34"/>
 <polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="341.55,-164.65 336.3,-168.24 342.64,-168.71 341.55,-164.65"/>
@@ -239,44 +247,44 @@
 <!-- by_q3c -->
 <g id="node13" class="node">
 <title>by_q3c</title>
-<polygon fill="#e8e6e0" stroke="black" stroke-width="1.2" points="97,-226.5 0,-226.5 0,-196.5 97,-196.5 97,-226.5"/>
-<text text-anchor="middle" x="48.5" y="-208.7" font-family="Liberation Sans" font-size="11.00">Buyer*</text>
+<polygon fill="#e8e6e0" stroke="black" stroke-width="1.2" points="97,-232.5 0,-232.5 0,-202.5 97,-202.5 97,-232.5"/>
+<text text-anchor="middle" x="48.5" y="-214.7" font-family="Liberation Sans" font-size="11.00">Buyer*</text>
 </g>
 <!-- by_q3c&#45;&gt;q3c -->
-<g id="edge13" class="edge">
+<g id="edge14" class="edge">
 <title>by_q3c&#45;&gt;q3c</title>
-<path fill="none" stroke="#333333" stroke-width="0.9" d="M97.17,-218.79C128.9,-222.24 171.34,-224.12 208,-216.5 218.83,-214.25 229.98,-210.46 240.41,-206.19"/>
-<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="241.42,-208.04 246.13,-203.77 239.78,-204.18 241.42,-208.04"/>
-<text text-anchor="middle" x="169" y="-223.7" font-family="Liberation Sans" font-size="8.50">farm selection</text>
+<path fill="none" stroke="#333333" stroke-width="0.9" d="M97.19,-222.15C128.94,-224.03 171.38,-224.24 208,-216.5 218.82,-214.21 229.97,-210.41 240.4,-206.14"/>
+<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="241.41,-207.99 246.11,-203.72 239.77,-204.12 241.41,-207.99"/>
+<text text-anchor="middle" x="169" y="-224.7" font-family="Liberation Sans" font-size="8.50">farm selection</text>
 </g>
 <!-- by_q3c&#45;&gt;q3c -->
-<g id="edge17" class="edge">
+<g id="edge18" class="edge">
 <title>by_q3c&#45;&gt;q3c</title>
-<path fill="none" stroke="#333333" stroke-width="0.9" d="M103.49,-199.12C112.31,-197.38 121.39,-195.76 130,-194.5 167.02,-189.1 209.25,-185.77 240.81,-183.84"/>
-<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="102.89,-197.1 97.42,-200.34 103.72,-201.22 102.89,-197.1"/>
+<path fill="none" stroke="#333333" stroke-width="0.9" d="M102.34,-200.81C111.49,-198.38 120.97,-196.14 130,-194.5 166.94,-187.78 209.37,-184.53 241.02,-182.96"/>
+<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="101.62,-198.83 96.38,-202.43 102.72,-202.88 101.62,-198.83"/>
 <text text-anchor="middle" x="169" y="-205.7" font-family="Liberation Sans" font-size="8.50">farm page without</text>
 <text text-anchor="middle" x="169" y="-196.7" font-family="Liberation Sans" font-size="8.50">contact number</text>
 </g>
 <!-- fs_q3c -->
 <g id="node15" class="node">
 <title>fs_q3c</title>
-<polygon fill="#e8e6e0" stroke="black" stroke-width="1.2" points="97,-144.5 0,-144.5 0,-114.5 97,-114.5 97,-144.5"/>
-<text text-anchor="middle" x="48.5" y="-126.7" font-family="Liberation Sans" font-size="11.00">Farmer&#45;Seller*</text>
+<polygon fill="#e8e6e0" stroke="black" stroke-width="1.2" points="97,-143.5 0,-143.5 0,-113.5 97,-113.5 97,-143.5"/>
+<text text-anchor="middle" x="48.5" y="-125.7" font-family="Liberation Sans" font-size="11.00">Farmer&#45;Seller*</text>
 </g>
 <!-- fs_q3c&#45;&gt;q3c -->
-<g id="edge14" class="edge">
+<g id="edge15" class="edge">
 <title>fs_q3c&#45;&gt;q3c</title>
-<path fill="none" stroke="#333333" stroke-width="0.9" d="M97,-139.84C137.1,-148.56 194.43,-161.03 235.9,-170.06"/>
-<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="235.59,-172.14 241.9,-171.36 236.48,-168.03 235.59,-172.14"/>
+<path fill="none" stroke="#333333" stroke-width="0.9" d="M97,-139.03C137.1,-147.93 194.43,-160.64 235.9,-169.84"/>
+<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="235.59,-171.92 241.9,-171.17 236.5,-167.82 235.59,-171.92"/>
 <text text-anchor="middle" x="169" y="-164.7" font-family="Liberation Sans" font-size="8.50">farm selection</text>
 </g>
 <!-- fs_q3c&#45;&gt;q3c -->
-<g id="edge18" class="edge">
+<g id="edge19" class="edge">
 <title>fs_q3c&#45;&gt;q3c</title>
-<path fill="none" stroke="#333333" stroke-width="0.9" d="M103.22,-119.63C134.49,-115.96 174.27,-114.92 208,-125.5 223.92,-130.49 239.45,-139.87 252.55,-149.54"/>
-<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="102.77,-117.57 97.08,-120.4 103.29,-121.74 102.77,-117.57"/>
-<text text-anchor="middle" x="169" y="-136.7" font-family="Liberation Sans" font-size="8.50">farm page, contact</text>
-<text text-anchor="middle" x="169" y="-127.7" font-family="Liberation Sans" font-size="8.50">number if own farm</text>
+<path fill="none" stroke="#333333" stroke-width="0.9" d="M103.25,-118.53C134.53,-114.82 174.31,-113.78 208,-124.5 224.16,-129.64 239.85,-139.33 253.03,-149.28"/>
+<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="102.8,-116.47 97.11,-119.3 103.33,-120.63 102.8,-116.47"/>
+<text text-anchor="middle" x="169" y="-135.7" font-family="Liberation Sans" font-size="8.50">farm page, contact</text>
+<text text-anchor="middle" x="169" y="-126.7" font-family="Liberation Sans" font-size="8.50">number if own farm</text>
 </g>
 <!-- D10_q3d -->
 <g id="node19" class="node">
@@ -288,14 +296,14 @@
 <text text-anchor="start" x="536" y="-57.7" font-family="Liberation Sans" font-size="11.00">Favorites</text>
 </g>
 <!-- q3d&#45;&gt;D10_q3d -->
-<g id="edge20" class="edge">
+<g id="edge21" class="edge">
 <title>q3d&#45;&gt;D10_q3d</title>
 <path fill="none" stroke="#333333" stroke-width="0.9" d="M338.14,-53.1C348.94,-54.01 360.36,-54.88 371,-55.5 409.8,-57.75 453.61,-59.01 487.18,-59.7"/>
 <polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="487.28,-61.8 493.32,-59.82 487.36,-57.6 487.28,-61.8"/>
 <text text-anchor="middle" x="400.5" y="-60.7" font-family="Liberation Sans" font-size="8.50">favorites</text>
 </g>
 <!-- q3d&#45;&gt;D10_q3d -->
-<g id="edge21" class="edge">
+<g id="edge22" class="edge">
 <title>q3d&#45;&gt;D10_q3d</title>
 <path fill="none" stroke="#333333" stroke-width="0.9" d="M344.3,-46.98C353.22,-46.78 362.37,-46.61 371,-46.5 397.22,-46.17 403.83,-44.87 430,-46.5 450.83,-47.8 473.71,-50.44 493.33,-53.08"/>
 <polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="344.12,-44.88 338.17,-47.12 344.22,-49.08 344.12,-44.88"/>
@@ -304,22 +312,22 @@
 <!-- by_q3d -->
 <g id="node18" class="node">
 <title>by_q3d</title>
-<polygon fill="#e8e6e0" stroke="black" stroke-width="1.2" points="97,-81.5 0,-81.5 0,-51.5 97,-51.5 97,-81.5"/>
-<text text-anchor="middle" x="48.5" y="-63.7" font-family="Liberation Sans" font-size="11.00">Buyer*</text>
+<polygon fill="#e8e6e0" stroke="black" stroke-width="1.2" points="97,-82.5 0,-82.5 0,-52.5 97,-52.5 97,-82.5"/>
+<text text-anchor="middle" x="48.5" y="-64.7" font-family="Liberation Sans" font-size="11.00">Buyer*</text>
 </g>
 <!-- by_q3d&#45;&gt;q3d -->
-<g id="edge19" class="edge">
+<g id="edge20" class="edge">
 <title>by_q3d&#45;&gt;q3d</title>
-<path fill="none" stroke="#333333" stroke-width="0.9" d="M97,-62.92C136.84,-59.92 193.69,-55.64 235.09,-52.52"/>
-<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="235.26,-54.62 241.09,-52.07 234.94,-50.43 235.26,-54.62"/>
-<text text-anchor="middle" x="169" y="-71.7" font-family="Liberation Sans" font-size="8.50">listing and shop</text>
-<text text-anchor="middle" x="169" y="-62.7" font-family="Liberation Sans" font-size="8.50">favorites</text>
+<path fill="none" stroke="#333333" stroke-width="0.9" d="M97,-63.72C136.84,-60.56 193.69,-56.04 235.09,-52.75"/>
+<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="235.27,-54.84 241.09,-52.27 234.94,-50.65 235.27,-54.84"/>
+<text text-anchor="middle" x="169" y="-72.7" font-family="Liberation Sans" font-size="8.50">listing and shop</text>
+<text text-anchor="middle" x="169" y="-63.7" font-family="Liberation Sans" font-size="8.50">favorites</text>
 </g>
 <!-- by_q3d&#45;&gt;q3d -->
-<g id="edge22" class="edge">
+<g id="edge23" class="edge">
 <title>by_q3d&#45;&gt;q3d</title>
-<path fill="none" stroke="#333333" stroke-width="0.9" d="M97.41,-49.75C108.01,-46.74 119.29,-44.06 130,-42.5 167.06,-37.09 209.47,-39.12 241.1,-42.22"/>
-<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="96.76,-47.75 91.6,-51.45 97.94,-51.78 96.76,-47.75"/>
+<path fill="none" stroke="#333333" stroke-width="0.9" d="M95.26,-50.68C106.47,-47.29 118.54,-44.24 130,-42.5 167.03,-36.88 209.45,-38.93 241.08,-42.08"/>
+<polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="94.59,-48.69 89.48,-52.48 95.84,-52.7 94.59,-48.69"/>
 <text text-anchor="middle" x="169" y="-44.7" font-family="Liberation Sans" font-size="8.50">favorites list</text>
 </g>
 </g>

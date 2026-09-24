@@ -28,7 +28,7 @@ F1 = [
  ('p2','D3','crop types'), ('D3','p2','system guards'), ('p2','D2','farm overrides'), ('D2','p2','farm guards'),
  ('p2','D4','listings, tawad rules'), ('p2','D8','guard and takedown\\nnotices'),
  ('by','p3','searches, favorites'), ('p3','by','listings, storefronts,\\nfarm pages, reviews'),
- ('fs','p3','shop profile'), ('p3','fs','farm page'),
+ ('fs','p3','shop profile'), ('p3','fs','farm page,\\nown shop reviews'),
  ('D4','p3','active listings'), ('D2','p3','farm profiles'), ('D9','p3','shop reviews'), ('D12','p3','public announcements'),
  ('p3','D10','favorites'), ('D10','p3','saved favorites'), ('p3','D1','shop profile'),
  ('by','p4','cart items, checkout,\\ncancellations, reviews'), ('fs','p4','status updates,\\nwalk-in sales'),
@@ -89,7 +89,7 @@ L2['3'] = ('Browse Marketplace', [
   ('a','3.1','Search\\nListings'), ('b','3.2','View\\nStorefronts'), ('c','3.3','View Farm\\nPages'), ('d','3.4','Manage\\nFavorites')], [
   ('by','a','keywords, crop type,\\nsort'), ('D4','a','active listings'), ('D3','a','crop types'), ('D2','a','farm names'), ('a','by','matching listings'),
   ('by','b','shop selection'), ('D1','b','shop profiles'), ('D4','b','shop listings'), ('D9','b','shop reviews'), ('b','by','storefront, reviews'),
-  ('fs','b','shop profile\\nupdates'), ('b','D1','shop profile'),
+  ('fs','b','shop profile\\nupdates'), ('b','D1','shop profile'), ('b','fs','own shop reviews,\\nrating'),
   ('by','c','farm selection'), ('fs','c','farm selection'), ('D2','c','profile, photos,\\ncontact number'), ('D12','c','public\\nannouncements'),
   ('c','by','farm page without\\ncontact number'), ('c','fs','farm page, contact\\nnumber if own farm'),
   ('by','d','listing and shop\\nfavorites'), ('d','D10','favorites'), ('D10','d','saved favorites'), ('d','by','favorites list')])

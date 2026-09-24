@@ -12,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Tests\Concerns\CreatesMarketplaceActors;
 use Tests\TestCase;
 
@@ -162,10 +163,115 @@ class ImageVariantsTest extends TestCase
         $this->assertLongSideAtMost($first, ImageVariants::THUMB_LONG_SIDE);
     }
 
+    public function test_exif_orientation_six_is_rotated_after_resize(): void
+    {
+        ini_set('memory_limit', '256M');
+        $tmp = tempnam(sys_get_temp_dir(), 'exif').'.jpg';
+
+        try {
+            $source = imagecreatetruecolor(4000, 3000);
+            $fill = imagecolorallocate($source, 200, 80, 40);
+            imagefilledrectangle($source, 0, 0, 3999, 2999, $fill);
+            imagejpeg($source, $tmp, 70);
+            imagedestroy($source);
+            file_put_contents($tmp, $this->jpegWithExifOrientation((string) file_get_contents($tmp), 6));
+
+            $path = app(ImageVariants::class)->store(
+                new UploadedFile($tmp, 'phone.jpg', 'image/jpeg', null, true),
+                'listings',
+            );
+            $bytes = Storage::disk(ListingStorage::diskName())->get($path);
+            $info = getimagesizefromstring($bytes);
+            $this->assertIsArray($info);
+
+            $width = (int) $info[0];
+            $height = (int) $info[1];
+            $this->assertGreaterThan($width, $height);
+            $this->assertLessThanOrEqual(ImageVariants::MAX_LONG_SIDE, max($width, $height));
+        } finally {
+            if (is_file($tmp)) {
+                unlink($tmp);
+            }
+        }
+    }
+
+    public function test_transparent_png_smaller_than_max_writes_white_corner(): void
+    {
+        $file = UploadedFile::fake()->createWithContent('clear.png', $this->transparentPng(120, 80));
+        $path = app(ImageVariants::class)->store($file, 'listings');
+        $jpeg = imagecreatefromstring(Storage::disk(ListingStorage::diskName())->get($path));
+        $this->assertInstanceOf(\GdImage::class, $jpeg);
+
+        $color = imagecolorsforindex($jpeg, imagecolorat($jpeg, 0, 0));
+        $this->assertSame(255, $color['red']);
+        $this->assertSame(255, $color['green']);
+        $this->assertSame(255, $color['blue']);
+        imagedestroy($jpeg);
+    }
+
+    public function test_image_over_40_megapixels_is_rejected(): void
+    {
+        $file = UploadedFile::fake()->createWithContent(
+            'huge.png',
+            $this->pngClaimingDimensions(10_000, 4_001),
+        );
+
+        try {
+            app(ImageVariants::class)->store($file, 'listings');
+            $this->fail('Expected a validation exception for an oversized photo.');
+        } catch (ValidationException $exception) {
+            $this->assertSame(
+                ['Photo is too large; please use a smaller image.'],
+                $exception->errors()['image'] ?? [],
+            );
+        }
+    }
+
     private function assertLongSideAtMost(string $bytes, int $max): void
     {
         $info = getimagesizefromstring($bytes);
         $this->assertIsArray($info);
         $this->assertLessThanOrEqual($max, max((int) $info[0], (int) $info[1]));
+    }
+
+    private function jpegWithExifOrientation(string $jpeg, int $orientation): string
+    {
+        $this->assertSame("\xFF\xD8", substr($jpeg, 0, 2));
+
+        $tiff = 'II'.pack('v', 42).pack('V', 8);
+        $tiff .= pack('v', 1);
+        $tiff .= pack('v', 0x0112).pack('v', 3).pack('V', 1).pack('V', $orientation);
+        $tiff .= pack('V', 0);
+
+        $payload = "Exif\x00\x00".$tiff;
+        $app1 = "\xFF\xE1".pack('n', strlen($payload) + 2).$payload;
+
+        return "\xFF\xD8".$app1.substr($jpeg, 2);
+    }
+
+    private function transparentPng(int $width, int $height): string
+    {
+        $image = imagecreatetruecolor($width, $height);
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+        $clear = imagecolorallocatealpha($image, 0, 0, 0, 127);
+        imagefilledrectangle($image, 0, 0, $width - 1, $height - 1, $clear);
+
+        ob_start();
+        imagepng($image);
+        $bytes = (string) ob_get_clean();
+        imagedestroy($image);
+
+        return $bytes;
+    }
+
+    private function pngClaimingDimensions(int $width, int $height): string
+    {
+        $bytes = $this->transparentPng(1, 1);
+        $bytes = substr_replace($bytes, pack('N', $width), 16, 4);
+        $bytes = substr_replace($bytes, pack('N', $height), 20, 4);
+        $crc = hash('crc32b', substr($bytes, 12, 17), true);
+
+        return substr_replace($bytes, $crc, 29, 4);
     }
 }

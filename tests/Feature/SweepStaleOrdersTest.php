@@ -10,6 +10,8 @@ use App\Models\Farm;
 use App\Models\Listing;
 use App\Models\Order;
 use App\Models\User;
+use App\Services\OrderStateMachine;
+use App\Support\InAppNotifier;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -173,6 +175,52 @@ class SweepStaleOrdersTest extends TestCase
         $this->assertSame(10.0, (float) $listingB->fresh()->quantity_available);
         $this->assertSame(0, $this->notices($sellerB->id, NotificationType::OrderAwaitingConfirmation));
         $this->assertSame(0, $this->notices($sellerB->id, NotificationType::OrderCancelled));
+    }
+
+    public function test_sweep_skips_an_order_confirmed_mid_sweep_and_still_cancels_the_other(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-09-24 08:00:00', 'Asia/Manila'));
+
+        $farmer = $this->farmer();
+        $listingA = $this->heldListing($farmer);
+        $listingB = $this->heldListing($farmer);
+        $confirmed = $this->placeOrder($this->buyer(), $listingA, 1);
+        $stale = $this->placeOrder($this->buyer(), $listingB, 1);
+
+        $this->backdateCreatedAt($confirmed, now()->subHours(48));
+        $this->backdateCreatedAt($stale, now()->subHours(48));
+
+        $this->app->instance(OrderStateMachine::class, new class(app(InAppNotifier::class), $confirmed->id, $farmer) extends OrderStateMachine
+        {
+            public function __construct(
+                InAppNotifier $notifier,
+                private int $confirmId,
+                private User $farmer,
+            ) {
+                parent::__construct($notifier);
+            }
+
+            public function transition(
+                Order $order,
+                OrderStatus $next,
+                User|OrderActor $actor,
+                ?string $note = null,
+                ?CancellationReason $reason = null,
+                ?float $amountReceived = null,
+            ): Order {
+                if ($actor === OrderActor::System && $order->id === $this->confirmId && $order->fresh()->status === OrderStatus::Placed) {
+                    parent::transition($order, OrderStatus::Confirmed, $this->farmer);
+                }
+
+                return parent::transition($order, $next, $actor, $note, $reason, $amountReceived);
+            }
+        });
+
+        $this->artisan('orders:sweep-stale')->assertSuccessful();
+
+        $this->assertSame(OrderStatus::Confirmed, $confirmed->fresh()->status);
+        $this->assertSame(OrderStatus::Cancelled, $stale->fresh()->status);
+        $this->assertSame(CancellationReason::SellerUnresponsive, $stale->fresh()->cancellation_reason);
     }
 
     private function heldListing(User $farmer, float $available = 10): Listing

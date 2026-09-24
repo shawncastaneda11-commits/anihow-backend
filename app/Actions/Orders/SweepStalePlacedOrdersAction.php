@@ -9,6 +9,8 @@ use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Services\OrderStateMachine;
 use App\Support\InAppNotifier;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class SweepStalePlacedOrdersAction
 {
@@ -42,13 +44,22 @@ class SweepStalePlacedOrdersAction
             ->where('created_at', '<=', $cutoff)
             ->orderBy('id')
             ->each(function (Order $order) use (&$cancelled): void {
-                $this->stateMachine->transition(
-                    $order,
-                    OrderStatus::Cancelled,
-                    OrderActor::System,
-                    note: 'Automatically cancelled after the seller did not respond.',
-                    reason: CancellationReason::SellerUnresponsive,
-                );
+                try {
+                    $this->stateMachine->transition(
+                        $order,
+                        OrderStatus::Cancelled,
+                        OrderActor::System,
+                        note: 'Automatically cancelled after the seller did not respond.',
+                        reason: CancellationReason::SellerUnresponsive,
+                    );
+                } catch (ValidationException) {
+                    Log::info('Skipping stale order that changed state mid-sweep.', [
+                        'order_id' => $order->id,
+                    ]);
+
+                    return;
+                }
+
                 $cancelled++;
             });
 

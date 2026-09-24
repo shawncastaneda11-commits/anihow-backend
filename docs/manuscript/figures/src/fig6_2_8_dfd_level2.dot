@@ -13,6 +13,7 @@ digraph G {
   D1_q8b [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D1</B></TD><TD SIDES="TB" ALIGN="LEFT">Users and Roles*</TD></TR></TABLE>>];
   D6_q8b [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D6</B></TD><TD SIDES="TB" ALIGN="LEFT">Orders*</TD></TR></TABLE>>];
   D9_q8b [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D9</B></TD><TD SIDES="TB" ALIGN="LEFT">Reviews</TD></TR></TABLE>>];
+  D17_q8b [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D17</B></TD><TD SIDES="TB" ALIGN="LEFT">Reports</TD></TR></TABLE>>];
   D10_q8b [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D10</B></TD><TD SIDES="TB" ALIGN="LEFT">Favorites</TD></TR></TABLE>>];
   D5_q8b [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D5</B></TD><TD SIDES="TB" ALIGN="LEFT">Cart Items</TD></TR></TABLE>>];
   q8c [shape=circle, style=filled, fillcolor="#F4F4F4", penwidth=1.4, fixedsize=true, width=1.35, fontsize=10.5, label="8.3\n\nRequest\nDeletion"];
@@ -36,6 +37,7 @@ digraph G {
   q8b -> D1_q8b [label="profile", dir=back];
   q8b -> D6_q8b [label="orders", dir=back];
   q8b -> D9_q8b [label="reviews", dir=back];
+  q8b -> D17_q8b [label="own reports", dir=back];
   q8b -> D10_q8b [label="favorites", dir=back];
   q8b -> D5_q8b [label="cart", dir=back];
   by_q8b -> q8b [label="JSON file", dir=back];
@@ -56,7 +58,7 @@ digraph G {
   em_q8d -> q8d [label="deletion notice", dir=back];
   q8d -> D8_q8d [label="rejection notice"];
   {rank=same; by_q8a; fs_q8a; by_q8b; fs_q8b; by_q8c; fs_q8c; sa_q8d; em_q8d}
-  {rank=same; D1_q8a; D1_q8b; D6_q8b; D9_q8b; D10_q8b; D5_q8b; D6_q8c; D15_q8c; D8_q8c; D15_q8d; D6_q8d; D1_q8d; D8_q8d}
+  {rank=same; D1_q8a; D1_q8b; D6_q8b; D9_q8b; D17_q8b; D10_q8b; D5_q8b; D6_q8c; D15_q8c; D8_q8c; D15_q8d; D6_q8d; D1_q8d; D8_q8d}
   {rank=same; q8a; q8b; q8c; q8d}
   q8a -> q8b [style=invis, weight=10];
   q8b -> q8c [style=invis, weight=10];

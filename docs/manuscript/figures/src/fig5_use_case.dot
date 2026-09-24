@@ -1,4 +1,4 @@
-// Figure 5. Use case diagram of AniHow (v3.5).
+// Figure 5. Use case diagram of AniHow (v3.5, with content reports).
 digraph G {
   graph [rankdir=LR, nodesep=0.16, ranksep=1.1, pad=0.3, fontname="Liberation Sans", newrank=true];
   node  [fontname="Liberation Sans", fontsize=11];
@@ -23,6 +23,7 @@ digraph G {
     sa6 [label="Process account\ndeletion requests"];
     sa7 [label="View ledger and analytics;\nexport CSV"];
     sa8 [label="Read order chat\nthreads"];
+    sa9 [label="Resolve reports on\nlistings and reviews"];
 
     // Content Editor (CMS, own farm)
     ce1 [label="Manage crop-care\narticles"];
@@ -44,6 +45,7 @@ digraph G {
     sh1 [label="Chat about an order"];
     sh2 [label="Ask the FAQ helper"];
     sh3 [label="Manage my data (correct,\ndownload, request deletion)"];
+    sh4 [label="Report a listing\nor review"];
 
     // Buyer (app)
     by1 [label="Browse and search\nlistings"];
@@ -51,21 +53,22 @@ digraph G {
     by3 [label="Place and cancel\norders"];
     by4 [label="Choose fulfillment"];
     by5 [label="Leave review"];
+    by6 [label="Save favorite listings\nand shops"];
   }
 
-  sa -> {sa1 sa2 sa3 sa4 sa5 sa6 sa7 sa8};
+  sa -> {sa1 sa2 sa3 sa4 sa5 sa6 sa7 sa8 sa9};
   ce -> {ce1 ce2 ce3 ce4 ce5 ce6};
-  {fs1 fs2 fs3 fs4 fs5 fs6 sh1 sh2 sh3} -> fs;
-  {sh1 sh2 sh3 by1 by2 by3 by4 by5} -> by;
+  {fs1 fs2 fs3 fs4 fs5 fs6 sh1 sh2 sh3 sh4} -> fs;
+  {sh1 sh2 sh3 sh4 by1 by2 by3 by4 by5 by6} -> by;
 
   // two columns: CMS use cases (left) and app use cases (right)
   {rank=same; sa ce}
-  {rank=same; sa1 sa2 sa3 sa4 sa5 sa6 sa7 sa8 ce1 ce2 ce3 ce4 ce5 ce6}
-  {rank=same; fs1 fs2 fs3 fs4 fs5 fs6 sh1 sh2 sh3 by1 by2 by3 by4 by5}
+  {rank=same; sa1 sa2 sa3 sa4 sa5 sa6 sa7 sa8 sa9 ce1 ce2 ce3 ce4 ce5 ce6}
+  {rank=same; fs1 fs2 fs3 fs4 fs5 fs6 sh1 sh2 sh3 sh4 by1 by2 by3 by4 by5 by6}
   {rank=same; fs by}
   edge [style=invis];
   sa1 -> fs1; sa2 -> fs2; sa3 -> fs3; sa4 -> fs4; sa5 -> fs5; sa6 -> fs6; sa7 -> sh1;
-  sa8 -> sh2; ce1 -> sh3; ce2 -> by1; ce3 -> by2; ce4 -> by3; ce5 -> by4; ce6 -> by5;
-  sa1 -> sa2 -> sa3 -> sa4 -> sa5 -> sa6 -> sa7 -> sa8 -> ce1 -> ce2 -> ce3 -> ce4 -> ce5 -> ce6 [constraint=false];
-  fs1 -> fs2 -> fs3 -> fs4 -> fs5 -> fs6 -> sh1 -> sh2 -> sh3 -> by1 -> by2 -> by3 -> by4 -> by5 [constraint=false];
+  sa8 -> sh2; sa9 -> sh3; ce1 -> sh4; ce2 -> by1; ce3 -> by2; ce4 -> by3; ce5 -> by4; ce6 -> by5;
+  sa1 -> sa2 -> sa3 -> sa4 -> sa5 -> sa6 -> sa7 -> sa8 -> sa9 -> ce1 -> ce2 -> ce3 -> ce4 -> ce5 -> ce6 [constraint=false];
+  fs1 -> fs2 -> fs3 -> fs4 -> fs5 -> fs6 -> sh1 -> sh2 -> sh3 -> sh4 -> by1 -> by2 -> by3 -> by4 -> by5 -> by6 [constraint=false];
 }

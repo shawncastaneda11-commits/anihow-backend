@@ -15,7 +15,8 @@ def save(name, title, procs, flows):
 P1 = [('p1', '1.0', 'Manage\\nAccounts and\\nAccess'), ('p2', '2.0', 'Manage\\nCatalog and\\nPricing'),
       ('p3', '3.0', 'Browse\\nMarketplace'), ('p4', '4.0', 'Process\\nOrders'),
       ('p5', '5.0', 'Coordinate\\nOrders and\\nNotify'), ('p6', '6.0', 'Manage Farm\\nContent and\\nHelp'),
-      ('p7', '7.0', 'Report\\nAnalytics and\\nExports'), ('p8', '8.0', 'Handle\\nData Rights')]
+      ('p7', '7.0', 'Report\\nAnalytics and\\nExports'), ('p8', '8.0', 'Handle\\nData Rights'),
+      ('p9', '9.0', 'Handle\\nContent\\nReports')]
 F1 = [
  ('by','p1','registration, credentials,\\nverification code'), ('fs','p1','credentials, password\\nchanges'),
  ('sa','p1','farmer-seller and editor\\naccounts, approvals,\\nsuspensions'),
@@ -48,13 +49,18 @@ F1 = [
  ('by','p8','corrections, download\\nand deletion requests'), ('fs','p8','corrections, download\\nand deletion requests'),
  ('sa','p8','deletion decisions'), ('p8','sa','pending requests'), ('p8','by','own data export'), ('p8','fs','own data export'),
  ('p8','D15','requests, decisions'), ('D15','p8','request status'), ('p8','D1','corrections,\\nanonymization'), ('D1','p8','profile'),
- ('D6','p8','orders, open orders check'), ('p8','D8','request and\\nrejection notices'), ('p8','em','deletion notices'),
+ ('D6','p8','orders, open orders check'), ('D17','p8','own reports'), ('p8','D8','request and\\nrejection notices'), ('p8','em','deletion notices'),
+ ('by','p9','listing and\\nreview reports'), ('fs','p9','reports on reviews\\nof own shop'),
+ ('sa','p9','resolve or dismiss,\\ntakedown or removal'), ('p9','sa','open reports'),
+ ('p9','by','report outcome'), ('p9','fs','report outcome,\\ntakedown notice'),
+ ('D4','p9','published listings'), ('D9','p9','visible reviews'), ('p9','D17','reports, decisions'), ('D17','p9','open reports'),
+ ('p9','D4','takedowns'), ('p9','D9','review removals'), ('p9','D8','report notices'),
 ]
 def part(keys):
     ks = set(keys)
     return [p for p in P1 if p[0] in ks], [f for f in F1 if f[0] in ks or f[1] in ks]
 save('fig6_1a_dfd_level1', 'Data flow diagram, level 1 (processes 1.0 to 4.0).', *part(['p1','p2','p3','p4']))
-save('fig6_1b_dfd_level1', 'Data flow diagram, level 1 (processes 5.0 to 8.0).', *part(['p5','p6','p7','p8']))
+save('fig6_1b_dfd_level1', 'Data flow diagram, level 1 (processes 5.0 to 9.0).', *part(['p5','p6','p7','p8','p9']))
 
 # ------------------------------------------------------------------ Level 2
 L2 = {}
@@ -125,12 +131,20 @@ L2['7'] = ('Report Analytics and Exports', [
 L2['8'] = ('Handle Data Rights', [
   ('a','8.1','Correct\\nProfile'), ('b','8.2','Download\\nOwn Data'), ('c','8.3','Request\\nDeletion'), ('d','8.4','Decide\\nDeletion')], [
   ('by','a','name, phone,\\naddress'), ('fs','a','name, phone,\\naddress'), ('a','D1','corrected profile'),
-  ('by','b','download request'), ('fs','b','download request'), ('D1','b','profile'), ('D6','b','orders'), ('D9','b','reviews'),
+  ('by','b','download request'), ('fs','b','download request'), ('D1','b','profile'), ('D6','b','orders'), ('D9','b','reviews'), ('D17','b','own reports'),
   ('D10','b','favorites'), ('D5','b','cart'), ('b','by','JSON file'), ('b','fs','JSON file'),
   ('by','c','request, cancel'), ('fs','c','request, cancel'), ('D6','c','open orders'), ('c','D15','pending request'),
   ('c','D8','notice to\\nSuper Admins'), ('c','by','request status'), ('c','fs','request status'),
   ('D15','d','pending requests'), ('sa','d','approve or reject'), ('d','sa','request details'), ('D6','d','open orders\\nrecheck'),
   ('d','D1','anonymized account'), ('d','D15','decision'), ('d','em','deletion notice'), ('d','D8','rejection notice')])
+L2['9'] = ('Handle Content Reports', [
+  ('a','9.1','Submit\\nReport'), ('b','9.2','Decide\\nReport')], [
+  ('by','a','listing or review,\\nreason, details'), ('fs','a','review on own shop,\\nreason, details'),
+  ('D4','a','published listing'), ('D9','a','visible review'), ('D17','a','open report check'),
+  ('a','D17','open report'), ('a','D8','notice to\\nSuper Admins'), ('a','by','confirmation\\nor refusal'), ('a','fs','confirmation\\nor refusal'),
+  ('D17','b','open reports'), ('sa','b','resolve with note or dismiss;\\noptional takedown or removal'), ('b','sa','report and target'),
+  ('b','D17','status, resolver'), ('b','D4','takedown'), ('b','D9','review removal'),
+  ('b','D8','takedown notice,\\nreporter notice')])
 for k, (name, procs, flows) in L2.items():
     procs = [(f'q{k}{p}', n, lab) for p, n, lab in procs]
     keys = {p[0][len(k)+1:] for p in procs}

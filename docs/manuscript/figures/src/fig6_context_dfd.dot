@@ -14,17 +14,17 @@ digraph G {
   sys [shape=circle, style="filled", fillcolor="#F4F4F4", penwidth=1.8, width=2.3, fixedsize=true,
        label="0\n\nAniHow\nSystem", fontsize=15];
 
-  sa -> sys [label="approvals, system price guards,\ntaxonomy, moderation, system FAQ\nanswers, deletion decisions"];
-  sys -> sa [label="order ledger, analytics, reports,\nCSV exports, deletion requests"];
+  sa -> sys [label="approvals, system price guards,\ntaxonomy, moderation, system FAQ\nanswers, report and deletion decisions"];
+  sys -> sa [label="order ledger, analytics, CSV exports,\ncontent reports, deletion requests"];
 
   ce -> sys [label="articles, farm profile and photos,\nfarm price guards, announcements,\nfarm FAQ answers"];
   sys -> ce [label="farm roster, farm analytics,\nmoderation notices"];
 
   sys -> fs [label="orders, crop-care articles, announcements,\nMy Sales figures, chat messages,\nnotifications, FAQ answers, data export"];
-  sys -> fs [dir=back, label="listings, tawad rules, order updates,\nwalk-in sales, chat messages,\nprofile corrections, deletion requests"];
+  sys -> fs [dir=back, label="listings, tawad rules, order updates,\nwalk-in sales, chat messages, review reports,\nprofile corrections, deletion requests"];
 
   sys -> by [label="listings, farm pages, order status,\nchat messages, notifications,\nFAQ answers, data export"];
-  sys -> by [dir=back, label="registration, orders, cancellations,\nreviews, chat messages, FAQ questions,\nprofile corrections, deletion requests"];
+  sys -> by [dir=back, label="registration, orders, cancellations,\nreviews, reports, chat messages, FAQ questions,\nprofile corrections, deletion requests"];
 
   sys -> em [label="verification codes, password\nresets, deletion notices,\nlow-stock alerts"];
 

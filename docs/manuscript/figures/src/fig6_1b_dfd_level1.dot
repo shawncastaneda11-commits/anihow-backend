@@ -1,4 +1,4 @@
-// Data flow diagram, level 1 (processes 5.0 to 8.0).
+// Data flow diagram, level 1 (processes 5.0 to 9.0).
 digraph G {
   graph [rankdir=LR, nodesep=0.25, ranksep=0.9, pad=0.25, fontname="Liberation Sans", newrank=true];
   node  [fontname="Liberation Sans", fontsize=11];
@@ -35,7 +35,16 @@ digraph G {
   D6_p8 [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D6</B></TD><TD SIDES="TB" ALIGN="LEFT">Orders*</TD></TR></TABLE>>];
   D15_p8 [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D15</B></TD><TD SIDES="TB" ALIGN="LEFT">Deletion Requests</TD></TR></TABLE>>];
   D1_p8 [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D1</B></TD><TD SIDES="TB" ALIGN="LEFT">Users and Roles</TD></TR></TABLE>>];
+  D17_p8 [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D17</B></TD><TD SIDES="TB" ALIGN="LEFT">Reports*</TD></TR></TABLE>>];
   em_p8 [shape=box, style=filled, fillcolor="#F2F2F2", penwidth=1.2, width=1.35, height=0.42, label="Email Service"];
+  p9 [shape=circle, style=filled, fillcolor="#F4F4F4", penwidth=1.4, fixedsize=true, width=1.35, fontsize=10.5, label="9.0\n\nHandle\nContent\nReports"];
+  by_p9 [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.42, label="Buyer*"];
+  fs_p9 [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.42, label="Farmer-Seller*"];
+  sa_p9 [shape=box, style=filled, fillcolor="#E1E6ED", penwidth=1.2, width=1.35, height=0.42, label="Super Admin*"];
+  D8_p9 [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D8</B></TD><TD SIDES="TB" ALIGN="LEFT">Notifications*</TD></TR></TABLE>>];
+  D17_p9 [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D17</B></TD><TD SIDES="TB" ALIGN="LEFT">Reports*</TD></TR></TABLE>>];
+  D4_p9 [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D4</B></TD><TD SIDES="TB" ALIGN="LEFT">Listings</TD></TR></TABLE>>];
+  D9_p9 [shape=plaintext, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D9</B></TD><TD SIDES="TB" ALIGN="LEFT">Reviews</TD></TR></TABLE>>];
   by_p5 -> p5 [label="chat messages,\nread marks"];
   fs_p5 -> p5 [label="chat messages,\nread marks"];
   by_p5 -> p5 [label="messages,\nnotifications", dir=back];
@@ -80,12 +89,27 @@ digraph G {
   p8 -> D1_p8 [label="corrections,\nanonymization"];
   p8 -> D1_p8 [label="profile", dir=back];
   p8 -> D6_p8 [label="orders, open orders check", dir=back];
+  p8 -> D17_p8 [label="own reports", dir=back];
   p8 -> D8_p8 [label="request and\nrejection notices"];
   em_p8 -> p8 [label="deletion notices", dir=back];
-  {rank=same; by_p5; fs_p5; sa_p5; ce_p6; sa_p6; fs_p6; by_p6; sch_p6; sa_p7; ce_p7; fs_p7; by_p8; fs_p8; sa_p8; em_p8}
-  {rank=same; D7_p5; D8_p5; D6_p5; D2_p6; D11_p6; D12_p6; D13_p6; D8_p6; D6_p7; D14_p7; D15_p8; D1_p8; D6_p8; D8_p8}
-  {rank=same; p5; p6; p7; p8}
+  by_p9 -> p9 [label="listing and\nreview reports"];
+  fs_p9 -> p9 [label="reports on reviews\nof own shop"];
+  sa_p9 -> p9 [label="resolve or dismiss,\ntakedown or removal"];
+  sa_p9 -> p9 [label="open reports", dir=back];
+  by_p9 -> p9 [label="report outcome", dir=back];
+  fs_p9 -> p9 [label="report outcome,\ntakedown notice", dir=back];
+  p9 -> D4_p9 [label="published listings", dir=back];
+  p9 -> D9_p9 [label="visible reviews", dir=back];
+  p9 -> D17_p9 [label="reports, decisions"];
+  p9 -> D17_p9 [label="open reports", dir=back];
+  p9 -> D4_p9 [label="takedowns"];
+  p9 -> D9_p9 [label="review removals"];
+  p9 -> D8_p9 [label="report notices"];
+  {rank=same; by_p5; fs_p5; sa_p5; ce_p6; sa_p6; fs_p6; by_p6; sch_p6; sa_p7; ce_p7; fs_p7; by_p8; fs_p8; sa_p8; em_p8; by_p9; fs_p9; sa_p9}
+  {rank=same; D7_p5; D8_p5; D6_p5; D2_p6; D11_p6; D12_p6; D13_p6; D8_p6; D6_p7; D14_p7; D15_p8; D1_p8; D6_p8; D17_p8; D8_p8; D4_p9; D9_p9; D17_p9; D8_p9}
+  {rank=same; p5; p6; p7; p8; p9}
   p5 -> p6 [style=invis, weight=10];
   p6 -> p7 [style=invis, weight=10];
   p7 -> p8 [style=invis, weight=10];
+  p8 -> p9 [style=invis, weight=10];
 }

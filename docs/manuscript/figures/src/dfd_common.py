@@ -11,7 +11,7 @@ STORES = {
  'D1': 'Users and Roles', 'D2': 'Farms', 'D3': 'Crop Types', 'D4': 'Listings',
  'D5': 'Cart Items', 'D6': 'Orders', 'D7': 'Order Messages', 'D8': 'Notifications',
  'D9': 'Reviews', 'D10': 'Favorites', 'D11': 'Crop-Care Articles', 'D12': 'Farm Announcements',
- 'D13': 'FAQ Entries', 'D14': 'Export Logs', 'D15': 'Deletion Requests', 'D16': 'Codes and Reset Tokens',
+ 'D13': 'FAQ Entries', 'D14': 'Export Logs', 'D15': 'Deletion Requests', 'D16': 'Codes and Reset Tokens', 'D17': 'Reports',
 }
 
 def render(title, procs, flows, rowsep=0.25):

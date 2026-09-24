@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,7 +18,7 @@ void openFarmAnnouncements(BuildContext context) {
 }
 
 class DismissedAnnouncementStore {
-  static String keyFor(int userId) => 'anihow_dismissed_announcements_$userId';
+  static String keyFor(int userId) => 'anihow_announcement_toasts_$userId';
 
   static Future<Set<int>> load(int userId) async {
     final prefs = await SharedPreferences.getInstance();
@@ -40,20 +42,22 @@ class FarmerAnnouncementHomeBanner extends StatefulWidget {
     super.key,
     required this.userId,
     required this.announcements,
-    this.onOpen,
+    this.toastDuration = const Duration(seconds: 4),
   });
 
   final int userId;
   final List<FarmAnnouncement> announcements;
-  final VoidCallback? onOpen;
+  final Duration toastDuration;
 
   @override
   State<FarmerAnnouncementHomeBanner> createState() => _FarmerAnnouncementHomeBannerState();
 }
 
 class _FarmerAnnouncementHomeBannerState extends State<FarmerAnnouncementHomeBanner> {
-  Set<int> _dismissed = {};
+  Set<int> _seen = {};
   bool _ready = false;
+  FarmAnnouncement? _toast;
+  Timer? _hide;
 
   @override
   void initState() {
@@ -62,10 +66,20 @@ class _FarmerAnnouncementHomeBannerState extends State<FarmerAnnouncementHomeBan
   }
 
   @override
+  void dispose() {
+    _hide?.cancel();
+    super.dispose();
+  }
+
+  @override
   void didUpdateWidget(FarmerAnnouncementHomeBanner oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.userId != widget.userId) {
       _load();
+      return;
+    }
+    if (oldWidget.announcements != widget.announcements) {
+      _maybeToast();
     }
   }
 
@@ -75,89 +89,63 @@ class _FarmerAnnouncementHomeBannerState extends State<FarmerAnnouncementHomeBan
       return;
     }
     setState(() {
-      _dismissed = ids;
+      _seen = ids;
       _ready = true;
     });
+    _maybeToast();
   }
 
-  Future<void> _dismiss(int announcementId) async {
-    setState(() => _dismissed = {..._dismissed, announcementId});
-    await DismissedAnnouncementStore.remember(widget.userId, announcementId);
-  }
-
-  FarmAnnouncement? get _banner {
+  FarmAnnouncement? get _unseen {
     for (final item in widget.announcements) {
-      if (!_dismissed.contains(item.id)) {
+      if (!_seen.contains(item.id)) {
         return item;
       }
     }
     return null;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (!_ready) {
-      return const SizedBox.shrink();
+  Future<void> _maybeToast() async {
+    if (!_ready || _toast != null) {
+      return;
     }
-    final banner = _banner;
-    if (banner == null) {
-      return const SizedBox.shrink();
+    final notice = _unseen;
+    if (notice == null) {
+      return;
     }
-    return FarmAnnouncementBanner(
-      announcement: banner,
-      onOpen: widget.onOpen,
-      onDismiss: () => _dismiss(banner.id),
-    );
+    setState(() {
+      _toast = notice;
+      _seen = {..._seen, notice.id};
+    });
+    _hide?.cancel();
+    _hide = Timer(widget.toastDuration, () {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _toast = null);
+    });
+    await DismissedAnnouncementStore.remember(widget.userId, notice.id);
   }
-}
-
-class FarmAnnouncementBanner extends StatelessWidget {
-  const FarmAnnouncementBanner({
-    super.key,
-    required this.announcement,
-    this.onOpen,
-    this.onDismiss,
-  });
-
-  final FarmAnnouncement announcement;
-  final VoidCallback? onOpen;
-  final VoidCallback? onDismiss;
 
   @override
   Widget build(BuildContext context) {
+    final notice = _toast;
+    if (notice == null) {
+      return const SizedBox.shrink();
+    }
     final s = AppStrings.of(context);
-    final title = announcement.isPinned
-        ? '${s.announcementPinned}: ${announcement.title}'
-        : announcement.title;
-
-    return Dismissible(
-      key: ValueKey('farm-announcement-${announcement.id}'),
-      direction: DismissDirection.horizontal,
-      onDismissed: (_) => onDismiss?.call(),
-      background: ColoredBox(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        child: Align(
-          alignment: Alignment.centerRight,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AniHowSpace.screen),
-            child: Text(s.dismissAnnouncement),
-          ),
-        ),
+    final title = notice.isPinned ? '${s.announcementPinned}: ${notice.title}' : notice.title;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AniHowSpace.screen,
+        AniHowSpace.cardGap,
+        AniHowSpace.screen,
+        0,
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onOpen,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 48),
-            child: AniHowHintCard(
-              icon: Icons.campaign_outlined,
-              title: title,
-              body: announcement.body,
-              tone: AniHowHintTone.brand,
-            ),
-          ),
-        ),
+      child: AniHowHintCard(
+        key: const ValueKey('farm-announcement-toast'),
+        icon: Icons.campaign_outlined,
+        title: title,
+        tone: AniHowHintTone.brand,
       ),
     );
   }

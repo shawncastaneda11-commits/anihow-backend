@@ -22,9 +22,10 @@ void openBuyerShop(BuildContext context, int sellerId) {
 }
 
 class ShopProfileScreen extends StatefulWidget {
-  const ShopProfileScreen({super.key, required this.sellerId});
+  const ShopProfileScreen({super.key, required this.sellerId, this.preview});
 
   final int sellerId;
+  final ShopProfile? preview;
 
   @override
   State<ShopProfileScreen> createState() => _ShopProfileScreenState();
@@ -32,6 +33,8 @@ class ShopProfileScreen extends StatefulWidget {
 
 class _ShopProfileScreenState extends State<ShopProfileScreen> {
   late Future<ShopProfile> _shop;
+  bool? _favorited;
+  bool _favoriteBusy = false;
   final List<ShopReview> _reviews = [];
   int _page = 0;
   int _lastPage = 1;
@@ -39,17 +42,29 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
   bool _loadingMore = false;
   String? _reviewsError;
 
+  bool get _previewing => widget.preview != null;
+
   @override
   void initState() {
     super.initState();
+    final preview = widget.preview;
+    if (preview != null) {
+      _shop = Future.value(preview);
+      _loadingReviews = false;
+      return;
+    }
     _shop = context.read<AuthController>().api.buyerShop(widget.sellerId);
     _loadReviews();
   }
 
   Future<void> _reload() async {
+    if (_previewing) {
+      return;
+    }
     final shop = context.read<AuthController>().api.buyerShop(widget.sellerId);
     setState(() {
       _shop = shop;
+      _favorited = null;
       _reviews.clear();
       _page = 0;
       _lastPage = 1;
@@ -101,6 +116,42 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
     }
   }
 
+  bool _isFavorited(ShopProfile shop) => _favorited ?? shop.isFavorited;
+
+  Future<void> _toggleFavorite(ShopProfile shop) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final wasFavorited = _isFavorited(shop);
+    setState(() => _favorited = !wasFavorited);
+    if (_previewing) {
+      return;
+    }
+    setState(() => _favoriteBusy = true);
+    try {
+      if (wasFavorited) {
+        await context.read<AuthController>().api.removeShopFavorite(shop.id);
+      } else {
+        await context.read<AuthController>().api.addShopFavorite(shop.id);
+      }
+      if (!mounted) {
+        return;
+      }
+      if (!wasFavorited) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(AppStrings.read(context).storeSavedToFavorites)),
+        );
+      }
+    } on ApiException catch (error) {
+      if (mounted) {
+        setState(() => _favorited = wasFavorited);
+        messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _favoriteBusy = false);
+      }
+    }
+  }
+
   Future<void> _call(String number) async {
     final digits = number.replaceAll(RegExp(r'[^\d+]'), '');
     if (digits.isEmpty) {
@@ -117,7 +168,30 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(AppStrings.of(context).shop)),
+      appBar: AppBar(
+        title: Text(AppStrings.of(context).shop),
+        actions: [
+          FutureBuilder<ShopProfile>(
+            future: _shop,
+            builder: (context, snapshot) {
+              final shop = snapshot.data;
+              if (shop == null) {
+                return const SizedBox(width: 48, height: 48);
+              }
+              final s = AppStrings.of(context);
+              return IconButton(
+                icon: Icon(_isFavorited(shop) ? Icons.favorite : Icons.favorite_outline),
+                tooltip: _isFavorited(shop) ? s.removeStoreFromFavorites : s.addStoreToFavorites,
+                onPressed: _favoriteBusy ? null : () => _toggleFavorite(shop),
+                style: IconButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                  foregroundColor: Colors.white,
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: FutureBuilder<ShopProfile>(
         future: _shop,
         builder: (context, snapshot) {
@@ -136,6 +210,14 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                       child: Padding(
                         padding: AniHowSpace.cardPadding,
                         child: ShopIdentityHeader(shop: shop),
+                      ),
+                    ),
+                    const SizedBox(height: AniHowSpace.cardGap),
+                    OutlinedButton.icon(
+                      onPressed: _favoriteBusy ? null : () => _toggleFavorite(shop),
+                      icon: Icon(_isFavorited(shop) ? Icons.favorite : Icons.favorite_outline),
+                      label: Text(
+                        _isFavorited(shop) ? s.removeStoreFromFavorites : s.addStoreToFavorites,
                       ),
                     ),
                     if (shop.farmId != null && shop.farmIsActive) ...[

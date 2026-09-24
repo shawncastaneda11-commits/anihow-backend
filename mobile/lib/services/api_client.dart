@@ -211,6 +211,16 @@ class ApiClient {
   Future<void> removeFavorite(int listingId) =>
       _delete('/buyer/favorites/$listingId');
 
+  Future<List<ShopFavoriteRecord>> shopFavorites() {
+    return _list('/buyer/shop-favorites', parse: ShopFavoriteRecord.fromJson);
+  }
+
+  Future<void> addShopFavorite(int sellerId) =>
+      _post('/buyer/shop-favorites', {'farmer_seller_id': sellerId});
+
+  Future<void> removeShopFavorite(int sellerId) =>
+      _delete('/buyer/shop-favorites/$sellerId');
+
   Future<ListingItem> farmerListing(int id) async {
     final response = await _get('/farmer/listings/$id');
     return ListingItem.fromJson(_asMap(response['data'] ?? response));

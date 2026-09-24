@@ -152,8 +152,18 @@ class BuyerOrderCard extends StatelessWidget {
                         fallback: order.cancellationLabel,
                       ),
                     ),
+                  if (order.hasCancellationNote)
+                    OrderMetaRow(
+                      icon: Icons.notes_outlined,
+                      text: order.cancellationNote!.trim(),
+                    ),
                   if (order.canBeReviewed)
-                    OrderMetaRow(icon: Icons.star_outline, text: s.readyToReview),
+                    OrderMetaRow(icon: Icons.star_outline, text: s.writeReview),
+                  if (order.reviewRating != null)
+                    OrderMetaRow(
+                      icon: Icons.star,
+                      text: s.youRated(order.reviewRating!),
+                    ),
                 ],
               ),
             ),

@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\Farmer\FarmerAnalyticsController;
 use App\Http\Controllers\Api\Farmer\FarmerAnnouncementController;
 use App\Http\Controllers\Api\Farms\FarmController;
 use App\Http\Controllers\Api\Favorites\FavoriteController;
+use App\Http\Controllers\Api\Favorites\ShopFavoriteController;
 use App\Http\Controllers\Api\Listings\ListingController;
 use App\Http\Controllers\Api\Listings\TawadRuleController;
 use App\Http\Controllers\Api\Listings\ToggleListingActiveController;
@@ -175,6 +176,7 @@ Route::middleware([
         ->name('buyer.shops.reviews');
 
     Route::get('favorites', [FavoriteController::class, 'index'])->name('buyer.favorites.index');
+    Route::get('shop-favorites', [ShopFavoriteController::class, 'index'])->name('buyer.shop-favorites.index');
 
     Route::middleware('verified')->group(function (): void {
         Route::post('cart', [CartController::class, 'store'])->name('buyer.cart.store');
@@ -190,5 +192,8 @@ Route::middleware([
         Route::post('reviews', [ReviewController::class, 'store'])->name('buyer.reviews.store');
         Route::post('favorites', [FavoriteController::class, 'store'])->name('buyer.favorites.store');
         Route::delete('favorites/{listing}', [FavoriteController::class, 'destroy'])->name('buyer.favorites.destroy');
+        Route::post('shop-favorites', [ShopFavoriteController::class, 'store'])->name('buyer.shop-favorites.store');
+        Route::delete('shop-favorites/{farmerSeller}', [ShopFavoriteController::class, 'destroy'])
+            ->name('buyer.shop-favorites.destroy');
     });
 });

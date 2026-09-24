@@ -50,12 +50,12 @@ void main() {
     expect(find.byKey(const Key('farm-announcement-1')), findsOneWidget);
   });
 
-  testWidgets('announcement banner can be dismissed', (tester) async {
+  testWidgets('new announcement pops as a toast then disappears', (tester) async {
+    SharedPreferences.setMockInitialValues({});
     await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    var dismissed = false;
-    final announcement = const FarmAnnouncement(
+    const announcement = FarmAnnouncement(
       id: 3,
       title: 'Harvest day Saturday',
       body: 'Bring crates by 6am.',
@@ -64,26 +64,29 @@ void main() {
 
     await tester.pumpWidget(
       _app(
-        home: Scaffold(
-          body: FarmAnnouncementBanner(
-            announcement: announcement,
-            onDismiss: () => dismissed = true,
+        home: const Scaffold(
+          body: FarmerAnnouncementHomeBanner(
+            userId: 7,
+            announcements: [announcement],
+            toastDuration: Duration(milliseconds: 50),
           ),
         ),
       ),
     );
     await tester.pump();
+    await tester.pump();
 
     final s = AppStrings(false);
     expect(find.text('${s.announcementPinned}: Harvest day Saturday'), findsOneWidget);
+    expect(find.text('Bring crates by 6am.'), findsNothing);
 
-    await tester.drag(find.byType(Dismissible), const Offset(-500, 0));
+    await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();
 
-    expect(dismissed, isTrue);
+    expect(find.text('${s.announcementPinned}: Harvest day Saturday'), findsNothing);
   });
 
-  testWidgets('dismissed banner stays hidden after rebuild and a newer notice still shows', (tester) async {
+  testWidgets('seen announcement does not toast again, but a newer one does', (tester) async {
     SharedPreferences.setMockInitialValues({});
     await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -103,37 +106,49 @@ void main() {
     await tester.pumpWidget(
       _app(
         home: const Scaffold(
-          body: FarmerAnnouncementHomeBanner(userId: 7, announcements: [older]),
+          body: FarmerAnnouncementHomeBanner(
+            userId: 7,
+            announcements: [older],
+            toastDuration: Duration(milliseconds: 50),
+          ),
         ),
       ),
     );
-    await tester.pumpAndSettle();
-
-    final s = AppStrings(false);
-    expect(find.text('${s.announcementPinned}: Harvest day Saturday'), findsOneWidget);
-
-    await tester.drag(find.byType(Dismissible), const Offset(-500, 0));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();
 
     await tester.pumpWidget(
       _app(
         home: const Scaffold(
-          body: FarmerAnnouncementHomeBanner(userId: 7, announcements: [older]),
+          body: FarmerAnnouncementHomeBanner(
+            userId: 7,
+            announcements: [older],
+            toastDuration: Duration(milliseconds: 50),
+          ),
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
 
+    final s = AppStrings(false);
     expect(find.text('${s.announcementPinned}: Harvest day Saturday'), findsNothing);
 
     await tester.pumpWidget(
       _app(
         home: const Scaffold(
-          body: FarmerAnnouncementHomeBanner(userId: 7, announcements: [newer, older]),
+          body: FarmerAnnouncementHomeBanner(
+            userId: 7,
+            announcements: [newer, older],
+            toastDuration: Duration(milliseconds: 50),
+          ),
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
 
     expect(find.text('Pickup point moved'), findsOneWidget);
     expect(find.text('${s.announcementPinned}: Harvest day Saturday'), findsNothing);

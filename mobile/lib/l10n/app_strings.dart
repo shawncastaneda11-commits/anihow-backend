@@ -156,6 +156,12 @@ class AppStrings {
   String get orders => t('Orders', 'Mga order');
   String get marketplace => t('Marketplace', 'Palengke');
   String get favorites => t('Favorites', 'Mga paborito');
+  String get favoriteCrops => t('Crops', 'Mga ani');
+  String get favoriteStores => t('Stores', 'Mga tindahan');
+  String get noFavoriteStores => t('No favorite stores yet.', 'Wala pang paboritong tindahan.');
+  String get addStoreToFavorites => t('Save store', 'I-save ang tindahan');
+  String get removeStoreFromFavorites => t('Remove store', 'Alisin ang tindahan');
+  String get storeSavedToFavorites => t('Store saved to favorites.', 'Nasave ang tindahan sa mga paborito.');
   String get profile => t('Profile', 'Profile');
   String get market => t('Market', 'Palengke');
   String get verifyBanner => t(
@@ -223,7 +229,7 @@ class AppStrings {
   String get tawad => t('Tawad', 'Tawad');
   String get total => t('Total', 'Kabuuan');
   String get noOrders => t('No orders yet.', 'Wala pang order.');
-  String get noFavorites => t('No favorites yet.', 'Wala pang paborito.');
+  String get noFavorites => t('No favorite crops yet.', 'Wala pang paboritong ani.');
   String get noListingsFound => t('No listings found.', 'Walang nahanap na listing.');
   String get nothingHere => t('Nothing here yet.', 'Wala pa rito.');
   String get somethingWentWrong => t('Something went wrong.', 'May nangyaring mali.');
@@ -323,6 +329,12 @@ class AppStrings {
   String get shopNotFound => t('Shop not found.', 'Hindi nahanap ang tindahan.');
   String get couldNotOpenPhone => t('Could not open the phone app.', 'Hindi mabuksan ang phone app.');
   String get readyToReview => t('Ready to review', 'Puwede nang i-review');
+  String get writeReview => t('Write a review', 'Sumulat ng review');
+  String get reviewComment => t('Comment (optional)', 'Komento (opsyonal)');
+  String get submitReview => t('Submit review', 'I-submit ang review');
+  String get chooseARating => t('Choose a star rating.', 'Pumili ng rating.');
+  String get reviewSaved => t('Review saved.', 'Nasave ang review.');
+  String youRated(Object rating) => t('You rated $rating', 'Ni-rate mo: $rating');
   String get items => t('Items', 'Mga item');
   String get cashAtMeetup => t('Cash at meetup', 'Cash sa pagkikita');
   String tawadMinus(String peso) => t('Tawad −$peso', 'Tawad −$peso');

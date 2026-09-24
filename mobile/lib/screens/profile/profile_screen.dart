@@ -183,19 +183,35 @@ class _ProfileLink extends StatelessWidget {
 }
 
 class FarmerProfileScreen extends StatefulWidget {
-  const FarmerProfileScreen({super.key});
+  const FarmerProfileScreen({super.key, this.preview});
+
+  final ShopProfile? preview;
 
   @override
   State<FarmerProfileScreen> createState() => _FarmerProfileScreenState();
 }
 
 class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
-  late Future<_FarmerShopView> _view;
+  _FarmerShopView? _view;
+  bool _loading = true;
+  Object? _error;
+
+  bool get _previewing => widget.preview != null;
 
   @override
   void initState() {
     super.initState();
-    _view = _load();
+    final preview = widget.preview;
+    if (preview != null) {
+      _view = _FarmerShopView(
+        shop: preview,
+        activeListings: preview.listings.where((listing) => listing.isActive).toList(),
+        listingsCount: preview.listings.where((listing) => listing.isActive).length,
+      );
+      _loading = false;
+      return;
+    }
+    _reload();
   }
 
   Future<_FarmerShopView> _load() async {
@@ -226,10 +242,43 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
     );
   }
 
+  void _applyShop(ShopProfile shop) {
+    final current = _view;
+    _view = _FarmerShopView(
+      shop: shop,
+      activeListings: current?.activeListings ?? const [],
+      listingsCount: current?.listingsCount,
+      listingsError: current?.listingsError,
+    );
+  }
+
   Future<void> _reload() async {
-    final next = _load();
-    setState(() => _view = next);
-    await next;
+    if (_previewing) {
+      return;
+    }
+    setState(() {
+      _loading = _view == null;
+      _error = null;
+    });
+    try {
+      final next = await _load();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _view = next;
+        _loading = false;
+        _error = null;
+      });
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loading = false;
+        _error = error;
+      });
+    }
   }
 
   Future<void> _call(String number) async {
@@ -246,11 +295,13 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
   }
 
   Future<void> _editShop(ShopProfile shop) async {
-    final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => ShopEditScreen(shop: shop)),
+    final saved = await Navigator.of(context).push<ShopProfile>(
+      MaterialPageRoute(
+        builder: (_) => ShopEditScreen(shop: shop, preview: _previewing),
+      ),
     );
-    if (saved == true && mounted) {
-      await _reload();
+    if (saved != null && mounted) {
+      setState(() => _applyShop(saved));
     }
   }
 
@@ -291,84 +342,79 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
           ),
         ],
       ),
-      body: FutureBuilder<_FarmerShopView>(
-        future: _view,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('${snapshot.error}'));
-          }
-          final view = snapshot.data;
-          if (view == null) {
-            return Center(child: Text(s.shopNotFound));
-          }
-          final shop = view.shop;
-          final user = context.watch<AuthController>().user;
-          final farmName = user?.farmName?.trim();
-          final farmId = user?.farmId ?? shop.farmId;
-          return RefreshIndicator(
-            onRefresh: _reload,
-            child: ListView(
-              padding: AniHowSpace.screenPadding,
-              children: [
-                Card(
-                  child: Padding(
-                    padding: AniHowSpace.cardPadding,
-                    child: ShopIdentityHeader(shop: shop),
-                  ),
-                ),
-                if (farmId != null && farmName != null && farmName.isNotEmpty && shop.farmIsActive)
-                  FarmLinkChip(farmId: farmId, label: s.farmLine(farmName))
-                else if (farmName != null && farmName.isNotEmpty)
-                  OrderMetaRow(icon: Icons.agriculture_outlined, text: s.farmLine(farmName)),
-                if (view.listingsCount != null || shop.hasRating) ...[
-                  const SizedBox(height: AniHowSpace.cardGap),
-                  ShopStatRow(
-                    listings: view.listingsCount,
-                    rating: shop.hasRating ? shop.averageRating : null,
-                  ),
-                ],
-                const SizedBox(height: AniHowSpace.cardGap),
-                ShopAboutCard(shop: shop, onCall: _call),
-                const SizedBox(height: AniHowSpace.cardGap),
-                OutlinedButton.icon(
-                  onPressed: () => _editShop(shop),
-                  icon: const Icon(Icons.edit_outlined),
-                  label: Text(s.editShopProfile),
-                ),
-                if (context.watch<AuthController>().user?.canRecordWalkInSales ?? false) ...[
-                  const SizedBox(height: AniHowSpace.cardGap),
-                  OutlinedButton.icon(
-                    onPressed: _openWalkIn,
-                    icon: const Icon(Icons.point_of_sale_outlined),
-                    label: Text(s.recordWalkIn),
-                  ),
-                ],
-                const SizedBox(height: AniHowSpace.section),
-                Text(s.activeListings, style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: AniHowSpace.cardGap),
-                if (view.listingsError != null)
-                  Text(view.listingsError!)
-                else if (view.activeListings.isEmpty)
-                  const ShopListingsEmpty()
-                else
-                  ...view.activeListings.map(
-                    (listing) => Padding(
-                      padding: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
-                      child: ProduceCard(
-                        listing: listing,
-                        showSeller: false,
-                        showStock: true,
-                        onTap: () => _openListing(listing),
-                      ),
-                    ),
-                  ),
-              ],
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(child: Text('$_error'))
+              : _view == null
+                  ? Center(child: Text(s.shopNotFound))
+                  : _shopBody(context, s, _view!),
+    );
+  }
+
+  Widget _shopBody(BuildContext context, AppStrings s, _FarmerShopView view) {
+    final shop = view.shop;
+    final user = context.watch<AuthController>().user;
+    final farmName = user?.farmName?.trim();
+    final farmId = user?.farmId ?? shop.farmId;
+    return RefreshIndicator(
+      onRefresh: _reload,
+      child: ListView(
+        padding: AniHowSpace.screenPadding,
+        children: [
+          Card(
+            child: Padding(
+              padding: AniHowSpace.cardPadding,
+              child: ShopIdentityHeader(shop: shop),
             ),
-          );
-        },
+          ),
+          if (farmId != null && farmName != null && farmName.isNotEmpty && shop.farmIsActive)
+            FarmLinkChip(farmId: farmId, label: s.farmLine(farmName))
+          else if (farmName != null && farmName.isNotEmpty)
+            OrderMetaRow(icon: Icons.agriculture_outlined, text: s.farmLine(farmName)),
+          if (view.listingsCount != null || shop.hasRating) ...[
+            const SizedBox(height: AniHowSpace.cardGap),
+            ShopStatRow(
+              listings: view.listingsCount,
+              rating: shop.hasRating ? shop.averageRating : null,
+            ),
+          ],
+          const SizedBox(height: AniHowSpace.cardGap),
+          ShopAboutCard(shop: shop, onCall: _call),
+          const SizedBox(height: AniHowSpace.cardGap),
+          OutlinedButton.icon(
+            onPressed: () => _editShop(shop),
+            icon: const Icon(Icons.edit_outlined),
+            label: Text(s.editShopProfile),
+          ),
+          if (user?.canRecordWalkInSales ?? false) ...[
+            const SizedBox(height: AniHowSpace.cardGap),
+            OutlinedButton.icon(
+              onPressed: _openWalkIn,
+              icon: const Icon(Icons.point_of_sale_outlined),
+              label: Text(s.recordWalkIn),
+            ),
+          ],
+          const SizedBox(height: AniHowSpace.section),
+          Text(s.activeListings, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: AniHowSpace.cardGap),
+          if (view.listingsError != null)
+            Text(view.listingsError!)
+          else if (view.activeListings.isEmpty)
+            const ShopListingsEmpty()
+          else
+            ...view.activeListings.map(
+              (listing) => Padding(
+                padding: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
+                child: ProduceCard(
+                  listing: listing,
+                  showSeller: false,
+                  showStock: true,
+                  onTap: () => _openListing(listing),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -389,9 +435,10 @@ class _FarmerShopView {
 }
 
 class ShopEditScreen extends StatefulWidget {
-  const ShopEditScreen({super.key, required this.shop});
+  const ShopEditScreen({super.key, required this.shop, this.preview = false});
 
   final ShopProfile shop;
+  final bool preview;
 
   @override
   State<ShopEditScreen> createState() => _ShopEditScreenState();
@@ -422,17 +469,42 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
     super.dispose();
   }
 
+  ShopProfile _shopFromFields() {
+    final bio = _bio.text.trim();
+    final location = _location.text.trim();
+    final contact = _contact.text.trim();
+    return ShopProfile(
+      id: widget.shop.id,
+      shopName: _name.text.trim(),
+      name: widget.shop.name,
+      bio: bio.isEmpty ? null : bio,
+      location: location.isEmpty ? null : location,
+      contact: contact.isEmpty ? null : contact,
+      averageRating: widget.shop.averageRating,
+      reviewsCount: widget.shop.reviewsCount,
+      listings: widget.shop.listings,
+      farmId: widget.shop.farmId,
+      farmName: widget.shop.farmName,
+      farmIsActive: widget.shop.farmIsActive,
+      isFavorited: widget.shop.isFavorited,
+    );
+  }
+
   Future<void> _save() async {
+    if (widget.preview) {
+      Navigator.of(context).pop(_shopFromFields());
+      return;
+    }
     setState(() => _busy = true);
     try {
-      await context.read<AuthController>().api.updateFarmerShop({
+      final shop = await context.read<AuthController>().api.updateFarmerShop({
         'shop_name': _name.text.trim(),
         'bio': _bio.text.trim(),
         'location': _location.text.trim(),
         'contact': _contact.text.trim(),
       });
       if (mounted) {
-        Navigator.of(context).pop(true);
+        Navigator.of(context).pop(shop.bio == _bio.text.trim() ? shop : _shopFromFields());
       }
     } catch (error) {
       if (mounted) {

@@ -378,6 +378,7 @@ class OrderRecord {
     this.reviewRating,
     this.cancellationReason,
     this.cancellationLabel,
+    this.cancellationNote,
     this.allowedNext = const [],
     this.fulfillmentPreference,
     this.fulfillmentLabel,
@@ -411,6 +412,7 @@ class OrderRecord {
   final int? reviewRating;
   final String? cancellationReason;
   final String? cancellationLabel;
+  final String? cancellationNote;
   final String? amountReceived;
   final String? source;
   final bool isWalkIn;
@@ -458,6 +460,7 @@ class OrderRecord {
       reviewRating: reviewMap == null ? null : ListingItem._asCount(reviewMap['rating']),
       cancellationReason: json['cancellation_reason'] as String?,
       cancellationLabel: json['cancellation_label'] as String?,
+      cancellationNote: json['cancellation_note'] as String?,
       amountReceived: json['amount_received']?.toString(),
       source: json['source'] as String?,
       isWalkIn: json['is_walk_in'] == true || json['is_walk_in'] == 1,
@@ -490,6 +493,9 @@ class OrderRecord {
   bool get hasCancellationReason =>
       isCancelled && ((cancellationReason != null && cancellationReason!.isNotEmpty) ||
           (cancellationLabel != null && cancellationLabel!.isNotEmpty));
+
+  bool get hasCancellationNote =>
+      isCancelled && cancellationNote != null && cancellationNote!.trim().isNotEmpty;
 
   String get buyerName {
     if (isWalkIn) {
@@ -532,8 +538,10 @@ class OrderRecord {
     String? statusLabel,
     List<String>? allowedNext,
     bool? canBeReviewed,
+    int? reviewRating,
     String? cancellationReason,
     String? cancellationLabel,
+    String? cancellationNote,
     String? amountReceived,
   }) {
     return OrderRecord(
@@ -556,9 +564,10 @@ class OrderRecord {
       sellerId: sellerId,
       placedAt: placedAt,
       canBeReviewed: canBeReviewed ?? this.canBeReviewed,
-      reviewRating: reviewRating,
+      reviewRating: reviewRating ?? this.reviewRating,
       cancellationReason: cancellationReason ?? this.cancellationReason,
       cancellationLabel: cancellationLabel ?? this.cancellationLabel,
+      cancellationNote: cancellationNote ?? this.cancellationNote,
       amountReceived: amountReceived ?? this.amountReceived,
       source: source,
       isWalkIn: isWalkIn,
@@ -704,6 +713,31 @@ class FavoriteRecord {
       listingId: json['listing_id'] as int,
       listing: listingJson is Map<String, dynamic>
           ? ListingItem.fromJson(listingJson)
+          : listingJson is Map
+              ? ListingItem.fromJson(Map<String, dynamic>.from(listingJson))
+              : null,
+    );
+  }
+}
+
+class ShopFavoriteRecord {
+  const ShopFavoriteRecord({
+    required this.id,
+    required this.sellerId,
+    this.shop,
+  });
+
+  final int id;
+  final int sellerId;
+  final ShopProfile? shop;
+
+  factory ShopFavoriteRecord.fromJson(Map<String, dynamic> json) {
+    final shopJson = json['shop'];
+    return ShopFavoriteRecord(
+      id: json['id'] as int,
+      sellerId: json['farmer_seller_id'] as int,
+      shop: shopJson is Map
+          ? ShopProfile.fromJson(Map<String, dynamic>.from(shopJson))
           : null,
     );
   }
@@ -807,6 +841,7 @@ class ShopProfile {
     this.farmId,
     this.farmName,
     this.farmIsActive = false,
+    this.isFavorited = false,
   });
 
   final int id;
@@ -821,6 +856,7 @@ class ShopProfile {
   final int? farmId;
   final String? farmName;
   final bool farmIsActive;
+  final bool isFavorited;
 
   bool get hasRating => reviewsCount > 0 && averageRating != null && averageRating!.isNotEmpty;
 
@@ -844,6 +880,25 @@ class ShopProfile {
       farmName: farmMap?['name'] as String?,
       farmIsActive: farmMap != null &&
           (farmMap['is_active'] == true || farmMap['is_active'] == 1 || farmMap['is_active'] == '1'),
+      isFavorited: json['is_favorited'] == true || json['is_favorited'] == 1,
+    );
+  }
+
+  ShopProfile copyWith({bool? isFavorited}) {
+    return ShopProfile(
+      id: id,
+      shopName: shopName,
+      name: name,
+      bio: bio,
+      location: location,
+      contact: contact,
+      averageRating: averageRating,
+      reviewsCount: reviewsCount,
+      listings: listings,
+      farmId: farmId,
+      farmName: farmName,
+      farmIsActive: farmIsActive,
+      isFavorited: isFavorited ?? this.isFavorited,
     );
   }
 }

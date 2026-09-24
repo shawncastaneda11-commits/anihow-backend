@@ -34,6 +34,7 @@ class AnonymizeUserAction
 
         $user->cartItems()->delete();
         $user->favorites()->delete();
+        $user->shopFavorites()->delete();
         $user->inAppNotifications()->delete();
         $user->tokens()->delete();
 

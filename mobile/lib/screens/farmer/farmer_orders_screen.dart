@@ -371,6 +371,11 @@ class _OrderCard extends StatelessWidget {
                         fallback: order.cancellationLabel,
                       ),
                     ),
+                  if (order.hasCancellationNote)
+                    OrderMetaRow(
+                      icon: Icons.notes_outlined,
+                      text: order.cancellationNote!.trim(),
+                    ),
                 ],
               ),
             ),
@@ -637,6 +642,11 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
                       order.cancellationReason,
                       fallback: order.cancellationLabel,
                     ),
+                  ),
+                if (order.hasCancellationNote)
+                  OrderMetaRow(
+                    icon: Icons.notes_outlined,
+                    text: order.cancellationNote!.trim(),
                   ),
                 if (order.canBeReviewed)
                   OrderMetaRow(icon: Icons.star_outline, text: s.reviewUnlocked),

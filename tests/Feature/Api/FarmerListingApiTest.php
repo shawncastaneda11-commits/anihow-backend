@@ -3,9 +3,13 @@
 namespace Tests\Feature\Api;
 
 use App\Enums\TawadType;
+use App\Models\Listing;
 use App\Models\TawadRule;
+use App\Support\ListingStorage;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\CreatesMarketplaceActors;
 use Tests\TestCase;
 
@@ -69,6 +73,41 @@ class FarmerListingApiTest extends TestCase
             'title' => 'Kamatis, bagong ani',
             'crop_type_id' => $cropType->id,
         ]);
+    }
+
+    public function test_farmer_can_create_and_replace_a_listing_photo(): void
+    {
+        Storage::fake(ListingStorage::diskName());
+
+        $farmer = $this->farmer();
+        $cropType = $this->cropType();
+
+        $create = $this->asUser($farmer)->post('/api/farmer/listings', [
+            'title' => 'Fresh kamatis, hand picked',
+            'crop_type_id' => $cropType->id,
+            'price_per_unit' => 30,
+            'quantity_available' => 20,
+            'image' => UploadedFile::fake()->image('produce.jpg'),
+        ], ['Accept' => 'application/json']);
+
+        $create->assertCreated()
+            ->assertJsonPath('data.title', 'Fresh kamatis, hand picked');
+        $this->assertNotEmpty($create->json('data.image_url'));
+
+        $listingId = $create->json('data.id');
+        $stored = Listing::query()->findOrFail($listingId);
+        $this->assertNotNull($stored->image_path);
+        Storage::disk(ListingStorage::diskName())->assertExists($stored->image_path);
+
+        $this->asUser($farmer)->post("/api/farmer/listings/{$listingId}", [
+            'title' => 'Kamatis, bagong ani',
+            'image' => UploadedFile::fake()->image('replacement.jpg'),
+        ], ['Accept' => 'application/json'])->assertOk();
+
+        $replaced = $stored->fresh();
+        $this->assertNotSame($stored->image_path, $replaced->image_path);
+        Storage::disk(ListingStorage::diskName())->assertExists($replaced->image_path);
+        Storage::disk(ListingStorage::diskName())->assertMissing($stored->image_path);
     }
 
     public function test_seller_cannot_view_or_update_another_sellers_listing(): void

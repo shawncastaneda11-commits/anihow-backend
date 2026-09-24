@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Api;
 
+use App\Enums\Role;
 use App\Enums\UserStatus;
+use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesMarketplaceActors;
@@ -124,5 +126,82 @@ class ReviewShopFavoriteOrderApiTest extends TestCase
         $this->asUser($buyer)
             ->getJson('/api/buyer/favorites')
             ->assertJsonCount(0, 'data');
+    }
+
+    public function test_buyer_can_add_list_and_remove_shop_favorites(): void
+    {
+        $farmer = $this->farmer([
+            'shop_name' => 'Aling Nena Produce',
+            'email' => 'nena-shop@example.com',
+            'phone' => '09171112222',
+        ]);
+        $buyer = $this->buyer();
+        $otherBuyer = $this->buyer();
+
+        $this->asUser($buyer)
+            ->getJson("/api/buyer/shops/{$farmer->id}")
+            ->assertOk()
+            ->assertJsonPath('data.is_favorited', false);
+
+        $this->asUser($buyer)
+            ->postJson('/api/buyer/shop-favorites', [
+                'farmer_seller_id' => $farmer->id,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.shop.shop_name', 'Aling Nena Produce');
+
+        $this->asUser($buyer)
+            ->postJson('/api/buyer/shop-favorites', [
+                'farmer_seller_id' => $farmer->id,
+            ])
+            ->assertUnprocessable();
+
+        $this->asUser($buyer)
+            ->postJson('/api/buyer/shop-favorites', [
+                'farmer_seller_id' => $otherBuyer->id,
+            ])
+            ->assertUnprocessable();
+
+        $list = $this->asUser($buyer)
+            ->getJson('/api/buyer/shop-favorites')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+
+        $encoded = json_encode($list->json());
+        $this->assertStringNotContainsString('nena-shop@example.com', (string) $encoded);
+
+        $this->asUser($otherBuyer)
+            ->getJson('/api/buyer/shop-favorites')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+
+        $this->asUser($buyer)
+            ->getJson("/api/buyer/shops/{$farmer->id}")
+            ->assertJsonPath('data.is_favorited', true);
+
+        $this->asUser($buyer)
+            ->deleteJson("/api/buyer/shop-favorites/{$farmer->id}")
+            ->assertOk();
+
+        $this->asUser($buyer)
+            ->getJson('/api/buyer/shop-favorites')
+            ->assertJsonCount(0, 'data');
+    }
+
+    public function test_farmer_and_content_editor_cannot_manage_shop_favorites(): void
+    {
+        $farm = $this->farm();
+        $seller = $this->farmer([], $farm);
+        $target = $this->farmer();
+        $editor = User::factory()->create(['farm_id' => $farm->id]);
+        $editor->syncRoles(Role::ContentEditor);
+
+        $this->asUser($seller)
+            ->postJson('/api/buyer/shop-favorites', ['farmer_seller_id' => $target->id])
+            ->assertForbidden();
+
+        $this->asUser($editor)
+            ->getJson('/api/buyer/shop-favorites')
+            ->assertForbidden();
     }
 }

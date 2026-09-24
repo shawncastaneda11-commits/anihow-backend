@@ -77,6 +77,28 @@ void main() {
     expect(find.text('Seller unresponsive'), findsOneWidget);
   });
 
+  testWidgets('buyer order card shows the seller cancellation note', (tester) async {
+    await tester.pumpWidget(
+      _app(
+        home: const BuyerOrderCard(
+          order: OrderRecord(
+            id: 3,
+            status: 'cancelled',
+            statusLabel: 'Cancelled',
+            total: '60',
+            items: [],
+            shopName: 'Mang Tonyo Farm',
+            cancellationReason: 'other',
+            cancellationNote: 'Stall closed after the rain.',
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Other'), findsOneWidget);
+    expect(find.text('Stall closed after the rain.'), findsOneWidget);
+  });
+
   testWidgets('buyer order card shows chat for app orders', (tester) async {
     await tester.pumpWidget(
       _app(

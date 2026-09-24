@@ -57,6 +57,10 @@ void main() {
     expect(filipino.logOut, 'Mag-log out');
     expect(english.myData, 'My data');
     expect(filipino.myData, 'Aking datos');
+    expect(english.favoriteCrops, 'Crops');
+    expect(filipino.favoriteStores, 'Mga tindahan');
+    expect(english.writeReview, 'Write a review');
+    expect(filipino.submitReview, 'I-submit ang review');
   });
 
   testWidgets('Settings has English and Filipino only, and Filipino copy', (tester) async {

@@ -156,8 +156,6 @@ class ShopAboutCard extends StatelessWidget {
           children: [
             Text(
               (bio != null && bio.isNotEmpty) ? bio : s.noBioYet,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: AniHowSpace.cardGap),

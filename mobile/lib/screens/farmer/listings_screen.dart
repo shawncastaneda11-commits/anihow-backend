@@ -134,18 +134,9 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
         body: Column(
           children: [
             if (userId != null && _announcements.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AniHowSpace.screen,
-                  AniHowSpace.cardGap,
-                  AniHowSpace.screen,
-                  0,
-                ),
-                child: FarmerAnnouncementHomeBanner(
-                  userId: userId,
-                  announcements: _announcements,
-                  onOpen: () => openFarmAnnouncements(context),
-                ),
+              FarmerAnnouncementHomeBanner(
+                userId: userId,
+                announcements: _announcements,
               ),
             Align(
               alignment: Alignment.centerLeft,

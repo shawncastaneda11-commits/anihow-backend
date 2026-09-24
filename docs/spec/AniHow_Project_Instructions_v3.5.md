@@ -6,7 +6,8 @@ instruction set, working note, or prior manuscript section, THIS DOCUMENT WINS.
 v2 through v3.4 are historical reference only.
 
 Status: system built and feature-complete for the study; manuscript in re-audit
-against the v3.5 build.
+against the v3.5 build. Revised 24 September 2026 for the post-v3.5 hardening
+pass (see "Post-v3.5 addendum" at the end); no module or actor changed.
 
 ---
 
@@ -30,17 +31,18 @@ The system is implemented across three surfaces: a Laravel API (four roles), a
 Filament CMS (policy-gated resources for two roles on one panel), and a Flutter
 Android application. Development happens on the branch
 `cursor/cloud-agent-1790189470926-52vq6`; this document describes that branch as
-of commit `c22e36f`.
+of commit `efa1419`.
 
 **Test totals (confirmed runs, 24 September 2026).**
 
 | Layer | Result |
 |---|---|
-| Full `php artisan test` suite | **182 tests, 1,320 assertions** |
+| Full `php artisan test` suite | **215 tests, 1,538 assertions** |
 | SmokeTestSeeder (service-level, runs separately) | **26 of 26** checks |
 | Multi-farm isolation (inside the PHP total) | 8 checks, 138 assertions |
-| Flutter `flutter test` (default run) | **48 passed**; 3 live API suites skipped by design |
+| Flutter `flutter test` (default run, Flutter 3.47.4) | **63 passed**; 3 live API suites skipped by design |
 | Flutter live suites (`--tags live --run-skipped --concurrency=1`) | 3 of 3 against a seeded local API |
+| GitHub Actions CI (every push) | Pint `--test`, full PHPUnit suite, `flutter analyze`, `flutter test`; green on `efa1419` |
 
 The PHP feature suite covers: authentication and OTP verification, change
 password, the client request contract, crop-care reads (farmer-sellers only),
@@ -50,7 +52,9 @@ guards, walk-in recording, marketplace search, takedown and restore
 notification, order chat, the FAQ bot and its CMS management and moderation,
 the farm page, farm announcements, farmer-seller analytics, stale-order
 reminders and auto-cancellation, Super Admin CSV exports, and the data-subject
-rights (correct, export, request deletion, anonymisation).
+rights (correct, export, request deletion, anonymisation), shop favorites,
+the buyer-visible cancellation note, the demo seeder, image variants and
+thumbnails, and orphaned-file pruning.
 
 The overlap between the smoke and feature layers is deliberate: the seeder tests
 the services, the feature suite tests the routes, and a policy or FormRequest can
@@ -525,12 +529,14 @@ the SRS):**
 | Spatie Laravel-Permission | 8.3.0 |
 | Laravel Reverb | 1.12.0 |
 | Dart SDK constraint | ^3.13.3 |
-| Flutter, MySQL | [TEAM INPUT: from `flutter --version` and the VPS] |
+| Flutter | 3.47.4 |
+| MySQL | [TEAM INPUT: from the VPS] |
 
 **Server processes on the VPS (all four are required):**
 1. Nginx + PHP-FPM serving the Laravel application over HTTPS.
-2. **Queue worker** (`queue:work`, under Supervisor): sends queued email such as
-   OTP codes, password resets, low-stock alerts, and deletion confirmations.
+2. **Queue worker** (`queue:work`, under Supervisor): sends queued email, namely
+   password resets, low-stock alerts, and deletion notices. OTP codes do NOT go
+   through the queue (see below).
 3. **Reverb** (`reverb:start`, under Supervisor), proxied as `wss` on its own
    subdomain: live order chat.
 4. **Scheduler** (cron running `schedule:run` every minute): delivers scheduled
@@ -539,7 +545,11 @@ the SRS):**
 
 **Email verification:** OTP-only, 6-digit code, hashed in cache, 10-minute
 expiry, in-app verification screen. Mail goes out through Gmail SMTP (app
-password on the sending account) through the queue; `log` in local development.
+password on the sending account). The OTP is sent synchronously (`notifyNow`)
+within the registration or resend request, so it does not depend on the queue
+worker. `log` in local development, where the code is also returned in the API
+response only in `local`/`testing` when mail is unconfigured; in production an
+unconfigured mailer returns 503 and the code is never exposed.
 
 **Time zone:** `Asia/Manila` for the application, analytics, and schedules.
 
@@ -789,7 +799,7 @@ filename suggests College of Computer Studies).
 | 13 | Farmer-seller account creation described as Super Admin-created; OTP applies to buyers. | Corrects v3.4's description to match the build. |
 | 14 | Client scope settled: Manggahan is the sole evaluated partner. | Decision 21; closes the v3.4 open item. |
 | 15 | PYAP name corrected; post-turnover administration recorded. | Decisions 22, 23. |
-| 16 | Test totals: 182 tests, 1,320 assertions (PHP); 48 Flutter tests plus 3 live suites. | Confirmed runs. |
+| 16 | Test totals: 182 tests, 1,320 assertions (PHP); 48 Flutter tests plus 3 live suites. Superseded by the addendum totals. | Confirmed runs at `c22e36f`. |
 | 17 | DeLone and McLean (1992) page range confirmed as 60-95. | Closes the v3.4 note. |
 
 ### Deferred / open (not v3.5 behaviour changes)
@@ -799,7 +809,27 @@ filename suggests College of Computer Studies).
   as a limitation, not a planned feature.
 - Accepted edge: a checkout in the same instant a deletion is approved can leave
   one order attached to "Deleted user"; milliseconds wide, pilot scale.
-- Carried from v3.4, unverified since: the unverified-buyer `MaterialBanner`
-  overlapping the status bar.
 - The README's older phase sections (Reservations, POS) are outdated and should
   be trimmed in a documentation pass.
+
+---
+
+## Post-v3.5 addendum (hardening pass, 24 September 2026)
+
+None of these changes adds a module, an actor, or a permission, so the five
+modules, the golden thread, and the decision log stand as written. Chapter 3
+was updated only where noted.
+
+| # | Change | Commit | Manuscript effect |
+|---|---|---|---|
+| A1 | Shop favorites for buyers (deleted shops drop out of the list); buyer sees the seller's cancellation note on the order. | `36960ae`, `8fe30bc` | None (supporting table already omitted from Figure 7). |
+| A2 | DemoSeeder with realistic data; stale pre-rebuild seeders removed; mail, broadcasts, and queued jobs suppressed while seeding. | `c83e82c`, `79f6e41` | None. |
+| A3 | Indexes on hot queries; uploaded images stored as a 1600px JPEG (quality 82) plus a 400px thumbnail. | `798ec43` | None. |
+| A4 | OTP returned in the API response only in `local`/`testing` with mail unconfigured; production returns 503. | `f5ef3c5` | None. |
+| A5 | Image processing: resize before rotate, 40 MP decode cap, white background for transparency, memory limit only raised, all eight EXIF orientations handled. | `f2012b1`, `526ea07` | None. |
+| A6 | Unverified-buyer banner no longer overlaps the status bar (closes the v3.4 carry-over). | `8fe30bc` | None. |
+| A7 | `storage:prune-orphans` removes image files no row references (listing photos included). | `8fe30bc`, `f57264b` | None. |
+| A8 | GitHub Actions CI on every push: Pint, PHPUnit, `flutter analyze`, `flutter test` (Flutter 3.47.4). | `2375443`, `efa1419` | Chapter 3 Testing Procedure mentions automated checks on every push. |
+| A9 | Documentation correction: the OTP is sent directly, not through the queue worker. | none (docs) | Chapter 3 architecture paragraph and Figure 4 corrected. |
+| A10 | Test totals: 215 tests, 1,538 assertions (PHP); isolation 8 tests, 138 assertions; seeder 26 of 26; Flutter 63 passed plus 3 live suites. | `efa1419` | Chapter 3 Testing Procedure updated. |
+| A11 | Table 2 Flutter version set to 3.47.4. | none (docs) | Chapter 3 Table 2 updated; MySQL still team input. |

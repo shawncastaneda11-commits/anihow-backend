@@ -36,7 +36,8 @@ digraph G {
   api -> db; panel -> db;
   db -> queue [dir=back, label=" reads jobs"];
   db -> sched [dir=back, label=" reads and\n updates"];
-  queue -> mail [label=" OTP codes, password\n resets, notices"];
+  queue -> mail [label=" password resets,\n low-stock and\n deletion notices"];
+  api -> mail [label=" OTP codes\n (sent directly)", style=dashed, constraint=false];
 
   {rank=same; app; web}
   {rank=same; reverb; api; panel}

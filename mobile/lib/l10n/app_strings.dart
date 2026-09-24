@@ -255,6 +255,38 @@ class AppStrings {
   String get phoneOptional => t('Phone (optional)', 'Telepono (opsyonal)');
   String get confirmPassword => t('Confirm password', 'Ulitin ang password');
   String get register => t('Register', 'Magpalista');
+  String get report => t('Report', 'I-ulat');
+  String get reportDetails => t('Details (optional)', 'Detalye (opsyonal)');
+  String get reportChooseReason => t('Choose a reason.', 'Pumili ng dahilan.');
+  String get reportSubmitted => t(
+        'Thank you. Your report was sent to the administrator.',
+        'Salamat. Naipadala na ang iyong ulat sa administrator.',
+      );
+  String get submitReport => t('Submit', 'I-submit');
+
+  List<({String value, String label})> get reportReasons => [
+        (
+          value: 'wrong_or_misleading',
+          label: t('Wrong or misleading information', 'Mali o mapanlinlang na impormasyon'),
+        ),
+        (
+          value: 'prohibited_item',
+          label: t('Item not allowed to be sold', 'Bawal ibenta ang item na ito'),
+        ),
+        (
+          value: 'offensive_content',
+          label: t('Offensive or abusive content', 'Masakit o mapang-abusong nilalaman'),
+        ),
+        (
+          value: 'spam_or_fake',
+          label: t('Spam or fake', 'Spam o peke'),
+        ),
+        (
+          value: 'other',
+          label: t('Other', 'Iba pa'),
+        ),
+      ];
+
   String get addToCart => t('Add to cart', 'Idagdag sa cart');
   String get addedToCart => t('Added to cart.', 'Nadagdag sa cart.');
   String get viewCart => t('View cart', 'Tingnan ang cart');
@@ -558,6 +590,9 @@ class AppStrings {
             'Account deletion request rejected',
             'Tinanggihan ang kahilingan sa pagbura ng account',
           ),
+        'report_submitted' => t('New report submitted', 'May bagong ulat'),
+        'report_resolved' => t('Report resolved', 'Naaksyunan ang ulat'),
+        'report_dismissed' => t('Report dismissed', 'Tinanggihan ang ulat'),
         _ => fallback,
       };
 

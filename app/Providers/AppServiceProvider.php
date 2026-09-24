@@ -70,6 +70,14 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perHour(3)->by($request->user()?->id ?: $request->ip());
         });
+
+        RateLimiter::for('reports', function (Request $request) {
+            if (app()->runningUnitTests()) {
+                return Limit::none();
+            }
+
+            return Limit::perHour(10)->by($request->user()?->id ?: $request->ip());
+        });
     }
 
     private function configureAuthUrls(): void

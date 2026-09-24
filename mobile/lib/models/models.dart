@@ -1080,6 +1080,7 @@ class ShopReview {
     required this.id,
     required this.rating,
     required this.reviewerName,
+    this.buyerId,
     this.comment,
     this.createdAt,
   });
@@ -1087,6 +1088,7 @@ class ShopReview {
   final int id;
   final int rating;
   final String reviewerName;
+  final int? buyerId;
   final String? comment;
   final String? createdAt;
 
@@ -1095,6 +1097,7 @@ class ShopReview {
       id: json['id'] as int,
       rating: ListingItem._asCount(json['rating']) ?? 0,
       reviewerName: json['buyer_name'] as String? ?? 'Buyer',
+      buyerId: ListingItem._asCount(json['buyer_id']),
       comment: json['comment'] as String?,
       createdAt: json['created_at'] as String?,
     );
@@ -1168,6 +1171,9 @@ class AppNotification {
         related == 'farm_announcement' ||
         related.endsWith('FarmAnnouncement');
   }
+
+  bool get isReportNotice =>
+      type == 'report_submitted' || type == 'report_resolved' || type == 'report_dismissed';
 
   bool get pointsToOrder {
     final related = relatedType ?? '';

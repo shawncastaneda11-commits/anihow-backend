@@ -11,6 +11,7 @@ import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/produce_card.dart';
+import '../../widgets/report_sheet.dart';
 import '../../widgets/shop_profile_parts.dart';
 import '../farm/farm_profile_screen.dart';
 import 'listing_detail_screen.dart';
@@ -300,7 +301,10 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                       ..._reviews.map(
                         (review) => Padding(
                           padding: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
-                          child: _ReviewCard(review: review),
+                          child: _ReviewCard(
+                            review: review,
+                            viewerId: context.watch<AuthController>().user?.id,
+                          ),
                         ),
                       ),
                       if (_page < _lastPage)
@@ -321,9 +325,10 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
 }
 
 class _ReviewCard extends StatelessWidget {
-  const _ReviewCard({required this.review});
+  const _ReviewCard({required this.review, this.viewerId});
 
   final ShopReview review;
+  final int? viewerId;
 
   @override
   Widget build(BuildContext context) {
@@ -349,6 +354,16 @@ class _ReviewCard extends StatelessWidget {
                           fontWeight: FontWeight.w400,
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
+                  ),
+                if (viewerId == null || review.buyerId != viewerId)
+                  TextButton(
+                    style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                    onPressed: () => showReportSheet(
+                      context,
+                      targetType: 'review',
+                      targetId: review.id,
+                    ),
+                    child: Text(AppStrings.of(context).report),
                   ),
               ],
             ),

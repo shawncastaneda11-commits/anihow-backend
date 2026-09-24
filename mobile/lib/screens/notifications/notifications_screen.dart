@@ -161,7 +161,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               horizontal: AniHowSpace.cardPad,
               vertical: 8,
             ),
-            leading: _UnreadDot(visible: item.isUnread),
+            leading: item.isReportNotice
+                ? Icon(
+                    _reportIcon(item.type),
+                    color: AniHowColors.brand,
+                  )
+                : _UnreadDot(visible: item.isUnread),
             title: Text(
               AppStrings.of(context).notificationTitle(item.type, item.title),
               style: TextStyle(
@@ -246,7 +251,19 @@ class _UnreadDot extends StatelessWidget {
   }
 }
 
+IconData _reportIcon(String? type) {
+  return switch (type) {
+    'report_resolved' => Icons.flag,
+    'report_dismissed' => Icons.flag_outlined,
+    _ => Icons.outlined_flag,
+  };
+}
+
 Future<void> openNotificationTarget(BuildContext context, AppNotification item) async {
+  if (item.isReportNotice) {
+    return;
+  }
+
   final user = context.read<AuthController>().user;
   final api = context.read<AuthController>().api;
   final isFarmer = user?.isFarmerSeller == true;

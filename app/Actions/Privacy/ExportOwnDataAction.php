@@ -2,8 +2,10 @@
 
 namespace App\Actions\Privacy;
 
+use App\Models\Listing;
 use App\Models\Order;
 use App\Models\OrderMessage;
+use App\Models\Review;
 use App\Models\TawadRule;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -109,6 +111,21 @@ class ExportOwnDataAction
                     'min_quantity' => $rule->min_quantity,
                     'is_active' => $rule->is_active,
                     'ended_at' => $rule->ended_at?->toIso8601String(),
+                ])->all(),
+            'reports_submitted' => $user->reportsFiled()
+                ->orderBy('id')
+                ->get()
+                ->map(fn ($report): array => [
+                    'target_type' => match ($report->reportable_type) {
+                        Listing::class => 'listing',
+                        Review::class => 'review',
+                        default => class_basename((string) $report->reportable_type),
+                    },
+                    'reason' => $report->reason instanceof \BackedEnum
+                        ? $report->reason->value
+                        : $report->reason,
+                    'status' => $report->status->value,
+                    'created_at' => $report->created_at?->toIso8601String(),
                 ])->all(),
         ];
     }

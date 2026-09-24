@@ -19,6 +19,7 @@ class ReviewResource extends JsonResource
             'order_id' => $this->order_id,
             'rating' => $this->rating,
             'comment' => $this->comment,
+            'buyer_id' => $this->buyer_id,
             'buyer_name' => $this->whenLoaded('buyer', fn (): string => $this->buyer->name),
             'created_at' => $this->created_at?->toIso8601String(),
         ];

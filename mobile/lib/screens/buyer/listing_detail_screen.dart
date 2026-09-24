@@ -14,14 +14,16 @@ import '../../widgets/form_label.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/produce_card.dart';
 import '../../widgets/produce_photo.dart';
+import '../../widgets/report_sheet.dart';
 import '../../widgets/status_pill.dart';
 import 'cart_screen.dart';
 import 'shop_profile_screen.dart';
 
 class ListingDetailScreen extends StatefulWidget {
-  const ListingDetailScreen({super.key, required this.listingId});
+  const ListingDetailScreen({super.key, required this.listingId, this.preview});
 
   final int listingId;
+  final ListingItem? preview;
 
   @override
   State<ListingDetailScreen> createState() => _ListingDetailScreenState();
@@ -35,7 +37,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _future = context.read<AuthController>().api.marketplaceShow(widget.listingId);
+    final preview = widget.preview;
+    _future = preview != null
+        ? Future.value(preview)
+        : context.read<AuthController>().api.marketplaceShow(widget.listingId);
   }
 
   @override
@@ -109,7 +114,33 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(s.t('Listing', 'Listing')),
-        actions: const [CartIconButton()],
+        actions: [
+          FutureBuilder<ListingItem>(
+            future: _future,
+            builder: (context, snapshot) {
+              final listing = snapshot.data;
+              final userId = context.watch<AuthController>().user?.id;
+              final ownListing = listing != null && listing.sellerId != null && listing.sellerId == userId;
+              if (listing == null || ownListing) {
+                return const SizedBox.shrink();
+              }
+              return TextButton(
+                key: const ValueKey('listing-report'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  minimumSize: const Size(48, 48),
+                ),
+                onPressed: () => showReportSheet(
+                  context,
+                  targetType: 'listing',
+                  targetId: listing.id,
+                ),
+                child: Text(s.report),
+              );
+            },
+          ),
+          const CartIconButton(),
+        ],
       ),
       body: FutureBuilder<ListingItem>(
         future: _future,

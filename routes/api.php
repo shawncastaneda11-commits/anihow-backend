@@ -34,6 +34,7 @@ use App\Http\Controllers\Api\Orders\CheckoutController;
 use App\Http\Controllers\Api\Orders\FarmerOrderController;
 use App\Http\Controllers\Api\Orders\OrderHistoryController;
 use App\Http\Controllers\Api\Orders\WalkInSaleController;
+use App\Http\Controllers\Api\Reports\SubmitReportController;
 use App\Http\Controllers\Api\Reviews\ReviewController;
 use App\Http\Controllers\Api\Shop\BuyerShopController;
 use App\Http\Controllers\Api\Shop\FarmerShopController;
@@ -102,6 +103,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('faq/ask', [FaqController::class, 'ask'])->name('faq.ask');
 
     Route::get('farms/{farm}', FarmController::class)->name('farms.show');
+
+    Route::post('reports', SubmitReportController::class)
+        ->middleware('throttle:reports')
+        ->name('reports.store');
 });
 
 Route::middleware([

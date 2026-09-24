@@ -11,6 +11,7 @@ use App\Models\FarmAnnouncement;
 use App\Models\InAppNotification;
 use App\Models\Listing;
 use App\Models\Order;
+use App\Models\Report;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Mail;
@@ -270,6 +271,41 @@ class InAppNotifier
             NotificationType::AccountDeletionRequested->label(),
             "{$requester->name} requested deletion of their account.",
             $request,
+        );
+    }
+
+    public function reportSubmitted(User $admin, Report $report): InAppNotification
+    {
+        $kind = class_basename((string) $report->reportable_type);
+
+        return $this->send(
+            $admin,
+            NotificationType::ReportSubmitted,
+            NotificationType::ReportSubmitted->label(),
+            "A {$kind} was reported.",
+            $report,
+        );
+    }
+
+    public function reportResolved(User $reporter, Report $report): InAppNotification
+    {
+        return $this->send(
+            $reporter,
+            NotificationType::ReportResolved,
+            NotificationType::ReportResolved->label(),
+            'Your report was reviewed and resolved.',
+            $report,
+        );
+    }
+
+    public function reportDismissed(User $reporter, Report $report): InAppNotification
+    {
+        return $this->send(
+            $reporter,
+            NotificationType::ReportDismissed,
+            NotificationType::ReportDismissed->label(),
+            'Your report was reviewed and dismissed.',
+            $report,
         );
     }
 

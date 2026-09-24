@@ -189,6 +189,20 @@ class ApiClient {
     return ListingItem.fromJson(_asMap(response['data'] ?? response));
   }
 
+  Future<void> submitReport({
+    required String targetType,
+    required int targetId,
+    required String reason,
+    String? details,
+  }) {
+    return _post('/reports', {
+      'target_type': targetType,
+      'target_id': targetId,
+      'reason': reason,
+      if (details != null && details.isNotEmpty) 'details': details,
+    });
+  }
+
   Future<void> submitReview({
     required int orderId,
     required int rating,

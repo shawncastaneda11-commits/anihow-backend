@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Role;
-use App\Support\ListingStorage;
+use App\Support\ImageVariants;
 use Database\Factories\FarmFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -88,11 +88,12 @@ class Farm extends Model
 
     public function coverPhotoUrl(): ?string
     {
-        if (! filled($this->cover_photo_path)) {
-            return null;
-        }
+        return app(ImageVariants::class)->url($this->cover_photo_path);
+    }
 
-        return ListingStorage::disk()->url($this->cover_photo_path);
+    public function coverThumbnailUrl(): ?string
+    {
+        return app(ImageVariants::class)->thumbnailUrl($this->cover_photo_path);
     }
 
     /**

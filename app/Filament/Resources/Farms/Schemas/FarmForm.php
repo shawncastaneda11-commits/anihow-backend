@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Farms\Schemas;
 
+use App\Support\ImageVariants;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -47,15 +48,18 @@ class FarmForm
                     ->maxLength(255)
                     ->columnSpanFull()
                     ->helperText('Shown publicly in the app. Where buyers meet sellers. Free text: no map, no route, no coordinates.'),
-                FileUpload::make('cover_photo_path')
-                    ->label('Cover photo')
-                    ->image()
-                    ->disk(config('anihow.listing_disk', 'public'))
-                    ->directory('farms')
-                    ->visibility('public')
-                    ->maxSize(2048)
-                    ->columnSpanFull()
-                    ->helperText('Shown publicly in the app.'),
+                ImageVariants::bindUpload(
+                    FileUpload::make('cover_photo_path')
+                        ->label('Cover photo')
+                        ->image()
+                        ->disk(config('anihow.listing_disk', 'public'))
+                        ->directory('farms')
+                        ->visibility('public')
+                        ->maxSize(2048)
+                        ->columnSpanFull()
+                        ->helperText('Shown publicly in the app.'),
+                    'farms',
+                ),
                 Toggle::make('is_active')
                     ->label('Active')
                     ->default(true),

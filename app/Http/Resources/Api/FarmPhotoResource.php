@@ -17,6 +17,7 @@ class FarmPhotoResource extends JsonResource
         return [
             'id' => $this->id,
             'url' => $this->url(),
+            'thumbnail_url' => $this->thumbnailUrl(),
             'caption' => $this->caption,
         ];
     }

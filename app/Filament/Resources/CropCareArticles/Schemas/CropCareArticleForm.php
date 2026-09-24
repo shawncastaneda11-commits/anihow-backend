@@ -4,6 +4,7 @@ namespace App\Filament\Resources\CropCareArticles\Schemas;
 
 use App\Enums\ArticleCategory;
 use App\Enums\ArticleStatus;
+use App\Support\ImageVariants;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -57,14 +58,17 @@ class CropCareArticleForm
                     ->rows(14)
                     ->columnSpanFull(),
 
-                FileUpload::make('image_path')
-                    ->label('Image')
-                    ->image()
-                    ->disk(config('anihow.listing_disk', 'public'))
-                    ->directory('crop-care')
-                    ->visibility('public')
-                    ->maxSize(2048)
-                    ->columnSpanFull(),
+                ImageVariants::bindUpload(
+                    FileUpload::make('image_path')
+                        ->label('Image')
+                        ->image()
+                        ->disk(config('anihow.listing_disk', 'public'))
+                        ->directory('crop-care')
+                        ->visibility('public')
+                        ->maxSize(2048)
+                        ->columnSpanFull(),
+                    'crop-care',
+                ),
 
                 Select::make('status')
                     ->options(ArticleStatus::options())

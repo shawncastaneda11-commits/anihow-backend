@@ -4,7 +4,7 @@ namespace App\Models;
 
 use App\Enums\ArticleCategory;
 use App\Enums\ArticleStatus;
-use App\Support\ListingStorage;
+use App\Support\ImageVariants;
 use Database\Factories\CropCareArticleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -53,9 +53,7 @@ class CropCareArticle extends Model
         // forceDeleted, not deleting: a soft-deleted article is still
         // recoverable and must keep its image.
         static::forceDeleted(function (CropCareArticle $article): void {
-            if (filled($article->image_path)) {
-                ListingStorage::disk()->delete($article->image_path);
-            }
+            app(ImageVariants::class)->delete($article->image_path);
         });
     }
 
@@ -80,11 +78,12 @@ class CropCareArticle extends Model
 
     public function imageUrl(): ?string
     {
-        if (! filled($this->image_path)) {
-            return null;
-        }
+        return app(ImageVariants::class)->url($this->image_path);
+    }
 
-        return ListingStorage::disk()->url($this->image_path);
+    public function thumbnailUrl(): ?string
+    {
+        return app(ImageVariants::class)->thumbnailUrl($this->image_path);
     }
 
     public function isOwnedBy(User $user): bool

@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Support\ListingStorage;
+use App\Support\ImageVariants;
 use Database\Factories\FarmPhotoFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,9 +18,7 @@ class FarmPhoto extends Model
     protected static function booted(): void
     {
         static::deleting(function (FarmPhoto $photo): void {
-            if (filled($photo->path)) {
-                ListingStorage::disk()->delete($photo->path);
-            }
+            app(ImageVariants::class)->delete($photo->path);
         });
     }
 
@@ -31,10 +29,11 @@ class FarmPhoto extends Model
 
     public function url(): ?string
     {
-        if (! filled($this->path)) {
-            return null;
-        }
+        return app(ImageVariants::class)->url($this->path);
+    }
 
-        return ListingStorage::disk()->url($this->path);
+    public function thumbnailUrl(): ?string
+    {
+        return app(ImageVariants::class)->thumbnailUrl($this->path);
     }
 }

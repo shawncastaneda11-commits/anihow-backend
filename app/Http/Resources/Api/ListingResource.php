@@ -24,6 +24,7 @@ class ListingResource extends JsonResource
             'is_active' => $this->is_active,
             'status' => $this->status->value,
             'image_url' => $this->imageUrl(),
+            'thumbnail_url' => $this->thumbnailUrl(),
             'crop_type' => new CropTypeResource($this->whenLoaded('cropType')),
             'tawad' => new TawadRuleResource($this->whenLoaded('activeTawadRule')),
             'farm' => new FarmResource($this->whenLoaded('farm')),

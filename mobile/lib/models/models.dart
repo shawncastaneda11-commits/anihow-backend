@@ -212,6 +212,7 @@ class ListingItem {
     this.unitLabel,
     this.description,
     this.imageUrl,
+    this.thumbnailUrl,
     this.isActive = true,
     this.category,
     this.sellerName,
@@ -231,6 +232,7 @@ class ListingItem {
   final String quantityAvailable;
   final String? description;
   final String? imageUrl;
+  final String? thumbnailUrl;
   final bool isActive;
   final String? status;
   final CategoryItem? category;
@@ -267,6 +269,7 @@ class ListingItem {
       unitLabel: unitLabel,
       description: description,
       imageUrl: imageUrl,
+      thumbnailUrl: thumbnailUrl,
       isActive: isActive ?? this.isActive,
       status: status,
       category: category,
@@ -294,6 +297,8 @@ class ListingItem {
       quantityAvailable: '${json['quantity_available'] ?? '0'}',
       description: json['description'] as String?,
       imageUrl: ApiConfig.mediaUrl(json['image_url'] as String?),
+      thumbnailUrl: ApiConfig.mediaUrl(json['thumbnail_url'] as String?) ??
+          ApiConfig.mediaUrl(json['image_url'] as String?),
       isActive: json['is_active'] == true || json['is_active'] == 1,
       status: json['status'] as String?,
       category: cropTypeMap == null ? null : CategoryItem.fromJson(cropTypeMap),
@@ -754,6 +759,7 @@ class CropCareArticle {
     this.categoryLabel = '',
     this.authorName,
     this.imageUrl,
+    this.thumbnailUrl,
     this.publishedAt,
     this.farmId,
     this.farmName,
@@ -769,6 +775,7 @@ class CropCareArticle {
   final String categoryLabel;
   final String? authorName;
   final String? imageUrl;
+  final String? thumbnailUrl;
   final String? publishedAt;
   final int? farmId;
   final String? farmName;
@@ -805,6 +812,8 @@ class CropCareArticle {
       categoryLabel: json['category_label'] as String? ?? '',
       authorName: json['author_name'] as String?,
       imageUrl: ApiConfig.mediaUrl(json['image_url'] as String?),
+      thumbnailUrl: ApiConfig.mediaUrl(json['thumbnail_url'] as String?) ??
+          ApiConfig.mediaUrl(json['image_url'] as String?),
       publishedAt: json['published_at'] as String?,
       farmId: ListingItem._asCount(farmMap?['id']),
       farmName: farmMap?['name'] as String?,
@@ -942,17 +951,29 @@ class FarmPhotoItem {
   const FarmPhotoItem({
     required this.id,
     required this.url,
+    this.thumbnailUrl,
     this.caption,
   });
 
   final int id;
   final String url;
+  final String? thumbnailUrl;
   final String? caption;
+
+  String get gridUrl {
+    final thumb = thumbnailUrl?.trim();
+    if (thumb != null && thumb.isNotEmpty) {
+      return thumb;
+    }
+    return url;
+  }
 
   factory FarmPhotoItem.fromJson(Map<String, dynamic> json) {
     return FarmPhotoItem(
       id: json['id'] as int,
       url: ApiConfig.mediaUrl(json['url'] as String?) ?? '',
+      thumbnailUrl: ApiConfig.mediaUrl(json['thumbnail_url'] as String?) ??
+          ApiConfig.mediaUrl(json['url'] as String?),
       caption: json['caption'] as String?,
     );
   }

@@ -31,6 +31,7 @@ class FarmResource extends JsonResource
             'pickup_point' => $this->pickup_point,
             'is_active' => $this->is_active,
             'cover_photo_url' => $this->coverPhotoUrl(),
+            'thumbnail_url' => $this->coverThumbnailUrl(),
             'photos' => FarmPhotoResource::collection($this->whenLoaded('photos')),
             'announcements' => FarmAnnouncementResource::collection($this->whenLoaded('announcements')),
             'farmer_sellers_count' => $this->whenCounted('farmerSellers'),

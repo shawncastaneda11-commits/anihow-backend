@@ -4,7 +4,7 @@ namespace App\Models;
 
 use App\Enums\ListingStatus;
 use App\Enums\UserStatus;
-use App\Support\ListingStorage;
+use App\Support\ImageVariants;
 use App\Support\Pricing\PriceGuard;
 use App\Support\Pricing\PriceGuardResolver;
 use Database\Factories\ListingFactory;
@@ -58,9 +58,7 @@ class Listing extends Model
         // soft delete and would destroy the image of a listing that is still
         // recoverable and still referenced by order items.
         static::forceDeleted(function (Listing $listing): void {
-            if (filled($listing->image_path)) {
-                ListingStorage::disk()->delete($listing->image_path);
-            }
+            app(ImageVariants::class)->delete($listing->image_path);
         });
     }
 
@@ -106,11 +104,12 @@ class Listing extends Model
 
     public function imageUrl(): ?string
     {
-        if (! filled($this->image_path)) {
-            return null;
-        }
+        return app(ImageVariants::class)->url($this->image_path);
+    }
 
-        return ListingStorage::disk()->url($this->image_path);
+    public function thumbnailUrl(): ?string
+    {
+        return app(ImageVariants::class)->thumbnailUrl($this->image_path);
     }
 
     public function isOwnedBy(User $user): bool

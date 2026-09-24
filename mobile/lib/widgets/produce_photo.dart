@@ -10,17 +10,21 @@ class ProducePhoto extends StatelessWidget {
     required this.listing,
     this.borderRadius,
     this.iconSize = 44,
+    this.preferThumbnail = true,
   });
 
   final ListingItem listing;
   final BorderRadius? borderRadius;
   final double iconSize;
+  final bool preferThumbnail;
 
   @override
   Widget build(BuildContext context) {
     final accent = CategoryColor.of(listing.category, listingName: listing.name);
     final radius = borderRadius ?? BorderRadius.zero;
-    final url = listing.imageUrl;
+    final url = preferThumbnail
+        ? (listing.thumbnailUrl ?? listing.imageUrl)
+        : listing.imageUrl;
 
     return ClipRRect(
       borderRadius: radius,

@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Farms\RelationManagers;
 
 use App\Models\Farm;
 use App\Models\FarmPhoto;
+use App\Support\ImageVariants;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -37,15 +38,18 @@ class FarmPhotosRelationManager extends RelationManager
     {
         return $schema
             ->components([
-                FileUpload::make('path')
-                    ->label('Photo')
-                    ->image()
-                    ->disk(config('anihow.listing_disk', 'public'))
-                    ->directory(fn (): string => 'farms/'.$this->getOwnerRecord()->getKey())
-                    ->visibility('public')
-                    ->required()
-                    ->maxSize(2048)
-                    ->columnSpanFull(),
+                ImageVariants::bindUpload(
+                    FileUpload::make('path')
+                        ->label('Photo')
+                        ->image()
+                        ->disk(config('anihow.listing_disk', 'public'))
+                        ->directory(fn (): string => 'farms/'.$this->getOwnerRecord()->getKey())
+                        ->visibility('public')
+                        ->required()
+                        ->maxSize(2048)
+                        ->columnSpanFull(),
+                    'farms/'.$this->getOwnerRecord()->getKey(),
+                ),
                 TextInput::make('caption')
                     ->maxLength(255),
             ]);

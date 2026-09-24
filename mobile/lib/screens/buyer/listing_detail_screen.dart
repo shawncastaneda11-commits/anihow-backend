@@ -130,6 +130,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   listing: listing,
                   borderRadius: BorderRadius.circular(AniHowTheme.cardRadius),
                   iconSize: 64,
+                  preferThumbnail: false,
                 ),
               ),
               const SizedBox(height: AniHowSpace.section),

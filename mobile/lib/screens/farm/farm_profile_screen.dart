@@ -319,7 +319,7 @@ class _PhotoTile extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           Image.network(
-            photo.url,
+            photo.gridUrl,
             fit: BoxFit.cover,
             filterQuality: FilterQuality.high,
             errorBuilder: (_, _, _) => ColoredBox(

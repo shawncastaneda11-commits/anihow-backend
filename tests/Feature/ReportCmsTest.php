@@ -18,6 +18,7 @@ use App\Models\Review;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\Concerns\CreatesMarketplaceActors;
 use Tests\TestCase;
 
@@ -132,6 +133,72 @@ class ReportCmsTest extends TestCase
 
         $this->get('/admin/reports')
             ->assertForbidden();
+    }
+
+    public function test_resolving_or_dismissing_a_closed_report_throws_and_does_not_take_down(): void
+    {
+        $admin = $this->staff(Role::SuperAdmin);
+        $farmer = $this->farmer();
+        $listing = $this->listingFor($farmer, ['title' => 'Morning crate']);
+        $buyer = $this->buyer();
+
+        $alreadyResolved = $this->openReport($buyer, $listing, ReportReason::ProhibitedItem);
+        $alreadyResolved->update([
+            'status' => ReportStatus::Resolved,
+            'resolved_by' => $admin->id,
+            'resolved_at' => now(),
+        ]);
+
+        $this->assertClosedReportIsGuarded(
+            fn () => app(ResolveReportAction::class)->handle(
+                $alreadyResolved,
+                $admin,
+                'Again.',
+                true,
+                'Take it down.',
+            ),
+        );
+        $this->assertClosedReportIsGuarded(
+            fn () => app(DismissReportAction::class)->handle($alreadyResolved, $admin),
+        );
+
+        $alreadyDismissed = $this->openReport($buyer, $listing, ReportReason::SpamOrFake);
+        $alreadyDismissed->update([
+            'status' => ReportStatus::Dismissed,
+            'resolved_by' => $admin->id,
+            'resolved_at' => now(),
+        ]);
+
+        $this->assertClosedReportIsGuarded(
+            fn () => app(ResolveReportAction::class)->handle(
+                $alreadyDismissed,
+                $admin,
+                'Resolve anyway.',
+                true,
+                'Take it down.',
+            ),
+        );
+        $this->assertClosedReportIsGuarded(
+            fn () => app(DismissReportAction::class)->handle($alreadyDismissed, $admin),
+        );
+
+        $this->assertSame(ListingStatus::Published, $listing->fresh()->status);
+        $this->assertSame(0, $this->notices($buyer->id, NotificationType::ReportResolved));
+        $this->assertSame(0, $this->notices($buyer->id, NotificationType::ReportDismissed));
+        $this->assertSame(0, $this->notices($farmer->id, NotificationType::ListingTakenDown));
+    }
+
+    /**
+     * @param  callable(): mixed  $action
+     */
+    private function assertClosedReportIsGuarded(callable $action): void
+    {
+        try {
+            $action();
+            $this->fail('Expected ValidationException for a closed report.');
+        } catch (ValidationException $exception) {
+            $this->assertSame(['This report was already closed.'], $exception->errors()['status']);
+        }
     }
 
     private function openReport(User $reporter, Listing|Review $target, ReportReason $reason): Report

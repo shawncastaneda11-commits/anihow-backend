@@ -56,6 +56,51 @@ class ReviewShopFavoriteOrderApiTest extends TestCase
             ->assertJsonPath('data.0.comment', 'Sariwa ang kamatis.');
     }
 
+    public function test_storefront_reviews_expose_is_own_and_hide_buyer_id(): void
+    {
+        $farmer = $this->farmer();
+        $listing = $this->listingFor($farmer, ['price_per_unit' => 30, 'quantity_available' => 40]);
+        $owner = $this->buyer(['name' => 'Maria Buyer']);
+        $other = $this->buyer(['name' => 'Other Buyer']);
+
+        $ownOrder = $this->completeOrder($farmer, $this->placeOrder($owner, $listing, 1), 30);
+        $otherOrder = $this->completeOrder($farmer, $this->placeOrder($other, $listing, 1), 30);
+
+        $this->asUser($owner)->postJson('/api/buyer/reviews', [
+            'order_id' => $ownOrder->id,
+            'rating' => 5,
+            'comment' => 'Sariwa.',
+        ])->assertCreated();
+
+        $this->asUser($other)->postJson('/api/buyer/reviews', [
+            'order_id' => $otherOrder->id,
+            'rating' => 4,
+            'comment' => 'Okay.',
+        ])->assertCreated();
+
+        $asOwner = $this->asUser($owner)
+            ->getJson("/api/buyer/shops/{$farmer->id}/reviews")
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+
+        $rows = collect($asOwner->json('data'));
+        $this->assertTrue($rows->every(fn (array $row): bool => ! array_key_exists('buyer_id', $row)));
+
+        $own = $rows->firstWhere('comment', 'Sariwa.');
+        $theirs = $rows->firstWhere('comment', 'Okay.');
+        $this->assertTrue($own['is_own']);
+        $this->assertFalse($theirs['is_own']);
+
+        $asOther = collect(
+            $this->asUser($other)
+                ->getJson("/api/buyer/shops/{$farmer->id}/reviews")
+                ->assertOk()
+                ->json('data'),
+        );
+        $this->assertFalse($asOther->firstWhere('comment', 'Sariwa.')['is_own']);
+        $this->assertTrue($asOther->firstWhere('comment', 'Okay.')['is_own']);
+    }
+
     public function test_buyer_can_view_shop_profile_and_farmer_can_update_own_shop(): void
     {
         $farmer = $this->farmer([

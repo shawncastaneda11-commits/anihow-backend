@@ -1080,7 +1080,7 @@ class ShopReview {
     required this.id,
     required this.rating,
     required this.reviewerName,
-    this.buyerId,
+    this.isOwn = false,
     this.comment,
     this.createdAt,
   });
@@ -1088,7 +1088,7 @@ class ShopReview {
   final int id;
   final int rating;
   final String reviewerName;
-  final int? buyerId;
+  final bool isOwn;
   final String? comment;
   final String? createdAt;
 
@@ -1097,7 +1097,7 @@ class ShopReview {
       id: json['id'] as int,
       rating: ListingItem._asCount(json['rating']) ?? 0,
       reviewerName: json['buyer_name'] as String? ?? 'Buyer',
-      buyerId: ListingItem._asCount(json['buyer_id']),
+      isOwn: json['is_own'] == true || json['is_own'] == 1,
       comment: json['comment'] as String?,
       createdAt: json['created_at'] as String?,
     );

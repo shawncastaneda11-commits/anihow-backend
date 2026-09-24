@@ -301,10 +301,7 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                       ..._reviews.map(
                         (review) => Padding(
                           padding: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
-                          child: _ReviewCard(
-                            review: review,
-                            viewerId: context.watch<AuthController>().user?.id,
-                          ),
+                          child: _ReviewCard(review: review),
                         ),
                       ),
                       if (_page < _lastPage)
@@ -325,10 +322,9 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
 }
 
 class _ReviewCard extends StatelessWidget {
-  const _ReviewCard({required this.review, this.viewerId});
+  const _ReviewCard({required this.review});
 
   final ShopReview review;
-  final int? viewerId;
 
   @override
   Widget build(BuildContext context) {
@@ -355,7 +351,7 @@ class _ReviewCard extends StatelessWidget {
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
                   ),
-                if (viewerId == null || review.buyerId != viewerId)
+                if (!review.isOwn)
                   TextButton(
                     style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
                     onPressed: () => showReportSheet(

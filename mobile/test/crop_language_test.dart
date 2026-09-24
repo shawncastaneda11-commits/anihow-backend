@@ -41,6 +41,16 @@ void main() {
     expect(filipino.settings, 'Mga setting');
     expect(filipino.faq, 'Mga tanong');
     expect(filipino.mySales, 'Aking Benta');
+    expect(english.sellerUnresponsive, 'Seller unresponsive');
+    expect(filipino.sellerUnresponsive, 'Hindi tumugon ang seller');
+    expect(
+      english.notificationTitle('order_awaiting_confirmation', 'fallback'),
+      'Order awaiting confirmation',
+    );
+    expect(
+      filipino.notificationTitle('order_awaiting_confirmation', 'fallback'),
+      'May order na hinihintay ang kumpirmasyon',
+    );
     expect(english.salesWindow('2026-09-18', '2026-09-24'), 'Sep 18 to Sep 24');
     expect(filipino.salesWindow('2026-09-18', '2026-09-24'), 'Set 18 hanggang Set 24');
     expect(filipino.unverified, 'Hindi pa');

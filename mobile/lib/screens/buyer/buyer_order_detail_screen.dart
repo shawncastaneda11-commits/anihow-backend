@@ -149,10 +149,13 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen> {
                           icon: Icons.schedule_outlined,
                           text: relativeTime(order.placedAt),
                         ),
-                      if (order.isCancelled && order.cancellationLabel != null)
+                      if (order.hasCancellationReason)
                         OrderMetaRow(
                           icon: Icons.info_outline,
-                          text: order.cancellationLabel!,
+                          text: s.cancellationReasonText(
+                            order.cancellationReason,
+                            fallback: order.cancellationLabel,
+                          ),
                         ),
                       if (order.canBeReviewed)
                         OrderMetaRow(

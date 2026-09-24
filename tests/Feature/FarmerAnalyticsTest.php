@@ -200,6 +200,33 @@ class FarmerAnalyticsTest extends TestCase
         $this->assertSame('2026-08-26', $response->json('data.sales_per_period.0.period'));
     }
 
+    public function test_an_order_completed_at_manila_morning_lands_on_that_manila_day(): void
+    {
+        $this->assertSame('Asia/Manila', config('app.timezone'));
+
+        Carbon::setTestNow(Carbon::parse('2026-09-24 07:30:00', 'Asia/Manila'));
+
+        $farmer = $this->farmer();
+        $listing = $this->pricedListing($farmer, 40);
+        $this->completeOrder($farmer, $this->placeOrder($this->buyer(), $listing, 1), 40);
+
+        $response = $this->asUser($farmer)
+            ->getJson('/api/farmer/analytics?period=week')
+            ->assertOk();
+
+        $this->assertSame('2026-09-18', $response->json('data.window_start'));
+        $this->assertSame('2026-09-24', $response->json('data.window_end'));
+
+        $today = collect($response->json('data.sales_per_period'))
+            ->firstWhere('period', '2026-09-24');
+
+        $this->assertNotNull($today);
+        $this->assertSame(1, $today['orders']);
+        $this->assertEquals(40, $today['revenue']);
+        $this->assertSame(1, $response->json('data.summary.completed_orders'));
+        $this->assertEquals(40, $response->json('data.summary.gross_sales'));
+    }
+
     /**
      * @param  array<string, mixed>  $payload
      */

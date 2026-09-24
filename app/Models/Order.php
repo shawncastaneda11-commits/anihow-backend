@@ -56,6 +56,7 @@ use Illuminate\Validation\ValidationException;
     'ready_at',
     'completed_at',
     'cancelled_at',
+    'reminder_sent_at',
 ])]
 class Order extends Model
 {
@@ -88,6 +89,7 @@ class Order extends Model
             'ready_at' => 'datetime',
             'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'reminder_sent_at' => 'datetime',
         ];
     }
 

@@ -309,6 +309,7 @@ Copy `.env.example`. Important variables:
 | --- | --- | --- |
 | `APP_KEY` | `php artisan key:generate` | generate once, store as secret |
 | `APP_URL` | `http://localhost:8000` | `https://<your-app>.up.railway.app` |
+| `APP_TIMEZONE` | `Asia/Manila` | `Asia/Manila` |
 | `APP_ENV` / `APP_DEBUG` | `local` / `true` | `production` / `false` |
 | `FORCE_HTTPS` | `false` | `true` (also implied when `APP_ENV=production`) |
 | `FRONTEND_URL` | same as app or Flutter deep-link base | password-reset landing URL |
@@ -426,6 +427,7 @@ php artisan reverb:restart
 
 - `APP_ENV=production` so smoke seeders never run
 - `APP_DEBUG=false`
+- `APP_TIMEZONE=Asia/Manila`
 - `MAIL_*` for Gmail SMTP
 - `RATE_LIMIT_AUTH` left at `5`
 

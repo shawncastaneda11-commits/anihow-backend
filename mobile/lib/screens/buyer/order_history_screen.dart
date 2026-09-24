@@ -144,8 +144,14 @@ class BuyerOrderCard extends StatelessWidget {
                   ),
                   if (location != null && location.isNotEmpty)
                     OrderMetaRow(icon: Icons.place_outlined, text: location),
-                  if (order.isCancelled && order.cancellationLabel != null)
-                    OrderMetaRow(icon: Icons.info_outline, text: order.cancellationLabel!),
+                  if (order.hasCancellationReason)
+                    OrderMetaRow(
+                      icon: Icons.info_outline,
+                      text: s.cancellationReasonText(
+                        order.cancellationReason,
+                        fallback: order.cancellationLabel,
+                      ),
+                    ),
                   if (order.canBeReviewed)
                     OrderMetaRow(icon: Icons.star_outline, text: s.readyToReview),
                 ],

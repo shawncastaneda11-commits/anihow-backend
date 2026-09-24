@@ -313,7 +313,9 @@ class AppStrings {
       );
   String get sellerDeclined => t('Declined by farmer-seller', 'Tinanggihan ng seller');
   String get noShowHandover => t('No-show at handover', 'Hindi dumating sa handover');
+  String get sellerUnresponsive => t('Seller unresponsive', 'Hindi tumugon ang seller');
   String get otherReason => t('Other', 'Iba');
+  String get cancelledByBuyer => t('Cancelled by buyer', 'Kinansela ng buyer');
   String get reviewUnlocked => t(
         'Review unlocked for the buyer',
         'Puwede nang mag-review ang buyer',
@@ -334,6 +336,15 @@ class AppStrings {
         'no_show' => noShowHandover,
         'other' => otherReason,
         _ => value,
+      };
+
+  String cancellationReasonText(String? value, {String? fallback}) => switch (value) {
+        'buyer_cancelled' => cancelledByBuyer,
+        'seller_declined' => sellerDeclined,
+        'no_show' => noShowHandover,
+        'seller_unresponsive' => sellerUnresponsive,
+        'other' => otherReason,
+        _ => fallback ?? value ?? '',
       };
   String get showMore => t('Show more', 'Magpakita pa');
   String get loading => t('Loading…', 'Naglo-load…');
@@ -472,6 +483,10 @@ class AppStrings {
         'order_cancelled' => t('Order cancelled', 'Kinansela ang order'),
         'order_message' => t('New order message', 'Bagong mensahe sa order'),
         'order_placed' => t('New order placed', 'May bagong order'),
+        'order_awaiting_confirmation' => t(
+            'Order awaiting confirmation',
+            'May order na hinihintay ang kumpirmasyon',
+          ),
         'listing_low_stock' => t('Listing low on stock', 'Kulang na ang stock ng listing'),
         'listing_taken_down' => t('Listing taken down', 'Tinanggal ang listing'),
         'listing_restored' => t('Listing restored', 'Naibalik ang listing'),

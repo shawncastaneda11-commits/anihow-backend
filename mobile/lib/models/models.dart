@@ -458,6 +458,10 @@ class OrderRecord {
   bool get isCompleted => status == 'completed';
   bool get isCancelled => status == 'cancelled';
 
+  bool get hasCancellationReason =>
+      isCancelled && ((cancellationReason != null && cancellationReason!.isNotEmpty) ||
+          (cancellationLabel != null && cancellationLabel!.isNotEmpty));
+
   String get buyerName {
     if (isWalkIn) {
       final name = walkInBuyerName?.trim();
@@ -1063,6 +1067,7 @@ class AppNotification {
   bool get pointsToOrder {
     final related = relatedType ?? '';
     return type == 'order_placed' ||
+        type == 'order_awaiting_confirmation' ||
         type == 'order_confirmed' ||
         type == 'order_ready' ||
         type == 'order_completed' ||

@@ -11,3 +11,7 @@ Artisan::command('inspire', function () {
 Schedule::command('announcements:notify-due')
     ->everyFiveMinutes()
     ->withoutOverlapping();
+
+Schedule::command('orders:sweep-stale')
+    ->hourly()
+    ->withoutOverlapping();

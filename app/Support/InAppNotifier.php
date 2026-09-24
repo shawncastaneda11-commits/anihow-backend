@@ -63,6 +63,20 @@ class InAppNotifier
     }
 
     /**
+     * A placed order is still waiting for the farmer-seller to confirm.
+     */
+    public function orderAwaitingConfirmation(User $farmer, Order $order): InAppNotification
+    {
+        return $this->send(
+            $farmer,
+            NotificationType::OrderAwaitingConfirmation,
+            NotificationType::OrderAwaitingConfirmation->label(),
+            "Order {$order->order_number} is still waiting for your confirmation.",
+            $order,
+        );
+    }
+
+    /**
      * Every state after Placed reaches the buyer.
      */
     public function orderStatusChanged(User $recipient, Order $order, OrderStatus $status): ?InAppNotification

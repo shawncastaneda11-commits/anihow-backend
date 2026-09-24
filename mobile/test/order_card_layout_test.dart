@@ -57,6 +57,26 @@ void main() {
     expect(paragraph.constraints.maxWidth, greaterThan(160));
   });
 
+  testWidgets('buyer order card shows seller unresponsive in English', (tester) async {
+    await tester.pumpWidget(
+      _app(
+        home: const BuyerOrderCard(
+          order: OrderRecord(
+            id: 2,
+            status: 'cancelled',
+            statusLabel: 'Cancelled',
+            total: '60',
+            items: [],
+            shopName: 'Mang Tonyo Farm',
+            cancellationReason: 'seller_unresponsive',
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Seller unresponsive'), findsOneWidget);
+  });
+
   testWidgets('buyer order card shows chat for app orders', (tester) async {
     await tester.pumpWidget(
       _app(

@@ -363,8 +363,14 @@ class _OrderCard extends StatelessWidget {
                     OrderMetaRow(icon: Icons.shopping_basket_outlined, text: order.itemSummary),
                   if (order.fulfillmentLabel != null)
                     OrderMetaRow(icon: Icons.handshake_outlined, text: order.fulfillmentLabel!),
-                  if (order.isCancelled && order.cancellationLabel != null)
-                    OrderMetaRow(icon: Icons.info_outline, text: order.cancellationLabel!),
+                  if (order.hasCancellationReason)
+                    OrderMetaRow(
+                      icon: Icons.info_outline,
+                      text: s.cancellationReasonText(
+                        order.cancellationReason,
+                        fallback: order.cancellationLabel,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -624,8 +630,14 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
                     icon: Icons.payments_outlined,
                     text: s.cashReceivedLine(AniHowMoney.peso(order.amountReceived)),
                   ),
-                if (order.isCancelled && order.cancellationLabel != null)
-                  OrderMetaRow(icon: Icons.info_outline, text: order.cancellationLabel!),
+                if (order.hasCancellationReason)
+                  OrderMetaRow(
+                    icon: Icons.info_outline,
+                    text: s.cancellationReasonText(
+                      order.cancellationReason,
+                      fallback: order.cancellationLabel,
+                    ),
+                  ),
                 if (order.canBeReviewed)
                   OrderMetaRow(icon: Icons.star_outline, text: s.reviewUnlocked),
                 if (order.reviewRating != null)

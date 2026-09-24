@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Enums\ArticleCategory;
 use App\Enums\ArticleStatus;
+use App\Enums\CancellationReason;
 use App\Enums\FulfillmentPreference;
 use App\Enums\ListingStatus;
 use App\Enums\OrderStatus;
@@ -18,6 +19,7 @@ use App\Models\Listing;
 use App\Models\Review;
 use App\Models\TawadRule;
 use App\Models\User;
+use App\Services\AnalyticsService;
 use App\Services\CheckoutService;
 use App\Services\OrderStateMachine;
 use Illuminate\Database\Seeder;
@@ -156,7 +158,7 @@ class SmokeTestSeeder extends Seeder
             order: $orderB,
             next: OrderStatus::Cancelled,
             actor: $sellerB,
-            reason: \App\Enums\CancellationReason::NoShow,
+            reason: CancellationReason::NoShow,
             note: 'Buyer did not arrive.',
         );
 
@@ -272,13 +274,26 @@ class SmokeTestSeeder extends Seeder
     {
         $listing->tawadRules()->update(['is_active' => false, 'ended_at' => now()]);
 
-        // PHP 20 off at 5 kg and above.
-        return $listing->tawadRules()->create([
-            'type' => TawadType::MinimumQuantity,
-            'discount_amount' => 20.00,
-            'min_quantity' => 5.00,
-            'is_active' => true,
-        ]);
+        // PHP 20 off at 5 kg and above. Reuse the same row on a second seed.
+        $rule = $listing->tawadRules()
+            ->where('type', TawadType::MinimumQuantity)
+            ->where('discount_amount', 20.00)
+            ->where('min_quantity', 5.00)
+            ->first();
+
+        if ($rule === null) {
+            return $listing->tawadRules()->create([
+                'type' => TawadType::MinimumQuantity,
+                'discount_amount' => 20.00,
+                'min_quantity' => 5.00,
+                'is_active' => true,
+                'ended_at' => null,
+            ]);
+        }
+
+        $rule->update(['is_active' => true, 'ended_at' => null]);
+
+        return $rule->fresh();
     }
 
     private function article(Farm $farm, User $editor, CropType $cropType): CropCareArticle
@@ -328,7 +343,7 @@ class SmokeTestSeeder extends Seeder
 
     private function report($order): void
     {
-        $analytics = app(\App\Services\AnalyticsService::class);
+        $analytics = app(AnalyticsService::class);
         $discount = $analytics->averageDiscount(null, 30);
         $units = $analytics->unitsSoldPerCropType(null, 30);
 

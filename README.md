@@ -336,4 +336,19 @@ Worker service needs the same env vars (especially `APP_KEY`, database, and mail
 php artisan test
 ```
 
+### Flutter testing
+
+Everyday (skips live API tests):
+
+```bash
+flutter test
+```
+
+Live tests need a local API and smoke accounts. Local only:
+
+```bash
+php artisan migrate:fresh --seed
+flutter test --tags live --run-skipped --concurrency=1
+```
+
 See [CHANGELOG.md](CHANGELOG.md) for what each phase added.

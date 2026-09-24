@@ -7,16 +7,22 @@ use Illuminate\Database\Seeder;
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Seed the application's database.
-     *
-     * Reduced to roles and permissions for the marketplace rebuild. The
-     * remaining seeders reference dropped tables and changed columns; they
-     * are rewritten alongside the models.
+     * Roles and permissions always. Smoke fixtures (and listing cover photos
+     * that hang off those listings) only on local and testing, so
+     * `migrate:fresh --seed` gives the Flutter live tests their accounts.
+     * Never in production: those seeders walk a real checkout and write demo users.
      */
     public function run(): void
     {
         $this->call([
             RolePermissionSeeder::class,
         ]);
+
+        if (app()->environment(['local', 'testing'])) {
+            $this->call([
+                SmokeTestSeeder::class,
+                ListingImageSeeder::class,
+            ]);
+        }
     }
 }

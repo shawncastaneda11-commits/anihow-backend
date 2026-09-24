@@ -4,6 +4,7 @@ namespace App\Support;
 
 use Filament\Forms\Components\FileUpload;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -188,25 +189,34 @@ class ImageVariants
 
     private function orient(\GdImage $image, int $orientation): \GdImage
     {
-        $background = imagecolorallocate($image, 255, 255, 255);
+        $working = $image;
+        $background = imagecolorallocate($working, 255, 255, 255);
         $angle = match ($orientation) {
             3 => 180,
-            6 => -90,
-            8 => 90,
+            5, 6 => -90,
+            7, 8 => 90,
             default => null,
         };
 
-        if ($angle === null || $background === false) {
-            return $image;
+        if ($angle !== null && $background !== false) {
+            $rotated = imagerotate($working, $angle, $background);
+
+            if ($rotated !== false) {
+                $working = $rotated;
+            }
         }
 
-        $rotated = imagerotate($image, $angle, $background);
+        $flip = match ($orientation) {
+            2, 5, 7 => IMG_FLIP_HORIZONTAL,
+            4 => IMG_FLIP_VERTICAL,
+            default => null,
+        };
 
-        if ($rotated === false) {
-            return $image;
+        if ($flip !== null) {
+            imageflip($working, $flip);
         }
 
-        return $rotated;
+        return $working;
     }
 
     private function writeJpeg(string $path, \GdImage $image): void
@@ -406,7 +416,10 @@ class ImageVariants
     private function withRaisedMemoryLimit(callable $callback): mixed
     {
         $previous = ini_get('memory_limit');
-        ini_set('memory_limit', '256M');
+
+        if ($this->shouldRaiseMemoryLimit($previous)) {
+            ini_set('memory_limit', '256M');
+        }
 
         try {
             return $callback();
@@ -415,19 +428,24 @@ class ImageVariants
         }
     }
 
+    private function shouldRaiseMemoryLimit(string|false $current): bool
+    {
+        if (! is_string($current) || $current === '-1') {
+            return false;
+        }
+
+        return $this->memoryLimitToBytes($current) < 256 * 1024 * 1024;
+    }
+
     private function restoreMemoryLimit(string|false $previous): void
     {
-        if (! is_string($previous) || $previous === '-1') {
+        if (! is_string($previous)) {
             return;
         }
 
-        $bytes = $this->memoryLimitToBytes($previous);
-
-        if ($bytes !== null && memory_get_usage(true) >= $bytes) {
-            return;
+        if (ini_set('memory_limit', $previous) === false) {
+            Log::debug('Could not restore memory_limit to '.$previous.'.');
         }
-
-        ini_set('memory_limit', $previous);
     }
 
     private function memoryLimitToBytes(string $limit): ?int

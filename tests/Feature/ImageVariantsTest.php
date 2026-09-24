@@ -13,6 +13,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\CreatesMarketplaceActors;
 use Tests\TestCase;
 
@@ -21,12 +22,22 @@ class ImageVariantsTest extends TestCase
     use CreatesMarketplaceActors;
     use RefreshDatabase;
 
+    private string $originalMemoryLimit;
+
     protected function setUp(): void
     {
         parent::setUp();
 
+        $this->originalMemoryLimit = (string) ini_get('memory_limit');
         $this->seed(RolePermissionSeeder::class);
         Storage::fake(ListingStorage::diskName());
+    }
+
+    protected function tearDown(): void
+    {
+        ini_set('memory_limit', $this->originalMemoryLimit);
+
+        parent::tearDown();
     }
 
     public function test_listing_upload_creates_original_and_thumbnail_within_max_sizes(): void
@@ -195,6 +206,113 @@ class ImageVariantsTest extends TestCase
         }
     }
 
+    /**
+     * @return array<string, array{int, string, bool}>
+     */
+    public static function exifOrientationCases(): array
+    {
+        return [
+            'orientation 1' => [1, 'top-left', false],
+            'orientation 2' => [2, 'top-right', false],
+            'orientation 3' => [3, 'bottom-right', false],
+            'orientation 4' => [4, 'bottom-left', false],
+            'orientation 5' => [5, 'top-left', true],
+            'orientation 6' => [6, 'top-right', true],
+            'orientation 7' => [7, 'bottom-right', true],
+            'orientation 8' => [8, 'bottom-left', true],
+        ];
+    }
+
+    #[DataProvider('exifOrientationCases')]
+    public function test_exif_orientations_place_marker_in_expected_corner(
+        int $orientation,
+        string $corner,
+        bool $portrait,
+    ): void {
+        $tmp = tempnam(sys_get_temp_dir(), 'exif').'.jpg';
+
+        try {
+            file_put_contents($tmp, $this->jpegWithExifOrientation($this->landscapeJpegWithTopLeftMarker(), $orientation));
+
+            $path = app(ImageVariants::class)->store(
+                new UploadedFile($tmp, 'marker.jpg', 'image/jpeg', null, true),
+                'listings',
+            );
+            $bytes = Storage::disk(ListingStorage::diskName())->get($path);
+            $image = imagecreatefromstring($bytes);
+            $this->assertInstanceOf(\GdImage::class, $image);
+
+            $width = imagesx($image);
+            $height = imagesy($image);
+
+            if ($portrait) {
+                $this->assertGreaterThan($width, $height);
+            } else {
+                $this->assertGreaterThan($height, $width);
+            }
+
+            [$x, $y] = match ($corner) {
+                'top-left' => [8, 8],
+                'top-right' => [$width - 9, 8],
+                'bottom-left' => [8, $height - 9],
+                default => [$width - 9, $height - 9],
+            };
+
+            $color = imagecolorsforindex($image, imagecolorat($image, $x, $y));
+            imagedestroy($image);
+
+            $this->assertGreaterThan(200, $color['red'], "Marker missing at {$corner} for orientation {$orientation}.");
+            $this->assertLessThan(80, $color['green']);
+            $this->assertLessThan(80, $color['blue']);
+        } finally {
+            if (is_file($tmp)) {
+                unlink($tmp);
+            }
+        }
+    }
+
+    public function test_memory_limit_128m_is_raised_to_256m_then_restored(): void
+    {
+        ini_set('memory_limit', '128M');
+        $this->assertSame('128M', ini_get('memory_limit'));
+
+        $during = null;
+        $this->invokeWithRaisedMemoryLimit(function () use (&$during): void {
+            $during = ini_get('memory_limit');
+        });
+
+        $this->assertSame('256M', $during);
+        $this->assertSame('128M', ini_get('memory_limit'));
+    }
+
+    public function test_memory_limit_512m_is_not_lowered(): void
+    {
+        ini_set('memory_limit', '512M');
+        $this->assertSame('512M', ini_get('memory_limit'));
+
+        $during = null;
+        $this->invokeWithRaisedMemoryLimit(function () use (&$during): void {
+            $during = ini_get('memory_limit');
+        });
+
+        $this->assertSame('512M', $during);
+        $this->assertSame('512M', ini_get('memory_limit'));
+    }
+
+    public function test_memory_limit_unlimited_stays_unlimited(): void
+    {
+        ini_set('memory_limit', '-1');
+        $this->assertSame('-1', ini_get('memory_limit'));
+
+        $during = null;
+        $this->invokeWithRaisedMemoryLimit(function () use (&$during): void {
+            $during = ini_get('memory_limit');
+        });
+
+        $this->assertSame('-1', $during);
+        $this->assertSame('-1', ini_get('memory_limit'));
+    }
+
     public function test_transparent_png_smaller_than_max_writes_white_corner(): void
     {
         $file = UploadedFile::fake()->createWithContent('clear.png', $this->transparentPng(120, 80));
@@ -232,6 +350,32 @@ class ImageVariantsTest extends TestCase
         $info = getimagesizefromstring($bytes);
         $this->assertIsArray($info);
         $this->assertLessThanOrEqual($max, max((int) $info[0], (int) $info[1]));
+    }
+
+    /**
+     * @param  callable(): mixed  $callback
+     */
+    private function invokeWithRaisedMemoryLimit(callable $callback): mixed
+    {
+        $method = new \ReflectionMethod(ImageVariants::class, 'withRaisedMemoryLimit');
+
+        return $method->invoke(app(ImageVariants::class), $callback);
+    }
+
+    private function landscapeJpegWithTopLeftMarker(): string
+    {
+        $image = imagecreatetruecolor(120, 60);
+        $white = imagecolorallocate($image, 255, 255, 255);
+        $red = imagecolorallocate($image, 255, 0, 0);
+        imagefilledrectangle($image, 0, 0, 119, 59, $white);
+        imagefilledrectangle($image, 0, 0, 19, 19, $red);
+
+        ob_start();
+        imagejpeg($image, null, 100);
+        $bytes = (string) ob_get_clean();
+        imagedestroy($image);
+
+        return $bytes;
     }
 
     private function jpegWithExifOrientation(string $jpeg, int $orientation): string

@@ -22,6 +22,7 @@ class ShopProfileResource extends JsonResource
             'average_rating' => $this->averageRating(),
             'reviews_count' => (int) ($this->reviews_received_count ?? 0),
             'listings' => ListingResource::collection($this->whenLoaded('listings')),
+            'farm' => new FarmResource($this->whenLoaded('farm')),
         ];
     }
 }

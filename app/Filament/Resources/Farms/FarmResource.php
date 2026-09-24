@@ -7,6 +7,7 @@ use App\Filament\Resources\Farms\Pages\CreateFarm;
 use App\Filament\Resources\Farms\Pages\EditFarm;
 use App\Filament\Resources\Farms\Pages\ListFarms;
 use App\Filament\Resources\Farms\RelationManagers\CropTypeOverridesRelationManager;
+use App\Filament\Resources\Farms\RelationManagers\FarmPhotosRelationManager;
 use App\Filament\Resources\Farms\Schemas\FarmForm;
 use App\Filament\Resources\Farms\Tables\FarmsTable;
 use App\Models\Farm;
@@ -51,6 +52,7 @@ class FarmResource extends Resource
     {
         return [
             'price-guards' => CropTypeOverridesRelationManager::class,
+            'photos' => FarmPhotosRelationManager::class,
         ];
     }
 

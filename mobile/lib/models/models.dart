@@ -771,6 +771,8 @@ class ShopProfile {
     this.averageRating,
     this.reviewsCount = 0,
     this.listings = const [],
+    this.farmId,
+    this.farmName,
   });
 
   final int id;
@@ -782,10 +784,14 @@ class ShopProfile {
   final String? averageRating;
   final int reviewsCount;
   final List<ListingItem> listings;
+  final int? farmId;
+  final String? farmName;
 
   bool get hasRating => reviewsCount > 0 && averageRating != null && averageRating!.isNotEmpty;
 
   factory ShopProfile.fromJson(Map<String, dynamic> json) {
+    final farmJson = json['farm'];
+    final farmMap = farmJson is Map ? Map<String, dynamic>.from(farmJson) : null;
     return ShopProfile(
       id: json['id'] as int,
       shopName: json['shop_name'] as String? ?? json['name'] as String? ?? '',
@@ -798,6 +804,115 @@ class ShopProfile {
       listings: ((json['listings'] as List?) ?? const [])
           .whereType<Map>()
           .map((item) => ListingItem.fromJson(Map<String, dynamic>.from(item)))
+          .toList(),
+      farmId: ListingItem._asCount(farmMap?['id']),
+      farmName: farmMap?['name'] as String?,
+    );
+  }
+}
+
+class FarmPhotoItem {
+  const FarmPhotoItem({
+    required this.id,
+    required this.url,
+    this.caption,
+  });
+
+  final int id;
+  final String url;
+  final String? caption;
+
+  factory FarmPhotoItem.fromJson(Map<String, dynamic> json) {
+    return FarmPhotoItem(
+      id: json['id'] as int,
+      url: ApiConfig.mediaUrl(json['url'] as String?) ?? '',
+      caption: json['caption'] as String?,
+    );
+  }
+}
+
+class FarmStorefront {
+  const FarmStorefront({
+    required this.id,
+    required this.shopName,
+    this.avatar,
+  });
+
+  final int id;
+  final String shopName;
+  final String? avatar;
+
+  factory FarmStorefront.fromJson(Map<String, dynamic> json) {
+    return FarmStorefront(
+      id: json['id'] as int,
+      shopName: json['shop_name'] as String? ?? json['name'] as String? ?? '',
+      avatar: ApiConfig.mediaUrl(json['avatar'] as String?),
+    );
+  }
+}
+
+class FarmProfile {
+  const FarmProfile({
+    required this.id,
+    required this.name,
+    this.slug,
+    this.description,
+    this.contactPerson,
+    this.contactNumber,
+    this.barangay,
+    this.municipality,
+    this.pickupPoint,
+    this.coverPhotoUrl,
+    this.photos = const [],
+    this.farmerSellersCount = 0,
+    this.storefronts = const [],
+  });
+
+  final int id;
+  final String name;
+  final String? slug;
+  final String? description;
+  final String? contactPerson;
+  final String? contactNumber;
+  final String? barangay;
+  final String? municipality;
+  final String? pickupPoint;
+  final String? coverPhotoUrl;
+  final List<FarmPhotoItem> photos;
+  final int farmerSellersCount;
+  final List<FarmStorefront> storefronts;
+
+  bool get hasCoverPhoto => coverPhotoUrl != null && coverPhotoUrl!.isNotEmpty;
+
+  String get placeLabel {
+    final parts = [barangay, municipality]
+        .map((part) => part?.trim() ?? '')
+        .where((part) => part.isNotEmpty)
+        .toList();
+    return parts.join(', ');
+  }
+
+  factory FarmProfile.fromJson(Map<String, dynamic> json) {
+    return FarmProfile(
+      id: json['id'] as int,
+      name: json['name'] as String? ?? '',
+      slug: json['slug'] as String?,
+      description: json['description'] as String?,
+      contactPerson: json['contact_person'] as String?,
+      contactNumber: json['contact_number'] as String?,
+      barangay: json['barangay'] as String?,
+      municipality: json['municipality'] as String?,
+      pickupPoint: json['pickup_point'] as String?,
+      coverPhotoUrl: ApiConfig.mediaUrl(json['cover_photo_url'] as String?),
+      photos: ((json['photos'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((item) => FarmPhotoItem.fromJson(Map<String, dynamic>.from(item)))
+          .where((photo) => photo.url.isNotEmpty)
+          .toList(),
+      farmerSellersCount: ListingItem._asCount(json['farmer_sellers_count']) ?? 0,
+      storefronts: ((json['storefronts'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((item) => FarmStorefront.fromJson(Map<String, dynamic>.from(item)))
           .toList(),
     );
   }

@@ -12,7 +12,10 @@ class FarmerShopController extends Controller
 {
     public function show(Request $request): ShopProfileResource
     {
-        $farmer = $request->user()->loadCount('reviewsReceived')->loadAvg('reviewsReceived', 'rating');
+        $farmer = $request->user()
+            ->load('farm')
+            ->loadCount('reviewsReceived')
+            ->loadAvg('reviewsReceived', 'rating');
 
         return new ShopProfileResource($farmer);
     }
@@ -20,7 +23,7 @@ class FarmerShopController extends Controller
     public function update(UpdateShopProfileRequest $request, UpdateShopProfileAction $updateShop): ShopProfileResource
     {
         $farmer = $updateShop->handle($request->user(), $request->validated());
-        $farmer->loadCount('reviewsReceived')->loadAvg('reviewsReceived', 'rating');
+        $farmer->load('farm')->loadCount('reviewsReceived')->loadAvg('reviewsReceived', 'rating');
 
         return (new ShopProfileResource($farmer))
             ->additional(['message' => 'Shop profile updated.']);

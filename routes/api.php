@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\Cart\CartController;
 use App\Http\Controllers\Api\Chat\OrderMessageController;
 use App\Http\Controllers\Api\CropCare\CropCareArticleController;
 use App\Http\Controllers\Api\Faq\FaqController;
+use App\Http\Controllers\Api\Farms\FarmController;
 use App\Http\Controllers\Api\Favorites\FavoriteController;
 use App\Http\Controllers\Api\Listings\ListingController;
 use App\Http\Controllers\Api\Listings\TawadRuleController;
@@ -83,6 +84,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
     Route::get('faq', [FaqController::class, 'index'])->name('faq.index');
     Route::post('faq/ask', [FaqController::class, 'ask'])->name('faq.ask');
+
+    Route::get('farms/{farm}', FarmController::class)->name('farms.show');
 });
 
 Route::middleware([

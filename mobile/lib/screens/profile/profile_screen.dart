@@ -21,6 +21,7 @@ import '../buyer/order_history_screen.dart';
 import '../farmer/listing_form_screen.dart';
 import '../farmer/walk_in_sale_screen.dart';
 import '../faq/faq_bot_screen.dart';
+import '../farm/farm_profile_screen.dart';
 import 'settings_screen.dart';
 import 'verify_email_screen.dart';
 
@@ -304,7 +305,9 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
             return Center(child: Text(s.shopNotFound));
           }
           final shop = view.shop;
-          final farmName = context.watch<AuthController>().user?.farmName?.trim();
+          final user = context.watch<AuthController>().user;
+          final farmName = user?.farmName?.trim();
+          final farmId = user?.farmId ?? shop.farmId;
           return RefreshIndicator(
             onRefresh: _reload,
             child: ListView(
@@ -316,7 +319,9 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
                     child: ShopIdentityHeader(shop: shop),
                   ),
                 ),
-                if (farmName != null && farmName.isNotEmpty)
+                if (farmId != null && farmName != null && farmName.isNotEmpty)
+                  FarmLinkChip(farmId: farmId, label: s.farmLine(farmName))
+                else if (farmName != null && farmName.isNotEmpty)
                   OrderMetaRow(icon: Icons.agriculture_outlined, text: s.farmLine(farmName)),
                 if (view.listingsCount != null || shop.hasRating) ...[
                   const SizedBox(height: AniHowSpace.cardGap),

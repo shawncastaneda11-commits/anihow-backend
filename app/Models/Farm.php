@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Role;
+use App\Support\ListingStorage;
 use Database\Factories\FarmFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -73,6 +74,15 @@ class Farm extends Model
     public function photos(): HasMany
     {
         return $this->hasMany(FarmPhoto::class)->orderBy('sort_order');
+    }
+
+    public function coverPhotoUrl(): ?string
+    {
+        if (! filled($this->cover_photo_path)) {
+            return null;
+        }
+
+        return ListingStorage::disk()->url($this->cover_photo_path);
     }
 
     /**

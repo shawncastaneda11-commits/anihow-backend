@@ -430,6 +430,11 @@ class ApiClient {
     return ShopProfile.fromJson(_asMap(response['data'] ?? response));
   }
 
+  Future<FarmProfile> farm(int farmId) async {
+    final response = await _get('/farms/$farmId');
+    return FarmProfile.fromJson(_asMap(response['data'] ?? response));
+  }
+
   Future<ShopProfile> updateFarmerShop(Map<String, dynamic> body) async {
     try {
       final response = await _dio.patch('/farmer/shop', data: body);

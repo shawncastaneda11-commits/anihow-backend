@@ -114,8 +114,8 @@ class AppStrings {
   String get profile => t('Profile', 'Profile');
   String get market => t('Market', 'Palengke');
   String get verifyBanner => t(
-        'Verify your email before ordering or saving favorites.',
-        'Beripikahin muna ang email bago mag-order o mag-save ng paborito.',
+        'Verify email to order.',
+        'Beripikahin ang email para makapag-order.',
       );
   String get verifyNow => t('Verify now', 'Beripikahin ngayon');
 
@@ -123,6 +123,15 @@ class AppStrings {
   String get roleBuyer => t('Buyer', 'Buyer');
   String get roleFarmer => t('Farmer-seller', 'Magsasaka-tindahan');
   String farmLine(String name) => t('Farm: $name', 'Bukid: $name');
+  String get farm => t('Farm', 'Bukid');
+  String get farmProfile => t('Farm profile', 'Profile ng bukid');
+  String get farmNotFound => t('Farm not found.', 'Hindi nahanap ang bukid.');
+  String get pickupPoint => t('Pickup point', 'Pickup point');
+  String get farmPhotos => t('Photos', 'Mga larawan');
+  String get farmStorefronts => t('Storefronts', 'Mga tindahan');
+  String get noFarmPhotos => t('No photos yet', 'Wala pang larawan');
+  String get noFarmStorefronts => t('No storefronts yet', 'Wala pang tindahan');
+  String get farmContact => t('Contact person', 'Contact person');
   String get activeListings => t('Active listings', 'Mga active na listing');
   String get noActiveListings => t('No active listings', 'Walang active na listing');
   String get noBioYet => t('No bio yet', 'Wala pang bio');

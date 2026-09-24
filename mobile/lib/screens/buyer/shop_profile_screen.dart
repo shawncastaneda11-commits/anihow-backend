@@ -12,6 +12,7 @@ import '../../theme/anihow_theme.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/produce_card.dart';
 import '../../widgets/shop_profile_parts.dart';
+import '../farm/farm_profile_screen.dart';
 import 'listing_detail_screen.dart';
 
 void openBuyerShop(BuildContext context, int sellerId) {
@@ -137,6 +138,15 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                         child: ShopIdentityHeader(shop: shop),
                       ),
                     ),
+                    if (shop.farmId != null) ...[
+                      const SizedBox(height: AniHowSpace.cardGap),
+                      FarmLinkChip(
+                        farmId: shop.farmId!,
+                        label: shop.farmName == null || shop.farmName!.isEmpty
+                            ? s.farm
+                            : s.farmLine(shop.farmName!),
+                      ),
+                    ],
                     const SizedBox(height: AniHowSpace.section),
                     Text(
                       s.pickupOnly,

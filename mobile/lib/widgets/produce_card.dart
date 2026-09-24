@@ -44,82 +44,86 @@ class ProduceCard extends StatelessWidget {
     final language = context.watch<PreferencesController>().language;
     final sellerLabel = listing.sellerName ?? listing.category?.labelFor(language) ?? AppStrings.maybeOf(context).farmStall;
     final cropLabel = listing.category?.labelFor(language);
+    final muted = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+    );
+
+    final photo = AspectRatio(
+      aspectRatio: 4 / 3,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ProducePhoto(listing: listing, iconSize: 40),
+          if (trailing != null)
+            Positioned(
+              top: 4,
+              right: 4,
+              child: Material(
+                color: Colors.black.withValues(alpha: 0.35),
+                shape: const CircleBorder(),
+                child: trailing,
+              ),
+            ),
+        ],
+      ),
+    );
+
+    final details = Padding(
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            listing.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.titleMedium,
+          ),
+          Text(
+            [
+              if (cropLabel != null && cropLabel.isNotEmpty) cropLabel,
+              if (showSeller) sellerLabel,
+            ].join(' · '),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: muted,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${AniHowMoney.peso(listing.pricePerUnit)} / ${listing.unit ?? ''}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: AniHowColors.brand,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
 
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AspectRatio(
-              aspectRatio: 4 / 3,
-              child: Stack(
-                fit: StackFit.expand,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxHeight.isFinite) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  ProducePhoto(listing: listing, iconSize: 40),
-                  if (trailing != null)
-                    Positioned(
-                      top: 4,
-                      right: 4,
-                      child: Material(
-                        color: Colors.black.withValues(alpha: 0.35),
-                        shape: const CircleBorder(),
-                        child: trailing,
-                      ),
-                    ),
+                  photo,
+                  Expanded(child: details),
                 ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    listing.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  if (cropLabel != null && cropLabel.isNotEmpty)
-                    Text(
-                      cropLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                    ),
-                  if (showSeller)
-                    GestureDetector(
-                      onTap: onSellerTap,
-                      child: Text(
-                        sellerLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: onSellerTap == null
-                              ? theme.colorScheme.onSurface.withValues(alpha: 0.7)
-                              : AniHowColors.deepGreen,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '${AniHowMoney.peso(listing.pricePerUnit)} / ${listing.unit ?? ''}',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: AniHowColors.brand,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  if (listing.tawad != null)
-                    Text(listing.tawad!.summary, maxLines: 1, overflow: TextOverflow.ellipsis),
-                ],
-              ),
-            ),
-          ],
+              );
+            }
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [photo, details],
+            );
+          },
         ),
       ),
     );

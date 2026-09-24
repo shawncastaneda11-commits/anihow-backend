@@ -17,6 +17,13 @@ class FarmPhoto extends Model
 
     protected static function booted(): void
     {
+        static::updating(function (FarmPhoto $photo): void {
+            if ($photo->isDirty('path')) {
+                $previous = $photo->getOriginal('path');
+                app(ImageVariants::class)->delete(is_string($previous) ? $previous : null);
+            }
+        });
+
         static::deleting(function (FarmPhoto $photo): void {
             app(ImageVariants::class)->delete($photo->path);
         });

@@ -5,14 +5,28 @@ import '../../l10n/app_strings.dart';
 import '../../navigation/route_observer.dart';
 import '../../state/auth_controller.dart';
 import '../../widgets/notification_bell.dart';
+import '../../widgets/unverified_email_banner.dart';
 import 'favorites_screen.dart';
 import 'marketplace_screen.dart';
 import 'order_history_screen.dart';
 import '../profile/profile_screen.dart';
 import '../profile/verify_email_screen.dart';
 
+/// Test hook so the banner layout can be pumped without live API pages.
+class BuyerShellPreview {
+  const BuyerShellPreview({
+    this.index = 0,
+    this.pages,
+  });
+
+  final int index;
+  final List<Widget>? pages;
+}
+
 class BuyerShell extends StatefulWidget {
-  const BuyerShell({super.key});
+  const BuyerShell({super.key, this.preview});
+
+  final BuyerShellPreview? preview;
 
   @override
   State<BuyerShell> createState() => _BuyerShellState();
@@ -25,7 +39,10 @@ class _BuyerShellState extends State<BuyerShell> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _openVerifyAfterRegister());
+    _index = widget.preview?.index ?? 0;
+    if (widget.preview == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _openVerifyAfterRegister());
+    }
   }
 
   void _openVerifyAfterRegister() {
@@ -41,54 +58,31 @@ class _BuyerShellState extends State<BuyerShell> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthController>();
     final s = AppStrings.of(context);
-    final pages = const [
-      MarketplaceScreen(),
-      OrderHistoryScreen(),
-      FavoritesScreen(),
-      ProfileScreen(),
-    ];
+    final pages = widget.preview?.pages ??
+        const [
+          MarketplaceScreen(),
+          OrderHistoryScreen(),
+          FavoritesScreen(),
+          ProfileScreen(),
+        ];
     final titles = [s.marketplace, s.orders, s.favorites, s.profile];
-    final showVerifyBanner = auth.user?.isVerified == false && !_hideVerifyBanner;
+    final hasAppBar = _index != 0 && _index != 1;
 
-    return Scaffold(
-      appBar: _index == 0 || _index == 1
-          ? null
-          : AppBar(
+    return VerifyBannerScope(
+      hidden: _hideVerifyBanner,
+      hide: () => setState(() => _hideVerifyBanner = true),
+      child: Scaffold(
+      appBar: hasAppBar
+          ? AppBar(
               title: Text(titles[_index]),
               actions: const [NotificationBellButton()],
-            ),
+            )
+          : null,
       body: Column(
         children: [
-          if (showVerifyBanner)
-            SafeArea(
-              bottom: false,
-              child: MaterialBanner(
-                content: Text(s.verifyBanner),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const VerifyEmailScreen()),
-                    ),
-                    child: Text(s.verifyNow),
-                  ),
-                  TextButton(
-                    onPressed: () => setState(() => _hideVerifyBanner = true),
-                    child: Text(s.ok),
-                  ),
-                ],
-              ),
-            ),
-          Expanded(
-            child: showVerifyBanner
-                ? MediaQuery.removePadding(
-                    context: context,
-                    removeTop: true,
-                    child: pages[_index],
-                  )
-                : pages[_index],
-          ),
+          if (hasAppBar) const UnverifiedEmailBanner(),
+          Expanded(child: pages[_index]),
         ],
       ),
       bottomNavigationBar: DecoratedBox(
@@ -109,6 +103,7 @@ class _BuyerShellState extends State<BuyerShell> {
           ],
         ),
       ),
+    ),
     );
   }
 }

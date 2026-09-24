@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Favorites;
 
 use App\Actions\Favorites\AddShopFavoriteAction;
+use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Favorites\StoreShopFavoriteRequest;
 use App\Http\Resources\Api\ShopFavoriteResource;
@@ -21,6 +22,9 @@ class ShopFavoriteController extends Controller
 
         $favorites = $request->user()
             ->shopFavorites()
+            ->whereHas('farmerSeller', function (Builder $query): void {
+                $query->withoutTrashed()->where('status', UserStatus::Active);
+            })
             ->with($this->shopRelations())
             ->latest()
             ->paginate();

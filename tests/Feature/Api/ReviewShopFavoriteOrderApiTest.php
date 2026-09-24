@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Actions\Privacy\AnonymizeUserAction;
 use App\Enums\Role;
 use App\Enums\UserStatus;
 use App\Models\User;
@@ -203,5 +204,29 @@ class ReviewShopFavoriteOrderApiTest extends TestCase
         $this->asUser($editor)
             ->getJson('/api/buyer/shop-favorites')
             ->assertForbidden();
+    }
+
+    public function test_shop_favorites_omit_anonymised_sellers(): void
+    {
+        $seller = $this->farmer(['shop_name' => 'Aling Nena Produce']);
+        $buyer = $this->buyer();
+
+        $this->asUser($buyer)
+            ->postJson('/api/buyer/shop-favorites', [
+                'farmer_seller_id' => $seller->id,
+            ])
+            ->assertCreated();
+
+        $this->asUser($buyer)
+            ->getJson('/api/buyer/shop-favorites')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+
+        app(AnonymizeUserAction::class)->handle($seller);
+
+        $this->asUser($buyer)
+            ->getJson('/api/buyer/shop-favorites')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
     }
 }

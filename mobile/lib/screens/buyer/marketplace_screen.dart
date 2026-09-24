@@ -14,6 +14,7 @@ import '../../widgets/cart_icon_button.dart';
 import '../../widgets/category_color.dart';
 import '../../widgets/notification_bell.dart';
 import '../../widgets/produce_card.dart';
+import '../../widgets/unverified_email_banner.dart';
 import 'listing_detail_screen.dart';
 import 'shop_profile_screen.dart';
 import 'shops_screen.dart';
@@ -93,6 +94,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
             ],
           ),
         ),
+        const UnverifiedEmailBanner(),
         Padding(
           padding: const EdgeInsets.fromLTRB(
             AniHowSpace.screen,

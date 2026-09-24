@@ -86,6 +86,20 @@ class Farm extends Model
         return $this->hasMany(FaqEntry::class);
     }
 
+    protected static function booted(): void
+    {
+        static::updating(function (Farm $farm): void {
+            if ($farm->isDirty('cover_photo_path')) {
+                $previous = $farm->getOriginal('cover_photo_path');
+                app(ImageVariants::class)->delete(is_string($previous) ? $previous : null);
+            }
+        });
+
+        static::deleting(function (Farm $farm): void {
+            app(ImageVariants::class)->delete($farm->cover_photo_path);
+        });
+    }
+
     public function coverPhotoUrl(): ?string
     {
         return app(ImageVariants::class)->url($this->cover_photo_path);

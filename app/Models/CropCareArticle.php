@@ -50,6 +50,13 @@ class CropCareArticle extends Model
 
     protected static function booted(): void
     {
+        static::updating(function (CropCareArticle $article): void {
+            if ($article->isDirty('image_path')) {
+                $previous = $article->getOriginal('image_path');
+                app(ImageVariants::class)->delete(is_string($previous) ? $previous : null);
+            }
+        });
+
         // forceDeleted, not deleting: a soft-deleted article is still
         // recoverable and must keep its image.
         static::forceDeleted(function (CropCareArticle $article): void {

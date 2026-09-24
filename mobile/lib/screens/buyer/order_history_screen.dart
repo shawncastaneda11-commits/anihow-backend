@@ -12,6 +12,7 @@ import '../../widgets/notification_bell.dart';
 import '../../widgets/order_look.dart';
 import '../../widgets/profile_avatar_button.dart';
 import '../../widgets/status_pill.dart';
+import '../../widgets/unverified_email_banner.dart';
 import '../chat/order_chat_screen.dart';
 import 'buyer_order_detail_screen.dart';
 
@@ -46,7 +47,11 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
         title: Text(AppStrings.of(context).orderHistory),
         actions: const [NotificationBellButton()],
       ),
-      body: AsyncView<List<OrderRecord>>(
+      body: Column(
+        children: [
+          const UnverifiedEmailBanner(),
+          Expanded(
+            child: AsyncView<List<OrderRecord>>(
         future: _future,
         onRetry: _reload,
         emptyMessage: AppStrings.of(context).noOrders,
@@ -75,6 +80,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
             ),
           );
         },
+            ),
+          ),
+        ],
       ),
     );
   }

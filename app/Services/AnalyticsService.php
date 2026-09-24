@@ -34,9 +34,9 @@ class AnalyticsService
      *
      * @return Collection<int, object>
      */
-    public function unitsSoldPerCropType(?User $viewer = null, ?int $days = null, ?CarbonInterface $since = null): Collection
+    public function unitsSoldPerCropType(?User $viewer = null, ?int $days = null, ?CarbonInterface $since = null, ?CarbonInterface $until = null): Collection
     {
-        return $this->itemQuery($viewer, $days, $since)
+        return $this->itemQuery($viewer, $days, $since, $until)
             ->join('crop_types', 'crop_types.id', '=', 'order_items.crop_type_id')
             ->groupBy('crop_types.id', 'crop_types.name', 'crop_types.unit_of_measure')
             ->orderByDesc('units')
@@ -67,10 +67,10 @@ class AnalyticsService
      *
      * @return Collection<int, object>
      */
-    public function salesPerPeriod(?User $viewer = null, string $grouping = 'day', int $periods = 30, ?CarbonInterface $since = null): Collection
+    public function salesPerPeriod(?User $viewer = null, string $grouping = 'day', int $periods = 30, ?CarbonInterface $since = null, ?CarbonInterface $until = null): Collection
     {
         $skeleton = $since !== null
-            ? $this->periodSkeletonFromSince($grouping, $since)
+            ? $this->periodSkeletonFromSince($grouping, $since, $until)
             : $this->periodSkeleton($grouping, $periods);
 
         $from = $since ?? match ($grouping) {
@@ -81,6 +81,7 @@ class AnalyticsService
 
         $orders = $this->orderQuery($viewer)
             ->where('orders.completed_at', '>=', $from)
+            ->when($until !== null, fn (Builder $query): Builder => $query->where('orders.completed_at', '<=', $until))
             ->get(['completed_at', 'total']);
 
         foreach ($orders as $order) {
@@ -141,10 +142,10 @@ class AnalyticsService
     /**
      * @return Collection<string, array{label: string, orders: int, revenue: float}>
      */
-    private function periodSkeletonFromSince(string $grouping, CarbonInterface $since): Collection
+    private function periodSkeletonFromSince(string $grouping, CarbonInterface $since, ?CarbonInterface $until = null): Collection
     {
         $cursor = $since->copy()->startOfDay();
-        $end = now()->startOfDay();
+        $end = $until?->copy()->startOfDay() ?? now()->startOfDay();
         $skeleton = collect();
         $first = true;
 
@@ -180,11 +181,11 @@ class AnalyticsService
      *
      * @return Collection<int, object>
      */
-    public function bestSelling(?User $viewer = null, string $window = 'week', int $limit = 5, ?CarbonInterface $since = null): Collection
+    public function bestSelling(?User $viewer = null, string $window = 'week', int $limit = 5, ?CarbonInterface $since = null, ?CarbonInterface $until = null): Collection
     {
         $days = $since !== null ? null : ($window === 'month' ? 30 : 7);
 
-        return $this->unitsSoldPerCropType($viewer, $days, $since)->take($limit);
+        return $this->unitsSoldPerCropType($viewer, $days, $since, $until)->take($limit);
     }
 
     /**
@@ -193,9 +194,9 @@ class AnalyticsService
      *
      * @return array{average: float, total: float, orders: int, discounted_orders: int}
      */
-    public function averageDiscount(?User $viewer = null, ?int $days = null, ?CarbonInterface $since = null): array
+    public function averageDiscount(?User $viewer = null, ?int $days = null, ?CarbonInterface $since = null, ?CarbonInterface $until = null): array
     {
-        $query = $this->applyCompletedSince($this->orderQuery($viewer), $days, $since);
+        $query = $this->applyCompletedSince($this->orderQuery($viewer), $days, $since, $until);
 
         $orders = (clone $query)->count();
         $total = (float) (clone $query)->sum('tawad_total');
@@ -281,13 +282,13 @@ class AnalyticsService
     /**
      * @return Builder<OrderItem>
      */
-    private function itemQuery(?User $viewer, ?int $days, ?CarbonInterface $since = null): Builder
+    private function itemQuery(?User $viewer, ?int $days, ?CarbonInterface $since = null, ?CarbonInterface $until = null): Builder
     {
         $query = OrderItem::query()
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->where('orders.status', OrderStatus::Completed);
 
-        $this->applyCompletedSince($query, $days, $since);
+        $this->applyCompletedSince($query, $days, $since, $until);
 
         return $this->scope($query, $viewer, 'orders');
     }
@@ -298,14 +299,16 @@ class AnalyticsService
      * @param  Builder<TModel>  $query
      * @return Builder<TModel>
      */
-    private function applyCompletedSince(Builder $query, ?int $days, ?CarbonInterface $since): Builder
+    private function applyCompletedSince(Builder $query, ?int $days, ?CarbonInterface $since, ?CarbonInterface $until = null): Builder
     {
         if ($since !== null) {
-            return $query->where('orders.completed_at', '>=', $since);
+            $query->where('orders.completed_at', '>=', $since);
+        } elseif ($days !== null) {
+            $query->where('orders.completed_at', '>=', now()->subDays($days));
         }
 
-        if ($days !== null) {
-            return $query->where('orders.completed_at', '>=', now()->subDays($days));
+        if ($until !== null) {
+            $query->where('orders.completed_at', '<=', $until);
         }
 
         return $query;

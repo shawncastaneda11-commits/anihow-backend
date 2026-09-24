@@ -5,6 +5,7 @@ set -euo pipefail
 python3 src/gen_fig7.py
 python3 src/gen_dfd.py
 for src in src/fig*.dot; do
+  case "$src" in *_dfd_level*) continue ;; esac
   name=$(basename "$src" .dot)
   engine=dot
   grep -q 'layout=neato' "$src" && engine=neato

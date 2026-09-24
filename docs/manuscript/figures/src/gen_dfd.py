@@ -6,10 +6,11 @@ docs/manuscript/figures; render.sh then draws the .dot files.
 """
 import os, sys
 sys.path.insert(0, os.path.dirname(__file__))
-from dfd_common import render
+from dfd_common import render, draw
 
 def save(name, title, procs, flows):
     open(f'src/{name}.dot', 'w').write(render(title, procs, flows))
+    draw(f'src/{name}.dot', f'{name}.png', f'{name}.svg')
 
 # ------------------------------------------------------------------ Level 1
 P1 = [('p1', '1.0', 'Manage\\nAccounts and\\nAccess'), ('p2', '2.0', 'Manage\\nCatalog and\\nPricing'),

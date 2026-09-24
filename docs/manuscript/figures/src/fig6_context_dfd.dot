@@ -1,4 +1,4 @@
-// Figure 6. Context diagram (data flow diagram, level 0) of AniHow (v3.5).
+// Figure 6. Context diagram (data flow diagram, level 0) of AniHow (v3.5), Gane-Sarson notation.
 digraph G {
   graph [rankdir=LR, nodesep=0.7, ranksep=2.2, pad=0.3, fontname="Liberation Sans", newrank=true];
   node  [fontname="Liberation Sans", fontsize=13];
@@ -11,8 +11,9 @@ digraph G {
   by [label="Buyer",          fillcolor="#E8E6E0"];
   em [label="Email Service\n(Gmail SMTP)", fillcolor="#F2F2F2"];
 
-  sys [shape=circle, style="filled", fillcolor="#F4F4F4", penwidth=1.8, width=2.3, fixedsize=true,
-       label="0\n\nAniHow\nSystem", fontsize=15];
+  sys [shape=plaintext, style="", fillcolor=none, width=0, height=0, margin=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" BGCOLOR="#F4F4F4">
+       <TR><TD><FONT POINT-SIZE="14">0</FONT></TD></TR><HR/>
+       <TR><TD CELLPADDING="14"><FONT POINT-SIZE="15">AniHow<BR/>System</FONT></TD></TR></TABLE>>];
 
   sa -> sys [label="approvals, system price guards,\ntaxonomy, moderation, system FAQ\nanswers, report and deletion decisions"];
   sys -> sa [label="order ledger, analytics, CSV exports,\ncontent reports, deletion requests"];

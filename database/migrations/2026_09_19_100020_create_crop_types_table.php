@@ -36,8 +36,12 @@ return new class extends Migration
 
         // Belt and braces behind the FormRequest rules. MySQL 8.0.16+ enforces
         // CHECK; older MySQL and some MariaDB builds parse and ignore it.
-        DB::statement('ALTER TABLE crop_types ADD CONSTRAINT chk_crop_types_floor_positive CHECK (floor_price > 0)');
-        DB::statement('ALTER TABLE crop_types ADD CONSTRAINT chk_crop_types_discount_below_floor CHECK (max_discount >= 0 AND max_discount < floor_price)');
+        // SQLite rejects ALTER TABLE ... ADD CONSTRAINT, so skip there. In-memory
+        // PHPUnit still relies on FormRequest and model rules for these floors.
+        if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+            DB::statement('ALTER TABLE crop_types ADD CONSTRAINT chk_crop_types_floor_positive CHECK (floor_price > 0)');
+            DB::statement('ALTER TABLE crop_types ADD CONSTRAINT chk_crop_types_discount_below_floor CHECK (max_discount >= 0 AND max_discount < floor_price)');
+        }
     }
 
     public function down(): void

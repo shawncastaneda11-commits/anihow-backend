@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/dashed_photo_box.dart';
 import '../../widgets/form_label.dart';
+import '../../widgets/hint_card.dart';
 import '../../widgets/primary_button.dart';
 import '../../state/auth_controller.dart';
+import '../../state/preferences_controller.dart';
 import 'tawad_form_screen.dart';
 import 'walk_in_sale_screen.dart';
 
@@ -66,7 +69,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   Future<void> _save() async {
     if (_cropTypeId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Choose a crop type.')),
+        SnackBar(content: Text(AppStrings.read(context).chooseCrop)),
       );
       return;
     }
@@ -106,14 +109,17 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     }
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete this listing?'),
-        content: Text(listing.title),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
-        ],
-      ),
+      builder: (context) {
+        final s = AppStrings.of(context);
+        return AlertDialog(
+          title: Text(s.deleteListingAsk),
+          content: Text(listing.title),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: Text(s.cancel)),
+            TextButton(onPressed: () => Navigator.pop(context, true), child: Text(s.delete)),
+          ],
+        );
+      },
     );
     if (confirmed != true || !mounted) {
       return;
@@ -173,16 +179,17 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     }
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('End this tawad?'),
-        content: const Text(
-          'Orders already confirmed keep the price they were confirmed at.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Back')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('End tawad')),
-        ],
-      ),
+      builder: (context) {
+        final s = AppStrings.of(context);
+        return AlertDialog(
+          title: Text(s.endTawadAsk),
+          content: Text(s.tawadKeepPrice),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: Text(s.back)),
+            TextButton(onPressed: () => Navigator.pop(context, true), child: Text(s.endTawad)),
+          ],
+        );
+      },
     );
     if (confirmed != true || !mounted) {
       return;
@@ -236,13 +243,14 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.listing == null ? 'New listing' : 'Edit listing'),
+        title: Text(widget.listing == null ? s.newListing : s.editListing),
         actions: [
           if (widget.listing != null)
             IconButton(
-              tooltip: 'Delete listing',
+              tooltip: s.deleteListing,
               onPressed: _busy ? null : _deleteListing,
               icon: const Icon(Icons.delete_outline),
             ),
@@ -267,119 +275,159 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                 child: ListView(
                   padding: AniHowSpace.screenPadding,
                   children: [
-                    DashedPhotoBox(
-                      filePath: _imagePath,
-                      networkUrl: widget.listing?.imageUrl,
-                      onTap: _pickPhoto,
+                    AniHowFormCard(
+                      child: DashedPhotoBox(
+                        filePath: _imagePath,
+                        networkUrl: widget.listing?.imageUrl,
+                        onTap: _pickPhoto,
+                        emptyLabel: s.addPhoto,
+                      ),
+                    ),
+                    if (_listing?.isTakenDown == true) ...[
+                      const SizedBox(height: AniHowSpace.cardGap),
+                      AniHowHintCard(
+                        icon: Icons.visibility_off_outlined,
+                        title: s.takenDown,
+                        body: _listing!.takedownReason ?? s.listingTakenDownHint,
+                        tone: AniHowHintTone.cash,
+                      ),
+                    ],
+                    const SizedBox(height: AniHowSpace.cardGap),
+                    AniHowHintCard(
+                      icon: Icons.photo_camera_outlined,
+                      title: s.listingPhotoHint,
+                      tone: AniHowHintTone.brand,
                     ),
                     const SizedBox(height: AniHowSpace.section),
-                    AniHowField(
-                      label: 'Title',
-                      child: TextField(
-                        controller: _name,
-                        textCapitalization: TextCapitalization.words,
-                        decoration: const InputDecoration(hintText: 'Name this produce'),
-                      ),
-                    ),
-                    const SizedBox(height: AniHowSpace.fieldGap),
-                    AniHowField(
-                      label: 'Crop type',
-                      child: DropdownButtonFormField<int>(
-                        initialValue: _cropTypeId,
-                        items: cropTypes
-                            .map(
-                              (cropType) => DropdownMenuItem(
-                                value: cropType.id,
-                                child: Text(cropType.bilingualLabel),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) => setState(() => _cropTypeId = value),
-                      ),
-                    ),
-                    if (unit != null && unit.isNotEmpty) ...[
-                      const SizedBox(height: AniHowSpace.fieldGap),
-                      Text(
-                        'Unit: $unit',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
-                    const SizedBox(height: AniHowSpace.fieldGap),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: AniHowField(
-                            label: 'Price',
+                    AniHowFormCard(
+                      title: s.listingDetails,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          AniHowField(
+                            label: s.titleLabel,
                             child: TextField(
-                              controller: _price,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              decoration: const InputDecoration(
-                                prefixText: '₱ ',
-                                hintText: '0.00',
-                              ),
+                              controller: _name,
+                              textCapitalization: TextCapitalization.words,
+                              decoration: InputDecoration(hintText: s.nameProduce),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: AniHowSpace.cardGap),
-                        Expanded(
-                          child: AniHowField(
-                            label: 'Quantity',
-                            child: TextField(
-                              controller: _quantity,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          const SizedBox(height: AniHowSpace.fieldGap),
+                          AniHowField(
+                            label: s.cropType,
+                            child: DropdownButtonFormField<int>(
+                              initialValue: _cropTypeId,
+                              items: cropTypes
+                                  .map(
+                                    (cropType) => DropdownMenuItem(
+                                      value: cropType.id,
+                                      child: Text(
+                                        cropType.labelFor(context.watch<PreferencesController>().language),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (value) => setState(() => _cropTypeId = value),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    if (floor != null && floor.isNotEmpty) ...[
-                      const SizedBox(height: AniHowSpace.labelGap),
-                      Text(
-                        'Floor price for ${selectedCrop!.displayLabel}: ${AniHowMoney.peso(floor)} (set by your farm)',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          if (unit != null && unit.isNotEmpty) ...[
+                            const SizedBox(height: AniHowSpace.cardGap),
+                            Text(s.unitLine(unit), style: Theme.of(context).textTheme.bodyMedium),
+                          ],
+                          const SizedBox(height: AniHowSpace.fieldGap),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: AniHowField(
+                                  label: s.price,
+                                  child: TextField(
+                                    controller: _price,
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    decoration: const InputDecoration(
+                                      prefixText: '₱ ',
+                                      hintText: '0.00',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AniHowSpace.cardGap),
+                              Expanded(
+                                child: AniHowField(
+                                  label: s.quantity,
+                                  child: TextField(
+                                    controller: _quantity,
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (floor != null && floor.isNotEmpty) ...[
+                            const SizedBox(height: AniHowSpace.cardGap),
+                            Text(
+                              s.floorPriceFor(
+                                selectedCrop!.labelFor(context.watch<PreferencesController>().language),
+                                AniHowMoney.peso(floor),
+                              ),
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                  ),
                             ),
-                      ),
-                    ],
-                    const SizedBox(height: AniHowSpace.fieldGap),
-                    AniHowField(
-                      label: 'Description',
-                      child: TextField(
-                        controller: _description,
-                        maxLines: 4,
-                        textCapitalization: TextCapitalization.sentences,
-                        decoration: const InputDecoration(hintText: 'Add a short note'),
+                          ],
+                          const SizedBox(height: AniHowSpace.fieldGap),
+                          AniHowField(
+                            label: s.description,
+                            child: TextField(
+                              controller: _description,
+                              maxLines: 4,
+                              textCapitalization: TextCapitalization.sentences,
+                              decoration: InputDecoration(hintText: s.shortNote),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     if (_listing != null) ...[
                       const SizedBox(height: AniHowSpace.section),
-                      Text('Tawad', style: Theme.of(context).textTheme.titleSmall),
-                      const SizedBox(height: AniHowSpace.labelGap),
-                      if (_listing!.tawad != null) ...[
-                        Text(_listing!.tawad!.summary),
-                        if (_listing!.tawad!.typeLabel != null) Text(_listing!.tawad!.typeLabel!),
-                        const SizedBox(height: AniHowSpace.cardGap),
-                        PrimaryButton(
-                          label: 'Replace tawad',
-                          onPressed: _busy ? null : _openTawad,
+                      AniHowFormCard(
+                        title: s.tawad,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (_listing!.tawad != null) ...[
+                              Text(
+                                _listing!.tawad!.displaySummary(
+                                  offThisOrder: s.tawadOffThisOrder,
+                                  offAtMin: s.tawadOffAtMin,
+                                ),
+                              ),
+                              if (_listing!.tawad!.typeLabel != null) Text(_listing!.tawad!.typeLabel!),
+                              const SizedBox(height: AniHowSpace.cardGap),
+                              PrimaryButton(
+                                label: s.replaceTawad,
+                                onPressed: _busy ? null : _openTawad,
+                              ),
+                              const SizedBox(height: AniHowSpace.cardGap),
+                              OutlinedButton(
+                                onPressed: _busy ? null : _endTawad,
+                                child: Text(s.endTawad),
+                              ),
+                            ] else ...[
+                              Text(s.noTawad),
+                              const SizedBox(height: AniHowSpace.cardGap),
+                              PrimaryButton(label: s.setTawad, onPressed: _busy ? null : _openTawad),
+                            ],
+                          ],
                         ),
-                        const SizedBox(height: AniHowSpace.cardGap),
-                        OutlinedButton(
-                          onPressed: _busy ? null : _endTawad,
-                          child: const Text('End tawad'),
-                        ),
-                      ] else ...[
-                        const Text('No tawad on this listing.'),
-                        const SizedBox(height: AniHowSpace.cardGap),
-                        PrimaryButton(label: 'Set tawad', onPressed: _busy ? null : _openTawad),
-                      ],
+                      ),
                       if (!_listing!.isTakenDown &&
                           (context.watch<AuthController>().user?.canRecordWalkInSales ?? false)) ...[
-                        const SizedBox(height: AniHowSpace.section),
-                        OutlinedButton(
+                        const SizedBox(height: AniHowSpace.cardGap),
+                        OutlinedButton.icon(
                           onPressed: _busy ? null : _openWalkIn,
-                          child: const Text('Record walk-in sale'),
+                          icon: const Icon(Icons.point_of_sale_outlined),
+                          label: Text(s.recordWalkIn),
                         ),
                       ],
                     ],
@@ -395,7 +443,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                     AniHowSpace.screen,
                     AniHowSpace.screen,
                   ),
-                  child: PrimaryButton(label: 'Save listing', busy: _busy, onPressed: _save),
+                  child: PrimaryButton(label: s.saveListing, busy: _busy, onPressed: _save),
                 ),
               ),
             ],

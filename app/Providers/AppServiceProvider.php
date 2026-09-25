@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -32,6 +33,12 @@ class AppServiceProvider extends ServiceProvider
 
         $this->configureRateLimiting();
         $this->configureAuthUrls();
+        $this->configureBroadcasting();
+    }
+
+    private function configureBroadcasting(): void
+    {
+        Broadcast::routes(['middleware' => ['auth:sanctum']]);
     }
 
     private function configureRateLimiting(): void
@@ -54,6 +61,22 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perMinute((int) config('anihow.rate_limit_auth', 5))
                 ->by($email.'|'.$request->ip());
+        });
+
+        RateLimiter::for('data-export', function (Request $request) {
+            if (app()->runningUnitTests()) {
+                return Limit::none();
+            }
+
+            return Limit::perHour(3)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('reports', function (Request $request) {
+            if (app()->runningUnitTests()) {
+                return Limit::none();
+            }
+
+            return Limit::perHour(10)->by($request->user()?->id ?: $request->ip());
         });
     }
 

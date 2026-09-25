@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
@@ -35,7 +36,7 @@ class _ShopsScreenState extends State<ShopsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Shops')),
+      appBar: AppBar(title: Text(AppStrings.of(context).shops)),
       body: AsyncView<List<ShopProfile>>(
         future: _future,
         onRetry: _reload,

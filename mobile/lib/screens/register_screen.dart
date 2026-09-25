@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_strings.dart';
 import '../state/auth_controller.dart';
 import '../theme/anihow_space.dart';
 import '../widgets/auth_layout.dart';
 import '../widgets/form_label.dart';
+import '../widgets/password_field.dart';
 import '../widgets/primary_button.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -53,10 +55,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final error = context.watch<AuthController>().error;
+    final s = AppStrings.of(context);
 
     return AuthLayout(
       leading: IconButton(
-        tooltip: 'Back',
+        tooltip: s.back,
         onPressed: () => Navigator.of(context).maybePop(),
         icon: const Icon(Icons.arrow_back),
       ),
@@ -64,16 +67,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Create account',
+            s.createAccount,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: AniHowSpace.section),
-          AniHowField(label: 'Full name', child: TextField(controller: _name)),
+          AniHowField(label: s.fullName, child: TextField(controller: _name)),
           const SizedBox(height: AniHowSpace.fieldGap),
           AniHowField(
-            label: 'Email',
+            label: s.email,
             child: TextField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
@@ -81,22 +84,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
           const SizedBox(height: AniHowSpace.fieldGap),
           AniHowField(
-            label: 'Phone (optional)',
+            label: s.phoneOptional,
             child: TextField(
               controller: _phone,
               keyboardType: TextInputType.phone,
             ),
           ),
           const SizedBox(height: AniHowSpace.fieldGap),
-          AniHowField(
-            label: 'Password',
-            child: TextField(controller: _password, obscureText: true),
-          ),
+          PasswordField(controller: _password, label: s.password),
           const SizedBox(height: AniHowSpace.fieldGap),
-          AniHowField(
-            label: 'Confirm password',
-            child: TextField(controller: _confirm, obscureText: true),
-          ),
+          PasswordField(controller: _confirm, label: s.confirmPassword),
           if (error != null) ...[
             const SizedBox(height: AniHowSpace.cardGap),
             Text(
@@ -108,7 +105,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           ],
           const SizedBox(height: AniHowSpace.section),
-          PrimaryButton(label: 'Register', busy: _busy, onPressed: _submit),
+          PrimaryButton(label: s.register, busy: _busy, onPressed: _submit),
         ],
       ),
     );

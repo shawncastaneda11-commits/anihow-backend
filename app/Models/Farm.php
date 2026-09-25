@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Role;
+use App\Support\ImageVariants;
 use Database\Factories\FarmFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -73,6 +74,40 @@ class Farm extends Model
     public function photos(): HasMany
     {
         return $this->hasMany(FarmPhoto::class)->orderBy('sort_order');
+    }
+
+    public function announcements(): HasMany
+    {
+        return $this->hasMany(FarmAnnouncement::class);
+    }
+
+    public function faqEntries(): HasMany
+    {
+        return $this->hasMany(FaqEntry::class);
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(function (Farm $farm): void {
+            if ($farm->isDirty('cover_photo_path')) {
+                $previous = $farm->getOriginal('cover_photo_path');
+                app(ImageVariants::class)->delete(is_string($previous) ? $previous : null);
+            }
+        });
+
+        static::deleting(function (Farm $farm): void {
+            app(ImageVariants::class)->delete($farm->cover_photo_path);
+        });
+    }
+
+    public function coverPhotoUrl(): ?string
+    {
+        return app(ImageVariants::class)->url($this->cover_photo_path);
+    }
+
+    public function coverThumbnailUrl(): ?string
+    {
+        return app(ImageVariants::class)->thumbnailUrl($this->cover_photo_path);
     }
 
     /**

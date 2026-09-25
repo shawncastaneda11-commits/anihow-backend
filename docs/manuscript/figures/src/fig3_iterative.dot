@@ -1,0 +1,21 @@
+// Figure 3. Iterative and incremental development model as applied to the study.
+digraph G {
+  graph [layout=neato, splines=true, pad=0.3, fontname="Liberation Sans"];
+  node  [shape=box, style="rounded", penwidth=1.4, fontname="Liberation Sans", fontsize=14, width=2.0, height=0.65, fixedsize=true];
+  edge  [penwidth=1.2, arrowsize=0.8, color="#222222", fontname="Liberation Sans", fontsize=11];
+
+  plan [label="Planning and\nRequirements", style="rounded,filled", fillcolor="#F0F0F0", pos="0,6!"];
+  des  [label="Design",         pos="0,4.6!"];
+  impl [label="Implementation", pos="3.4,4.6!"];
+  test [label="Testing",        pos="3.4,3.0!"];
+  eval [label="Evaluation",     pos="0,3.0!"];
+  inc  [label="Working\nIncrement", style="rounded,filled", fillcolor="#F0F0F0", pos="0,1.5!"];
+  adv  [label="Adviser Validation\n(two documented sessions)", width=2.9, style="rounded,filled", fillcolor="#E6E6E6", pos="3.9,1.5!"];
+  fin  [label="Final System\nand Deployment", style="rounded,filled", fillcolor="#F0F0F0", pos="0,0!"];
+
+  plan -> des; des -> impl; impl -> test; test -> eval;
+  eval -> des [style=dashed, xlabel="refine /\nnext increment"];
+  eval -> inc;
+  inc -> adv [dir=both, xlabel="validate /\nfeedback"];
+  inc -> fin [xlabel="when all five modules\nare complete"];
+}

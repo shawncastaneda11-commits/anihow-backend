@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Order;
-use Illuminate\Support\Str;
 
 /**
  * Human readable and quoted out loud at handover, so it avoids characters that

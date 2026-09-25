@@ -11,7 +11,22 @@ import 'package:anihow/widgets/status_pill.dart';
 void main() {
   test('Android emulator API host is 10.0.2.2', () {
     expect(ApiConfig.emulatorHost, 'http://10.0.2.2:8000');
+    expect(ApiConfig.localHost, 'http://127.0.0.1:8000');
+    expect(ApiConfig.hasReleaseApi, isFalse);
     expect(ApiConfig.baseUrl.endsWith('/api'), isTrue);
+    expect(ApiConfig.broadcastingAuthUrl.endsWith('/broadcasting/auth'), isTrue);
+    expect(ApiConfig.reverbPort, 8080);
+    expect(ApiConfig.reverbScheme, 'ws');
+    expect(ApiConfig.reverbAppKey, 'anihow-reverb-key');
+    expect(ApiConfig.reverbHost, anyOf('10.0.2.2', '127.0.0.1'));
+  });
+
+  test('media URLs from Laravel localhost are rewritten to the API host', () {
+    expect(
+      ApiConfig.mediaUrl('http://127.0.0.1:8000/storage/listings/tomato.jpg'),
+      '${ApiConfig.host}/storage/listings/tomato.jpg',
+    );
+    expect(ApiConfig.mediaUrl(null), isNull);
   });
 
   test('warm agricultural palette tokens', () {
@@ -314,6 +329,45 @@ void main() {
     expect(placed.total, '160');
     expect(placed.paymentLabel, 'Cash on handover');
     expect(placed.items.single.listedPrice, '30');
+    expect(
+      placed.chatPeerTitle(viewingAsSeller: false),
+      'Aling Nena Produce',
+    );
+  });
+
+  test('order chat title is the stall for a buyer and the buyer for a seller', () {
+    final order = OrderRecord.fromJson({
+      'id': 11,
+      'order_number': 'AH-260925-CY7JUU',
+      'status': 'placed',
+      'total': 80,
+      'seller': {'id': 4, 'shop_name': 'Kuya Jun Harvest'},
+      'buyer': {'id': 9, 'name': 'Carla Santos'},
+    });
+
+    expect(order.chatPeerTitle(viewingAsSeller: false), 'Kuya Jun Harvest');
+    expect(order.chatPeerTitle(viewingAsSeller: true), 'Carla Santos');
+  });
+
+  test('a taken-down listing is not purchasable from the cart', () {
+    const line = CartLine(
+      id: 1,
+      quantity: '2',
+      listedPrice: '40',
+      lineSubtotal: '80',
+      tawadAmount: '0',
+      lineTotal: '80',
+      listing: ListingItem(
+        id: 7,
+        title: 'Talong, mahaba',
+        pricePerUnit: '40',
+        quantityAvailable: '10',
+        isActive: true,
+        status: 'taken_down',
+      ),
+    );
+
+    expect(line.isPurchasable, isFalse);
   });
 
   test('tawad request shapes are peso-only with exactly two types', () {

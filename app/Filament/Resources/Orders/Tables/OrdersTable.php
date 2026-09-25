@@ -6,9 +6,12 @@ use App\Enums\FulfillmentPreference;
 use App\Enums\OrderStatus;
 use App\Models\Order;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class OrdersTable
 {
@@ -79,6 +82,24 @@ class OrdersTable
                     ->options(OrderStatus::options()),
                 SelectFilter::make('farm')
                     ->relationship('farm', 'name'),
+                Filter::make('placed_at')
+                    ->label('Placed')
+                    ->schema([
+                        DatePicker::make('from')->label('From'),
+                        DatePicker::make('until')->label('Until'),
+                    ])
+                    ->query(fn (Builder $query, array $data): Builder => $query
+                        ->when($data['from'] ?? null, fn (Builder $placed, mixed $from): Builder => $placed->whereDate('created_at', '>=', $from))
+                        ->when($data['until'] ?? null, fn (Builder $placed, mixed $until): Builder => $placed->whereDate('created_at', '<=', $until))),
+                Filter::make('completed_at')
+                    ->label('Completed')
+                    ->schema([
+                        DatePicker::make('from')->label('From'),
+                        DatePicker::make('until')->label('Until'),
+                    ])
+                    ->query(fn (Builder $query, array $data): Builder => $query
+                        ->when($data['from'] ?? null, fn (Builder $completed, mixed $from): Builder => $completed->whereDate('completed_at', '>=', $from))
+                        ->when($data['until'] ?? null, fn (Builder $completed, mixed $until): Builder => $completed->whereDate('completed_at', '<=', $until))),
                 SelectFilter::make('fulfillment_preference')
                     ->options(FulfillmentPreference::options())
                     ->label('Fulfillment'),

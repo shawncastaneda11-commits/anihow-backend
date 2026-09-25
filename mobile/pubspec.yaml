@@ -40,6 +40,7 @@ dependencies:
   shared_preferences: ^2.5.5
   image_picker: ^1.2.0
   url_launcher: ^6.3.2
+  dart_pusher_channels: ^1.2.3
 
 dev_dependencies:
   flutter_test:
@@ -63,17 +64,10 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  fonts:
-    - family: PlusJakartaSans
-      fonts:
-        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
-          weight: 400
-        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
-          weight: 700
+  assets:
+    - assets/branding/anihow-logo.png
+    - assets/branding/anihow-mark.png
+    - assets/branding/anihow-wordmark.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

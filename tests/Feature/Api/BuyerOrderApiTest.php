@@ -45,4 +45,25 @@ class BuyerOrderApiTest extends TestCase
         $this->assertArrayNotHasKey('notes', $data);
         $this->assertArrayNotHasKey('unit_price', $item);
     }
+
+    public function test_buyer_sees_seller_cancellation_note(): void
+    {
+        $farmer = $this->farmer();
+        $listing = $this->listingFor($farmer, ['price_per_unit' => 30, 'quantity_available' => 10]);
+        $buyer = $this->buyer();
+        $order = $this->placeOrder($buyer, $listing, 1);
+
+        $this->asUser($farmer)
+            ->patchJson("/api/farmer/orders/{$order->id}/cancel", [
+                'reason' => 'other',
+                'note' => 'Stall closed after the rain.',
+            ])
+            ->assertOk();
+
+        $this->asUser($buyer)
+            ->getJson("/api/buyer/orders/{$order->id}")
+            ->assertOk()
+            ->assertJsonPath('data.cancellation_reason', 'other')
+            ->assertJsonPath('data.cancellation_note', 'Stall closed after the rain.');
+    }
 }

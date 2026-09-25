@@ -1,0 +1,45 @@
+// Figure 4. System and network architecture of AniHow (v3.5).
+digraph G {
+  graph [rankdir=TB, nodesep=0.5, ranksep=0.55, pad=0.3, fontname="Liberation Sans", fontsize=13, newrank=true];
+  node  [shape=box, style="rounded,filled", fillcolor="white", penwidth=1.4, fontname="Liberation Sans", fontsize=12];
+  edge  [penwidth=1.2, arrowsize=0.8, color="#222222", fontname="Liberation Sans", fontsize=10];
+
+  app [label="Android Application (Flutter)\nFarmer-Sellers and Buyers", fillcolor="#EEF2F6"];
+  web [label="Web Browser\nSuper Admin and Content Editors", fillcolor="#EEF2F6"];
+
+  subgraph cluster_vps {
+    label="Virtual Private Server (VPS)"; labeljust="l"; style="rounded,dashed"; color="#666666"; fontsize=13;
+    nginx [label="Web Server (Nginx)\nHTTPS termination and WSS proxy", fillcolor="#F7F7F7"];
+
+    reverb [label="Laravel Reverb\n(WebSocket server:\nlive order chat)", fillcolor="#F2F0EA"];
+
+    subgraph cluster_laravel {
+      label="Laravel Application"; style="rounded"; color="#999999"; fontsize=12;
+      api   [label="REST API\n(Sanctum token authentication,\nSpatie role-based access)", fillcolor="#F2F0EA"];
+      panel [label="Filament CMS Panel\n(policy-gated, two roles)", fillcolor="#F2F0EA"];
+    }
+    db     [label="MySQL Database", shape=cylinder, style="filled", fillcolor="#F0F0F0"];
+    queue  [label="Queue Worker\n(queued email)", fillcolor="#F2F0EA"];
+    sched  [label="Scheduler (cron)\nannouncements every 5 min,\nstale-order sweep hourly", fillcolor="#F2F0EA"];
+  }
+
+  mail [label="Email Service\n(Gmail SMTP)", fillcolor="#EEF2F6"];
+
+  app -> nginx [label=" HTTPS / JSON"];
+  app -> nginx [label=" WSS\n (order chat)", style=dashed, dir=both];
+  web -> nginx [label=" HTTPS"];
+
+  nginx -> api; nginx -> panel;
+  nginx -> reverb [style=dashed, dir=both];
+  reverb -> api [dir=back, label="publish\nchat events", style=dashed, constraint=false];
+
+  api -> db; panel -> db;
+  db -> queue [dir=back, label=" reads jobs"];
+  db -> sched [dir=back, label=" reads and\n updates"];
+  queue -> mail [label=" password resets,\n low-stock and\n deletion notices"];
+  api -> mail [label=" OTP codes\n (sent directly)", style=dashed, constraint=false];
+
+  {rank=same; app; web}
+  {rank=same; reverb; api; panel}
+  {rank=same; queue; sched}
+}

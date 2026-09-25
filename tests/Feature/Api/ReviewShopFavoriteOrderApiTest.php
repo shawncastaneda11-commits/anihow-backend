@@ -2,7 +2,10 @@
 
 namespace Tests\Feature\Api;
 
+use App\Actions\Privacy\AnonymizeUserAction;
+use App\Enums\Role;
 use App\Enums\UserStatus;
+use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesMarketplaceActors;
@@ -53,6 +56,51 @@ class ReviewShopFavoriteOrderApiTest extends TestCase
             ->assertJsonPath('data.0.comment', 'Sariwa ang kamatis.');
     }
 
+    public function test_storefront_reviews_expose_is_own_and_hide_buyer_id(): void
+    {
+        $farmer = $this->farmer();
+        $listing = $this->listingFor($farmer, ['price_per_unit' => 30, 'quantity_available' => 40]);
+        $owner = $this->buyer(['name' => 'Maria Buyer']);
+        $other = $this->buyer(['name' => 'Other Buyer']);
+
+        $ownOrder = $this->completeOrder($farmer, $this->placeOrder($owner, $listing, 1), 30);
+        $otherOrder = $this->completeOrder($farmer, $this->placeOrder($other, $listing, 1), 30);
+
+        $this->asUser($owner)->postJson('/api/buyer/reviews', [
+            'order_id' => $ownOrder->id,
+            'rating' => 5,
+            'comment' => 'Sariwa.',
+        ])->assertCreated();
+
+        $this->asUser($other)->postJson('/api/buyer/reviews', [
+            'order_id' => $otherOrder->id,
+            'rating' => 4,
+            'comment' => 'Okay.',
+        ])->assertCreated();
+
+        $asOwner = $this->asUser($owner)
+            ->getJson("/api/buyer/shops/{$farmer->id}/reviews")
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+
+        $rows = collect($asOwner->json('data'));
+        $this->assertTrue($rows->every(fn (array $row): bool => ! array_key_exists('buyer_id', $row)));
+
+        $own = $rows->firstWhere('comment', 'Sariwa.');
+        $theirs = $rows->firstWhere('comment', 'Okay.');
+        $this->assertTrue($own['is_own']);
+        $this->assertFalse($theirs['is_own']);
+
+        $asOther = collect(
+            $this->asUser($other)
+                ->getJson("/api/buyer/shops/{$farmer->id}/reviews")
+                ->assertOk()
+                ->json('data'),
+        );
+        $this->assertFalse($asOther->firstWhere('comment', 'Sariwa.')['is_own']);
+        $this->assertTrue($asOther->firstWhere('comment', 'Okay.')['is_own']);
+    }
+
     public function test_buyer_can_view_shop_profile_and_farmer_can_update_own_shop(): void
     {
         $farmer = $this->farmer([
@@ -81,7 +129,8 @@ class ReviewShopFavoriteOrderApiTest extends TestCase
 
         $this->asUser($farmer)
             ->getJson("/api/buyer/shops/{$farmer->id}")
-            ->assertForbidden();
+            ->assertOk()
+            ->assertJsonPath('data.shop_name', 'Juan Farm Stall');
 
         $suspended = $this->farmer(['email' => 'suspended@example.com', 'status' => UserStatus::Suspended]);
         $this->asUser($buyer)
@@ -123,6 +172,107 @@ class ReviewShopFavoriteOrderApiTest extends TestCase
 
         $this->asUser($buyer)
             ->getJson('/api/buyer/favorites')
+            ->assertJsonCount(0, 'data');
+    }
+
+    public function test_buyer_can_add_list_and_remove_shop_favorites(): void
+    {
+        $farmer = $this->farmer([
+            'shop_name' => 'Aling Nena Produce',
+            'email' => 'nena-shop@example.com',
+            'phone' => '09171112222',
+        ]);
+        $buyer = $this->buyer();
+        $otherBuyer = $this->buyer();
+
+        $this->asUser($buyer)
+            ->getJson("/api/buyer/shops/{$farmer->id}")
+            ->assertOk()
+            ->assertJsonPath('data.is_favorited', false);
+
+        $this->asUser($buyer)
+            ->postJson('/api/buyer/shop-favorites', [
+                'farmer_seller_id' => $farmer->id,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.shop.shop_name', 'Aling Nena Produce');
+
+        $this->asUser($buyer)
+            ->postJson('/api/buyer/shop-favorites', [
+                'farmer_seller_id' => $farmer->id,
+            ])
+            ->assertUnprocessable();
+
+        $this->asUser($buyer)
+            ->postJson('/api/buyer/shop-favorites', [
+                'farmer_seller_id' => $otherBuyer->id,
+            ])
+            ->assertUnprocessable();
+
+        $list = $this->asUser($buyer)
+            ->getJson('/api/buyer/shop-favorites')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+
+        $encoded = json_encode($list->json());
+        $this->assertStringNotContainsString('nena-shop@example.com', (string) $encoded);
+
+        $this->asUser($otherBuyer)
+            ->getJson('/api/buyer/shop-favorites')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+
+        $this->asUser($buyer)
+            ->getJson("/api/buyer/shops/{$farmer->id}")
+            ->assertJsonPath('data.is_favorited', true);
+
+        $this->asUser($buyer)
+            ->deleteJson("/api/buyer/shop-favorites/{$farmer->id}")
+            ->assertOk();
+
+        $this->asUser($buyer)
+            ->getJson('/api/buyer/shop-favorites')
+            ->assertJsonCount(0, 'data');
+    }
+
+    public function test_farmer_and_content_editor_cannot_manage_shop_favorites(): void
+    {
+        $farm = $this->farm();
+        $seller = $this->farmer([], $farm);
+        $target = $this->farmer();
+        $editor = User::factory()->create(['farm_id' => $farm->id]);
+        $editor->syncRoles(Role::ContentEditor);
+
+        $this->asUser($seller)
+            ->postJson('/api/buyer/shop-favorites', ['farmer_seller_id' => $target->id])
+            ->assertForbidden();
+
+        $this->asUser($editor)
+            ->getJson('/api/buyer/shop-favorites')
+            ->assertForbidden();
+    }
+
+    public function test_shop_favorites_omit_anonymised_sellers(): void
+    {
+        $seller = $this->farmer(['shop_name' => 'Aling Nena Produce']);
+        $buyer = $this->buyer();
+
+        $this->asUser($buyer)
+            ->postJson('/api/buyer/shop-favorites', [
+                'farmer_seller_id' => $seller->id,
+            ])
+            ->assertCreated();
+
+        $this->asUser($buyer)
+            ->getJson('/api/buyer/shop-favorites')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+
+        app(AnonymizeUserAction::class)->handle($seller);
+
+        $this->asUser($buyer)
+            ->getJson('/api/buyer/shop-favorites')
+            ->assertOk()
             ->assertJsonCount(0, 'data');
     }
 }

@@ -1,0 +1,59 @@
+// Data flow diagram, level 2, process 2.0 Manage Catalog and Pricing.
+digraph G {
+  graph [rankdir=LR, nodesep=0.25, ranksep=0.9, pad=0.25, fontname="Liberation Sans", newrank=true];
+  node  [fontname="Liberation Sans", fontsize=11];
+  edge  [penwidth=0.9, arrowsize=0.6, color="#333333", fontname="Liberation Sans", fontsize=8.5];
+  q2a [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#F4F4F4"><TR><TD><FONT POINT-SIZE="10.5">2.1</FONT></TD></TR><HR/><TR><TD CELLPADDING="5"><FONT POINT-SIZE="10.5">Maintain<BR/>Crop<BR/>Taxonomy</FONT></TD></TR></TABLE>>];
+  sa_q2a [shape=box, style=filled, fillcolor="#E1E6ED", penwidth=1.2, width=1.35, height=0.46, label="Super Admin", comment="gsdup"];
+  D3_q2a [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D3</B></TD><TD SIDES="TB" ALIGN="LEFT">Crop Types</TD></TR></TABLE>>];
+  q2b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#F4F4F4"><TR><TD><FONT POINT-SIZE="10.5">2.2</FONT></TD></TR><HR/><TR><TD CELLPADDING="5"><FONT POINT-SIZE="10.5">Set Farm<BR/>Price<BR/>Guards</FONT></TD></TR></TABLE>>];
+  sa_q2b [shape=box, style=filled, fillcolor="#E1E6ED", penwidth=1.2, width=1.35, height=0.46, label="Super Admin", comment="gsdup"];
+  D3_q2b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D3</B></TD><TD SIDES="TB" ALIGN="LEFT">Crop Types</TD></TR></TABLE>>];
+  ce_q2b [shape=box, style=filled, fillcolor="#E1E6ED", penwidth=1.2, width=1.35, height=0.46, label="Content Editor"];
+  D2_q2b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D2</B></TD><TD SIDES="TB" ALIGN="LEFT">Farms</TD></TR></TABLE>>];
+  D4_q2b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D4</B></TD><TD SIDES="TB" ALIGN="LEFT">Listings</TD></TR></TABLE>>];
+  D8_q2b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D8</B></TD><TD SIDES="TB" ALIGN="LEFT">Notifications</TD></TR></TABLE>>];
+  q2c [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#F4F4F4"><TR><TD><FONT POINT-SIZE="10.5">2.3</FONT></TD></TR><HR/><TR><TD CELLPADDING="5"><FONT POINT-SIZE="10.5">Manage<BR/>Listings</FONT></TD></TR></TABLE>>];
+  D3_q2c [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D3</B></TD><TD SIDES="TB" ALIGN="LEFT">Crop Types</TD></TR></TABLE>>];
+  D2_q2c [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D2</B></TD><TD SIDES="TB" ALIGN="LEFT">Farms</TD></TR></TABLE>>];
+  D4_q2c [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D4</B></TD><TD SIDES="TB" ALIGN="LEFT">Listings</TD></TR></TABLE>>];
+  fs_q2c [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Farmer-Seller", comment="gsdup"];
+  q2d [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#F4F4F4"><TR><TD><FONT POINT-SIZE="10.5">2.4</FONT></TD></TR><HR/><TR><TD CELLPADDING="5"><FONT POINT-SIZE="10.5">Manage<BR/>Tawad<BR/>Rules</FONT></TD></TR></TABLE>>];
+  D3_q2d [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D3</B></TD><TD SIDES="TB" ALIGN="LEFT">Crop Types</TD></TR></TABLE>>];
+  D2_q2d [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D2</B></TD><TD SIDES="TB" ALIGN="LEFT">Farms</TD></TR></TABLE>>];
+  D4_q2d [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D4</B></TD><TD SIDES="TB" ALIGN="LEFT">Listings</TD></TR></TABLE>>];
+  fs_q2d [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Farmer-Seller", comment="gsdup"];
+  q2e [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#F4F4F4"><TR><TD><FONT POINT-SIZE="10.5">2.5</FONT></TD></TR><HR/><TR><TD CELLPADDING="5"><FONT POINT-SIZE="10.5">Moderate<BR/>Listings</FONT></TD></TR></TABLE>>];
+  sa_q2e [shape=box, style=filled, fillcolor="#E1E6ED", penwidth=1.2, width=1.35, height=0.46, label="Super Admin", comment="gsdup"];
+  D4_q2e [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D4</B></TD><TD SIDES="TB" ALIGN="LEFT">Listings</TD></TR></TABLE>>];
+  D8_q2e [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D8</B></TD><TD SIDES="TB" ALIGN="LEFT">Notifications</TD></TR></TABLE>>];
+  sa_q2a -> q2a [label="crop types, system floor\nand maximum discount"];
+  q2a -> D3_q2a [label="crop types, guards"];
+  q2a -> q2b [label="system guards", constraint=false];
+  ce_q2b -> q2b [label="own farm floor\nand ceiling"];
+  sa_q2b -> q2b [label="any farm floor\nand ceiling"];
+  q2b -> D3_q2b [label="system guards", dir=back];
+  q2b -> D2_q2b [label="tighten-only overrides"];
+  q2b -> D4_q2b [label="affected listings", dir=back];
+  q2b -> D8_q2b [label="stranded listing\nand tawad notices"];
+  fs_q2c -> q2c [label="listing details, photos,\npause or resume"];
+  q2c -> D3_q2c [label="system floor", dir=back];
+  q2c -> D2_q2c [label="farm floor", dir=back];
+  q2c -> D4_q2c [label="listings, photos,\nthumbnails"];
+  fs_q2c -> q2c [label="effective floor,\nrejections", dir=back];
+  fs_q2d -> q2d [label="flat or quantity\ntawad rules"];
+  q2d -> D3_q2d [label="maximum discount", dir=back];
+  q2d -> D2_q2d [label="farm ceiling", dir=back];
+  q2d -> D4_q2d [label="tawad rules"];
+  fs_q2d -> q2d [label="rejections", dir=back];
+  sa_q2e -> q2e [label="takedown, restore"];
+  q2e -> D4_q2e [label="listing status"];
+  q2e -> D8_q2e [label="takedown and\nrestore notices"];
+  {rank=same; sa_q2a; ce_q2b; sa_q2b; fs_q2c; fs_q2d; sa_q2e}
+  {rank=same; D3_q2a; D3_q2b; D2_q2b; D4_q2b; D8_q2b; D3_q2c; D2_q2c; D4_q2c; D3_q2d; D2_q2d; D4_q2d; D4_q2e; D8_q2e}
+  {rank=same; q2a; q2b; q2c; q2d; q2e}
+  q2a -> q2b [style=invis, weight=10];
+  q2b -> q2c [style=invis, weight=10];
+  q2c -> q2d [style=invis, weight=10];
+  q2d -> q2e [style=invis, weight=10];
+}

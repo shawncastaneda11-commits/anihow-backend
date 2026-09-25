@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Actions\Auth\SendEmailVerificationCodeAction;
+use App\Enums\OrderStatus;
 use App\Enums\Role;
 use App\Enums\UserStatus;
 use App\Notifications\ResetPasswordNotification;
@@ -175,9 +176,38 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         return $this->hasMany(Favorite::class, 'buyer_id');
     }
 
+    public function shopFavorites(): HasMany
+    {
+        return $this->hasMany(ShopFavorite::class, 'buyer_id');
+    }
+
     public function reportsFiled(): HasMany
     {
         return $this->hasMany(Report::class, 'reporter_id');
+    }
+
+    public function accountDeletionRequests(): HasMany
+    {
+        return $this->hasMany(AccountDeletionRequest::class);
+    }
+
+    /**
+     * Placed, Confirmed, or Ready — as buyer or as seller. These block a
+     * deletion request because the other party still needs the account.
+     */
+    public function hasOpenMarketplaceOrders(): bool
+    {
+        return Order::query()
+            ->whereIn('status', [
+                OrderStatus::Placed,
+                OrderStatus::Confirmed,
+                OrderStatus::Ready,
+            ])
+            ->where(function ($query): void {
+                $query->where('buyer_id', $this->id)
+                    ->orWhere('farmer_seller_id', $this->id);
+            })
+            ->exists();
     }
 
     public function shopContact(): ?string

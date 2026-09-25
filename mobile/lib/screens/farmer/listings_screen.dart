@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/listing_active_badge.dart';
 import '../../widgets/produce_card.dart';
+import 'farm_announcements_screen.dart';
 import 'listing_form_screen.dart';
 
 class FarmerListingsScreen extends StatefulWidget {
@@ -18,6 +20,7 @@ class FarmerListingsScreen extends StatefulWidget {
 
 class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
   List<ListingItem> _items = const [];
+  List<FarmAnnouncement> _announcements = const [];
   bool _loading = true;
   Object? _error;
   final Set<int> _toggling = {};
@@ -34,12 +37,20 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
       _error = null;
     });
     try {
-      final items = await context.read<AuthController>().api.farmerListings();
+      final api = context.read<AuthController>().api;
+      final items = await api.farmerListings();
+      var announcements = const <FarmAnnouncement>[];
+      try {
+        announcements = await api.farmerAnnouncements();
+      } on ApiException {
+        announcements = _announcements;
+      }
       if (!mounted) {
         return;
       }
       setState(() {
         _items = items;
+        _announcements = announcements;
         _loading = false;
         _error = null;
       });
@@ -110,6 +121,9 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final userId = context.watch<AuthController>().user?.id;
+
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -119,6 +133,22 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
         ),
         body: Column(
           children: [
+            if (userId != null && _announcements.isNotEmpty)
+              FarmerAnnouncementHomeBanner(
+                userId: userId,
+                announcements: _announcements,
+              ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: TextButton.icon(
+                  onPressed: () => openFarmAnnouncements(context),
+                  icon: const Icon(Icons.campaign_outlined),
+                  label: Text(s.viewAnnouncements),
+                ),
+              ),
+            ),
             const TabBar(
               tabs: [
                 Tab(height: AniHowSpace.tabHeight, text: 'All'),
@@ -202,8 +232,8 @@ class _List extends StatelessWidget {
             showStock: true,
             onTap: () => onOpen(listing),
             trailing: ListingActiveBadge(
-              isActive: listing.isActive,
-              onTap: () => onToggle(listing, !listing.isActive),
+              isActive: listing.isSellerActive,
+              onTap: listing.isTakenDown ? null : () => onToggle(listing, !listing.isActive),
             ),
           );
         },

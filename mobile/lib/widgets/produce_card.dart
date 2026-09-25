@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 
+import 'package:provider/provider.dart';
+
+import '../l10n/app_strings.dart';
 import '../models/models.dart';
+import '../state/preferences_controller.dart';
 import '../theme/anihow_space.dart';
 import '../theme/anihow_theme.dart';
-import 'category_color.dart';
+import 'produce_photo.dart';
 import 'status_pill.dart';
+
+enum ProduceCardStyle { row, poster }
 
 class ProduceCard extends StatelessWidget {
   const ProduceCard({
@@ -16,6 +22,7 @@ class ProduceCard extends StatelessWidget {
     this.showSeller = true,
     this.showStock = false,
     this.placeholderColor,
+    this.style = ProduceCardStyle.row,
   });
 
   final ListingItem listing;
@@ -25,19 +32,108 @@ class ProduceCard extends StatelessWidget {
   final bool showSeller;
   final bool showStock;
   final Color? placeholderColor;
+  final ProduceCardStyle style;
 
   @override
   Widget build(BuildContext context) {
-    final accent = placeholderColor ??
-        (showStock
-            ? AniHowColors.stockPlaceholder(
-                isLowStock: listing.isLowStock,
-                isInStock: listing.isInStock,
-              )
-            : CategoryColor.of(listing.category, listingName: listing.name));
+    return style == ProduceCardStyle.poster ? _poster(context) : _row(context);
+  }
+
+  Widget _poster(BuildContext context) {
     final theme = Theme.of(context);
-    final sellerLabel = listing.sellerName ?? listing.category?.displayLabel ?? 'Farm stall';
-    final cropLabel = listing.category?.bilingualLabel;
+    final language = context.watch<PreferencesController>().language;
+    final sellerLabel = listing.sellerName ?? listing.category?.labelFor(language) ?? AppStrings.maybeOf(context).farmStall;
+    final cropLabel = listing.category?.labelFor(language);
+    final muted = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+    );
+
+    final photo = AspectRatio(
+      aspectRatio: 4 / 3,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ProducePhoto(listing: listing, iconSize: 40),
+          if (trailing != null)
+            Positioned(
+              top: 4,
+              right: 4,
+              child: Material(
+                color: Colors.black.withValues(alpha: 0.35),
+                shape: const CircleBorder(),
+                child: trailing,
+              ),
+            ),
+        ],
+      ),
+    );
+
+    final details = Padding(
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            listing.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.titleMedium,
+          ),
+          Text(
+            [
+              if (cropLabel != null && cropLabel.isNotEmpty) cropLabel,
+              if (showSeller) sellerLabel,
+            ].join(' · '),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: muted,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${AniHowMoney.peso(listing.pricePerUnit)} / ${listing.unit ?? ''}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: AniHowColors.brand,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxHeight.isFinite) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  photo,
+                  Expanded(child: details),
+                ],
+              );
+            }
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [photo, details],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _row(BuildContext context) {
+    final theme = Theme.of(context);
+    final language = context.watch<PreferencesController>().language;
+    final sellerLabel = listing.sellerName ?? listing.category?.labelFor(language) ?? AppStrings.maybeOf(context).farmStall;
+    final cropLabel = listing.category?.labelFor(language);
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -50,7 +146,15 @@ class ProduceCard extends StatelessWidget {
                 padding: AniHowSpace.cardPadding,
                 child: Row(
                   children: [
-                    _Thumbnail(listing: listing, accent: accent),
+                    SizedBox(
+                      width: 88,
+                      height: 88,
+                      child: ProducePhoto(
+                        listing: listing,
+                        borderRadius: BorderRadius.circular(AniHowSpace.radius),
+                        iconSize: 32,
+                      ),
+                    ),
                     const SizedBox(width: AniHowSpace.cardGap),
                     Expanded(
                       child: Column(
@@ -93,9 +197,15 @@ class ProduceCard extends StatelessWidget {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          if (listing.tawad != null) ...[
+                          if (listing.tawad != null && listing.tawad!.isActive) ...[
                             const SizedBox(height: AniHowSpace.labelGap),
-                            Text(listing.tawad!.summary, style: theme.textTheme.bodyMedium),
+                            Text(
+                              listing.tawad!.displaySummary(
+                                offThisOrder: AppStrings.of(context).tawadOffThisOrder,
+                                offAtMin: AppStrings.of(context).tawadOffAtMin,
+                              ),
+                              style: theme.textTheme.bodyMedium,
+                            ),
                           ],
                           if (listing.hasRating) ...[
                             const SizedBox(height: AniHowSpace.labelGap),
@@ -103,7 +213,7 @@ class ProduceCard extends StatelessWidget {
                           ],
                           if (showStock) ...[
                             const SizedBox(height: AniHowSpace.labelGap),
-                            StatusPill.forListing(listing),
+                            StatusPill.forListing(listing, strings: AppStrings.of(context)),
                           ],
                         ],
                       ),
@@ -150,63 +260,13 @@ class RatingLabel extends StatelessWidget {
         if (reviews != null) ...[
           const SizedBox(width: 4),
           Text(
-            reviews == 1 ? '(1 review)' : '($reviews reviews)',
+            AppStrings.maybeOf(context).reviewsCount(reviews),
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ],
       ],
-    );
-  }
-}
-
-class _Thumbnail extends StatelessWidget {
-  const _Thumbnail({required this.listing, required this.accent});
-
-  final ListingItem listing;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    final letter = listing.name.isNotEmpty ? listing.name[0].toUpperCase() : '?';
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AniHowSpace.radius),
-      child: SizedBox(
-        width: AniHowSpace.thumb,
-        height: AniHowSpace.thumb,
-        child: listing.imageUrl != null && listing.imageUrl!.isNotEmpty
-            ? Image.network(
-                listing.imageUrl!,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _Fallback(letter: letter, accent: accent),
-              )
-            : _Fallback(letter: letter, accent: accent),
-      ),
-    );
-  }
-}
-
-class _Fallback extends StatelessWidget {
-  const _Fallback({required this.letter, required this.accent});
-
-  final String letter;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return ColoredBox(
-      color: accent,
-      child: Center(
-        child: Text(
-          letter,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onPrimary,
-            fontSize: AniHowSpace.name,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
     );
   }
 }

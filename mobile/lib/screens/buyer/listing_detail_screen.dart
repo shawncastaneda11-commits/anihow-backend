@@ -1,25 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
 import '../../state/cart_controller.dart';
+import '../../state/preferences_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/cart_icon_button.dart';
-import '../../widgets/category_color.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/produce_card.dart';
+import '../../widgets/produce_photo.dart';
+import '../../widgets/report_sheet.dart';
 import '../../widgets/status_pill.dart';
 import 'cart_screen.dart';
 import 'shop_profile_screen.dart';
 
 class ListingDetailScreen extends StatefulWidget {
-  const ListingDetailScreen({super.key, required this.listingId});
+  const ListingDetailScreen({super.key, required this.listingId, this.preview});
 
   final int listingId;
+  final ListingItem? preview;
 
   @override
   State<ListingDetailScreen> createState() => _ListingDetailScreenState();
@@ -33,7 +37,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _future = context.read<AuthController>().api.marketplaceShow(widget.listingId);
+    final preview = widget.preview;
+    _future = preview != null
+        ? Future.value(preview)
+        : context.read<AuthController>().api.marketplaceShow(widget.listingId);
   }
 
   @override
@@ -46,7 +53,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     final quantity = _quantity.text.trim();
     if (quantity.isEmpty || (double.tryParse(quantity) ?? 0) <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a quantity.')),
+        SnackBar(content: Text(AppStrings.read(context).enterQuantity)),
       );
       return;
     }
@@ -64,9 +71,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Added to cart.'),
+          content: Text(AppStrings.read(context).addedToCart),
           action: SnackBarAction(
-            label: 'View cart',
+            label: AppStrings.read(context).viewCart,
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const CartScreen()),
@@ -91,7 +98,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       await context.read<AuthController>().api.addFavorite(widget.listingId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Saved to favorites.')),
+          SnackBar(content: Text(AppStrings.read(context).t('Saved to favorites.', 'Nasave sa mga paborito.'))),
         );
       }
     } on ApiException catch (error) {
@@ -103,10 +110,37 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Listing'),
-        actions: const [CartIconButton()],
+        title: Text(s.t('Listing', 'Listing')),
+        actions: [
+          FutureBuilder<ListingItem>(
+            future: _future,
+            builder: (context, snapshot) {
+              final listing = snapshot.data;
+              final userId = context.watch<AuthController>().user?.id;
+              final ownListing = listing != null && listing.sellerId != null && listing.sellerId == userId;
+              if (listing == null || ownListing) {
+                return const SizedBox.shrink();
+              }
+              return TextButton(
+                key: const ValueKey('listing-report'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  minimumSize: const Size(48, 48),
+                ),
+                onPressed: () => showReportSheet(
+                  context,
+                  targetType: 'listing',
+                  targetId: listing.id,
+                ),
+                child: Text(s.report),
+              );
+            },
+          ),
+          const CartIconButton(),
+        ],
       ),
       body: FutureBuilder<ListingItem>(
         future: _future,
@@ -118,56 +152,29 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             return Center(child: Text('${snapshot.error}'));
           }
           final listing = snapshot.data!;
-          final accent = CategoryColor.of(listing.category, listingName: listing.name);
           return ListView(
             padding: AniHowSpace.screenPadding,
             children: [
               AspectRatio(
-                aspectRatio: 16 / 9,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: accent,
-                    borderRadius: BorderRadius.circular(AniHowSpace.radius),
-                  ),
-                  child: listing.imageUrl != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(AniHowSpace.radius),
-                          child: Image.network(
-                            listing.imageUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Center(
-                              child: Text(
-                                listing.name,
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                      color: Theme.of(context).colorScheme.onPrimary,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                              ),
-                            ),
-                          ),
-                        )
-                      : Center(
-                          child: Text(
-                            listing.name,
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  color: Theme.of(context).colorScheme.onPrimary,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                          ),
-                        ),
+                aspectRatio: 4 / 3,
+                child: ProducePhoto(
+                  listing: listing,
+                  borderRadius: BorderRadius.circular(AniHowTheme.cardRadius),
+                  iconSize: 64,
+                  preferThumbnail: false,
                 ),
               ),
               const SizedBox(height: AniHowSpace.section),
               Row(
                 children: [
                   Expanded(child: Text(listing.name, style: Theme.of(context).textTheme.titleMedium)),
-                  if (listing.isLowStock) StatusPill.lowStock() else StatusPill.inStock(),
+                  if (listing.isLowStock) StatusPill.lowStock(strings: s) else StatusPill.inStock(strings: s),
                 ],
               ),
               if (listing.category != null) ...[
                 const SizedBox(height: 2),
                 Text(
-                  listing.category!.bilingualLabel,
+                  listing.category!.labelFor(context.watch<PreferencesController>().language),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
@@ -188,7 +195,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              listing.sellerName ?? 'Farm stall',
+                              listing.sellerName ?? s.t('Farm stall', 'Tindahan'),
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     fontWeight: FontWeight.w700,
                                     color: listing.sellerId == null
@@ -218,27 +225,64 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 ),
               ),
               const SizedBox(height: AniHowSpace.cardGap),
-              Text(
-                '${AniHowMoney.peso(listing.pricePerUnit)} / ${listing.unitLabel ?? listing.unit ?? ''}',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AniHowColors.deepGreen),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF1A2A22)
+                      : const Color(0xFFEDF6F0),
+                  borderRadius: BorderRadius.circular(AniHowSpace.radius),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${AniHowMoney.peso(listing.pricePerUnit)} / ${listing.unitLabel ?? listing.unit ?? ''}',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: AniHowColors.brand,
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                      ),
+                      Text(
+                        '${listing.quantityAvailable} ${s.t('available', 'available')}',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              Text('${listing.quantityAvailable} available', style: Theme.of(context).textTheme.bodyMedium),
+              if (listing.tawad != null && listing.tawad!.isActive) ...[
+                const SizedBox(height: AniHowSpace.labelGap),
+                Text(
+                  key: const ValueKey('listing-tawad-summary'),
+                  listing.tawad!.displaySummary(
+                    offThisOrder: s.tawadOffThisOrder,
+                    offAtMin: s.tawadOffAtMin,
+                  ),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AniHowColors.brand,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
               if (listing.description != null && listing.description!.isNotEmpty) ...[
                 const SizedBox(height: AniHowSpace.cardGap),
                 Text(listing.description!),
               ],
               const SizedBox(height: AniHowSpace.section),
               AniHowField(
-                label: 'Quantity',
+                label: s.quantity,
                 child: TextField(
                   controller: _quantity,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 ),
               ),
               const SizedBox(height: AniHowSpace.fieldGap),
-              PrimaryButton(label: 'Add to cart', onPressed: _addToCart, busy: _adding),
+              PrimaryButton(label: s.addToCart, onPressed: _addToCart, busy: _adding),
               const SizedBox(height: AniHowSpace.cardGap),
-              OutlinedButton(onPressed: _favorite, child: const Text('Add to favorites')),
+              OutlinedButton(onPressed: _favorite, child: Text(s.t('Add to favorites', 'Idagdag sa paborito'))),
             ],
           );
         },

@@ -55,7 +55,9 @@ class CartController extends ChangeNotifier {
     notifyListeners();
     try {
       final items = await _auth.api.cartItems();
-      snapshot = CartSnapshot(items: items);
+      snapshot = CartSnapshot(
+        items: items.where((item) => item.isPurchasable).toList(),
+      );
       error = null;
     } on ApiException catch (caught) {
       error = caught;

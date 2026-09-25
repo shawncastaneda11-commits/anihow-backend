@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -42,6 +45,7 @@ class ApiClient {
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
+          options.headers['Accept-Language'] = acceptLanguage;
           if (options.data is FormData) {
             options.headers.remove('Content-Type');
           }
@@ -62,6 +66,7 @@ class ApiClient {
 
   final Dio _dio;
   final void Function() onUnauthorized;
+  String acceptLanguage = 'en';
 
   Future<void> saveToken(String token) =>
       _storage.write(key: _tokenKey, value: token);
@@ -87,7 +92,7 @@ class ApiClient {
     );
   }
 
-  Future<({UserAccount user, String token})> registerBuyer({
+  Future<({UserAccount user, String token, String? verificationCode})> registerBuyer({
     required String name,
     required String email,
     required String password,
@@ -107,6 +112,7 @@ class ApiClient {
     return (
       user: UserAccount.fromJson(_asMap(response['data'])),
       token: token,
+      verificationCode: response['verification_code'] as String?,
     );
   }
 
@@ -114,6 +120,47 @@ class ApiClient {
     final response = await _get('/auth/user');
     return UserAccount.fromJson(_asMap(response['data'] ?? response));
   }
+
+  Future<UserAccount> updateProfile({
+    required String name,
+    String? phone,
+    String? location,
+  }) async {
+    final response = await _patchJson('/auth/user', {
+      'name': name,
+      'phone': phone,
+      'location': location,
+    });
+    return UserAccount.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<Map<String, dynamic>> exportOwnData() => _get('/auth/user/export');
+
+  Future<String> saveOwnDataExport() async {
+    final data = await exportOwnData();
+    final date = DateTime.now().toIso8601String().split('T').first;
+    final file = File('${Directory.systemTemp.path}/anihow-my-data-$date.json');
+    await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data));
+    return file.path;
+  }
+
+  Future<AccountDeletionRequest?> deletionRequest() async {
+    final response = await _get('/auth/user/deletion-request');
+    final data = response['data'];
+    if (data is Map) {
+      return AccountDeletionRequest.fromJson(Map<String, dynamic>.from(data));
+    }
+    return null;
+  }
+
+  Future<AccountDeletionRequest> requestAccountDeletion({String? reason}) async {
+    final response = await _post('/auth/user/deletion-request', {
+      if (reason != null && reason.isNotEmpty) 'reason': reason,
+    });
+    return AccountDeletionRequest.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<void> cancelAccountDeletion() => _delete('/auth/user/deletion-request');
 
   Future<void> logout() async {
     try {
@@ -142,6 +189,20 @@ class ApiClient {
     return ListingItem.fromJson(_asMap(response['data'] ?? response));
   }
 
+  Future<void> submitReport({
+    required String targetType,
+    required int targetId,
+    required String reason,
+    String? details,
+  }) {
+    return _post('/reports', {
+      'target_type': targetType,
+      'target_id': targetId,
+      'reason': reason,
+      if (details != null && details.isNotEmpty) 'details': details,
+    });
+  }
+
   Future<void> submitReview({
     required int orderId,
     required int rating,
@@ -163,6 +224,16 @@ class ApiClient {
 
   Future<void> removeFavorite(int listingId) =>
       _delete('/buyer/favorites/$listingId');
+
+  Future<List<ShopFavoriteRecord>> shopFavorites() {
+    return _list('/buyer/shop-favorites', parse: ShopFavoriteRecord.fromJson);
+  }
+
+  Future<void> addShopFavorite(int sellerId) =>
+      _post('/buyer/shop-favorites', {'farmer_seller_id': sellerId});
+
+  Future<void> removeShopFavorite(int sellerId) =>
+      _delete('/buyer/shop-favorites/$sellerId');
 
   Future<ListingItem> farmerListing(int id) async {
     final response = await _get('/farmer/listings/$id');
@@ -261,6 +332,50 @@ class ApiClient {
   Future<List<OrderRecord>> buyerOrders() async {
     final pages = await _listPages('/buyer/orders', parse: OrderRecord.fromJson);
     return pages.items;
+  }
+
+  Future<OrderRecord> buyerOrder(int id) async {
+    final response = await _get('/buyer/orders/$id');
+    return OrderRecord.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<List<OrderMessage>> orderMessages(int orderId, {int? afterId}) {
+    return _list(
+      '/orders/$orderId/messages',
+      query: {
+        'after_id': ?afterId,
+      },
+      parse: OrderMessage.fromJson,
+    );
+  }
+
+  Future<OrderMessage> sendOrderMessage(int orderId, {required String body}) async {
+    final response = await _post('/orders/$orderId/messages', {'body': body});
+    return OrderMessage.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<List<FaqSuggestion>> faqSuggestions() async {
+    final response = await _get('/faq');
+    final data = _asMap(response['data'] ?? response);
+    return ((data['suggestions'] as List?) ?? const [])
+        .whereType<Map>()
+        .map((item) => FaqSuggestion.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+  }
+
+  Future<FaqAnswer> askFaq(String question) async {
+    final response = await _post('/faq/ask', {'question': question});
+    return FaqAnswer.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<Map<String, dynamic>> authorizeBroadcast({
+    required String socketId,
+    required String channelName,
+  }) {
+    return _postAbsolute(ApiConfig.broadcastingAuthUrl, {
+      'socket_id': socketId,
+      'channel_name': channelName,
+    });
   }
 
   Future<List<CartLine>> cartItems() {
@@ -363,8 +478,16 @@ class ApiClient {
     return ShopProfile.fromJson(_asMap(response['data'] ?? response));
   }
 
-  Future<PagedShopReviews> shopReviews(int sellerId, {int page = 1}) async {
-    final response = await _get('/buyer/shops/$sellerId/reviews', query: {'page': page});
+  Future<PagedShopReviews> shopReviews(int sellerId, {int page = 1}) {
+    return _pagedShopReviews('/buyer/shops/$sellerId/reviews', page: page);
+  }
+
+  Future<PagedShopReviews> farmerShopReviews({int page = 1}) {
+    return _pagedShopReviews('/farmer/shop/reviews', page: page);
+  }
+
+  Future<PagedShopReviews> _pagedShopReviews(String path, {int page = 1}) async {
+    final response = await _get(path, query: {'page': page});
     final meta = _asMap(response['meta']);
     return PagedShopReviews(
       reviews: ((response['data'] as List?) ?? const [])
@@ -381,6 +504,20 @@ class ApiClient {
   Future<ShopProfile> farmerShop() async {
     final response = await _get('/farmer/shop');
     return ShopProfile.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<FarmProfile> farm(int farmId) async {
+    final response = await _get('/farms/$farmId');
+    return FarmProfile.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<List<FarmAnnouncement>> farmerAnnouncements() {
+    return _list('/farmer/announcements', parse: FarmAnnouncement.fromJson);
+  }
+
+  Future<FarmerAnalytics> farmerAnalytics({String period = 'week'}) async {
+    final response = await _get('/farmer/analytics', query: {'period': period});
+    return FarmerAnalytics.fromJson(_asMap(response['data'] ?? response));
   }
 
   Future<ShopProfile> updateFarmerShop(Map<String, dynamic> body) async {
@@ -413,9 +550,23 @@ class ApiClient {
 
   Future<void> markAllNotificationsRead() => _post('/notifications/read-all', {});
 
-  Future<void> resendVerification() => _post('/auth/email/verification-notification', {});
+  Future<String?> resendVerification() async {
+    final response = await _post('/auth/email/verification-notification', {});
+    return response['verification_code'] as String?;
+  }
 
   Future<void> verifyEmail(String code) => _post('/auth/email/verify', {'code': code});
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String password,
+    required String passwordConfirmation,
+  }) =>
+      _post('/auth/password', {
+        'current_password': currentPassword,
+        'password': password,
+        'password_confirmation': passwordConfirmation,
+      });
 
   Future<Map<String, dynamic>> _sendListing(
     String path,
@@ -456,6 +607,18 @@ class ApiClient {
   ) async {
     try {
       final response = await _dio.post(path, data: body);
+      return _asMap(response.data);
+    } on DioException catch (error) {
+      throw ApiException(_messageFrom(error));
+    }
+  }
+
+  Future<Map<String, dynamic>> _postAbsolute(
+    String url,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final response = await _dio.postUri(Uri.parse(url), data: body);
       return _asMap(response.data);
     } on DioException catch (error) {
       throw ApiException(_messageFrom(error));

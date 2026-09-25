@@ -8,6 +8,8 @@ use App\Http\Requests\Api\Cart\UpdateCartItemRequest;
 use App\Http\Resources\Api\CartItemResource;
 use App\Models\CartItem;
 use App\Models\Listing;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -24,6 +26,8 @@ class CartController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', CartItem::class);
+
+        $this->pruneUnavailableCartItems($request->user());
 
         $items = $request->user()
             ->cartItems()
@@ -65,9 +69,18 @@ class CartController extends Controller
 
     public function update(UpdateCartItemRequest $request, CartItem $cartItem): CartItemResource
     {
+        $listing = $cartItem->listing;
+        if ($listing === null || ! Listing::query()->marketplaceVisible()->whereKey($listing->id)->exists()) {
+            $cartItem->delete();
+
+            throw ValidationException::withMessages([
+                'quantity' => 'This listing is no longer available.',
+            ]);
+        }
+
         $quantity = (float) $request->validated('quantity');
 
-        $this->assertStock($cartItem->listing, $quantity);
+        $this->assertStock($listing, $quantity);
 
         $cartItem->update(['quantity' => $quantity]);
         $cartItem->load(self::CART_RELATIONS);
@@ -100,5 +113,15 @@ class CartController extends Controller
         throw ValidationException::withMessages([
             'quantity' => "Only {$available} available.",
         ]);
+    }
+
+    private function pruneUnavailableCartItems(User $buyer): void
+    {
+        $buyer->cartItems()
+            ->whereDoesntHave(
+                'listing',
+                fn (Builder $listing): Builder => $listing->marketplaceVisible(),
+            )
+            ->delete();
     }
 }

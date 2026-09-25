@@ -2,6 +2,9 @@
 
 use App\Enums\Role;
 use App\Http\Controllers\Api\Admin\CreateFarmerSellerController;
+use App\Http\Controllers\Api\Auth\AccountDeletionRequestController;
+use App\Http\Controllers\Api\Auth\ChangePasswordController;
+use App\Http\Controllers\Api\Auth\ExportOwnDataController;
 use App\Http\Controllers\Api\Auth\ForgotPasswordController;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\LogoutController;
@@ -9,10 +12,17 @@ use App\Http\Controllers\Api\Auth\MeController;
 use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\Auth\ResendVerificationController;
 use App\Http\Controllers\Api\Auth\ResetPasswordController;
+use App\Http\Controllers\Api\Auth\UpdateProfileController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\Cart\CartController;
+use App\Http\Controllers\Api\Chat\OrderMessageController;
 use App\Http\Controllers\Api\CropCare\CropCareArticleController;
+use App\Http\Controllers\Api\Faq\FaqController;
+use App\Http\Controllers\Api\Farmer\FarmerAnalyticsController;
+use App\Http\Controllers\Api\Farmer\FarmerAnnouncementController;
+use App\Http\Controllers\Api\Farms\FarmController;
 use App\Http\Controllers\Api\Favorites\FavoriteController;
+use App\Http\Controllers\Api\Favorites\ShopFavoriteController;
 use App\Http\Controllers\Api\Listings\ListingController;
 use App\Http\Controllers\Api\Listings\TawadRuleController;
 use App\Http\Controllers\Api\Listings\ToggleListingActiveController;
@@ -24,6 +34,7 @@ use App\Http\Controllers\Api\Orders\CheckoutController;
 use App\Http\Controllers\Api\Orders\FarmerOrderController;
 use App\Http\Controllers\Api\Orders\OrderHistoryController;
 use App\Http\Controllers\Api\Orders\WalkInSaleController;
+use App\Http\Controllers\Api\Reports\SubmitReportController;
 use App\Http\Controllers\Api\Reviews\ReviewController;
 use App\Http\Controllers\Api\Shop\BuyerShopController;
 use App\Http\Controllers\Api\Shop\FarmerShopController;
@@ -41,6 +52,17 @@ Route::prefix('auth')->group(function (): void {
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('logout', LogoutController::class)->name('auth.logout');
         Route::get('user', MeController::class)->name('auth.user');
+        Route::patch('user', UpdateProfileController::class)->name('auth.user.update');
+        Route::get('user/export', ExportOwnDataController::class)
+            ->middleware('throttle:data-export')
+            ->name('auth.user.export');
+        Route::get('user/deletion-request', [AccountDeletionRequestController::class, 'show'])
+            ->name('auth.user.deletion-request.show');
+        Route::post('user/deletion-request', [AccountDeletionRequestController::class, 'store'])
+            ->name('auth.user.deletion-request.store');
+        Route::delete('user/deletion-request', [AccountDeletionRequestController::class, 'destroy'])
+            ->name('auth.user.deletion-request.destroy');
+        Route::post('password', ChangePasswordController::class)->name('auth.password');
         Route::middleware('throttle:auth')->group(function (): void {
             Route::post('email/verification-notification', ResendVerificationController::class)
                 ->name('verification.send');
@@ -69,6 +91,29 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->name('notifications.read-all');
     Route::patch('notifications/{inAppNotification}/read', [NotificationController::class, 'read'])
         ->name('notifications.read');
+
+    // Order chat is gated by OrderPolicy, not by role prefix. Buyer and
+    // farmer-seller both hit the same routes for the same thread.
+    Route::get('orders/{order}/messages', [OrderMessageController::class, 'index'])
+        ->name('orders.messages.index');
+    Route::post('orders/{order}/messages', [OrderMessageController::class, 'store'])
+        ->name('orders.messages.store');
+
+    Route::get('faq', [FaqController::class, 'index'])->name('faq.index');
+    Route::post('faq/ask', [FaqController::class, 'ask'])->name('faq.ask');
+
+    Route::get('farms/{farm}', FarmController::class)->name('farms.show');
+
+    // Storefront pages are public to any signed-in role. Farmers reach them
+    // from a farm profile; buyers already used these paths. Index stays buyer-only.
+    Route::get('buyer/shops/{farmerSeller}', [BuyerShopController::class, 'show'])
+        ->name('buyer.shops.show');
+    Route::get('buyer/shops/{farmerSeller}/reviews', [BuyerShopController::class, 'reviews'])
+        ->name('buyer.shops.reviews');
+
+    Route::post('reports', SubmitReportController::class)
+        ->middleware('throttle:reports')
+        ->name('reports.store');
 });
 
 Route::middleware([
@@ -114,7 +159,13 @@ Route::middleware([
     Route::post('walk-in-sales', WalkInSaleController::class)->name('farmer.walk-in-sales.store');
 
     Route::get('shop', [FarmerShopController::class, 'show'])->name('farmer.shop.show');
+    Route::get('shop/reviews', [FarmerShopController::class, 'reviews'])->name('farmer.shop.reviews');
     Route::match(['put', 'patch'], 'shop', [FarmerShopController::class, 'update'])->name('farmer.shop.update');
+
+    Route::get('announcements', [FarmerAnnouncementController::class, 'index'])
+        ->name('farmer.announcements.index');
+
+    Route::get('analytics', FarmerAnalyticsController::class)->name('farmer.analytics');
 });
 
 Route::middleware([
@@ -133,11 +184,9 @@ Route::middleware([
         ->name('buyer.orders.receipt');
 
     Route::get('shops', [BuyerShopController::class, 'index'])->name('buyer.shops.index');
-    Route::get('shops/{farmerSeller}', [BuyerShopController::class, 'show'])->name('buyer.shops.show');
-    Route::get('shops/{farmerSeller}/reviews', [BuyerShopController::class, 'reviews'])
-        ->name('buyer.shops.reviews');
 
     Route::get('favorites', [FavoriteController::class, 'index'])->name('buyer.favorites.index');
+    Route::get('shop-favorites', [ShopFavoriteController::class, 'index'])->name('buyer.shop-favorites.index');
 
     Route::middleware('verified')->group(function (): void {
         Route::post('cart', [CartController::class, 'store'])->name('buyer.cart.store');
@@ -153,5 +202,8 @@ Route::middleware([
         Route::post('reviews', [ReviewController::class, 'store'])->name('buyer.reviews.store');
         Route::post('favorites', [FavoriteController::class, 'store'])->name('buyer.favorites.store');
         Route::delete('favorites/{listing}', [FavoriteController::class, 'destroy'])->name('buyer.favorites.destroy');
+        Route::post('shop-favorites', [ShopFavoriteController::class, 'store'])->name('buyer.shop-favorites.store');
+        Route::delete('shop-favorites/{farmerSeller}', [ShopFavoriteController::class, 'destroy'])
+            ->name('buyer.shop-favorites.destroy');
     });
 });

@@ -1,5 +1,7 @@
 # AniHow API
 
+[![CI](https://github.com/shawncastaneda11-commits/anihow-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/shawncastaneda11-commits/anihow-backend/actions/workflows/ci.yml)
+
 Laravel REST API for a farmers' digital market hub in General Trias, Cavite.
 
 Mobile clients are Flutter (Android). The single `super_admin` uses the Filament web panel at `/admin`.
@@ -17,7 +19,7 @@ Current scope is **Phase 5**: Phases 1–4 product APIs plus production hardenin
 | Spatie laravel-permission | 8.x |
 | Filament | 5.x |
 
-PHPUnit tests use in-memory SQLite (`phpunit.xml`).
+PHPUnit tests use in-memory SQLite (`phpunit.xml`). GitHub Actions CI runs Pint and the PHP suite, plus `flutter analyze` and `flutter test` in `/mobile`.
 
 ## Roles
 
@@ -87,22 +89,72 @@ php artisan db:seed --class=SmokeTestSeeder
 
 ```bash
 php artisan serve
+php artisan reverb:start
+php artisan queue:work
+php artisan schedule:work
 ```
+
+- `php artisan serve` — API + Filament. Without it, the app and `/admin` have nothing to talk to.
+- `php artisan reverb:start` — live order chat. Without it, the app falls back to 8s polling.
+- `php artisan queue:work` — queued emails (OTP, password reset, low-stock). Without it, those mails sit in the `jobs` table.
+- `php artisan schedule:work` — scheduled farm announcements (later the stale-order sweep). Without it, a future `starts_at` never notifies.
 
 - API: `http://localhost:8000/api`
 - Filament admin: `http://localhost:8000/admin`
+- Reverb (order chat): `ws://localhost:8080` — Android emulator uses `10.0.2.2:8080`
 
-### Logins (password: `password` for every row)
+Settings → Help & contact opens the scripted FAQ bot (no LLM).
 
-| Surface | Role | Email |
-| --- | --- | --- |
-| Filament `/admin` | `super_admin` | `admin@anihow.local` (override with `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD`) |
-| Filament `/admin` | `content_editor` | `smoke.editor@anihow.local` |
-| Android app | `farmer_seller` | `smoke.sellera@anihow.local` |
-| Android app | `farmer_seller` | `smoke.sellerb@anihow.local` |
-| Android app | `buyer` | `smoke.buyer@anihow.local` |
+### Logins
+
+Seeded after `SuperAdminSeeder` and `SmokeTestSeeder`. Password is `password` for every account unless you override `SUPER_ADMIN_PASSWORD` in `.env`.
+
+#### Filament `/admin` (`http://localhost:8000/admin`)
+
+| Role | Name | Email | Password |
+| --- | --- | --- | --- |
+| `super_admin` | AniHow Super Admin | `admin@anihow.local` | `password` |
+| `content_editor` | Smoke Content Editor | `smoke.editor@anihow.local` | `password` |
+
+`super_admin` email and password can be changed with `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD` before you run `SuperAdminSeeder`. The content editor belongs to Smoke Test Farm.
+
+#### Android app
+
+| Role | Name | Email | Password | Notes |
+| --- | --- | --- | --- | --- |
+| `farmer_seller` | Smoke Seller A | `smoke.sellera@anihow.local` | `password` | Shop: Aling Nena Produce. Farm: Smoke Test Farm. |
+| `farmer_seller` | Smoke Seller B | `smoke.sellerb@anihow.local` | `password` | Shop: Mang Tonyo Farm. Farm: Smoke Test Farm. |
+| `buyer` | Smoke Buyer | `smoke.buyer@anihow.local` | `password` | Email already verified. |
 
 Do not use `juan@anihow.local`, `maria.santos@anihow.local`, `pedro.reyes@anihow.local`, `ana.buyer@anihow.local`, or `ben.buyer@anihow.local`. Those seeders are leftover from the pre-rebuild schema and are not called.
+
+## Demo data
+
+Realistic Cavite fixtures for a local defense: PYAP Manggahan Chapter, four farmer-sellers, crop types, listings, ~35 days of checkout/OSM order history, reviews, announcements, crop-care articles, and a farm FAQ override.
+
+**Never run this on the production server.** It is not called from `DatabaseSeeder`.
+
+```bash
+php artisan db:seed --class=DemoSeeder
+```
+
+Safe to re-run (updateOrCreate / firstOrCreate; order history is written once). Shared password for every `@demo.anihow.local` account: `password`.
+
+| Role | Name | Email |
+| --- | --- | --- |
+| `content_editor` | Elena Ramos | `elena.ramos@demo.anihow.local` |
+| `farmer_seller` | Nena Villanueva | `nena.villanueva@demo.anihow.local` |
+| `farmer_seller` | Antonio Ramirez | `antonio.ramirez@demo.anihow.local` |
+| `farmer_seller` | Rosa Mendoza | `rosa.mendoza@demo.anihow.local` |
+| `farmer_seller` | Jun Bautista | `jun.bautista@demo.anihow.local` |
+| `buyer` | Carla Santos | `carla.santos@demo.anihow.local` |
+| `buyer` | Miguel Reyes | `miguel.reyes@demo.anihow.local` |
+| `buyer` | Ana Dela Cruz | `ana.delacruz@demo.anihow.local` |
+| `buyer` | Paolo Garcia | `paolo.garcia@demo.anihow.local` |
+| `buyer` | Liza Ramos | `liza.ramos@demo.anihow.local` |
+| `buyer` | Benito Cruz | `benito.cruz@demo.anihow.local` |
+
+Filament `/admin` still uses `admin@anihow.local` from `SuperAdminSeeder` (password `password` unless you set `SUPER_ADMIN_PASSWORD`). The content editor above can also sign in to `/admin` for the PYAP farm.
 
 ## Auth API (Sanctum)
 
@@ -287,6 +339,7 @@ Copy `.env.example`. Important variables:
 | --- | --- | --- |
 | `APP_KEY` | `php artisan key:generate` | generate once, store as secret |
 | `APP_URL` | `http://localhost:8000` | `https://<your-app>.up.railway.app` |
+| `APP_TIMEZONE` | `Asia/Manila` | `Asia/Manila` |
 | `APP_ENV` / `APP_DEBUG` | `local` / `true` | `production` / `false` |
 | `FORCE_HTTPS` | `false` | `true` (also implied when `APP_ENV=production`) |
 | `FRONTEND_URL` | same as app or Flutter deep-link base | password-reset landing URL |
@@ -300,6 +353,113 @@ Copy `.env.example`. Important variables:
 | `CORS_ALLOWED_ORIGINS` | `*` | your Flutter web origin(s), comma-separated |
 | `RATE_LIMIT_AUTH` / `RATE_LIMIT_API` | `5` / `60` | same unless you need to tune |
 | `SUPER_ADMIN_*` | seed credentials | change the password |
+
+## Deploy on a VPS
+
+Nginx + PHP-FPM serving `public/`. HTTPS is required.
+
+### Supervisor
+
+Two programs, both with autorestart. Same working directory and `.env` as the app.
+
+`queue-work` — queued emails (OTP, password reset, low-stock):
+
+```ini
+[program:anihow-queue]
+command=php artisan queue:work --sleep=1 --tries=3
+directory=/path/to/anihow-backend
+autostart=true
+autorestart=true
+user=www-data
+redirect_stderr=true
+stdout_logfile=/var/log/anihow-queue.log
+```
+
+`reverb` — live order chat:
+
+```ini
+[program:anihow-reverb]
+command=php artisan reverb:start
+directory=/path/to/anihow-backend
+autostart=true
+autorestart=true
+user=www-data
+redirect_stderr=true
+stdout_logfile=/var/log/anihow-reverb.log
+```
+
+### Cron
+
+```
+* * * * * cd /path/to/anihow-backend && php artisan schedule:run >> /dev/null 2>&1
+```
+
+That ticks `announcements:notify-due` (and later the stale-order sweep).
+
+### Reverb over Nginx
+
+Prefer a dedicated subdomain (e.g. `ws.example.com`) whose server block proxies `location /` to `127.0.0.1:${REVERB_SERVER_PORT}` with the `Upgrade` / `Connection` headers. That way both the WebSocket path (`/app`) and Laravel's HTTP publish path (`/apps`) reach Reverb.
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name ws.example.com;
+
+    location / {
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_pass http://127.0.0.1:8080;
+    }
+}
+```
+
+On a shared domain instead, proxy **both** `/app` and `/apps` the same way:
+
+```nginx
+location /app {
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+    proxy_pass http://127.0.0.1:8080;
+}
+
+location /apps {
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+    proxy_pass http://127.0.0.1:8080;
+}
+```
+
+`REVERB_HOST` / `REVERB_PORT` / `REVERB_SCHEME` in the **server** `.env` are what Laravel uses to publish to Reverb. Set them to the public wss endpoint (e.g. `ws.example.com` / `443` / `https`), not `localhost`. The Android app's endpoints are set at build time (see Flutter release build below), not from this `.env`.
+
+### Post-deploy
+
+```bash
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan storage:link
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+php artisan queue:restart
+php artisan reverb:restart
+```
+
+### Environment
+
+- `APP_ENV=production` so smoke seeders never run
+- `APP_DEBUG=false`
+- `APP_TIMEZONE=Asia/Manila`
+- `MAIL_*` for Gmail SMTP. `MAIL_*` must be set before going live; without it, buyer verification is disabled.
+- `RATE_LIMIT_AUTH` left at `5`
 
 ## Deploy on Railway
 
@@ -317,6 +477,36 @@ Worker service needs the same env vars (especially `APP_KEY`, database, and mail
 
 ```bash
 php artisan test
+```
+
+### Flutter release build
+
+Endpoints are compile-time `--dart-define` values. Omit them for emulator defaults (`10.0.2.2:8000`, Reverb `ws` on `8080`).
+
+```bash
+flutter build apk --release \
+  --dart-define=API_BASE_URL=https://api.example.com \
+  --dart-define=REVERB_HOST=ws.example.com \
+  --dart-define=REVERB_PORT=443 \
+  --dart-define=REVERB_SCHEME=wss \
+  --dart-define=REVERB_APP_KEY=...
+```
+
+A release build without these defines shows a "not connected to a server" screen by design.
+
+### Flutter testing
+
+Everyday (skips live API tests):
+
+```bash
+flutter test
+```
+
+Live tests need a local API and smoke accounts. Local only:
+
+```bash
+php artisan migrate:fresh --seed
+flutter test --tags live --run-skipped --concurrency=1
 ```
 
 See [CHANGELOG.md](CHANGELOG.md) for what each phase added.

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../theme/anihow_space.dart';
 import '../theme/anihow_theme.dart';
+import 'anihow_logo.dart';
 import 'app_header.dart';
 
 /// Shared login / register chrome: scrollable brand header + overlapping form sheet.
@@ -16,11 +17,9 @@ class AuthLayout extends StatelessWidget {
   final Widget form;
   final Widget? leading;
 
-  static const double _headerFraction = 0.34;
+  static const double _headerFraction = 0.50;
   static const double _sheetOverlap = 28;
   static const double _sheetRadius = 28;
-  static const double _logoTile = 64;
-  static const double _logoRadius = 20;
 
   @override
   Widget build(BuildContext context) {
@@ -84,51 +83,20 @@ class AuthLayout extends StatelessWidget {
                                     ),
                                   ),
                                 Padding(
-                                  padding: EdgeInsets.only(top: topInset),
-                                  child: Center(
+                                  padding: EdgeInsets.fromLTRB(
+                                    AniHowSpace.screen,
+                                    topInset,
+                                    AniHowSpace.screen,
+                                    0,
+                                  ),
+                                  child: const Center(
                                     child: FittedBox(
                                       fit: BoxFit.scaleDown,
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Container(
-                                            width: _logoTile,
-                                            height: _logoTile,
-                                            decoration: BoxDecoration(
-                                              color: AniHowColors.card,
-                                              borderRadius:
-                                                  BorderRadius.circular(_logoRadius),
-                                            ),
-                                            alignment: Alignment.center,
-                                            child: const Icon(
-                                              Icons.eco,
-                                              color: AniHowColors.brand,
-                                              size: 36,
-                                            ),
-                                          ),
-                                          const SizedBox(height: AniHowSpace.cardGap),
-                                          Text(
-                                            'AniHow',
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              color: onPrimary,
-                                              fontSize: AniHowSpace.headline,
-                                              fontWeight: FontWeight.w800,
-                                              fontFamily: AniHowTheme.fontFamily,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            "Farmers' market hub",
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              color: onPrimary.withValues(alpha: 0.86),
-                                              fontSize: AniHowSpace.body,
-                                              fontWeight: FontWeight.w500,
-                                              fontFamily: AniHowTheme.fontFamily,
-                                            ),
-                                          ),
-                                        ],
+                                      child: AniHowLogoMark(
+                                        markHeight: 128,
+                                        wordmarkHeight: 68,
+                                        wordmarkWidth: 300,
+                                        onCard: true,
                                       ),
                                     ),
                                   ),

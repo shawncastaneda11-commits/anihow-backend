@@ -5,9 +5,13 @@ namespace App\Support;
 use App\Enums\NotificationType;
 use App\Enums\OrderStatus;
 use App\Mail\ListingLowStockMail;
+use App\Models\AccountDeletionRequest;
+use App\Models\Farm;
+use App\Models\FarmAnnouncement;
 use App\Models\InAppNotification;
 use App\Models\Listing;
 use App\Models\Order;
+use App\Models\Report;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Mail;
@@ -56,6 +60,20 @@ class InAppNotifier
             NotificationType::OrderPlaced,
             NotificationType::OrderPlaced->label(),
             "{$buyerName} placed order {$order->order_number} totaling PHP {$total}.",
+            $order,
+        );
+    }
+
+    /**
+     * A placed order is still waiting for the farmer-seller to confirm.
+     */
+    public function orderAwaitingConfirmation(User $farmer, Order $order): InAppNotification
+    {
+        return $this->send(
+            $farmer,
+            NotificationType::OrderAwaitingConfirmation,
+            NotificationType::OrderAwaitingConfirmation->label(),
+            "Order {$order->order_number} is still waiting for your confirmation.",
             $order,
         );
     }
@@ -193,6 +211,130 @@ class InAppNotifier
             NotificationType::AccountApproved,
             NotificationType::AccountApproved->label(),
             'Your account has been approved. You can now sign in and start selling.',
+        );
+    }
+
+    /**
+     * A currently-active farm announcement reaches that farm's farmer-sellers.
+     * Buyers are never notified.
+     */
+    public function farmAnnouncement(User $farmer, FarmAnnouncement $announcement): InAppNotification
+    {
+        return $this->send(
+            $farmer,
+            NotificationType::FarmAnnouncement,
+            $announcement->title,
+            $announcement->body,
+            $announcement,
+        );
+    }
+
+    /**
+     * Super Admin hid or removed a farm FAQ override. The farm's Content
+     * Editor is told; farmer-sellers are not.
+     */
+    public function faqEntryModerated(User $editor, string $label, bool $deleted, ?Farm $farm = null): InAppNotification
+    {
+        $body = $deleted
+            ? "FAQ \"{$label}\" was deleted."
+            : "FAQ \"{$label}\" was deactivated.";
+
+        return $this->send(
+            $editor,
+            NotificationType::FaqEntryModerated,
+            NotificationType::FaqEntryModerated->label(),
+            $body,
+            $farm,
+        );
+    }
+
+    public function faqEntryUpdatedAfterModeration(User $admin, string $label, ?Farm $farm = null): InAppNotification
+    {
+        return $this->send(
+            $admin,
+            NotificationType::FaqEntryModerated,
+            NotificationType::FaqEntryModerated->label(),
+            "FAQ answer updated after moderation: {$label}",
+            $farm,
+        );
+    }
+
+    /**
+     * A new chat message reaches the other party on the order, never the
+     * sender and never the Super Admin.
+     */
+    public function accountDeletionRequested(User $admin, User $requester, Model $request): InAppNotification
+    {
+        return $this->send(
+            $admin,
+            NotificationType::AccountDeletionRequested,
+            NotificationType::AccountDeletionRequested->label(),
+            "{$requester->name} requested deletion of their account.",
+            $request,
+        );
+    }
+
+    public function reportSubmitted(User $admin, Report $report): InAppNotification
+    {
+        $kind = class_basename((string) $report->reportable_type);
+
+        return $this->send(
+            $admin,
+            NotificationType::ReportSubmitted,
+            NotificationType::ReportSubmitted->label(),
+            "A {$kind} was reported.",
+            $report,
+        );
+    }
+
+    public function reportResolved(User $reporter, Report $report): InAppNotification
+    {
+        return $this->send(
+            $reporter,
+            NotificationType::ReportResolved,
+            NotificationType::ReportResolved->label(),
+            'Your report was reviewed and resolved.',
+            $report,
+        );
+    }
+
+    public function reportDismissed(User $reporter, Report $report): InAppNotification
+    {
+        return $this->send(
+            $reporter,
+            NotificationType::ReportDismissed,
+            NotificationType::ReportDismissed->label(),
+            'Your report was reviewed and dismissed.',
+            $report,
+        );
+    }
+
+    public function accountDeletionRejected(User $user, Model $request): InAppNotification
+    {
+        $note = $request instanceof AccountDeletionRequest
+            ? $request->rejection_note
+            : null;
+        $suffix = filled($note) ? " {$note}" : '';
+
+        return $this->send(
+            $user,
+            NotificationType::AccountDeletionRejected,
+            NotificationType::AccountDeletionRejected->label(),
+            "Your account deletion request was rejected.{$suffix}",
+            $request,
+        );
+    }
+
+    public function orderMessage(User $recipient, Order $order, User $sender, string $body): InAppNotification
+    {
+        $preview = mb_strlen($body) > 80 ? mb_substr($body, 0, 77).'...' : $body;
+
+        return $this->send(
+            $recipient,
+            NotificationType::OrderMessage,
+            NotificationType::OrderMessage->label(),
+            "{$sender->name} on order {$order->order_number}: {$preview}",
+            $order,
         );
     }
 

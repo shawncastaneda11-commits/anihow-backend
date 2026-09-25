@@ -1,0 +1,54 @@
+// Data flow diagram, level 2, process 3.0 Browse Marketplace.
+digraph G {
+  graph [rankdir=LR, nodesep=0.25, ranksep=0.9, pad=0.25, fontname="Liberation Sans", newrank=true];
+  node  [fontname="Liberation Sans", fontsize=11];
+  edge  [penwidth=0.9, arrowsize=0.6, color="#333333", fontname="Liberation Sans", fontsize=8.5];
+  q3a [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#F4F4F4"><TR><TD><FONT POINT-SIZE="10.5">3.1</FONT></TD></TR><HR/><TR><TD CELLPADDING="5"><FONT POINT-SIZE="10.5">Search<BR/>Listings</FONT></TD></TR></TABLE>>];
+  by_q3a [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Buyer", comment="gsdup"];
+  D4_q3a [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D4</B></TD><TD SIDES="TB" ALIGN="LEFT">Listings</TD></TR></TABLE>>];
+  D3_q3a [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D3</B></TD><TD SIDES="TB" ALIGN="LEFT">Crop Types</TD></TR></TABLE>>];
+  D2_q3a [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D2</B></TD><TD SIDES="TB" ALIGN="LEFT">Farms</TD></TR></TABLE>>];
+  q3b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#F4F4F4"><TR><TD><FONT POINT-SIZE="10.5">3.2</FONT></TD></TR><HR/><TR><TD CELLPADDING="5"><FONT POINT-SIZE="10.5">View<BR/>Storefronts</FONT></TD></TR></TABLE>>];
+  by_q3b [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Buyer", comment="gsdup"];
+  D4_q3b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D4</B></TD><TD SIDES="TB" ALIGN="LEFT">Listings</TD></TR></TABLE>>];
+  D1_q3b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D1</B></TD><TD SIDES="TB" ALIGN="LEFT">Users and Roles</TD></TR></TABLE>>];
+  D9_q3b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D9</B></TD><TD SIDES="TB" ALIGN="LEFT">Reviews</TD></TR></TABLE>>];
+  fs_q3b [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Farmer-Seller", comment="gsdup"];
+  q3c [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#F4F4F4"><TR><TD><FONT POINT-SIZE="10.5">3.3</FONT></TD></TR><HR/><TR><TD CELLPADDING="5"><FONT POINT-SIZE="10.5">View Farm<BR/>Pages</FONT></TD></TR></TABLE>>];
+  by_q3c [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Buyer", comment="gsdup"];
+  D2_q3c [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D2</B></TD><TD SIDES="TB" ALIGN="LEFT">Farms</TD></TR></TABLE>>];
+  fs_q3c [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Farmer-Seller", comment="gsdup"];
+  D12_q3c [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D12</B></TD><TD SIDES="TB" ALIGN="LEFT">Farm Announcements</TD></TR></TABLE>>];
+  q3d [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#F4F4F4"><TR><TD><FONT POINT-SIZE="10.5">3.4</FONT></TD></TR><HR/><TR><TD CELLPADDING="5"><FONT POINT-SIZE="10.5">Manage<BR/>Favorites</FONT></TD></TR></TABLE>>];
+  by_q3d [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Buyer", comment="gsdup"];
+  D10_q3d [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D10</B></TD><TD SIDES="TB" ALIGN="LEFT">Favorites</TD></TR></TABLE>>];
+  by_q3a -> q3a [label="keywords, crop type,\nsort"];
+  q3a -> D4_q3a [label="active listings", dir=back];
+  q3a -> D3_q3a [label="crop types", dir=back];
+  q3a -> D2_q3a [label="farm names", dir=back];
+  by_q3a -> q3a [label="matching listings", dir=back];
+  by_q3b -> q3b [label="shop selection"];
+  q3b -> D1_q3b [label="shop profiles", dir=back];
+  q3b -> D4_q3b [label="shop listings", dir=back];
+  q3b -> D9_q3b [label="shop reviews", dir=back];
+  by_q3b -> q3b [label="storefront, reviews", dir=back];
+  fs_q3b -> q3b [label="shop profile\nupdates"];
+  q3b -> D1_q3b [label="shop profile"];
+  fs_q3b -> q3b [label="own shop reviews,\nrating", dir=back];
+  by_q3c -> q3c [label="farm selection"];
+  fs_q3c -> q3c [label="farm selection"];
+  q3c -> D2_q3c [label="profile, photos,\ncontact number", dir=back];
+  q3c -> D12_q3c [label="public\nannouncements", dir=back];
+  by_q3c -> q3c [label="farm page without\ncontact number", dir=back];
+  fs_q3c -> q3c [label="farm page, contact\nnumber if own farm", dir=back];
+  by_q3d -> q3d [label="listing and shop\nfavorites"];
+  q3d -> D10_q3d [label="favorites"];
+  q3d -> D10_q3d [label="saved favorites", dir=back];
+  by_q3d -> q3d [label="favorites list", dir=back];
+  {rank=same; by_q3a; by_q3b; fs_q3b; by_q3c; fs_q3c; by_q3d}
+  {rank=same; D4_q3a; D3_q3a; D2_q3a; D1_q3b; D4_q3b; D9_q3b; D2_q3c; D12_q3c; D10_q3d}
+  {rank=same; q3a; q3b; q3c; q3d}
+  q3a -> q3b [style=invis, weight=10];
+  q3b -> q3c [style=invis, weight=10];
+  q3c -> q3d [style=invis, weight=10];
+}

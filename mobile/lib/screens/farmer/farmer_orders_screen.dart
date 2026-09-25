@@ -2,31 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
 import '../../support/relative_time.dart';
 import '../../theme/anihow_space.dart';
+import '../../theme/anihow_theme.dart';
 import '../../widgets/form_label.dart';
-import '../../widgets/price_breakdown.dart';
+import '../../widgets/hint_card.dart';
+import '../../widgets/order_look.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
 import '../../widgets/status_pill.dart';
+import '../chat/order_chat_screen.dart';
 import 'walk_in_sale_screen.dart';
 
-const _orderTabs = [
-  (status: 'placed', label: 'Placed', empty: 'No placed orders.'),
-  (status: 'confirmed', label: 'Confirmed', empty: 'No confirmed orders.'),
-  (status: 'ready', label: 'Ready', empty: 'No orders waiting for handover.'),
-  (status: 'completed', label: 'Completed', empty: 'No completed orders.'),
-  (status: 'cancelled', label: 'Cancelled', empty: 'No cancelled orders.'),
-];
+List<({String status, String label, String empty})> _orderTabs(AppStrings s) => [
+      (status: 'placed', label: s.placed, empty: s.noPlacedOrders),
+      (status: 'confirmed', label: s.confirmed, empty: s.noConfirmedOrders),
+      (status: 'ready', label: s.ready, empty: s.noReadyOrders),
+      (status: 'completed', label: s.completed, empty: s.noCompletedOrders),
+      (status: 'cancelled', label: s.cancelled, empty: s.noCancelledOrders),
+    ];
 
-const _sellerCancelReasons = [
-  (value: 'seller_declined', label: 'Declined by farmer-seller'),
-  (value: 'no_show', label: 'No-show at handover'),
-  (value: 'other', label: 'Other'),
-];
+const _sellerCancelReasons = ['seller_declined', 'no_show', 'other'];
 
 class FarmerOrdersScreen extends StatefulWidget {
   const FarmerOrdersScreen({super.key});
@@ -166,8 +166,10 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final tabs = _orderTabs(s);
     return DefaultTabController(
-      length: _orderTabs.length,
+      length: tabs.length,
       child: Scaffold(
         body: Column(
           children: [
@@ -179,29 +181,27 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen> {
                   AniHowSpace.screen,
                   0,
                 ),
-                child: PrimaryButton(
-                  label: 'Record walk-in sale',
+                child: OutlinedButton.icon(
                   onPressed: _openWalkIn,
+                  icon: const Icon(Icons.point_of_sale_outlined),
+                  label: Text(s.recordWalkIn),
                 ),
               ),
-            const TabBar(
+            TabBar(
               isScrollable: true,
               tabs: [
-                Tab(height: AniHowSpace.tabHeight, text: 'Placed'),
-                Tab(height: AniHowSpace.tabHeight, text: 'Confirmed'),
-                Tab(height: AniHowSpace.tabHeight, text: 'Ready'),
-                Tab(height: AniHowSpace.tabHeight, text: 'Completed'),
-                Tab(height: AniHowSpace.tabHeight, text: 'Cancelled'),
+                for (final tab in tabs)
+                  Tab(height: AniHowSpace.tabHeight, text: tab.label),
               ],
             ),
-            Expanded(child: _body()),
+            Expanded(child: _body(tabs)),
           ],
         ),
       ),
     );
   }
 
-  Widget _body() {
+  Widget _body(List<({String status, String label, String empty})> tabs) {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -210,7 +210,7 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen> {
     }
     return TabBarView(
       children: [
-        for (final tab in _orderTabs)
+        for (final tab in tabs)
           _OrderList(
             items: _items.where((order) => order.status == tab.status).toList(),
             emptyLabel: tab.empty,
@@ -304,49 +304,100 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
+    );
+    final when = order.placedAt == null ? null : relativeTime(order.placedAt);
+    final summary = [
+      AniHowMoney.peso(order.total),
+      ?when,
+    ].join('  ·  ');
+
     return Card(
       child: Padding(
-        padding: AniHowSpace.cardPadding,
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             InkWell(
               onTap: onOpen,
+              borderRadius: BorderRadius.circular(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      AniHowAvatar(name: order.buyerName),
+                      AniHowAvatar(name: order.buyerName, radius: 20),
                       const SizedBox(width: AniHowSpace.cardGap),
                       Expanded(
-                        child: Text(
-                          order.buyerName,
-                          style: Theme.of(context).textTheme.titleMedium,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(order.buyerName, style: theme.textTheme.titleMedium),
+                            const SizedBox(height: 4),
+                            Text(summary, style: muted),
+                            if (tawadIsActive(order.tawadDisplay))
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  s.tawadMinus(AniHowMoney.peso(order.tawadDisplay)),
+                                  style: muted?.copyWith(
+                                    color: AniHowColors.sage,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: AniHowSpace.cardGap),
-                      Flexible(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: StatusPill.order(order.status, label: order.statusLabel),
-                        ),
-                      ),
+                      const SizedBox(width: 8),
+                      StatusPill.order(order.status, strings: s),
                     ],
                   ),
-                  const SizedBox(height: AniHowSpace.cardGap),
-                  if (order.isWalkIn) const _WalkInLabel(),
-                  Text(order.orderNumber ?? 'Order #${order.id}'),
-                  Text(AniHowMoney.peso(order.total)),
-                  Text(order.itemSummary),
-                  if (order.fulfillmentLabel != null) Text(order.fulfillmentLabel!),
-                  if (order.placedAt != null) Text(relativeTime(order.placedAt)),
-                  if (order.isCancelled && order.cancellationLabel != null)
-                    Text(order.cancellationLabel!),
+                  if (order.isWalkIn)
+                    OrderMetaRow(icon: Icons.storefront_outlined, text: s.walkIn),
+                  if (order.items.isNotEmpty)
+                    OrderMetaRow(icon: Icons.shopping_basket_outlined, text: order.itemSummary),
+                  if (order.fulfillmentLabel != null)
+                    OrderMetaRow(icon: Icons.handshake_outlined, text: order.fulfillmentLabel!),
+                  if (order.hasCancellationReason)
+                    OrderMetaRow(
+                      icon: Icons.info_outline,
+                      text: s.cancellationReasonText(
+                        order.cancellationReason,
+                        fallback: order.cancellationLabel,
+                      ),
+                    ),
+                  if (order.hasCancellationNote)
+                    OrderMetaRow(
+                      icon: Icons.notes_outlined,
+                      text: order.cancellationNote!.trim(),
+                    ),
                 ],
               ),
             ),
+            if (!order.isWalkIn)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => OrderChatScreen(order: order),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                  label: Text(s.chatWithBuyer),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.only(top: 6, right: 8),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ),
             OrderAdvanceButtons(
               order: order,
               busy: busy,
@@ -489,7 +540,7 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(order?.orderNumber ?? 'Order'),
+          title: Text(order?.buyerName ?? AppStrings.of(context).order),
           leading: BackButton(onPressed: _pop),
         ),
         body: _buildBody(order),
@@ -498,54 +549,165 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
   }
 
   Widget _buildBody(OrderRecord? order) {
+    final s = AppStrings.of(context);
     if (_loading && order == null) {
       return const Center(child: CircularProgressIndicator());
     }
     if (order == null) {
-      return Center(child: Text(_error?.toString() ?? 'Order not found.'));
+      return Center(child: Text(_error?.toString() ?? s.orderNotFound));
     }
+    final theme = Theme.of(context);
     return ListView(
       padding: AniHowSpace.screenPadding,
       children: [
-        Row(
-          children: [
-            AniHowAvatar(name: order.buyerName),
-            const SizedBox(width: AniHowSpace.cardGap),
-            Expanded(
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    AniHowAvatar(name: order.buyerName, radius: 20),
+                    const SizedBox(width: AniHowSpace.cardGap),
+                    Expanded(
+                      child: Text(order.buyerName, style: theme.textTheme.titleMedium),
+                    ),
+                    StatusPill.order(order.status, strings: s),
+                  ],
+                ),
+                if (order.isWalkIn)
+                  OrderMetaRow(icon: Icons.storefront_outlined, text: s.walkIn),
+                if (!order.isWalkIn && order.contact != null && order.contact!.isNotEmpty)
+                  OrderMetaRow(icon: Icons.call_outlined, text: order.contact!),
+                if (!order.isWalkIn)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => OrderChatScreen(order: order),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                      label: Text(s.chatWithBuyer),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.only(top: 10, right: 8),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        if (order.isReady) ...[
+          const SizedBox(height: AniHowSpace.cardGap),
+          AniHowHintCard(
+            icon: Icons.payments_outlined,
+            title: s.cashAtMeetup,
+            tone: AniHowHintTone.cash,
+          ),
+        ],
+        const SizedBox(height: AniHowSpace.cardGap),
+        Card(
+          child: Padding(
+            padding: AniHowSpace.cardPadding,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                OrderTotalHero(
+                  total: order.total,
+                  tawadLine: tawadIsActive(order.tawadDisplay)
+                      ? s.tawadMinus(AniHowMoney.peso(order.tawadDisplay))
+                      : null,
+                ),
+                if (order.fulfillmentLabel != null)
+                  OrderMetaRow(icon: Icons.handshake_outlined, text: order.fulfillmentLabel!),
+                if (order.fulfillmentNote != null && order.fulfillmentNote!.isNotEmpty)
+                  OrderMetaRow(icon: Icons.notes_outlined, text: order.fulfillmentNote!),
+                if (order.placedAt != null)
+                  OrderMetaRow(icon: Icons.schedule_outlined, text: relativeTime(order.placedAt)),
+                if (order.amountReceived != null)
+                  OrderMetaRow(
+                    icon: Icons.payments_outlined,
+                    text: s.cashReceivedLine(AniHowMoney.peso(order.amountReceived)),
+                  ),
+                if (order.hasCancellationReason)
+                  OrderMetaRow(
+                    icon: Icons.info_outline,
+                    text: s.cancellationReasonText(
+                      order.cancellationReason,
+                      fallback: order.cancellationLabel,
+                    ),
+                  ),
+                if (order.hasCancellationNote)
+                  OrderMetaRow(
+                    icon: Icons.notes_outlined,
+                    text: order.cancellationNote!.trim(),
+                  ),
+                if (order.canBeReviewed)
+                  OrderMetaRow(icon: Icons.star_outline, text: s.reviewUnlocked),
+                if (order.reviewRating != null)
+                  OrderMetaRow(
+                    icon: Icons.star_outline,
+                    text: s.buyerRated(order.reviewRating!),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        if (order.items.isNotEmpty) ...[
+          const SizedBox(height: AniHowSpace.cardGap),
+          Card(
+            child: Padding(
+              padding: AniHowSpace.cardPadding,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(order.buyerName, style: Theme.of(context).textTheme.titleMedium),
-                  if (order.isWalkIn) const _WalkInLabel(),
-                  if (!order.isWalkIn && order.contact != null && order.contact!.isNotEmpty)
-                    Text(order.contact!),
+                  Text(s.items, style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 4),
+                  for (final item in order.items)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(item.listingName, style: theme.textTheme.titleSmall),
+                                Text(
+                                  item.quantityLabel,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            AniHowMoney.peso(item.lineTotal ?? item.lineSubtotal),
+                            style: theme.textTheme.titleSmall,
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
-            StatusPill.order(order.status, label: order.statusLabel),
-          ],
-        ),
-        const SizedBox(height: AniHowSpace.section),
-        PriceBreakdown(
-          listed: order.listedTotal,
-          tawad: order.tawadDisplay,
-          total: order.total,
-        ),
-        if (order.fulfillmentLabel != null) Text(order.fulfillmentLabel!),
-        if (order.fulfillmentNote != null && order.fulfillmentNote!.isNotEmpty)
-          Text(order.fulfillmentNote!),
-        if (order.placedAt != null) Text(relativeTime(order.placedAt)),
-        if (order.amountReceived != null) Text('Cash received ${AniHowMoney.peso(order.amountReceived)}'),
-        if (order.isCancelled && order.cancellationLabel != null) Text(order.cancellationLabel!),
-        if (order.canBeReviewed) const Text('Review unlocked for the buyer'),
-        if (order.reviewRating != null) Text('Buyer rated ${order.reviewRating}'),
-        const SizedBox(height: AniHowSpace.section),
-        for (final item in order.items) ...[
-          Text(item.listingName, style: Theme.of(context).textTheme.titleSmall),
-          Text(
-            '${item.quantityLabel} · ${AniHowMoney.peso(item.listedPrice)} → ${AniHowMoney.peso(item.lineSubtotal)}',
           ),
-          const SizedBox(height: AniHowSpace.cardGap),
+        ],
+        if (order.orderNumber != null) ...[
+          const SizedBox(height: AniHowSpace.section),
+          Text(
+            order.orderNumber!,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.labelSmall,
+          ),
         ],
         OrderAdvanceButtons(
           order: order,
@@ -557,15 +719,6 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
         ),
       ],
     );
-  }
-}
-
-class _WalkInLabel extends StatelessWidget {
-  const _WalkInLabel();
-
-  @override
-  Widget build(BuildContext context) {
-    return Text('Walk-in', style: Theme.of(context).textTheme.labelSmall);
   }
 }
 
@@ -596,26 +749,27 @@ class OrderAdvanceButtons extends StatelessWidget {
     if (!confirm && !ready && !complete && !cancel) {
       return const SizedBox.shrink();
     }
+    final s = AppStrings.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (confirm) ...[
           const SizedBox(height: AniHowSpace.cardGap),
-          PrimaryButton(label: 'Confirm order', onPressed: onConfirm, busy: busy),
+          PrimaryButton(label: s.confirmOrder, onPressed: onConfirm, busy: busy),
         ],
         if (ready) ...[
           const SizedBox(height: AniHowSpace.cardGap),
-          PrimaryButton(label: 'Mark ready', onPressed: onReady, busy: busy),
+          PrimaryButton(label: s.markReady, onPressed: onReady, busy: busy),
         ],
         if (complete) ...[
           const SizedBox(height: AniHowSpace.cardGap),
-          PrimaryButton(label: 'Complete handover', onPressed: onComplete, busy: busy),
+          PrimaryButton(label: s.completeHandover, onPressed: onComplete, busy: busy),
         ],
         if (cancel) ...[
           const SizedBox(height: AniHowSpace.cardGap),
           OutlinedButton(
             onPressed: busy ? null : onCancel,
-            child: Text(busy ? 'Please wait…' : 'Cancel order'),
+            child: Text(busy ? s.pleaseWait : s.cancelOrder),
           ),
         ],
       ],
@@ -656,32 +810,33 @@ class _AmountReceivedDialogState extends State<_AmountReceivedDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return AlertDialog(
-      title: const Text('Cash received'),
+      title: Text(s.cashReceived),
       content: AniHowField(
-        label: 'Amount received',
+        label: s.amountReceived,
         child: TextField(
           controller: _controller,
           autofocus: true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
-          decoration: InputDecoration(hintText: 'Order total ${AniHowMoney.peso(widget.order.total)}'),
+          decoration: InputDecoration(hintText: s.orderTotalHint(AniHowMoney.peso(widget.order.total))),
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Back')),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(s.back)),
         TextButton(
           onPressed: () {
             final amount = _controller.text.trim();
             if (amount.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Enter the cash amount received.')),
+                SnackBar(content: Text(s.enterCashReceived)),
               );
               return;
             }
             Navigator.pop(context, amount);
           },
-          child: const Text('Record'),
+          child: Text(s.record),
         ),
       ],
     );
@@ -721,32 +876,33 @@ class _CancelOrderDialogState extends State<_CancelOrderDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return AlertDialog(
-      title: const Text('Cancel order'),
+      title: Text(s.cancelOrder),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('A no-show is a cancellation reason, not a separate status.'),
+            Text(s.cancelReasonHint),
             const SizedBox(height: AniHowSpace.cardGap),
             RadioGroup<String>(
               groupValue: _reason,
               onChanged: (value) => setState(() => _reason = value),
               child: Column(
                 children: [
-                  for (final option in _sellerCancelReasons)
+                  for (final value in _sellerCancelReasons)
                     RadioListTile<String>(
-                      title: Text(option.label),
-                      value: option.value,
+                      title: Text(s.sellerCancelReason(value)),
+                      value: value,
                       contentPadding: EdgeInsets.zero,
-                      selected: _reason == option.value,
+                      selected: _reason == value,
                     ),
                 ],
               ),
             ),
             AniHowField(
-              label: 'Note (optional)',
+              label: s.noteOptional,
               child: TextField(controller: _note, maxLength: 500),
             ),
           ],
@@ -755,13 +911,13 @@ class _CancelOrderDialogState extends State<_CancelOrderDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Back'),
+          child: Text(s.back),
         ),
         TextButton(
           onPressed: () {
             if (_reason == null) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Choose a cancellation reason.')),
+                SnackBar(content: Text(s.chooseCancelReason)),
               );
               return;
             }
@@ -774,7 +930,7 @@ class _CancelOrderDialogState extends State<_CancelOrderDialog> {
               ),
             );
           },
-          child: const Text('Cancel order'),
+          child: Text(s.cancelOrder),
         ),
       ],
     );

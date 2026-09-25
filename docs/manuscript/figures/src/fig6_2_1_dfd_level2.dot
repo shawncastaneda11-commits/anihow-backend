@@ -1,0 +1,61 @@
+// Data flow diagram, level 2, process 1.0 Manage Accounts and Access.
+digraph G {
+  graph [rankdir=LR, nodesep=0.25, ranksep=0.9, pad=0.25, fontname="Liberation Sans", newrank=true];
+  node  [fontname="Liberation Sans", fontsize=11];
+  edge  [penwidth=0.9, arrowsize=0.6, color="#333333", fontname="Liberation Sans", fontsize=8.5];
+  q1a [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#F4F4F4"><TR><TD><FONT POINT-SIZE="10.5">1.1</FONT></TD></TR><HR/><TR><TD CELLPADDING="5"><FONT POINT-SIZE="10.5">Register<BR/>Buyer</FONT></TD></TR></TABLE>>];
+  by_q1a [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Buyer", comment="gsdup"];
+  D1_q1a [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D1</B></TD><TD SIDES="TB" ALIGN="LEFT">Users and Roles</TD></TR></TABLE>>];
+  q1b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#F4F4F4"><TR><TD><FONT POINT-SIZE="10.5">1.2</FONT></TD></TR><HR/><TR><TD CELLPADDING="5"><FONT POINT-SIZE="10.5">Verify<BR/>Email</FONT></TD></TR></TABLE>>];
+  by_q1b [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Buyer", comment="gsdup"];
+  D1_q1b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D1</B></TD><TD SIDES="TB" ALIGN="LEFT">Users and Roles</TD></TR></TABLE>>];
+  D16_q1b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D16</B></TD><TD SIDES="TB" ALIGN="LEFT">Codes and Reset Tokens</TD></TR></TABLE>>];
+  em_q1b [shape=box, style=filled, fillcolor="#F2F2F2", penwidth=1.2, width=1.35, height=0.46, label="Email Service", comment="gsdup"];
+  q1c [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#F4F4F4"><TR><TD><FONT POINT-SIZE="10.5">1.3</FONT></TD></TR><HR/><TR><TD CELLPADDING="5"><FONT POINT-SIZE="10.5">Log In<BR/>and Out</FONT></TD></TR></TABLE>>];
+  by_q1c [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Buyer", comment="gsdup"];
+  D1_q1c [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D1</B></TD><TD SIDES="TB" ALIGN="LEFT">Users and Roles</TD></TR></TABLE>>];
+  fs_q1c [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Farmer-Seller", comment="gsdup"];
+  q1d [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#F4F4F4"><TR><TD><FONT POINT-SIZE="10.5">1.4</FONT></TD></TR><HR/><TR><TD CELLPADDING="5"><FONT POINT-SIZE="10.5">Reset and<BR/>Change<BR/>Password</FONT></TD></TR></TABLE>>];
+  by_q1d [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Buyer", comment="gsdup"];
+  D1_q1d [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D1</B></TD><TD SIDES="TB" ALIGN="LEFT">Users and Roles</TD></TR></TABLE>>];
+  D16_q1d [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D16</B></TD><TD SIDES="TB" ALIGN="LEFT">Codes and Reset Tokens</TD></TR></TABLE>>];
+  em_q1d [shape=box, style=filled, fillcolor="#F2F2F2", penwidth=1.2, width=1.35, height=0.46, label="Email Service", comment="gsdup"];
+  fs_q1d [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Farmer-Seller", comment="gsdup"];
+  q1e [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#F4F4F4"><TR><TD><FONT POINT-SIZE="10.5">1.5</FONT></TD></TR><HR/><TR><TD CELLPADDING="5"><FONT POINT-SIZE="10.5">Administer<BR/>Accounts</FONT></TD></TR></TABLE>>];
+  D1_q1e [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D1</B></TD><TD SIDES="TB" ALIGN="LEFT">Users and Roles</TD></TR></TABLE>>];
+  sa_q1e [shape=box, style=filled, fillcolor="#E1E6ED", penwidth=1.2, width=1.35, height=0.46, label="Super Admin"];
+  ce_q1e [shape=box, style=filled, fillcolor="#E1E6ED", penwidth=1.2, width=1.35, height=0.46, label="Content Editor"];
+  by_q1a -> q1a [label="name, email,\npassword"];
+  q1a -> D1_q1a [label="buyer account"];
+  by_q1a -> q1a [label="access token", dir=back];
+  q1a -> q1b [label="new account", constraint=false];
+  by_q1b -> q1b [label="entered code,\nresend request"];
+  q1b -> D16_q1b [label="hashed code,\n10-minute expiry"];
+  q1b -> D16_q1b [label="stored code", dir=back];
+  em_q1b -> q1b [label="six-digit code", dir=back];
+  q1b -> D1_q1b [label="verified status"];
+  by_q1b -> q1b [label="verification status", dir=back];
+  by_q1c -> q1c [label="credentials"];
+  fs_q1c -> q1c [label="credentials"];
+  q1c -> D1_q1c [label="account, role,\nstatus", dir=back];
+  by_q1c -> q1c [label="token or refusal", dir=back];
+  fs_q1c -> q1c [label="token or refusal", dir=back];
+  by_q1d -> q1d [label="reset request,\nnew password"];
+  fs_q1d -> q1d [label="reset request,\nnew password"];
+  q1d -> D16_q1d [label="reset token"];
+  q1d -> D16_q1d [label="token check", dir=back];
+  em_q1d -> q1d [label="reset link", dir=back];
+  q1d -> D1_q1d [label="password hash"];
+  sa_q1e -> q1e [label="farmer-seller and editor\naccounts, approvals,\nsuspensions"];
+  q1e -> D1_q1e [label="accounts, roles,\nfarm, status"];
+  q1e -> D1_q1e [label="members", dir=back];
+  ce_q1e -> q1e [label="own farm roster", dir=back];
+  sa_q1e -> q1e [label="user list", dir=back];
+  {rank=same; by_q1a; by_q1b; em_q1b; by_q1c; fs_q1c; by_q1d; fs_q1d; em_q1d; sa_q1e; ce_q1e}
+  {rank=same; D1_q1a; D16_q1b; D1_q1b; D1_q1c; D16_q1d; D1_q1d; D1_q1e}
+  {rank=same; q1a; q1b; q1c; q1d; q1e}
+  q1a -> q1b [style=invis, weight=10];
+  q1b -> q1c [style=invis, weight=10];
+  q1c -> q1d [style=invis, weight=10];
+  q1d -> q1e [style=invis, weight=10];
+}

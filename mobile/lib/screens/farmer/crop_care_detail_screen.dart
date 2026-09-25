@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/models.dart';
 import '../../state/auth_controller.dart';
+import '../../state/preferences_controller.dart';
 import '../../support/relative_time.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
@@ -60,7 +61,8 @@ class _CropCareDetailScreenState extends State<CropCareDetailScreen> {
       return const Center(child: Text('Guide not found.'));
     }
 
-    final cropNames = article.cropTypes.map((crop) => crop.bilingualLabel).join(', ');
+    final language = context.watch<PreferencesController>().language;
+    final cropNames = article.cropTypes.map((crop) => crop.labelFor(language)).join(', ');
     final theme = Theme.of(context);
     final cardColor = theme.cardTheme.color;
 

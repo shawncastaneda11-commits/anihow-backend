@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/anihow_space.dart';
 import '../theme/anihow_theme.dart';
+import 'anihow_logo.dart';
 
 class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   const AppHeader({
@@ -51,9 +52,23 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
+  Widget? _leading(BuildContext context, Color onPrimary) {
+    if (leading != null) {
+      return leading;
+    }
+    if (!Navigator.of(context).canPop()) {
+      return null;
+    }
+    return BackButton(
+      color: onPrimary,
+      style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
+    );
+  }
+
   Widget _brandMark(BuildContext context) {
     final onPrimary = Theme.of(context).colorScheme.onPrimary;
     final topInset = MediaQuery.paddingOf(context).top;
+    final leadingWidget = _leading(context, onPrimary);
 
     return SizedBox(
       width: double.infinity,
@@ -79,7 +94,12 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.eco, color: onPrimary, size: 36),
+                  const AniHowLogoMark(
+                    markHeight: 88,
+                    wordmarkHeight: 48,
+                    wordmarkWidth: 220,
+                    onCard: true,
+                  ),
                   const SizedBox(height: AniHowSpace.labelGap),
                   Text(
                     title,
@@ -88,7 +108,6 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                       color: onPrimary,
                       fontSize: AniHowSpace.headline,
                       fontWeight: FontWeight.w800,
-                      fontFamily: AniHowTheme.fontFamily,
                     ),
                   ),
                   if (subtitle != null) ...[
@@ -100,19 +119,18 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                         color: onPrimary.withValues(alpha: 0.86),
                         fontSize: AniHowSpace.body,
                         fontWeight: FontWeight.w500,
-                        fontFamily: AniHowTheme.fontFamily,
                       ),
                     ),
                   ],
                 ],
               ),
-              if (leading != null)
+              if (leadingWidget != null)
                 Positioned(
                   left: 0,
                   top: 0,
                   child: IconTheme(
                     data: IconThemeData(color: onPrimary),
-                    child: leading!,
+                    child: leadingWidget,
                   ),
                 ),
               if (trailing != null)
@@ -168,7 +186,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       child: NavigationToolbar(
         middleSpacing: 8,
         centerMiddle: true,
-        leading: leading,
+        leading: _leading(context, onPrimary),
         middle: titleBlock,
         trailing: trailing,
       ),

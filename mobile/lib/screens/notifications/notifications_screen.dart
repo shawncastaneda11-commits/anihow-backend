@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
@@ -10,8 +11,11 @@ import '../../widgets/async_view.dart';
 import '../../support/relative_time.dart';
 import '../buyer/listing_detail_screen.dart';
 import '../buyer/marketplace_screen.dart';
+import '../buyer/buyer_order_detail_screen.dart';
 import '../buyer/order_history_screen.dart';
 import '../farmer/farmer_orders_screen.dart';
+import '../chat/order_chat_screen.dart';
+import '../farmer/farm_announcements_screen.dart';
 import '../farmer/listing_form_screen.dart';
 import '../farmer/listings_screen.dart';
 
@@ -119,7 +123,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final hasUnread = _items.any((item) => item.isUnread);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifications'),
+        title: Text(AppStrings.of(context).notifications),
         actions: [
           TextButton(
             style: TextButton.styleFrom(
@@ -127,7 +131,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               disabledForegroundColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
             ),
             onPressed: _busy || !hasUnread ? null : _markAllRead,
-            child: const Text('Mark all read'),
+            child: Text(AppStrings.of(context).markAllRead),
           ),
         ],
       ),
@@ -157,9 +161,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               horizontal: AniHowSpace.cardPad,
               vertical: 8,
             ),
-            leading: _UnreadDot(visible: item.isUnread),
+            leading: item.isReportNotice
+                ? Icon(
+                    _reportIcon(item.type),
+                    color: AniHowColors.brand,
+                  )
+                : _UnreadDot(visible: item.isUnread),
             title: Text(
-              item.title,
+              AppStrings.of(context).notificationTitle(item.type, item.title),
               style: TextStyle(
                 fontSize: AniHowSpace.name,
                 fontWeight: item.isUnread ? FontWeight.w800 : FontWeight.w600,
@@ -242,10 +251,34 @@ class _UnreadDot extends StatelessWidget {
   }
 }
 
+IconData _reportIcon(String? type) {
+  return switch (type) {
+    'report_resolved' => Icons.flag,
+    'report_dismissed' => Icons.flag_outlined,
+    _ => Icons.outlined_flag,
+  };
+}
+
 Future<void> openNotificationTarget(BuildContext context, AppNotification item) async {
+  if (item.isReportNotice) {
+    return;
+  }
+
   final user = context.read<AuthController>().user;
   final api = context.read<AuthController>().api;
   final isFarmer = user?.isFarmerSeller == true;
+
+  if (isFarmer && item.pointsToAnnouncement) {
+    if (!context.mounted) {
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => FarmAnnouncementsScreen(highlightId: item.relatedId),
+      ),
+    );
+    return;
+  }
 
   if (item.pointsToListing && item.relatedId != null) {
     if (isFarmer) {
@@ -262,9 +295,12 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
         if (!context.mounted) {
           return;
         }
-        await _pushList(context, title: 'My listings', body: const FarmerListingsScreen());
+        await _pushList(context, title: AppStrings.of(context).myListings, body: const FarmerListingsScreen());
         return;
       }
+    }
+    if (!context.mounted) {
+      return;
     }
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => ListingDetailScreen(listingId: item.relatedId!)),
@@ -273,8 +309,11 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
   }
 
   if (item.pointsToListing) {
+    if (!context.mounted) {
+      return;
+    }
     if (isFarmer) {
-      await _pushList(context, title: 'My listings', body: const FarmerListingsScreen());
+      await _pushList(context, title: AppStrings.of(context).myListings, body: const FarmerListingsScreen());
     } else {
       await Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const MarketplaceScreen()),
@@ -283,7 +322,39 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
     return;
   }
 
+  if (item.type == 'order_message' && item.relatedId != null) {
+    try {
+      final order = isFarmer
+          ? await api.farmerOrder(item.relatedId!)
+          : await api.buyerOrder(item.relatedId!);
+      if (!context.mounted) {
+        return;
+      }
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => OrderChatScreen(order: order),
+        ),
+      );
+      return;
+    } on ApiException {
+      if (!context.mounted) {
+        return;
+      }
+    }
+  }
+
   if (!isFarmer && item.pointsToOrder) {
+    if (!context.mounted) {
+      return;
+    }
+    if (item.relatedId != null) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => BuyerOrderDetailScreen(orderId: item.relatedId),
+        ),
+      );
+      return;
+    }
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const OrderHistoryScreen()),
     );
@@ -291,6 +362,9 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
   }
 
   if (isFarmer && item.pointsToOrder) {
+    if (!context.mounted) {
+      return;
+    }
     if (item.relatedId != null) {
       await Navigator.of(context).push(
         MaterialPageRoute(
@@ -299,12 +373,15 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
       );
       return;
     }
-    await _pushList(context, title: 'Incoming orders', body: const FarmerOrdersScreen());
+    await _pushList(context, title: AppStrings.of(context).incomingOrders, body: const FarmerOrdersScreen());
     return;
   }
 
+  if (!context.mounted) {
+    return;
+  }
   if (isFarmer) {
-    await _pushList(context, title: 'Incoming orders', body: const FarmerOrdersScreen());
+    await _pushList(context, title: AppStrings.of(context).incomingOrders, body: const FarmerOrdersScreen());
     return;
   }
 

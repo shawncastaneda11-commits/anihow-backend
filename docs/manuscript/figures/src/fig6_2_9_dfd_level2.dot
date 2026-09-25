@@ -1,0 +1,39 @@
+// Data flow diagram, level 2, process 9.0 Handle Content Reports.
+digraph G {
+  graph [rankdir=LR, nodesep=0.25, ranksep=0.9, pad=0.25, fontname="Liberation Sans", newrank=true];
+  node  [fontname="Liberation Sans", fontsize=11];
+  edge  [penwidth=0.9, arrowsize=0.6, color="#333333", fontname="Liberation Sans", fontsize=8.5];
+  q9a [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#F4F4F4"><TR><TD><FONT POINT-SIZE="10.5">9.1</FONT></TD></TR><HR/><TR><TD CELLPADDING="5"><FONT POINT-SIZE="10.5">Submit<BR/>Report</FONT></TD></TR></TABLE>>];
+  by_q9a [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Buyer"];
+  fs_q9a [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Farmer-Seller"];
+  D4_q9a [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D4</B></TD><TD SIDES="TB" ALIGN="LEFT">Listings</TD></TR></TABLE>>];
+  D9_q9a [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D9</B></TD><TD SIDES="TB" ALIGN="LEFT">Reviews</TD></TR></TABLE>>];
+  D17_q9a [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D17</B></TD><TD SIDES="TB" ALIGN="LEFT">Reports</TD></TR></TABLE>>];
+  D8_q9a [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D8</B></TD><TD SIDES="TB" ALIGN="LEFT">Notifications</TD></TR></TABLE>>];
+  q9b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#F4F4F4"><TR><TD><FONT POINT-SIZE="10.5">9.2</FONT></TD></TR><HR/><TR><TD CELLPADDING="5"><FONT POINT-SIZE="10.5">Decide<BR/>Report</FONT></TD></TR></TABLE>>];
+  D4_q9b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D4</B></TD><TD SIDES="TB" ALIGN="LEFT">Listings</TD></TR></TABLE>>];
+  D9_q9b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D9</B></TD><TD SIDES="TB" ALIGN="LEFT">Reviews</TD></TR></TABLE>>];
+  D17_q9b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D17</B></TD><TD SIDES="TB" ALIGN="LEFT">Reports</TD></TR></TABLE>>];
+  D8_q9b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D8</B></TD><TD SIDES="TB" ALIGN="LEFT">Notifications</TD></TR></TABLE>>];
+  sa_q9b [shape=box, style=filled, fillcolor="#E1E6ED", penwidth=1.2, width=1.35, height=0.46, label="Super Admin"];
+  by_q9a -> q9a [label="listing or review,\nreason, details"];
+  fs_q9a -> q9a [label="review on own shop,\nreason, details"];
+  q9a -> D4_q9a [label="published listing", dir=back];
+  q9a -> D9_q9a [label="visible review", dir=back];
+  q9a -> D17_q9a [label="open report check", dir=back];
+  q9a -> D17_q9a [label="open report"];
+  q9a -> D8_q9a [label="notice to\nSuper Admins"];
+  by_q9a -> q9a [label="confirmation\nor refusal", dir=back];
+  fs_q9a -> q9a [label="confirmation\nor refusal", dir=back];
+  q9b -> D17_q9b [label="open reports", dir=back];
+  sa_q9b -> q9b [label="resolve with note or dismiss;\noptional takedown or removal"];
+  sa_q9b -> q9b [label="report and target", dir=back];
+  q9b -> D17_q9b [label="status, resolver"];
+  q9b -> D4_q9b [label="takedown"];
+  q9b -> D9_q9b [label="review removal"];
+  q9b -> D8_q9b [label="takedown notice,\nreporter notice"];
+  {rank=same; by_q9a; fs_q9a; sa_q9b}
+  {rank=same; D4_q9a; D9_q9a; D17_q9a; D8_q9a; D17_q9b; D4_q9b; D9_q9b; D8_q9b}
+  {rank=same; q9a; q9b}
+  q9a -> q9b [style=invis, weight=10];
+}

@@ -1,0 +1,66 @@
+// Data flow diagram, level 2, process 8.0 Handle Data Rights.
+digraph G {
+  graph [rankdir=LR, nodesep=0.25, ranksep=0.9, pad=0.25, fontname="Liberation Sans", newrank=true];
+  node  [fontname="Liberation Sans", fontsize=11];
+  edge  [penwidth=0.9, arrowsize=0.6, color="#333333", fontname="Liberation Sans", fontsize=8.5];
+  q8a [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#F4F4F4"><TR><TD><FONT POINT-SIZE="10.5">8.1</FONT></TD></TR><HR/><TR><TD CELLPADDING="5"><FONT POINT-SIZE="10.5">Correct<BR/>Profile</FONT></TD></TR></TABLE>>];
+  by_q8a [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Buyer", comment="gsdup"];
+  fs_q8a [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Farmer-Seller", comment="gsdup"];
+  D1_q8a [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D1</B></TD><TD SIDES="TB" ALIGN="LEFT">Users and Roles</TD></TR></TABLE>>];
+  q8b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#F4F4F4"><TR><TD><FONT POINT-SIZE="10.5">8.2</FONT></TD></TR><HR/><TR><TD CELLPADDING="5"><FONT POINT-SIZE="10.5">Download<BR/>Own Data</FONT></TD></TR></TABLE>>];
+  by_q8b [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Buyer", comment="gsdup"];
+  fs_q8b [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Farmer-Seller", comment="gsdup"];
+  D1_q8b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D1</B></TD><TD SIDES="TB" ALIGN="LEFT">Users and Roles</TD></TR></TABLE>>];
+  D6_q8b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D6</B></TD><TD SIDES="TB" ALIGN="LEFT">Orders</TD></TR></TABLE>>];
+  D9_q8b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D9</B></TD><TD SIDES="TB" ALIGN="LEFT">Reviews</TD></TR></TABLE>>];
+  D17_q8b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D17</B></TD><TD SIDES="TB" ALIGN="LEFT">Reports</TD></TR></TABLE>>];
+  D10_q8b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D10</B></TD><TD SIDES="TB" ALIGN="LEFT">Favorites</TD></TR></TABLE>>];
+  D5_q8b [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="TBL" WIDTH="30"><B>D5</B></TD><TD SIDES="TB" ALIGN="LEFT">Cart Items</TD></TR></TABLE>>];
+  q8c [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#F4F4F4"><TR><TD><FONT POINT-SIZE="10.5">8.3</FONT></TD></TR><HR/><TR><TD CELLPADDING="5"><FONT POINT-SIZE="10.5">Request<BR/>Deletion</FONT></TD></TR></TABLE>>];
+  by_q8c [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Buyer", comment="gsdup"];
+  fs_q8c [shape=box, style=filled, fillcolor="#E8E6E0", penwidth=1.2, width=1.35, height=0.46, label="Farmer-Seller", comment="gsdup"];
+  D6_q8c [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D6</B></TD><TD SIDES="TB" ALIGN="LEFT">Orders</TD></TR></TABLE>>];
+  D15_q8c [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D15</B></TD><TD SIDES="TB" ALIGN="LEFT">Deletion Requests</TD></TR></TABLE>>];
+  D8_q8c [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D8</B></TD><TD SIDES="TB" ALIGN="LEFT">Notifications</TD></TR></TABLE>>];
+  q8d [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE STYLE="ROUNDED" BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="3" BGCOLOR="#F4F4F4"><TR><TD><FONT POINT-SIZE="10.5">8.4</FONT></TD></TR><HR/><TR><TD CELLPADDING="5"><FONT POINT-SIZE="10.5">Decide<BR/>Deletion</FONT></TD></TR></TABLE>>];
+  D1_q8d [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D1</B></TD><TD SIDES="TB" ALIGN="LEFT">Users and Roles</TD></TR></TABLE>>];
+  D6_q8d [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D6</B></TD><TD SIDES="TB" ALIGN="LEFT">Orders</TD></TR></TABLE>>];
+  D15_q8d [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D15</B></TD><TD SIDES="TB" ALIGN="LEFT">Deletion Requests</TD></TR></TABLE>>];
+  D8_q8d [shape=plaintext, margin=0, width=0, height=0, label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR><TD SIDES="L" WIDTH="3" CELLPADDING="0"></TD><TD SIDES="TBL" WIDTH="30"><B>D8</B></TD><TD SIDES="TB" ALIGN="LEFT">Notifications</TD></TR></TABLE>>];
+  sa_q8d [shape=box, style=filled, fillcolor="#E1E6ED", penwidth=1.2, width=1.35, height=0.46, label="Super Admin"];
+  em_q8d [shape=box, style=filled, fillcolor="#F2F2F2", penwidth=1.2, width=1.35, height=0.46, label="Email Service"];
+  by_q8a -> q8a [label="name, phone,\naddress"];
+  fs_q8a -> q8a [label="name, phone,\naddress"];
+  q8a -> D1_q8a [label="corrected profile"];
+  by_q8b -> q8b [label="download request"];
+  fs_q8b -> q8b [label="download request"];
+  q8b -> D1_q8b [label="profile", dir=back];
+  q8b -> D6_q8b [label="orders", dir=back];
+  q8b -> D9_q8b [label="reviews", dir=back];
+  q8b -> D17_q8b [label="own reports", dir=back];
+  q8b -> D10_q8b [label="favorites", dir=back];
+  q8b -> D5_q8b [label="cart", dir=back];
+  by_q8b -> q8b [label="JSON file", dir=back];
+  fs_q8b -> q8b [label="JSON file", dir=back];
+  by_q8c -> q8c [label="request, cancel"];
+  fs_q8c -> q8c [label="request, cancel"];
+  q8c -> D6_q8c [label="open orders", dir=back];
+  q8c -> D15_q8c [label="pending request"];
+  q8c -> D8_q8c [label="notice to\nSuper Admins"];
+  by_q8c -> q8c [label="request status", dir=back];
+  fs_q8c -> q8c [label="request status", dir=back];
+  q8d -> D15_q8d [label="pending requests", dir=back];
+  sa_q8d -> q8d [label="approve or reject"];
+  sa_q8d -> q8d [label="request details", dir=back];
+  q8d -> D6_q8d [label="open orders\nrecheck", dir=back];
+  q8d -> D1_q8d [label="anonymized account"];
+  q8d -> D15_q8d [label="decision"];
+  em_q8d -> q8d [label="deletion notice", dir=back];
+  q8d -> D8_q8d [label="rejection notice"];
+  {rank=same; by_q8a; fs_q8a; by_q8b; fs_q8b; by_q8c; fs_q8c; sa_q8d; em_q8d}
+  {rank=same; D1_q8a; D1_q8b; D6_q8b; D9_q8b; D17_q8b; D10_q8b; D5_q8b; D6_q8c; D15_q8c; D8_q8c; D15_q8d; D6_q8d; D1_q8d; D8_q8d}
+  {rank=same; q8a; q8b; q8c; q8d}
+  q8a -> q8b [style=invis, weight=10];
+  q8b -> q8c [style=invis, weight=10];
+  q8c -> q8d [style=invis, weight=10];
+}

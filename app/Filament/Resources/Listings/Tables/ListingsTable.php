@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Listings\Tables;
 
+use App\Actions\Listings\TakeDownListingAction;
 use App\Enums\ListingStatus;
 use App\Models\Listing;
 use App\Support\InAppNotifier;
@@ -138,14 +139,11 @@ class ListingsTable
                             ->helperText('Shown to the seller.'),
                     ])
                     ->action(function (Listing $record, array $data): void {
-                        $record->update([
-                            'status' => ListingStatus::TakenDown,
-                            'taken_down_at' => now(),
-                            'taken_down_by' => auth()->id(),
-                            'takedown_reason' => $data['takedown_reason'],
-                        ]);
-
-                        app(InAppNotifier::class)->listingTakenDown($record->farmerSeller, $record);
+                        app(TakeDownListingAction::class)->handle(
+                            $record,
+                            auth()->user(),
+                            $data['takedown_reason'],
+                        );
                     }),
 
                 Action::make('restore')

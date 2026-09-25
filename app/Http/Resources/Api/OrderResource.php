@@ -43,6 +43,7 @@ class OrderResource extends JsonResource
             'amount_received' => $this->amount_received !== null ? (float) $this->amount_received : null,
             'cancellation_reason' => $this->cancellation_reason?->value,
             'cancellation_label' => $this->cancellation_reason?->label(),
+            'cancellation_note' => $this->cancellation_note,
             'cancelled_by' => $this->cancelled_by?->value,
             'can_be_reviewed' => $this->canBeReviewed(),
             'placed_at' => $this->created_at?->toIso8601String(),

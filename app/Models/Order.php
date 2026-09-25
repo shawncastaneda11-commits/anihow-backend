@@ -56,6 +56,7 @@ use Illuminate\Validation\ValidationException;
     'ready_at',
     'completed_at',
     'cancelled_at',
+    'reminder_sent_at',
 ])]
 class Order extends Model
 {
@@ -88,17 +89,18 @@ class Order extends Model
             'ready_at' => 'datetime',
             'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'reminder_sent_at' => 'datetime',
         ];
     }
 
     public function buyer(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'buyer_id');
+        return $this->belongsTo(User::class, 'buyer_id')->withTrashed();
     }
 
     public function farmerSeller(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'farmer_seller_id');
+        return $this->belongsTo(User::class, 'farmer_seller_id')->withTrashed();
     }
 
     public function farm(): BelongsTo
@@ -119,6 +121,11 @@ class Order extends Model
     public function statusHistories(): HasMany
     {
         return $this->hasMany(OrderStatusHistory::class)->orderBy('created_at');
+    }
+
+    public function messages(): HasMany
+    {
+        return $this->hasMany(OrderMessage::class)->orderBy('id');
     }
 
     public function isWalkIn(): bool

@@ -129,7 +129,8 @@ class ReviewShopFavoriteOrderApiTest extends TestCase
 
         $this->asUser($farmer)
             ->getJson("/api/buyer/shops/{$farmer->id}")
-            ->assertForbidden();
+            ->assertOk()
+            ->assertJsonPath('data.shop_name', 'Juan Farm Stall');
 
         $suspended = $this->farmer(['email' => 'suspended@example.com', 'status' => UserStatus::Suspended]);
         $this->asUser($buyer)

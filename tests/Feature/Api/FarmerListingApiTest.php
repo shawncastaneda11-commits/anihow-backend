@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Enums\ListingStatus;
 use App\Enums\TawadType;
 use App\Models\Listing;
 use App\Models\TawadRule;
@@ -223,5 +224,25 @@ class FarmerListingApiTest extends TestCase
         $this->assertFalse($rule->fresh()->is_active);
         $this->assertNotNull($rule->fresh()->ended_at);
         $this->assertNull($listing->fresh()->activeTawadRule);
+    }
+
+    public function test_a_taken_down_listing_cannot_be_turned_active_by_the_seller(): void
+    {
+        $farmer = $this->farmer();
+        $listing = $this->listingFor($farmer, [
+            'title' => 'Morning crate',
+            'is_active' => false,
+            'status' => ListingStatus::TakenDown,
+        ]);
+
+        $this->asUser($farmer)
+            ->patchJson('/api/farmer/listings/'.$listing->id.'/active', [
+                'is_active' => true,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('is_active');
+
+        $this->assertFalse($listing->fresh()->is_active);
+        $this->assertSame(ListingStatus::TakenDown, $listing->fresh()->status);
     }
 }

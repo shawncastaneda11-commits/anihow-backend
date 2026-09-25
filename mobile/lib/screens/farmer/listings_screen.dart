@@ -232,8 +232,8 @@ class _List extends StatelessWidget {
             showStock: true,
             onTap: () => onOpen(listing),
             trailing: ListingActiveBadge(
-              isActive: listing.isActive,
-              onTap: () => onToggle(listing, !listing.isActive),
+              isActive: listing.isSellerActive,
+              onTap: listing.isTakenDown ? null : () => onToggle(listing, !listing.isActive),
             ),
           );
         },

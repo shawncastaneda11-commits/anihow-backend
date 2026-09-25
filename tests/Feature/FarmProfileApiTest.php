@@ -74,6 +74,22 @@ class FarmProfileApiTest extends TestCase
             ->assertJsonPath('data.name', 'Manggahan Farm');
     }
 
+    public function test_a_farmer_seller_can_open_another_storefront_on_their_farm(): void
+    {
+        $farm = Farm::factory()->create(['name' => 'Manggahan Farm']);
+        $nena = $this->farmer(['shop_name' => 'Nena Stall'], $farm);
+        $rosa = $this->farmer(['email' => 'rosa@example.com', 'shop_name' => 'Ka Rosa Gulay'], $farm);
+
+        $this->asUser($nena)
+            ->getJson('/api/buyer/shops/'.$rosa->id)
+            ->assertOk()
+            ->assertJsonPath('data.shop_name', 'Ka Rosa Gulay');
+
+        $this->asUser($nena)
+            ->getJson('/api/buyer/shops/'.$rosa->id.'/reviews')
+            ->assertOk();
+    }
+
     public function test_an_inactive_farm_returns_not_found(): void
     {
         $farm = Farm::factory()->inactive()->create();

@@ -53,31 +53,10 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Future<void> _editQuantity(CartLine item) async {
-    final controller = TextEditingController(text: item.quantity);
     final next = await showDialog<String>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(item.listingName),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              labelText: 'Quantity${item.unitLabel.isEmpty ? '' : ' (${item.unitLabel})'}',
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(AppStrings.of(dialogContext).back)),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
-              child: Text(AppStrings.of(dialogContext).update),
-            ),
-          ],
-        );
-      },
+      builder: (_) => CartQuantityDialog(item: item),
     );
-    controller.dispose();
     if (!mounted || next == null || next.isEmpty || next == item.quantity) {
       return;
     }
@@ -190,6 +169,59 @@ class _CartScreenState extends State<CartScreen> {
           _CartOrderSummary(listed: listed, tawad: tawad, total: total),
         ],
       ),
+    );
+  }
+}
+
+/// Owns the field controller so it is not disposed while the dialog
+/// route is still leaving the tree.
+class CartQuantityDialog extends StatefulWidget {
+  const CartQuantityDialog({super.key, required this.item});
+
+  final CartLine item;
+
+  @override
+  State<CartQuantityDialog> createState() => _CartQuantityDialogState();
+}
+
+class _CartQuantityDialogState extends State<CartQuantityDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.item.quantity);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.read(context);
+    final unit = widget.item.unitLabel;
+    return AlertDialog(
+      title: Text(widget.item.listingName),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: InputDecoration(
+          labelText: unit.isEmpty ? s.quantity : '${s.quantity} ($unit)',
+        ),
+        onSubmitted: (value) => Navigator.pop(context, value.trim()),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(s.back)),
+        TextButton(
+          key: const ValueKey('cart-quantity-update'),
+          onPressed: () => Navigator.pop(context, _controller.text.trim()),
+          child: Text(s.update),
+        ),
+      ],
     );
   }
 }

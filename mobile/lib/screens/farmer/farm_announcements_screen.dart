@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
@@ -17,23 +16,16 @@ void openFarmAnnouncements(BuildContext context) {
   );
 }
 
+/// Session-only: the same notice pops once per app run, then stays gone until restart.
 class DismissedAnnouncementStore {
-  static String keyFor(int userId) => 'anihow_announcement_toasts_$userId';
+  static final Map<int, Set<int>> _ids = {};
 
-  static Future<Set<int>> load(int userId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList(keyFor(userId)) ?? const [];
-    return {
-      for (final value in raw)
-        if (int.tryParse(value) != null) int.parse(value),
-    };
-  }
+  static void reset() => _ids.clear();
 
-  static Future<void> remember(int userId, int announcementId) async {
-    final ids = await load(userId);
-    ids.add(announcementId);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(keyFor(userId), ids.map((id) => '$id').toList());
+  static Set<int> load(int userId) => Set<int>.from(_ids[userId] ?? const {});
+
+  static void remember(int userId, int announcementId) {
+    _ids.putIfAbsent(userId, () => <int>{}).add(announcementId);
   }
 }
 
@@ -42,7 +34,7 @@ class FarmerAnnouncementHomeBanner extends StatefulWidget {
     super.key,
     required this.userId,
     required this.announcements,
-    this.toastDuration = const Duration(seconds: 4),
+    this.toastDuration = const Duration(seconds: 6),
   });
 
   final int userId;
@@ -54,15 +46,19 @@ class FarmerAnnouncementHomeBanner extends StatefulWidget {
 }
 
 class _FarmerAnnouncementHomeBannerState extends State<FarmerAnnouncementHomeBanner> {
-  Set<int> _seen = {};
-  bool _ready = false;
+  late Set<int> _seen;
   FarmAnnouncement? _toast;
   Timer? _hide;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _seen = DismissedAnnouncementStore.load(widget.userId);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _maybeToast();
+      }
+    });
   }
 
   @override
@@ -75,24 +71,21 @@ class _FarmerAnnouncementHomeBannerState extends State<FarmerAnnouncementHomeBan
   void didUpdateWidget(FarmerAnnouncementHomeBanner oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.userId != widget.userId) {
-      _load();
+      _seen = DismissedAnnouncementStore.load(widget.userId);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _maybeToast();
+        }
+      });
       return;
     }
     if (oldWidget.announcements != widget.announcements) {
-      _maybeToast();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _maybeToast();
+        }
+      });
     }
-  }
-
-  Future<void> _load() async {
-    final ids = await DismissedAnnouncementStore.load(widget.userId);
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _seen = ids;
-      _ready = true;
-    });
-    _maybeToast();
   }
 
   FarmAnnouncement? get _unseen {
@@ -104,8 +97,8 @@ class _FarmerAnnouncementHomeBannerState extends State<FarmerAnnouncementHomeBan
     return null;
   }
 
-  Future<void> _maybeToast() async {
-    if (!_ready || _toast != null) {
+  void _maybeToast() {
+    if (_toast != null) {
       return;
     }
     final notice = _unseen;
@@ -116,6 +109,7 @@ class _FarmerAnnouncementHomeBannerState extends State<FarmerAnnouncementHomeBan
       _toast = notice;
       _seen = {..._seen, notice.id};
     });
+    DismissedAnnouncementStore.remember(widget.userId, notice.id);
     _hide?.cancel();
     _hide = Timer(widget.toastDuration, () {
       if (!mounted) {
@@ -123,7 +117,6 @@ class _FarmerAnnouncementHomeBannerState extends State<FarmerAnnouncementHomeBan
       }
       setState(() => _toast = null);
     });
-    await DismissedAnnouncementStore.remember(widget.userId, notice.id);
   }
 
   @override
@@ -141,11 +134,19 @@ class _FarmerAnnouncementHomeBannerState extends State<FarmerAnnouncementHomeBan
         AniHowSpace.screen,
         0,
       ),
-      child: AniHowHintCard(
-        key: const ValueKey('farm-announcement-toast'),
-        icon: Icons.campaign_outlined,
-        title: title,
-        tone: AniHowHintTone.brand,
+      child: Material(
+        elevation: 6,
+        borderRadius: BorderRadius.circular(AniHowSpace.radius),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          key: const ValueKey('farm-announcement-toast'),
+          onTap: () => openFarmAnnouncements(context),
+          child: AniHowHintCard(
+            icon: Icons.campaign_outlined,
+            title: title,
+            tone: AniHowHintTone.brand,
+          ),
+        ),
       ),
     );
   }

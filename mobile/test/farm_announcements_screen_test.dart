@@ -6,7 +6,6 @@ import 'package:anihow/theme/anihow_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 Widget _app({required Widget home}) {
   return ChangeNotifierProvider(
@@ -19,6 +18,8 @@ Widget _app({required Widget home}) {
 }
 
 void main() {
+  setUp(DismissedAnnouncementStore.reset);
+
   testWidgets('announcements screen lists pinned and regular notices', (tester) async {
     await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -51,7 +52,6 @@ void main() {
   });
 
   testWidgets('new announcement pops as a toast then disappears', (tester) async {
-    SharedPreferences.setMockInitialValues({});
     await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -79,6 +79,7 @@ void main() {
     final s = AppStrings(false);
     expect(find.text('${s.announcementPinned}: Harvest day Saturday'), findsOneWidget);
     expect(find.text('Bring crates by 6am.'), findsNothing);
+    expect(find.byKey(const ValueKey('farm-announcement-toast')), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();
@@ -86,8 +87,41 @@ void main() {
     expect(find.text('${s.announcementPinned}: Harvest day Saturday'), findsNothing);
   });
 
+  testWidgets('announcement toast stays about six seconds', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    const announcement = FarmAnnouncement(
+      id: 4,
+      title: 'Pickup point moved',
+      body: 'Barangay hall this week.',
+    );
+
+    await tester.pumpWidget(
+      _app(
+        home: const Scaffold(
+          body: FarmerAnnouncementHomeBanner(
+            userId: 7,
+            announcements: [announcement],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Pickup point moved'), findsOneWidget);
+    expect(find.text('Barangay hall this week.'), findsNothing);
+
+    await tester.pump(const Duration(seconds: 5));
+    expect(find.text('Pickup point moved'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    expect(find.text('Pickup point moved'), findsNothing);
+  });
+
   testWidgets('seen announcement does not toast again, but a newer one does', (tester) async {
-    SharedPreferences.setMockInitialValues({});
     await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 

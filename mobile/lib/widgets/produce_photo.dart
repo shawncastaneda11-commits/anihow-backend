@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../models/models.dart';
+import '../theme/anihow_space.dart';
+import '../theme/anihow_theme.dart';
 import 'category_color.dart';
 
 /// Cover photo, or a crop-colored illustration when the listing has none.
@@ -25,27 +28,79 @@ class ProducePhoto extends StatelessWidget {
     final url = preferThumbnail
         ? (listing.thumbnailUrl ?? listing.imageUrl)
         : listing.imageUrl;
-
-    return ClipRRect(
-      borderRadius: radius,
-      child: url != null && url.isNotEmpty
-          ? Image.network(
-              url,
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: double.infinity,
-              filterQuality: FilterQuality.high,
-              errorBuilder: (_, _, _) => _Fallback(
-                listing: listing,
-                accent: accent,
-                iconSize: iconSize,
-              ),
-            )
-          : _Fallback(
+    final photo = url != null && url.isNotEmpty
+        ? Image.network(
+            url,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+            filterQuality: FilterQuality.high,
+            errorBuilder: (_, _, _) => _Fallback(
               listing: listing,
               accent: accent,
               iconSize: iconSize,
             ),
+          )
+        : _Fallback(
+            listing: listing,
+            accent: accent,
+            iconSize: iconSize,
+          );
+
+    return ClipRRect(
+      borderRadius: radius,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          photo,
+          if (_hasActiveTawad)
+            Positioned(
+              left: 8,
+              bottom: 8,
+              right: 8,
+              child: Align(
+                alignment: Alignment.bottomLeft,
+                child: _TawadBadge(rule: listing.tawad!),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  bool get _hasActiveTawad {
+    final rule = listing.tawad;
+    return rule != null && rule.isActive;
+  }
+}
+
+class _TawadBadge extends StatelessWidget {
+  const _TawadBadge({required this.rule});
+
+  final TawadRule rule;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.maybeOf(context);
+    return DecoratedBox(
+      key: const ValueKey('produce-tawad-badge'),
+      decoration: BoxDecoration(
+        color: AniHowColors.brand.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Text(
+          s.tawadMinus(AniHowMoney.peso(rule.discountAmount)),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: AniHowSpace.meta,
+          ),
+        ),
+      ),
     );
   }
 }

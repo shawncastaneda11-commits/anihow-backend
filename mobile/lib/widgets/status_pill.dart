@@ -46,12 +46,22 @@ class StatusPill extends StatelessWidget {
     );
   }
 
-  factory StatusPill.forListing(ListingItem listing) {
+  factory StatusPill.takenDown({AppStrings? strings}) {
+    return StatusPill(
+      label: strings?.takenDown ?? 'Taken down',
+      color: AniHowColors.cancelled,
+    );
+  }
+
+  factory StatusPill.forListing(ListingItem listing, {AppStrings? strings}) {
+    if (listing.isTakenDown) {
+      return StatusPill.takenDown(strings: strings);
+    }
     final quantity = double.tryParse(listing.quantityAvailable) ?? 0;
     if (quantity <= 0) {
       return const StatusPill(label: 'Out', color: AniHowColors.cancelled);
     }
-    return listing.isLowStock ? StatusPill.lowStock() : StatusPill.inStock();
+    return listing.isLowStock ? StatusPill.lowStock(strings: strings) : StatusPill.inStock(strings: strings);
   }
 
   @override

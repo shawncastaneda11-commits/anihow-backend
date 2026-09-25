@@ -329,6 +329,45 @@ void main() {
     expect(placed.total, '160');
     expect(placed.paymentLabel, 'Cash on handover');
     expect(placed.items.single.listedPrice, '30');
+    expect(
+      placed.chatPeerTitle(viewingAsSeller: false),
+      'Aling Nena Produce',
+    );
+  });
+
+  test('order chat title is the stall for a buyer and the buyer for a seller', () {
+    final order = OrderRecord.fromJson({
+      'id': 11,
+      'order_number': 'AH-260925-CY7JUU',
+      'status': 'placed',
+      'total': 80,
+      'seller': {'id': 4, 'shop_name': 'Kuya Jun Harvest'},
+      'buyer': {'id': 9, 'name': 'Carla Santos'},
+    });
+
+    expect(order.chatPeerTitle(viewingAsSeller: false), 'Kuya Jun Harvest');
+    expect(order.chatPeerTitle(viewingAsSeller: true), 'Carla Santos');
+  });
+
+  test('a taken-down listing is not purchasable from the cart', () {
+    const line = CartLine(
+      id: 1,
+      quantity: '2',
+      listedPrice: '40',
+      lineSubtotal: '80',
+      tawadAmount: '0',
+      lineTotal: '80',
+      listing: ListingItem(
+        id: 7,
+        title: 'Talong, mahaba',
+        pricePerUnit: '40',
+        quantityAvailable: '10',
+        isActive: true,
+        status: 'taken_down',
+      ),
+    );
+
+    expect(line.isPurchasable, isFalse);
   });
 
   test('tawad request shapes are peso-only with exactly two types', () {

@@ -197,9 +197,15 @@ class ProduceCard extends StatelessWidget {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          if (listing.tawad != null) ...[
+                          if (listing.tawad != null && listing.tawad!.isActive) ...[
                             const SizedBox(height: AniHowSpace.labelGap),
-                            Text(listing.tawad!.summary, style: theme.textTheme.bodyMedium),
+                            Text(
+                              listing.tawad!.displaySummary(
+                                offThisOrder: AppStrings.of(context).tawadOffThisOrder,
+                                offAtMin: AppStrings.of(context).tawadOffAtMin,
+                              ),
+                              style: theme.textTheme.bodyMedium,
+                            ),
                           ],
                           if (listing.hasRating) ...[
                             const SizedBox(height: AniHowSpace.labelGap),
@@ -207,7 +213,7 @@ class ProduceCard extends StatelessWidget {
                           ],
                           if (showStock) ...[
                             const SizedBox(height: AniHowSpace.labelGap),
-                            StatusPill.forListing(listing),
+                            StatusPill.forListing(listing, strings: AppStrings.of(context)),
                           ],
                         ],
                       ),

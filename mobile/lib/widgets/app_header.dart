@@ -52,9 +52,23 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
+  Widget? _leading(BuildContext context, Color onPrimary) {
+    if (leading != null) {
+      return leading;
+    }
+    if (!Navigator.of(context).canPop()) {
+      return null;
+    }
+    return BackButton(
+      color: onPrimary,
+      style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
+    );
+  }
+
   Widget _brandMark(BuildContext context) {
     final onPrimary = Theme.of(context).colorScheme.onPrimary;
     final topInset = MediaQuery.paddingOf(context).top;
+    final leadingWidget = _leading(context, onPrimary);
 
     return SizedBox(
       width: double.infinity,
@@ -110,13 +124,13 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                   ],
                 ],
               ),
-              if (leading != null)
+              if (leadingWidget != null)
                 Positioned(
                   left: 0,
                   top: 0,
                   child: IconTheme(
                     data: IconThemeData(color: onPrimary),
-                    child: leading!,
+                    child: leadingWidget,
                   ),
                 ),
               if (trailing != null)
@@ -172,7 +186,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       child: NavigationToolbar(
         middleSpacing: 8,
         centerMiddle: true,
-        leading: leading,
+        leading: _leading(context, onPrimary),
         middle: titleBlock,
         trailing: trailing,
       ),

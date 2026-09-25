@@ -62,6 +62,48 @@ void main() {
     expect(find.text('Bring crates by 6am.'), findsOneWidget);
     expect(find.byKey(const Key('farm-cover')), findsOneWidget);
     expect(find.byKey(const Key('farm-cover-fallback')), findsNothing);
+    expect(find.byType(BackButton), findsNothing);
+  });
+
+  testWidgets('farm profile shows a back button when opened from another screen', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    const farm = FarmProfile(
+      id: 1,
+      name: 'Manggahan Farm',
+      storefronts: [
+        FarmStorefront(id: 4, shopName: 'Nena Stall'),
+      ],
+    );
+
+    await tester.pumpWidget(
+      _app(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const FarmProfileScreen(farmId: 1, preview: farm),
+                  ),
+                );
+              },
+              child: const Text('Open farm'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open farm'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BackButton), findsOneWidget);
+    expect(find.text('Nena Stall'), findsOneWidget);
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.text('Open farm'), findsOneWidget);
   });
 
   testWidgets('farm screen falls back when there is no cover photo', (tester) async {

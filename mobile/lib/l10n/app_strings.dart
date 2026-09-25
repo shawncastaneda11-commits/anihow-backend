@@ -295,6 +295,13 @@ class AppStrings {
   String get quantity => t('Quantity', 'Dami');
   String get inStock => t('In stock', 'May stock');
   String get lowStock => t('Low stock', 'Kulang ang stock');
+  String get takenDown => t('Taken down', 'Tinanggal');
+  String get listingActive => t('Active', 'Active');
+  String get listingInactive => t('Inactive', 'Inactive');
+  String get listingTakenDownHint => t(
+        'An administrator removed this listing from the marketplace.',
+        'Tinanggal ng administrator ang listing na ito sa marketplace.',
+      );
   String get outOfStock => t('Out', 'Wala');
   String get placed => t('Placed', 'Placed');
   String get confirmed => t('Confirmed', 'Confirmed');
@@ -371,6 +378,11 @@ class AppStrings {
   String get items => t('Items', 'Mga item');
   String get cashAtMeetup => t('Cash at meetup', 'Cash sa pagkikita');
   String tawadMinus(String peso) => t('Tawad −$peso', 'Tawad −$peso');
+  String tawadOffThisOrder(String peso) => t('$peso off this order', '$peso bawas sa order na ito');
+  String tawadOffAtMin(String peso, String quantity) => t(
+        '$peso off at $quantity and above',
+        '$peso bawas sa $quantity pataas',
+      );
   String get walkIn => t('Walk-in', 'Walk-in');
   String get confirmOrder => t('Confirm order', 'Kumpirmahin ang order');
   String get markReady => t('Mark ready', 'Markahang ready');

@@ -75,6 +75,7 @@ class _AniHowAppState extends State<AniHowApp> {
         builder: (context, theme, prefs, _) {
           return MaterialApp(
             title: 'AniHow',
+            debugShowCheckedModeBanner: false,
             locale: prefs.language.locale,
             theme: AniHowTheme.light(),
             darkTheme: AniHowTheme.dark(),

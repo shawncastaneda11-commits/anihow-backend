@@ -104,6 +104,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
     Route::get('farms/{farm}', FarmController::class)->name('farms.show');
 
+    // Storefront pages are public to any signed-in role. Farmers reach them
+    // from a farm profile; buyers already used these paths. Index stays buyer-only.
+    Route::get('buyer/shops/{farmerSeller}', [BuyerShopController::class, 'show'])
+        ->name('buyer.shops.show');
+    Route::get('buyer/shops/{farmerSeller}/reviews', [BuyerShopController::class, 'reviews'])
+        ->name('buyer.shops.reviews');
+
     Route::post('reports', SubmitReportController::class)
         ->middleware('throttle:reports')
         ->name('reports.store');
@@ -177,9 +184,6 @@ Route::middleware([
         ->name('buyer.orders.receipt');
 
     Route::get('shops', [BuyerShopController::class, 'index'])->name('buyer.shops.index');
-    Route::get('shops/{farmerSeller}', [BuyerShopController::class, 'show'])->name('buyer.shops.show');
-    Route::get('shops/{farmerSeller}/reviews', [BuyerShopController::class, 'reviews'])
-        ->name('buyer.shops.reviews');
 
     Route::get('favorites', [FavoriteController::class, 'index'])->name('buyer.favorites.index');
     Route::get('shop-favorites', [ShopFavoriteController::class, 'index'])->name('buyer.shop-favorites.index');

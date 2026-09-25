@@ -253,6 +253,20 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   ),
                 ),
               ),
+              if (listing.tawad != null && listing.tawad!.isActive) ...[
+                const SizedBox(height: AniHowSpace.labelGap),
+                Text(
+                  key: const ValueKey('listing-tawad-summary'),
+                  listing.tawad!.displaySummary(
+                    offThisOrder: s.tawadOffThisOrder,
+                    offAtMin: s.tawadOffAtMin,
+                  ),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AniHowColors.brand,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
               if (listing.description != null && listing.description!.isNotEmpty) ...[
                 const SizedBox(height: AniHowSpace.cardGap),
                 Text(listing.description!),

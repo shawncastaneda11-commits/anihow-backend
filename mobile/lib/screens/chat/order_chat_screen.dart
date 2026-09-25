@@ -160,9 +160,12 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final userId = context.watch<AuthController>().user?.id;
+    final user = context.watch<AuthController>().user;
+    final userId = user?.id;
     final s = AppStrings.of(context);
-    final title = widget.order.orderNumber ?? '${s.order} #${widget.order.id}';
+    final title = widget.order.chatPeerTitle(
+      viewingAsSeller: user?.isFarmerSeller == true,
+    );
 
     return Scaffold(
       appBar: AppBar(title: Text(s.chatTitle(title))),

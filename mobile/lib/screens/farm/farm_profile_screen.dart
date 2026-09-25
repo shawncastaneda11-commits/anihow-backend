@@ -7,7 +7,6 @@ import '../../models/models.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
-import '../../widgets/app_header.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/hint_card.dart';
 import '../../widgets/profile_avatar_button.dart';
@@ -100,7 +99,9 @@ class _FarmProfileScreenState extends State<FarmProfileScreen> {
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     return Scaffold(
-      appBar: AppHeader(title: s.farmProfile),
+      appBar: AppBar(
+        title: Text(s.farmProfile),
+      ),
       body: FutureBuilder<FarmProfile>(
         future: _farm,
         builder: (context, snapshot) {

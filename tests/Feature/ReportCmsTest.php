@@ -51,6 +51,7 @@ class ReportCmsTest extends TestCase
         );
 
         $this->assertSame(ListingStatus::TakenDown, $listing->fresh()->status);
+        $this->assertFalse($listing->fresh()->is_active);
         $this->assertSame(ReportStatus::Resolved, $report->fresh()->status);
         $this->assertSame(1, $this->notices($farmer->id, NotificationType::ListingTakenDown));
         $this->assertSame(1, $this->notices($buyer->id, NotificationType::ReportResolved));

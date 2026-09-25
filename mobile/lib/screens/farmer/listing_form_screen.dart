@@ -283,6 +283,15 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                         emptyLabel: s.addPhoto,
                       ),
                     ),
+                    if (_listing?.isTakenDown == true) ...[
+                      const SizedBox(height: AniHowSpace.cardGap),
+                      AniHowHintCard(
+                        icon: Icons.visibility_off_outlined,
+                        title: s.takenDown,
+                        body: _listing!.takedownReason ?? s.listingTakenDownHint,
+                        tone: AniHowHintTone.cash,
+                      ),
+                    ],
                     const SizedBox(height: AniHowSpace.cardGap),
                     AniHowHintCard(
                       icon: Icons.photo_camera_outlined,
@@ -387,7 +396,12 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             if (_listing!.tawad != null) ...[
-                              Text(_listing!.tawad!.summary),
+                              Text(
+                                _listing!.tawad!.displaySummary(
+                                  offThisOrder: s.tawadOffThisOrder,
+                                  offAtMin: s.tawadOffAtMin,
+                                ),
+                              ),
                               if (_listing!.tawad!.typeLabel != null) Text(_listing!.tawad!.typeLabel!),
                               const SizedBox(height: AniHowSpace.cardGap),
                               PrimaryButton(

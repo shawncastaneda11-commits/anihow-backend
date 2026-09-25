@@ -44,6 +44,17 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
 
   bool get _previewing => widget.preview != null;
 
+  bool get _canFavorite {
+    if (_previewing) {
+      return true;
+    }
+    try {
+      return context.read<AuthController>().user?.isBuyer ?? false;
+    } on ProviderNotFoundException {
+      return false;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -171,25 +182,26 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
       appBar: AppBar(
         title: Text(AppStrings.of(context).shop),
         actions: [
-          FutureBuilder<ShopProfile>(
-            future: _shop,
-            builder: (context, snapshot) {
-              final shop = snapshot.data;
-              if (shop == null) {
-                return const SizedBox(width: 48, height: 48);
-              }
-              final s = AppStrings.of(context);
-              return IconButton(
-                icon: Icon(_isFavorited(shop) ? Icons.favorite : Icons.favorite_outline),
-                tooltip: _isFavorited(shop) ? s.removeStoreFromFavorites : s.addStoreToFavorites,
-                onPressed: _favoriteBusy ? null : () => _toggleFavorite(shop),
-                style: IconButton.styleFrom(
-                  minimumSize: const Size(48, 48),
-                  foregroundColor: Colors.white,
-                ),
-              );
-            },
-          ),
+          if (_canFavorite)
+            FutureBuilder<ShopProfile>(
+              future: _shop,
+              builder: (context, snapshot) {
+                final shop = snapshot.data;
+                if (shop == null) {
+                  return const SizedBox(width: 48, height: 48);
+                }
+                final s = AppStrings.of(context);
+                return IconButton(
+                  icon: Icon(_isFavorited(shop) ? Icons.favorite : Icons.favorite_outline),
+                  tooltip: _isFavorited(shop) ? s.removeStoreFromFavorites : s.addStoreToFavorites,
+                  onPressed: _favoriteBusy ? null : () => _toggleFavorite(shop),
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size(48, 48),
+                    foregroundColor: Colors.white,
+                  ),
+                );
+              },
+            ),
         ],
       ),
       body: FutureBuilder<ShopProfile>(
@@ -212,14 +224,16 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                         child: ShopIdentityHeader(shop: shop),
                       ),
                     ),
-                    const SizedBox(height: AniHowSpace.cardGap),
-                    OutlinedButton.icon(
-                      onPressed: _favoriteBusy ? null : () => _toggleFavorite(shop),
-                      icon: Icon(_isFavorited(shop) ? Icons.favorite : Icons.favorite_outline),
-                      label: Text(
-                        _isFavorited(shop) ? s.removeStoreFromFavorites : s.addStoreToFavorites,
+                    if (_canFavorite) ...[
+                      const SizedBox(height: AniHowSpace.cardGap),
+                      OutlinedButton.icon(
+                        onPressed: _favoriteBusy ? null : () => _toggleFavorite(shop),
+                        icon: Icon(_isFavorited(shop) ? Icons.favorite : Icons.favorite_outline),
+                        label: Text(
+                          _isFavorited(shop) ? s.removeStoreFromFavorites : s.addStoreToFavorites,
+                        ),
                       ),
-                    ),
+                    ],
                     if (shop.farmId != null && shop.farmIsActive) ...[
                       const SizedBox(height: AniHowSpace.cardGap),
                       FarmLinkChip(

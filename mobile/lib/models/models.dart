@@ -190,6 +190,17 @@ class TawadRule {
     return '$amount off this order';
   }
 
+  String displaySummary({
+    required String Function(String peso) offThisOrder,
+    required String Function(String peso, String quantity) offAtMin,
+  }) {
+    final peso = AniHowMoney.peso(discountAmount);
+    if (isMinQuantity && (minQuantity ?? '').isNotEmpty) {
+      return offAtMin(peso, minQuantity!);
+    }
+    return offThisOrder(peso);
+  }
+
   factory TawadRule.fromJson(Map<String, dynamic> json) {
     return TawadRule(
       id: json['id'] as int,
@@ -222,6 +233,7 @@ class ListingItem {
     this.reviewsCount = 0,
     this.tawad,
     this.status,
+    this.takedownReason,
   });
 
   final int id;
@@ -242,6 +254,7 @@ class ListingItem {
   final String? averageRating;
   final int reviewsCount;
   final TawadRule? tawad;
+  final String? takedownReason;
 
   String get name => title;
 
@@ -258,6 +271,8 @@ class ListingItem {
   }
 
   bool get isTakenDown => status == 'taken_down';
+
+  bool get isSellerActive => isActive && !isTakenDown;
 
   ListingItem copyWith({bool? isActive}) {
     return ListingItem(
@@ -279,6 +294,7 @@ class ListingItem {
       averageRating: averageRating,
       reviewsCount: reviewsCount,
       tawad: tawad,
+      takedownReason: takedownReason,
     );
   }
 
@@ -310,6 +326,7 @@ class ListingItem {
       tawad: tawadJson is Map && tawadJson['id'] != null
           ? TawadRule.fromJson(Map<String, dynamic>.from(tawadJson))
           : null,
+      takedownReason: json['takedown_reason'] as String?,
     );
   }
 
@@ -482,6 +499,10 @@ class OrderRecord {
 
   String get stallName => shopName ?? counterpartyName ?? 'Stall';
 
+  String chatPeerTitle({required bool viewingAsSeller}) {
+    return viewingAsSeller ? buyerName : stallName;
+  }
+
   String get itemSummary {
     if (items.isEmpty) {
       return orderNumber ?? 'Order #$id';
@@ -619,6 +640,8 @@ class CartLine {
   }
 
   String get unitLabel => listing?.unitLabel ?? listing?.unit ?? '';
+
+  bool get isPurchasable => listing != null && listing!.isSellerActive;
 
   factory CartLine.fromJson(Map<String, dynamic> json) {
     final listingJson = json['listing'];

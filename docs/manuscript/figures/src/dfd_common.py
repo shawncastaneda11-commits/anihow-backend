@@ -31,7 +31,7 @@ def store_label(d, dup=False):
     return (f'<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR>{extra}'
             f'<TD SIDES="TBL" WIDTH="30"><B>{d}</B></TD><TD SIDES="TB" ALIGN="LEFT">{STORES[d]}</TD></TR></TABLE>>')
 
-def render(title, procs, flows, rowsep=0.25):
+def render(title, procs, flows, rowsep=0.5, ranksep=1.7):
     """procs: [(key, number, name)], flows: [(src, dst, label)]; src/dst are proc keys, EXT keys or store ids."""
     pk = [p[0] for p in procs]
     row_of = {}
@@ -40,7 +40,7 @@ def render(title, procs, flows, rowsep=0.25):
         if b in pk and a not in pk: row_of.setdefault(a, set()).add(b)
     dup = {n for n, rows in row_of.items() if len(rows) > 1}
     out = [f'// {title}', 'digraph G {',
-           '  graph [rankdir=LR, nodesep=%s, ranksep=0.9, pad=0.25, fontname="Liberation Sans", newrank=true];' % rowsep,
+           '  graph [rankdir=LR, nodesep=%s, ranksep=%s, pad=0.25, fontname="Liberation Sans", newrank=true, splines=spline, concentrate=false];' % (rowsep, ranksep),
            '  node  [fontname="Liberation Sans", fontsize=11];',
            '  edge  [penwidth=0.9, arrowsize=0.6, color="#333333", fontname="Liberation Sans", fontsize=8.5];']
     def nid(n, p): return f'{n}_{p}'

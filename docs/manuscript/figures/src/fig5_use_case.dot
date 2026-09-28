@@ -1,6 +1,6 @@
 // Figure 5. Use case diagram of AniHow (v3.5, with content reports).
 digraph G {
-  graph [rankdir=LR, nodesep=0.16, ranksep=1.1, pad=0.3, fontname="Liberation Sans", newrank=true];
+  graph [rankdir=LR, nodesep=0.38, ranksep=1.7, pad=0.3, fontname="Liberation Sans", newrank=true, splines=spline];
   node  [fontname="Liberation Sans", fontsize=11];
   edge  [arrowhead=none, penwidth=1.0, color="#333333"];
 

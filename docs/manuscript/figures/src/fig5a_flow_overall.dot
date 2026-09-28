@@ -1,0 +1,57 @@
+digraph G {
+  graph [rankdir=TB, nodesep=0.22, ranksep=0.22, pad=0.2, fontname="Liberation Sans", newrank=true, splines=ortho];
+  node  [fontname="Liberation Sans", fontsize=14, penwidth=1.3, style=filled, fillcolor="#FFFFFF", margin="0.12,0.06"];
+  edge  [penwidth=1.1, arrowsize=0.7, color="#333333", fontname="Liberation Sans", fontsize=12];
+  s [shape=box, style="rounded,filled", fillcolor="#E1E6ED", label="Start"];
+  open [shape=box, label="Open AniHow: Android application\nor content management panel"];
+  acct [shape=diamond, fillcolor="#F4F4F4", label="Has an account?", margin="0.02,0.02"];
+  reg [shape=parallelogram, fillcolor="#F2F2F2", label="Register as a buyer\n(name, email, password)", margin="0.02,0.04"];
+  code [shape=parallelogram, fillcolor="#F2F2F2", label="Receive six-digit code\nby email", margin="0.02,0.04"];
+  valid [shape=diamond, fillcolor="#F4F4F4", label="Code correct and\nwithin ten minutes?", margin="0.02,0.02"];
+  resend [shape=box, label="Request a new code"];
+  login [shape=parallelogram, fillcolor="#F2F2F2", label="Enter email and password", margin="0.02,0.04"];
+  ok [shape=diamond, fillcolor="#F4F4F4", label="Credentials valid and\naccount active?", margin="0.02,0.02"];
+  err [shape=box, label="Show error message"];
+  role [shape=diamond, fillcolor="#F4F4F4", label="Role of the user?", margin="0.02,0.02"];
+  sa [shape=box, label="Super Admin dashboard\n(content management panel)"];
+  ce [shape=box, label="Content Editor dashboard\n(own farm only)"];
+  fs [shape=box, label="Farmer-seller home\n(Android application)"];
+  by [shape=box, label="Buyer marketplace\n(Android application)"];
+  csa [shape=circle, width=0.35, fixedsize=true, fillcolor="#E8E6E0", label="A"];
+  sa -> csa;
+  cce [shape=circle, width=0.35, fixedsize=true, fillcolor="#E8E6E0", label="B"];
+  ce -> cce;
+  cfs [shape=circle, width=0.35, fixedsize=true, fillcolor="#E8E6E0", label="C"];
+  fs -> cfs;
+  cby [shape=circle, width=0.35, fixedsize=true, fillcolor="#E8E6E0", label="D"];
+  by -> cby;
+  tasks [shape=box, label="Perform role tasks\n(Figures 6 to 9)"];
+  out [shape=diamond, fillcolor="#F4F4F4", label="Log out?", margin="0.02,0.02"];
+  end [shape=box, style="rounded,filled", fillcolor="#E1E6ED", label="End"];
+  s -> open;
+  open -> acct;
+  acct -> reg [xlabel="No"];
+  reg -> code;
+  code -> valid;
+  valid -> resend [xlabel="No"];
+  resend -> code [constraint=false];
+  valid -> login [xlabel="Yes"];
+  acct -> login [xlabel="Yes"];
+  login -> ok;
+  ok -> err [xlabel="No"];
+  err -> login [constraint=false];
+  ok -> role [xlabel="Yes"];
+  role -> sa [xlabel="Super Admin"];
+  role -> ce [xlabel="Content Editor"];
+  role -> fs [xlabel="Farmer-seller"];
+  role -> by [xlabel="Buyer"];
+  csa -> tasks;
+  cce -> tasks;
+  cfs -> tasks;
+  cby -> tasks;
+  tasks -> out;
+  out -> tasks [xlabel="No", constraint=false];
+  out -> end [xlabel="Yes"];
+  {rank=same; sa ce fs by}
+  {rank=same; csa cce cfs cby}
+}

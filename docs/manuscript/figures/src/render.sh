@@ -4,6 +4,7 @@
 set -euo pipefail
 python3 src/gen_fig7.py
 python3 src/gen_dfd.py
+python3 src/gen_flowcharts.py
 for src in src/fig*.dot; do
   case "$src" in *_dfd_level*) continue ;; esac
   name=$(basename "$src" .dot)

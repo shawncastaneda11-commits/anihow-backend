@@ -31,7 +31,7 @@ def store_label(d, dup=False):
     return (f'<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="3"><TR>{extra}'
             f'<TD SIDES="TBL" WIDTH="30"><B>{d}</B></TD><TD SIDES="TB" ALIGN="LEFT">{STORES[d]}</TD></TR></TABLE>>')
 
-def render(title, procs, flows, rowsep=0.5, ranksep=1.7):
+def render(title, procs, flows, rowsep=0.42, ranksep=1.4):
     """procs: [(key, number, name)], flows: [(src, dst, label)]; src/dst are proc keys, EXT keys or store ids."""
     pk = [p[0] for p in procs]
     row_of = {}

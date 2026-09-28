@@ -89,6 +89,26 @@ void main() {
     await tester.pump();
 
     expect(find.text(error), findsOneWidget);
+    expect(find.text(AppStrings(false).deletionBlockedTitle), findsOneWidget);
     expect(find.text(AppStrings(false).requestAccountDeletion), findsWidgets);
+  });
+
+  testWidgets('My data deletion button opens the confirm dialog', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _app(home: const MyDataScreen(preview: MyDataPreview(user: _buyer))),
+    );
+    await tester.pump();
+
+    final s = AppStrings(false);
+    await tester.ensureVisible(find.widgetWithText(OutlinedButton, s.requestAccountDeletion));
+    await tester.tap(find.widgetWithText(OutlinedButton, s.requestAccountDeletion));
+    await tester.pumpAndSettle();
+
+    expect(find.text(s.confirmDeletionTitle), findsOneWidget);
+    expect(find.text(s.confirmDeletionBody), findsOneWidget);
+    expect(find.text(s.confirmDeletion), findsOneWidget);
   });
 }

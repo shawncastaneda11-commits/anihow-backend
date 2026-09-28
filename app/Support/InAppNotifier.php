@@ -15,6 +15,7 @@ use App\Models\Report;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 class InAppNotifier
 {
@@ -355,7 +356,12 @@ class InAppNotifier
         };
 
         if ($mailable) {
-            Mail::to($user)->queue($mailable);
+            try {
+                Mail::to($user)->queue($mailable);
+            } catch (Throwable $exception) {
+                // In-app inbox is the source of truth; mail is best-effort.
+                report($exception);
+            }
         }
     }
 }

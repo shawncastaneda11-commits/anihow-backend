@@ -1,4 +1,24 @@
-<div style="display:flex;flex-direction:column;align-items:center;gap:0.4rem;line-height:0;">
-    <img src="{{ asset('images/anihow-mark.png') }}" alt="AniHow" style="height:2.15rem;width:auto;">
-    <img src="{{ asset('images/anihow-wordmark.png') }}" alt="" style="height:1.35rem;width:auto;">
-</div>
+{{-- Sidebar uses the leaf mark only. Login keeps the full lockup. --}}
+@if (request()->is('admin/login'))
+    <div class="anihow-brand-login">
+        <img
+            class="anihow-mark"
+            src="{{ asset('images/anihow-mark.png') }}?v=12"
+            alt="AniHow"
+        >
+        <img
+            class="anihow-wordmark"
+            src="{{ asset('images/anihow-wordmark-name.png') }}?v=12"
+            alt=""
+        >
+        <p class="anihow-tagline">FROM FARM TO MARKET</p>
+    </div>
+@else
+    <div class="anihow-brand-panel">
+        <img
+            class="anihow-mark"
+            src="{{ asset('images/anihow-mark.png') }}?v=12"
+            alt="AniHow"
+        >
+    </div>
+@endif

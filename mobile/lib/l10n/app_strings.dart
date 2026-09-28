@@ -10,8 +10,19 @@ class AppStrings {
   final bool filipino;
 
   factory AppStrings.of(BuildContext context) {
-    final language = Provider.of<PreferencesController>(context).language;
-    return AppStrings(language == CropLanguage.filipino);
+    // Listen only while building. Callbacks/async handlers must not register
+    // a provider dependency or Provider throws and the tap looks like a no-op.
+    final listen = context is Element && context.debugDoingBuild;
+    try {
+      final language = Provider.of<PreferencesController>(context, listen: listen).language;
+      return AppStrings(language == CropLanguage.filipino);
+    } catch (_) {
+      try {
+        return AppStrings.read(context);
+      } catch (_) {
+        return const AppStrings(false);
+      }
+    }
   }
 
   factory AppStrings.read(BuildContext context) {
@@ -115,8 +126,8 @@ class AppStrings {
         'Burahin ang account mo?',
       );
   String get confirmDeletionBody => t(
-        'A Super Admin will review this. You can cancel while it is pending. Open orders must be finished first.',
-        'Susuriin ito ng Super Admin. Maaari mo itong kanselahin habang pending. Dapat tapos na ang mga bukas na order.',
+        'A Super Admin will review this. You can cancel while it is pending. If you have open orders (placed, confirmed, or ready), finish or cancel them first — the app will tell you if deletion is blocked.',
+        'Susuriin ito ng Super Admin. Maaari mo itong kanselahin habang pending. Kung may bukas na order (placed, confirmed, o ready), tapusin o kanselahin muna — sasabihin ng app kung hindi maaari ang pagbura.',
       );
   String get confirmDeletion => t('Send request', 'Ipadala ang kahilingan');
   String get deletionRequested => t(
@@ -126,6 +137,10 @@ class AppStrings {
   String get cancelDeletionRequest => t('Cancel request', 'Kanselahin ang kahilingan');
   String get deletionCancelled => t('Request cancelled.', 'Kinansela ang kahilingan.');
   String get deletionRejected => t('Request rejected', 'Tinanggihan ang kahilingan');
+  String get deletionBlockedTitle => t(
+        'Cannot request deletion',
+        'Hindi maaaring humiling ng pagbura',
+      );
 
   String get faqTitle => t('FAQ', 'Mga tanong');
   String get faqIntro => t(

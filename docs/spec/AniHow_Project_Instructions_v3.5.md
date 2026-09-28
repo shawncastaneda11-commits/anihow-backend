@@ -31,18 +31,18 @@ The system is implemented across three surfaces: a Laravel API (four roles), a
 Filament CMS (policy-gated resources for two roles on one panel), and a Flutter
 Android application. Development happens on the branch
 `cursor/cloud-agent-1790189470926-52vq6`; this document describes that branch as
-of commit `b6bfd4f`.
+of commit `6d0e7f3`.
 
 **Test totals (confirmed runs, 24 September 2026).**
 
 | Layer | Result |
 |---|---|
-| Full `php artisan test` suite | **232 tests, 1,728 assertions** |
+| Full `php artisan test` suite | **244 tests, 1,780 assertions** |
 | SmokeTestSeeder (service-level, runs separately) | **26 of 26** checks |
 | Multi-farm isolation (inside the PHP total) | 8 checks, 138 assertions |
-| Flutter `flutter test` (default run, Flutter 3.47.4) | **69 passed**; 3 live API suites skipped by design |
+| Flutter `flutter test` (default run, Flutter 3.47.4) | **78 passed**; 3 live API suites skipped by design |
 | Flutter live suites (`--tags live --run-skipped --concurrency=1`) | 3 of 3 against a seeded local API |
-| GitHub Actions CI (every push) | Pint `--test`, full PHPUnit suite, `flutter analyze`, `flutter test`; green on `b6bfd4f` |
+| GitHub Actions CI (every push) | Pint `--test`, full PHPUnit suite, `flutter analyze`, `flutter test`; green on `6d0e7f3` |
 
 The PHP feature suite covers: authentication and OTP verification, change
 password, the client request contract, crop-care reads (farmer-sellers only),
@@ -844,3 +844,4 @@ was updated only where noted.
 | A19 | Report hardening: storefront reviews return `is_own` instead of `buyer_id`; resolve and dismiss lock the report in a transaction and refuse a closed one with no side effects. | `7554966` | None. |
 | A20 | Farmer-seller shop reviews: `GET /api/farmer/shop/reviews` and a Reviews screen on the farmer's shop profile, with the Report button on each review. Visible-only counts and averages now live in `App\Support\ShopReviews`, used by both shop endpoints, so a removed review no longer changes the farmer's own rating (bug fix). | `b6bfd4f` | Use case diagram adds "View shop reviews"; level 1 and level 2 (3.2) DFDs show own shop reviews to the farmer-seller; Chapter 3 functional design and Testing Procedure (232 / 1,728, Flutter 69); Appendix F gains a case. |
 | A21 | DFDs (Figures 6 to 16) redrawn in pure Gane-Sarson notation: rounded-rectangle processes with a number compartment, rectangle entities, open-ended stores with an ID compartment; duplicates marked with a corner diagonal (entities) or a double left line (stores), drawn by `dfd_common.draw`. | none (docs) | Chapter 3 names the notation and cites Gane and Sarson (1979), added to References; figure notes updated. |
+| A22 | App fixes: taken-down listings leave carts and cannot be re-activated by the seller; tawad shown on the market; farmer-sellers can open storefronts from a farm page; checkout no longer fails when a seller has no farm (the order takes the listing's farm); fewer per-row rating queries; the private `local` disk serves from `/local-storage` so it no longer shadows public `/storage`; demo listings use real produce photos (`public/images/produce`). | `8d4254f`, `6d0e7f3` | Chapter 3 Testing Procedure 244 / 1,780 and Flutter 78; Table 3 note and Appendix F "all 244 tests passed". Photo sources and licences are not yet recorded (open item). |

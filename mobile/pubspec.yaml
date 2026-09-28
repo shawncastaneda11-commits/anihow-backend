@@ -68,6 +68,7 @@ flutter:
     - assets/branding/anihow-logo.png
     - assets/branding/anihow-mark.png
     - assets/branding/anihow-wordmark.png
+    - assets/branding/anihow-wordmark-name.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -68,7 +68,7 @@ class AniHowHintCard extends StatelessWidget {
   }
 }
 
-enum AniHowHintTone { neutral, brand, cash }
+enum AniHowHintTone { neutral, brand, cash, danger }
 
 class _HintColors {
   const _HintColors({
@@ -101,6 +101,13 @@ extension on AniHowHintTone {
           border: dark ? const Color(0xFF4A3E24) : const Color(0xFFE6D3A8),
           icon: AniHowColors.root,
           iconWash: dark ? const Color(0xFF3A3120) : const Color(0xFFF0E4C4),
+        );
+      case AniHowHintTone.danger:
+        return _HintColors(
+          background: dark ? const Color(0xFF2A1C1C) : const Color(0xFFFCEEEE),
+          border: dark ? const Color(0xFF5A3030) : const Color(0xFFF0C4C4),
+          icon: theme.colorScheme.error,
+          iconWash: dark ? const Color(0xFF3A2424) : const Color(0xFFF8DADA),
         );
       case AniHowHintTone.neutral:
         return _HintColors(

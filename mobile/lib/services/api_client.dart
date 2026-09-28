@@ -738,15 +738,26 @@ class ApiClient {
 
   String _messageFrom(DioException error) {
     final data = error.response?.data;
-    if (data is Map && data['message'] is String) {
+    if (data is Map) {
       final errors = data['errors'];
       if (errors is Map && errors.isNotEmpty) {
+        // Prefer field-specific reasons (e.g. open orders blocking deletion).
+        final status = errors['status'];
+        if (status is List && status.isNotEmpty) {
+          return status.first.toString();
+        }
         final first = errors.values.first;
         if (first is List && first.isNotEmpty) {
           return first.first.toString();
         }
+        if (first is String && first.isNotEmpty) {
+          return first;
+        }
       }
-      return data['message'] as String;
+      final message = data['message'];
+      if (message is String && message.isNotEmpty) {
+        return message;
+      }
     }
     if (error.type == DioExceptionType.connectionError ||
         error.type == DioExceptionType.connectionTimeout ||

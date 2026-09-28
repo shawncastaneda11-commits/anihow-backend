@@ -295,7 +295,7 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
         if (!context.mounted) {
           return;
         }
-        await _pushList(context, title: AppStrings.of(context).myListings, body: const FarmerListingsScreen());
+        await _pushList(context, title: AppStrings.read(context).myListings, body: const FarmerListingsScreen());
         return;
       }
     }
@@ -313,7 +313,7 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
       return;
     }
     if (isFarmer) {
-      await _pushList(context, title: AppStrings.of(context).myListings, body: const FarmerListingsScreen());
+      await _pushList(context, title: AppStrings.read(context).myListings, body: const FarmerListingsScreen());
     } else {
       await Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const MarketplaceScreen()),
@@ -373,7 +373,7 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
       );
       return;
     }
-    await _pushList(context, title: AppStrings.of(context).incomingOrders, body: const FarmerOrdersScreen());
+    await _pushList(context, title: AppStrings.read(context).incomingOrders, body: const FarmerOrdersScreen());
     return;
   }
 
@@ -381,7 +381,7 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
     return;
   }
   if (isFarmer) {
-    await _pushList(context, title: AppStrings.of(context).incomingOrders, body: const FarmerOrdersScreen());
+    await _pushList(context, title: AppStrings.read(context).incomingOrders, body: const FarmerOrdersScreen());
     return;
   }
 

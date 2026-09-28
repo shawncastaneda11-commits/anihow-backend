@@ -17,10 +17,16 @@ class AccountDeletionRequestController extends Controller
     {
         abort_unless($request->user()?->can(Permission::RequestAccountDeletion->value), 403);
 
-        $latest = $request->user()
+        $user = $request->user();
+        $latest = $user
             ->accountDeletionRequests()
+            ->pending()
             ->latest()
-            ->first();
+            ->first()
+            ?? $user
+                ->accountDeletionRequests()
+                ->latest()
+                ->first();
 
         return response()->json([
             'data' => $latest === null ? null : (new AccountDeletionRequestResource($latest))->resolve(),

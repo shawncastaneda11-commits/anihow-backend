@@ -45,6 +45,7 @@ class _MyDataScreenState extends State<MyDataScreen> {
   String? _deletionError;
   AccountDeletionRequest? _deletion;
   UserAccount? _user;
+  int _deletionLoadToken = 0;
 
   bool get _previewing => widget.preview != null;
 
@@ -77,14 +78,15 @@ class _MyDataScreenState extends State<MyDataScreen> {
     if (_previewing) {
       return;
     }
+    final token = ++_deletionLoadToken;
     try {
       final request = await context.read<AuthController>().api.deletionRequest();
-      if (!mounted) {
+      if (!mounted || token != _deletionLoadToken) {
         return;
       }
       setState(() => _deletion = request);
     } on ApiException catch (error) {
-      if (!mounted) {
+      if (!mounted || token != _deletionLoadToken) {
         return;
       }
       setState(() => _deletionError = error.message);
@@ -158,50 +160,97 @@ class _MyDataScreenState extends State<MyDataScreen> {
   }
 
   Future<void> _confirmDeletion() async {
-    final s = AppStrings.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(s.confirmDeletionTitle),
-        content: Text(s.confirmDeletionBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(s.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(s.confirmDeletion),
-          ),
-        ],
-      ),
-    );
+    if (_deletionBusy) {
+      return;
+    }
+
+    final s = AppStrings.read(context);
+    bool? confirmed;
+    try {
+      confirmed = await showDialog<bool>(
+        context: context,
+        useRootNavigator: true,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(s.confirmDeletionTitle),
+          content: Text(s.confirmDeletionBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext, rootNavigator: true).pop(false),
+              child: Text(s.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext, rootNavigator: true).pop(true),
+              child: Text(s.confirmDeletion),
+            ),
+          ],
+        ),
+      );
+    } catch (error, stack) {
+      debugPrint('AniHow deletion confirm dialog failed: $error\n$stack');
+      if (mounted) {
+        await _showDeletionBlocked(error.toString());
+      }
+      return;
+    }
+
     if (confirmed == true && mounted) {
       await _requestDeletion();
     }
   }
 
   Future<void> _requestDeletion() async {
-    if (_previewing) {
+    if (_previewing || _deletionBusy) {
       return;
     }
     final messenger = ScaffoldMessenger.of(context);
+    final token = ++_deletionLoadToken;
     setState(() {
       _deletionBusy = true;
       _deletionError = null;
     });
     try {
       final request = await context.read<AuthController>().api.requestAccountDeletion();
-      if (!mounted) {
+      if (!mounted || token != _deletionLoadToken) {
         return;
       }
       setState(() => _deletion = request);
-      messenger.showSnackBar(SnackBar(content: Text(AppStrings.read(context).deletionRequested)));
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(AppStrings.read(context).deletionRequested)));
     } on ApiException catch (error) {
-      if (!mounted) {
+      debugPrint('AniHow deletion blocked: ${error.message}');
+      if (!mounted || token != _deletionLoadToken) {
         return;
       }
       setState(() => _deletionError = error.message);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(error.message),
+            duration: const Duration(seconds: 8),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      await _showDeletionBlocked(error.message);
+    } catch (error, stack) {
+      debugPrint('AniHow deletion failed: $error\n$stack');
+      if (!mounted || token != _deletionLoadToken) {
+        return;
+      }
+      final message = error.toString();
+      setState(() => _deletionError = message);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(message),
+            duration: const Duration(seconds: 8),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      await _showDeletionBlocked(message);
     } finally {
       if (mounted) {
         setState(() => _deletionBusy = false);
@@ -209,21 +258,45 @@ class _MyDataScreenState extends State<MyDataScreen> {
     }
   }
 
+  Future<void> _showDeletionBlocked(String reason) async {
+    if (!mounted) {
+      return;
+    }
+    final s = AppStrings.read(context);
+    await showDialog<void>(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        icon: Icon(Icons.error_outline, color: Theme.of(dialogContext).colorScheme.error),
+        title: Text(s.deletionBlockedTitle),
+        content: Text(reason),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext, rootNavigator: true).pop(),
+            child: Text(s.ok),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _cancelDeletion() async {
     if (_previewing) {
       return;
     }
     final messenger = ScaffoldMessenger.of(context);
+    final token = ++_deletionLoadToken;
     setState(() => _deletionBusy = true);
     try {
       await context.read<AuthController>().api.cancelAccountDeletion();
-      if (!mounted) {
+      if (!mounted || token != _deletionLoadToken) {
         return;
       }
       setState(() => _deletion = null);
       messenger.showSnackBar(SnackBar(content: Text(AppStrings.read(context).deletionCancelled)));
     } on ApiException catch (error) {
-      if (!mounted) {
+      if (!mounted || token != _deletionLoadToken) {
         return;
       }
       messenger.showSnackBar(SnackBar(content: Text(error.message)));
@@ -243,9 +316,11 @@ class _MyDataScreenState extends State<MyDataScreen> {
 
     return Scaffold(
       appBar: AppHeader(title: s.myData),
-      body: ListView(
+      body: SingleChildScrollView(
         padding: AniHowSpace.screenPadding,
-        children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           AniHowHintCard(
             icon: Icons.lock_outline,
             title: s.emailNotEditable,
@@ -269,13 +344,6 @@ class _MyDataScreenState extends State<MyDataScreen> {
               onPressed: _deletionBusy ? null : _cancelDeletion,
               style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
               child: Text(s.cancelDeletionRequest),
-            ),
-          ],
-          if (_deletionError != null) ...[
-            const SizedBox(height: AniHowSpace.cardGap),
-            Text(
-              _deletionError!,
-              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
             ),
           ],
           const SizedBox(height: AniHowSpace.section),
@@ -332,6 +400,15 @@ class _MyDataScreenState extends State<MyDataScreen> {
             title: s.requestAccountDeletion,
             body: s.deletionKeptHint,
           ),
+          if (_deletionError != null) ...[
+            const SizedBox(height: AniHowSpace.cardGap),
+            AniHowHintCard(
+              icon: Icons.error_outline,
+              title: s.deletionBlockedTitle,
+              body: _deletionError,
+              tone: AniHowHintTone.danger,
+            ),
+          ],
           if (!pending) ...[
             if (_deletion?.isRejected == true) ...[
               const SizedBox(height: AniHowSpace.cardGap),
@@ -349,10 +426,17 @@ class _MyDataScreenState extends State<MyDataScreen> {
                 side: BorderSide(color: theme.colorScheme.error),
                 minimumSize: const Size.fromHeight(48),
               ),
-              child: Text(s.requestAccountDeletion),
+              child: _deletionBusy
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(s.requestAccountDeletion),
             ),
           ],
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -404,6 +404,25 @@ class PrivacyRightsTest extends TestCase
         );
     }
 
+    public function test_super_admin_cms_lists_pending_deletion_requests(): void
+    {
+        $admin = $this->staff(Role::SuperAdmin);
+        $buyer = $this->buyer(['name' => 'CMS Visible Buyer', 'email' => 'cms.visible@example.com']);
+
+        $this->asUser($buyer)
+            ->postJson('/api/auth/user/deletion-request', ['reason' => 'Leaving the market'])
+            ->assertCreated();
+
+        $this->actingAs($admin);
+        $this->assertTrue(AccountDeletionRequestResource::canAccess());
+
+        $rows = AccountDeletionRequestResource::getEloquentQuery()->get();
+        $this->assertCount(1, $rows);
+        $this->assertSame('CMS Visible Buyer', $rows->first()->user?->name);
+        $this->assertSame(AccountDeletionStatus::Pending, $rows->first()->status);
+        $this->assertSame('1', AccountDeletionRequestResource::getNavigationBadge());
+    }
+
     public function test_non_super_admins_cannot_process_deletion_requests(): void
     {
         $editor = $this->staff(Role::ContentEditor);

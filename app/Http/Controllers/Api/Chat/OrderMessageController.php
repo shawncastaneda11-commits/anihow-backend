@@ -9,6 +9,7 @@ use App\Http\Resources\Api\OrderMessageResource;
 use App\Models\Order;
 use App\Models\OrderMessage;
 use App\Support\InAppNotifier;
+use Illuminate\Broadcasting\BroadcastException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -52,7 +53,12 @@ class OrderMessageController extends Controller
             $notifier->orderMessage($counterpart, $order, $request->user(), $message->body);
         }
 
-        event(new OrderMessageCreated($message));
+        try {
+            event(new OrderMessageCreated($message));
+        } catch (BroadcastException $exception) {
+            // Keep the saved message usable when Reverb is down; clients fall back to polling.
+            report($exception);
+        }
 
         return (new OrderMessageResource($message))
             ->additional(['message' => 'Message sent.'])

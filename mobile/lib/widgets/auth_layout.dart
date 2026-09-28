@@ -17,7 +17,7 @@ class AuthLayout extends StatelessWidget {
   final Widget form;
   final Widget? leading;
 
-  static const double _headerFraction = 0.50;
+  static const double _headerFraction = 0.54;
   static const double _sheetOverlap = 28;
   static const double _sheetRadius = 28;
 
@@ -93,9 +93,10 @@ class AuthLayout extends StatelessWidget {
                                     child: FittedBox(
                                       fit: BoxFit.scaleDown,
                                       child: AniHowLogoMark(
-                                        markHeight: 128,
-                                        wordmarkHeight: 68,
-                                        wordmarkWidth: 300,
+                                        markHeight: 104,
+                                        wordmarkHeight: 50,
+                                        wordmarkWidth: 272,
+                                        taglineSize: 22,
                                         onCard: true,
                                       ),
                                     ),

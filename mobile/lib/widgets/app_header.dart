@@ -95,9 +95,10 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const AniHowLogoMark(
-                    markHeight: 88,
-                    wordmarkHeight: 48,
-                    wordmarkWidth: 220,
+                    markHeight: 92,
+                    wordmarkHeight: 40,
+                    wordmarkWidth: 240,
+                    taglineSize: 11,
                     onCard: true,
                   ),
                   const SizedBox(height: AniHowSpace.labelGap),

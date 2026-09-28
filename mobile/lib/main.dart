@@ -58,8 +58,8 @@ class _AniHowAppState extends State<AniHowApp> {
   @override
   void dispose() {
     widget.preferences.removeListener(_syncApiLocale);
-    super.dispose();
     _auth.dispose();
+    super.dispose();
   }
 
   @override

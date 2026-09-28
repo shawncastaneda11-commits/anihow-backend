@@ -31,6 +31,7 @@ use App\Models\User;
 use App\Services\AnalyticsService;
 use App\Services\CheckoutService;
 use App\Services\OrderStateMachine;
+use App\Support\ImageVariants;
 use App\Support\ListingStorage;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -41,6 +42,19 @@ class DemoSeeder extends Seeder
     public const PASSWORD = 'password';
 
     public const EMAIL_DOMAIN = '@demo.anihow.local';
+
+    /** @var array<string, string> */
+    private const CROP_PHOTOS = [
+        'kamatis' => 'tomato.jpg',
+        'talong' => 'eggplant.jpg',
+        'sitaw' => 'sitaw.jpg',
+        'kalabasa' => 'squash.jpg',
+        'ampalaya' => 'ampalaya.jpg',
+        'okra' => 'okra.jpg',
+        'pechay' => 'pechay.jpg',
+        'mais' => 'corn.jpg',
+        'sili' => 'chili.jpg',
+    ];
 
     public function run(): void
     {
@@ -117,7 +131,7 @@ class DemoSeeder extends Seeder
 
     private function farm(): Farm
     {
-        $cover = $this->storePlaceholder('farms/pyap-manggahan/cover.jpg', 'PYAP Manggahan', 46, 125, 50);
+        $cover = $this->storePublicPhoto('farms/pyap-manggahan/cover.jpg', 'farm-cover.jpg');
 
         return Farm::query()->updateOrCreate(
             ['slug' => 'pyap-manggahan-chapter'],
@@ -139,16 +153,16 @@ class DemoSeeder extends Seeder
     private function photos(Farm $farm): void
     {
         $gallery = [
-            [1, 'farms/pyap-manggahan/gallery-1.jpg', 'Morning harvest crates', 198, 40, 40],
-            [2, 'farms/pyap-manggahan/gallery-2.jpg', 'Talong and sitaw from the plots', 106, 27, 154],
-            [3, 'farms/pyap-manggahan/gallery-3.jpg', 'Saturday pickup at the hall', 245, 167, 26],
+            [1, 'farms/pyap-manggahan/gallery-1.jpg', 'Morning harvest crates', 'farm-crates.jpg'],
+            [2, 'farms/pyap-manggahan/gallery-2.jpg', 'Talong and sitaw from the plots', 'farm-plots.jpg'],
+            [3, 'farms/pyap-manggahan/gallery-3.jpg', 'Saturday pickup at the hall', 'farm-pickup.jpg'],
         ];
 
-        foreach ($gallery as [$sort, $path, $caption, $r, $g, $b]) {
+        foreach ($gallery as [$sort, $path, $caption, $photo]) {
             FarmPhoto::query()->updateOrCreate(
                 ['farm_id' => $farm->id, 'sort_order' => $sort],
                 [
-                    'path' => $this->storePlaceholder($path, $caption, $r, $g, $b),
+                    'path' => $this->storePublicPhoto($path, $photo),
                     'caption' => $caption,
                 ],
             );
@@ -334,7 +348,10 @@ class DemoSeeder extends Seeder
         foreach ($rows as $key => [$sellerKey, $cropKey, $title, $description, $price, $rgb]) {
             $seller = $sellers[$sellerKey];
             $crop = $crops[$cropKey];
-            $image = $this->storePlaceholder('listings/demo-'.$key.'.jpg', $title, $rgb[0], $rgb[1], $rgb[2]);
+            $image = $this->storePublicPhoto(
+                'listings/demo-'.$key.'.jpg',
+                self::CROP_PHOTOS[$cropKey] ?? 'tomato.jpg',
+            );
 
             $values = [
                 'farm_id' => $farm->id,
@@ -847,6 +864,21 @@ class DemoSeeder extends Seeder
     private function moment(int $daysAgo, int $hour): Carbon
     {
         return now()->subDays($daysAgo)->setTime($hour, 15, 0);
+    }
+
+    private function storePublicPhoto(string $path, string $filename): string
+    {
+        $source = public_path('images/produce/'.$filename);
+
+        if (is_file($source)) {
+            app(ImageVariants::class)->delete($path);
+            ListingStorage::disk()->put($path, File::get($source));
+            app(ImageVariants::class)->backfill($path);
+
+            return $path;
+        }
+
+        return $this->storePlaceholder($path, pathinfo($filename, PATHINFO_FILENAME), 46, 125, 50);
     }
 
     private function storePlaceholder(string $path, string $label, int $red, int $green, int $blue): string

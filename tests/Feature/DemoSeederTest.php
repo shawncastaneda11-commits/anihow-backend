@@ -12,6 +12,7 @@ use App\Models\Order;
 use App\Models\Review;
 use App\Models\User;
 use App\Services\AnalyticsService;
+use App\Support\ListingStorage;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Mail\Mailable;
@@ -59,6 +60,21 @@ class DemoSeederTest extends TestCase
             ->count();
 
         $this->assertSame(0, $mismatched);
+    }
+
+    public function test_demo_listing_photos_are_real_produce_images(): void
+    {
+        $this->seed(DemoSeeder::class);
+
+        $listing = Listing::query()->where('title', 'like', 'Talong, pantatong')->first();
+
+        $this->assertNotNull($listing?->image_path);
+        $this->assertTrue(ListingStorage::disk()->exists($listing->image_path));
+
+        $info = getimagesizefromstring((string) ListingStorage::disk()->get($listing->image_path));
+
+        $this->assertIsArray($info);
+        $this->assertNotSame([800, 500], [$info[0], $info[1]]);
     }
 
     public function test_demo_seeder_sends_and_queues_no_mail_to_demo_addresses(): void

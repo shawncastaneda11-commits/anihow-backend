@@ -8,24 +8,33 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\ShopProfileResource;
 use App\Models\User;
 use App\Support\ShopReviews;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class BuyerShopController extends Controller
 {
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
         $shops = User::query()
             ->role(Role::FarmerSeller->value)
             ->where('status', UserStatus::Active)
+            ->with('farm')
             ->withCount(ShopReviews::receivedAggregate())
             ->withAvg(ShopReviews::receivedAggregate(), 'rating')
+            ->when(
+                $request->user() !== null,
+                fn ($query) => $query->withExists([
+                    'shopFans as is_favorited' => fn ($favorites) => $favorites
+                        ->where('buyer_id', $request->user()->id),
+                ]),
+            )
             ->orderByRaw('coalesce(shop_name, name)')
             ->paginate();
 
         return ShopProfileResource::collection($shops);
     }
 
-    public function show(User $farmerSeller): ShopProfileResource
+    public function show(Request $request, User $farmerSeller): ShopProfileResource
     {
         abort_unless($farmerSeller->isFarmerSeller() && $farmerSeller->isActive(), 404);
 
@@ -36,6 +45,13 @@ class BuyerShopController extends Controller
                 ->with(['cropType', 'farm', 'activeTawadRule'])
                 ->latest(),
         ]);
+
+        if ($request->user() !== null) {
+            $farmerSeller->loadExists([
+                'shopFans as is_favorited' => fn ($favorites) => $favorites
+                    ->where('buyer_id', $request->user()->id),
+            ]);
+        }
 
         ShopReviews::loadStats($farmerSeller);
 

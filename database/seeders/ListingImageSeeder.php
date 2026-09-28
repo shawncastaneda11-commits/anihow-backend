@@ -17,13 +17,18 @@ class ListingImageSeeder extends Seeder
     private array $keywords = [
         'kamatis' => 'tomato.jpg',
         'tomato' => 'tomato.jpg',
-        'kamote' => 'kamote.jpg',
-        'mango' => 'mango.jpg',
-        'mangga' => 'mango.jpg',
-        'banana' => 'banana.jpg',
-        'saging' => 'banana.jpg',
+        'talong' => 'eggplant.jpg',
+        'eggplant' => 'eggplant.jpg',
         'sitaw' => 'sitaw.jpg',
+        'kalabasa' => 'squash.jpg',
+        'squash' => 'squash.jpg',
         'ampalaya' => 'ampalaya.jpg',
+        'okra' => 'okra.jpg',
+        'pechay' => 'pechay.jpg',
+        'mais' => 'corn.jpg',
+        'corn' => 'corn.jpg',
+        'sili' => 'chili.jpg',
+        'chili' => 'chili.jpg',
     ];
 
     public function run(): void

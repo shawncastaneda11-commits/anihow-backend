@@ -27,10 +27,12 @@ class ShopProfileResource extends JsonResource
             'farm' => new FarmResource($this->whenLoaded('farm')),
             'is_favorited' => $this->when(
                 $request->user()?->can(Permission::BrowseMarketplace->value) ?? false,
-                fn (): bool => ShopFavorite::query()
-                    ->where('buyer_id', $request->user()?->id)
-                    ->where('farmer_seller_id', $this->id)
-                    ->exists(),
+                fn (): bool => array_key_exists('is_favorited', $this->getAttributes())
+                    ? (bool) $this->getAttribute('is_favorited')
+                    : ShopFavorite::query()
+                        ->where('buyer_id', $request->user()?->id)
+                        ->where('farmer_seller_id', $this->id)
+                        ->exists(),
             ),
         ];
     }

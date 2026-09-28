@@ -9,6 +9,7 @@ use App\Models\Listing;
 use App\Models\Order;
 use App\Models\User;
 use App\Support\InAppNotifier;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -47,10 +48,20 @@ class CheckoutService
         ?string $fulfillmentNote = null,
     ): Collection {
         return DB::transaction(function () use ($buyer, $preference, $fulfillmentNote): Collection {
+            CartItem::query()
+                ->where('buyer_id', $buyer->id)
+                ->whereDoesntHave(
+                    'listing',
+                    fn (Builder $listing): Builder => $listing->marketplaceVisible(),
+                )
+                ->delete();
+
             $cartItems = CartItem::query()
                 ->where('buyer_id', $buyer->id)
                 ->with(['listing.cropType', 'listing.farmerSeller', 'listing.activeTawadRule'])
-                ->get();
+                ->get()
+                ->filter(fn (CartItem $item): bool => $item->listing !== null)
+                ->values();
 
             if ($cartItems->isEmpty()) {
                 throw ValidationException::withMessages([
@@ -59,7 +70,7 @@ class CheckoutService
             }
 
             $orders = $cartItems
-                ->groupBy(fn (CartItem $item): int => $item->listing->farmer_seller_id)
+                ->groupBy(fn (CartItem $item): int => (int) $item->listing->farmer_seller_id)
                 ->map(fn (Collection $items): Order => $this->createOrder(
                     $buyer,
                     $items,
@@ -96,11 +107,19 @@ class CheckoutService
         $subtotal = array_sum(array_column($lines, 'line_subtotal'));
         $tawadTotal = array_sum(array_column($lines, 'tawad_amount'));
 
+        $farmId = $items->first()->listing->farm_id;
+
+        if ($farmId === null) {
+            throw ValidationException::withMessages([
+                'cart' => 'A listing in your cart is no longer available.',
+            ]);
+        }
+
         $order = Order::create([
             'order_number' => $this->orderNumbers->generate(),
             'buyer_id' => $buyer->id,
             'farmer_seller_id' => $seller->id,
-            'farm_id' => $seller->farm_id,
+            'farm_id' => $farmId,
             'status' => OrderStatus::Placed,
             'fulfillment_preference' => $preference,
             'fulfillment_note' => $fulfillmentNote,

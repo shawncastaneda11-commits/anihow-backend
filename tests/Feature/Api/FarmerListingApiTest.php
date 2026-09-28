@@ -42,6 +42,23 @@ class FarmerListingApiTest extends TestCase
             ->assertJsonValidationErrors(['title', 'crop_type_id']);
     }
 
+    public function test_farmer_without_a_farm_cannot_create_a_listing(): void
+    {
+        $farmer = $this->farmer();
+        $farmer->forceFill(['farm_id' => null])->save();
+        $cropType = $this->cropType();
+
+        $this->asUser($farmer)
+            ->postJson('/api/farmer/listings', [
+                'title' => 'Fresh kamatis, hand picked',
+                'crop_type_id' => $cropType->id,
+                'price_per_unit' => 30,
+                'quantity_available' => 20,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['farm']);
+    }
+
     public function test_farmer_can_create_and_update_a_listing_with_the_live_body(): void
     {
         $farmer = $this->farmer();

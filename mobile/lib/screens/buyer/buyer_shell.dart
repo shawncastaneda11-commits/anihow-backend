@@ -82,7 +82,12 @@ class _BuyerShellState extends State<BuyerShell> {
       body: Column(
         children: [
           if (hasAppBar) const UnverifiedEmailBanner(),
-          Expanded(child: pages[_index]),
+          Expanded(
+            child: IndexedStack(
+              index: _index,
+              children: pages,
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: DecoratedBox(

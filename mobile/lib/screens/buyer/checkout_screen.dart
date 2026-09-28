@@ -67,6 +67,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
       setState(() => _busy = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
     }
   }
 
@@ -84,9 +90,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       appBar: AppBar(title: Text(s.checkout)),
       body: cart.loading
           ? const Center(child: CircularProgressIndicator())
-          : cart.isEmpty
-              ? Center(child: Text(s.emptyCart))
-              : ListView(
+          : cart.error != null
+              ? Center(child: Text('${cart.error}'))
+              : cart.isEmpty
+                  ? Center(child: Text(s.emptyCart))
+                  : ListView(
                   padding: AniHowSpace.screenPadding,
                   children: [
                     AniHowHintCard(

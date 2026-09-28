@@ -29,17 +29,26 @@ class ProducePhoto extends StatelessWidget {
         ? (listing.thumbnailUrl ?? listing.imageUrl)
         : listing.imageUrl;
     final photo = url != null && url.isNotEmpty
-        ? Image.network(
-            url,
-            fit: BoxFit.cover,
-            width: double.infinity,
-            height: double.infinity,
-            filterQuality: FilterQuality.high,
-            errorBuilder: (_, _, _) => _Fallback(
-              listing: listing,
-              accent: accent,
-              iconSize: iconSize,
-            ),
+        ? LayoutBuilder(
+            builder: (context, constraints) {
+              final dpr = MediaQuery.devicePixelRatioOf(context);
+              final cacheWidth = constraints.maxWidth.isFinite
+                  ? (constraints.maxWidth * dpr).round()
+                  : null;
+              return Image.network(
+                url,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                cacheWidth: cacheWidth == null || cacheWidth <= 0 ? null : cacheWidth,
+                filterQuality: FilterQuality.medium,
+                errorBuilder: (_, _, _) => _Fallback(
+                  listing: listing,
+                  accent: accent,
+                  iconSize: iconSize,
+                ),
+              );
+            },
           )
         : _Fallback(
             listing: listing,

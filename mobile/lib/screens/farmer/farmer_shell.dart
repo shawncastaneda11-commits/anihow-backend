@@ -62,7 +62,10 @@ class _FarmerShellState extends State<FarmerShell> {
           ),
         ],
       ),
-      body: pages[_index],
+      body: IndexedStack(
+        index: _index,
+        children: pages,
+      ),
       bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),

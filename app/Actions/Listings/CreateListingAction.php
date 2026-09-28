@@ -6,6 +6,7 @@ use App\Enums\ListingStatus;
 use App\Models\Listing;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Validation\ValidationException;
 
 class CreateListingAction
 {
@@ -20,6 +21,12 @@ class CreateListingAction
      */
     public function handle(User $farmerSeller, array $attributes, ?UploadedFile $image = null): Listing
     {
+        if ($farmerSeller->farm_id === null) {
+            throw ValidationException::withMessages([
+                'farm' => 'Assign this seller to a farm first.',
+            ]);
+        }
+
         if ($image !== null) {
             $attributes['image_path'] = $this->images->store($image);
         }

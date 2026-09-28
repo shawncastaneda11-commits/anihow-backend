@@ -33,7 +33,7 @@ class UserAccount {
     final farmJson = json['farm'];
     final farmMap = farmJson is Map ? Map<String, dynamic>.from(farmJson) : null;
     return UserAccount(
-      id: json['id'] as int,
+      id: ListingItem._asCount(json['id']) ?? 0,
       name: json['name'] as String? ?? '',
       email: json['email'] as String? ?? '',
       roles: ((json['roles'] as List?) ?? const [])
@@ -45,7 +45,7 @@ class UserAccount {
       phone: json['phone'] as String?,
       location: json['location'] as String?,
       shopName: json['shop_name'] as String?,
-      emailVerifiedAt: json['email_verified_at'] as String?,
+      emailVerifiedAt: json['email_verified_at']?.toString(),
       farmId: ListingItem._asCount(farmMap?['id']),
       farmName: farmMap?['name'] as String?,
     );
@@ -79,7 +79,7 @@ class AccountDeletionRequest {
 
   factory AccountDeletionRequest.fromJson(Map<String, dynamic> json) {
     return AccountDeletionRequest(
-      id: json['id'] as int,
+      id: ListingItem._asCount(json['id']) ?? 0,
       status: json['status'] as String? ?? '',
       reason: json['reason'] as String?,
       rejectionNote: json['rejection_note'] as String?,
@@ -116,7 +116,7 @@ class CategoryItem {
 
   factory CategoryItem.fromJson(Map<String, dynamic> json) {
     return CategoryItem(
-      id: json['id'] as int,
+      id: ListingItem._asCount(json['id']) ?? 0,
       name: json['name'] as String? ?? '',
       slug: json['slug'] as String?,
       labelEn: json['label_en'] as String?,
@@ -203,7 +203,7 @@ class TawadRule {
 
   factory TawadRule.fromJson(Map<String, dynamic> json) {
     return TawadRule(
-      id: json['id'] as int,
+      id: ListingItem._asCount(json['id']) ?? 0,
       type: json['type'] as String? ?? '',
       typeLabel: json['type_label'] as String?,
       discountAmount: '${json['discount_amount'] ?? '0'}',
@@ -305,16 +305,16 @@ class ListingItem {
     final sellerMap = sellerJson is Map ? Map<String, dynamic>.from(sellerJson) : null;
     final tawadJson = json['tawad'];
     return ListingItem(
-      id: json['id'] as int,
+      id: ListingItem._asCount(json['id']) ?? 0,
       title: json['title'] as String? ?? '',
       unit: cropTypeMap?['unit_of_measure'] as String?,
       unitLabel: cropTypeMap?['unit_label'] as String?,
       pricePerUnit: '${json['price_per_unit'] ?? '0'}',
       quantityAvailable: '${json['quantity_available'] ?? '0'}',
       description: json['description'] as String?,
-      imageUrl: ApiConfig.mediaUrl(json['image_url'] as String?),
-      thumbnailUrl: ApiConfig.mediaUrl(json['thumbnail_url'] as String?) ??
-          ApiConfig.mediaUrl(json['image_url'] as String?),
+      imageUrl: ApiConfig.mediaUrl(json['image_url']?.toString()),
+      thumbnailUrl: ApiConfig.mediaUrl(json['thumbnail_url']?.toString()) ??
+          ApiConfig.mediaUrl(json['image_url']?.toString()),
       isActive: json['is_active'] == true || json['is_active'] == 1,
       status: json['status'] as String?,
       category: cropTypeMap == null ? null : CategoryItem.fromJson(cropTypeMap),
@@ -456,7 +456,7 @@ class OrderRecord {
       farmMap?['municipality'] as String?,
     ].whereType<String>().where((part) => part.isNotEmpty).toList();
     return OrderRecord(
-      id: json['id'] as int,
+      id: ListingItem._asCount(json['id']) ?? 0,
       orderNumber: json['order_number'] as String?,
       status: json['status'] as String? ?? '',
       statusLabel: json['status_label'] as String?,
@@ -490,11 +490,22 @@ class OrderRecord {
       allowedNext: ((json['allowed_next'] as List?) ?? const [])
           .map((item) => item.toString())
           .toList(),
-      items: ((json['items'] as List?) ?? const [])
-          .whereType<Map>()
-          .map((item) => OrderItemRow.fromJson(Map<String, dynamic>.from(item)))
+      items: _jsonMaps(json['items'])
+          .map(OrderItemRow.fromJson)
           .toList(),
     );
+  }
+
+  static List<Map<String, dynamic>> _jsonMaps(Object? value) {
+    final raw = value is List
+        ? value
+        : value is Map && value['data'] is List
+            ? value['data'] as List
+            : const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
   }
 
   String get stallName => shopName ?? counterpartyName ?? 'Stall';
@@ -646,7 +657,7 @@ class CartLine {
   factory CartLine.fromJson(Map<String, dynamic> json) {
     final listingJson = json['listing'];
     return CartLine(
-      id: json['id'] as int,
+      id: ListingItem._asCount(json['id']) ?? 0,
       quantity: '${json['quantity'] ?? ''}',
       listedPrice: '${json['listed_price'] ?? '0'}',
       lineSubtotal: '${json['line_subtotal'] ?? '0'}',
@@ -737,8 +748,8 @@ class FavoriteRecord {
   factory FavoriteRecord.fromJson(Map<String, dynamic> json) {
     final listingJson = json['listing'];
     return FavoriteRecord(
-      id: json['id'] as int,
-      listingId: json['listing_id'] as int,
+      id: ListingItem._asCount(json['id']) ?? 0,
+      listingId: ListingItem._asCount(json['listing_id']) ?? 0,
       listing: listingJson is Map<String, dynamic>
           ? ListingItem.fromJson(listingJson)
           : listingJson is Map
@@ -762,8 +773,8 @@ class ShopFavoriteRecord {
   factory ShopFavoriteRecord.fromJson(Map<String, dynamic> json) {
     final shopJson = json['shop'];
     return ShopFavoriteRecord(
-      id: json['id'] as int,
-      sellerId: json['farmer_seller_id'] as int,
+      id: ListingItem._asCount(json['id']) ?? 0,
+      sellerId: ListingItem._asCount(json['farmer_seller_id']) ?? 0,
       shop: shopJson is Map
           ? ShopProfile.fromJson(Map<String, dynamic>.from(shopJson))
           : null,
@@ -826,7 +837,7 @@ class CropCareArticle {
     final farmJson = json['farm'];
     final farmMap = farmJson is Map ? Map<String, dynamic>.from(farmJson) : null;
     return CropCareArticle(
-      id: json['id'] as int,
+      id: ListingItem._asCount(json['id']) ?? 0,
       title: json['title'] as String? ?? '',
       body: json['body'] as String? ?? '',
       summary: json['summary'] as String? ?? '',
@@ -834,9 +845,9 @@ class CropCareArticle {
       category: json['category'] as String? ?? '',
       categoryLabel: json['category_label'] as String? ?? '',
       authorName: json['author_name'] as String?,
-      imageUrl: ApiConfig.mediaUrl(json['image_url'] as String?),
-      thumbnailUrl: ApiConfig.mediaUrl(json['thumbnail_url'] as String?) ??
-          ApiConfig.mediaUrl(json['image_url'] as String?),
+      imageUrl: ApiConfig.mediaUrl(json['image_url']?.toString()),
+      thumbnailUrl: ApiConfig.mediaUrl(json['thumbnail_url']?.toString()) ??
+          ApiConfig.mediaUrl(json['image_url']?.toString()),
       publishedAt: json['published_at'] as String?,
       farmId: ListingItem._asCount(farmMap?['id']),
       farmName: farmMap?['name'] as String?,
@@ -896,7 +907,7 @@ class ShopProfile {
     final farmJson = json['farm'];
     final farmMap = farmJson is Map ? Map<String, dynamic>.from(farmJson) : null;
     return ShopProfile(
-      id: json['id'] as int,
+      id: ListingItem._asCount(json['id']) ?? 0,
       shopName: json['shop_name'] as String? ?? json['name'] as String? ?? '',
       name: json['name'] as String? ?? '',
       bio: json['bio'] as String?,
@@ -958,7 +969,7 @@ class FarmAnnouncement {
 
   factory FarmAnnouncement.fromJson(Map<String, dynamic> json) {
     return FarmAnnouncement(
-      id: json['id'] as int,
+      id: ListingItem._asCount(json['id']) ?? 0,
       title: json['title'] as String? ?? '',
       body: json['body'] as String? ?? '',
       audience: json['audience'] as String?,
@@ -993,9 +1004,9 @@ class FarmPhotoItem {
 
   factory FarmPhotoItem.fromJson(Map<String, dynamic> json) {
     return FarmPhotoItem(
-      id: json['id'] as int,
+      id: ListingItem._asCount(json['id']) ?? 0,
       url: ApiConfig.mediaUrl(json['url'] as String?) ?? '',
-      thumbnailUrl: ApiConfig.mediaUrl(json['thumbnail_url'] as String?) ??
+      thumbnailUrl: ApiConfig.mediaUrl(json['thumbnail_url']?.toString()) ??
           ApiConfig.mediaUrl(json['url'] as String?),
       caption: json['caption'] as String?,
     );
@@ -1015,7 +1026,7 @@ class FarmStorefront {
 
   factory FarmStorefront.fromJson(Map<String, dynamic> json) {
     return FarmStorefront(
-      id: json['id'] as int,
+      id: ListingItem._asCount(json['id']) ?? 0,
       shopName: json['shop_name'] as String? ?? json['name'] as String? ?? '',
       avatar: ApiConfig.mediaUrl(json['avatar'] as String?),
     );
@@ -1069,7 +1080,7 @@ class FarmProfile {
 
   factory FarmProfile.fromJson(Map<String, dynamic> json) {
     return FarmProfile(
-      id: json['id'] as int,
+      id: ListingItem._asCount(json['id']) ?? 0,
       name: json['name'] as String? ?? '',
       slug: json['slug'] as String?,
       description: json['description'] as String?,
@@ -1117,7 +1128,7 @@ class ShopReview {
 
   factory ShopReview.fromJson(Map<String, dynamic> json) {
     return ShopReview(
-      id: json['id'] as int,
+      id: ListingItem._asCount(json['id']) ?? 0,
       rating: ListingItem._asCount(json['rating']) ?? 0,
       reviewerName: json['buyer_name'] as String? ?? 'Buyer',
       isOwn: json['is_own'] == true || json['is_own'] == 1,
@@ -1213,7 +1224,7 @@ class AppNotification {
 
   factory AppNotification.fromJson(Map<String, dynamic> json) {
     return AppNotification(
-      id: json['id'] as int,
+      id: ListingItem._asCount(json['id']) ?? 0,
       title: json['title'] as String? ?? '',
       body: json['body'] as String? ?? '',
       type: json['type'] as String?,
@@ -1246,7 +1257,7 @@ class OrderMessage {
     final author = json['author'];
     final authorMap = author is Map ? Map<String, dynamic>.from(author) : null;
     return OrderMessage(
-      id: json['id'] as int,
+      id: ListingItem._asCount(json['id']) ?? 0,
       body: json['body'] as String? ?? '',
       authorId: ListingItem._asCount(authorMap?['id']) ?? 0,
       authorName: authorMap?['name'] as String? ?? 'Someone',

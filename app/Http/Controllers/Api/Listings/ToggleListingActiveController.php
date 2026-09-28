@@ -20,7 +20,7 @@ class ToggleListingActiveController extends Controller
             $request->has('is_active') ? $request->boolean('is_active') : null,
         );
 
-        return (new ListingResource($listing))
+        return (new ListingResource($listing->load(ListingController::relations())))
             ->additional(['message' => 'Listing visibility updated.']);
     }
 }

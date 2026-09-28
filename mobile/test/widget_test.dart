@@ -349,6 +349,33 @@ void main() {
     expect(order.chatPeerTitle(viewingAsSeller: true), 'Carla Santos');
   });
 
+  test('checkout order payload parses string ids and wrapped item lists', () {
+    final order = OrderRecord.fromJson({
+      'id': '43',
+      'order_number': 'AH-260925-JXYT9',
+      'status': 'placed',
+      'total': 310,
+      'seller': {'id': '7', 'shop_name': 'Aling Nena Produce'},
+      'items': {
+        'data': [
+          {
+            'listing_name': 'Talong, mahaba',
+            'quantity': 8,
+            'listed_price': 40,
+            'line_subtotal': 320,
+            'tawad_amount': 10,
+            'line_total': 310,
+          },
+        ],
+      },
+    });
+
+    expect(order.id, 43);
+    expect(order.sellerId, 7);
+    expect(order.items, hasLength(1));
+    expect(order.items.single.listingName, 'Talong, mahaba');
+  });
+
   test('a taken-down listing is not purchasable from the cart', () {
     const line = CartLine(
       id: 1,

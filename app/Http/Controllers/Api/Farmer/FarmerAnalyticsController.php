@@ -17,6 +17,13 @@ class FarmerAnalyticsController extends Controller
             : now()->startOfDay()->subDays(6);
         $grouping = $period === 'month' ? 'week' : 'day';
         $user = $request->user();
+        $units = $analytics->unitsSoldPerCropType($user, since: $since);
+        $unitRows = fn (object $row): array => [
+            'crop' => $row->crop,
+            'unit' => $row->unit_of_measure,
+            'units' => (float) $row->units,
+            'revenue' => (float) $row->revenue,
+        ];
 
         return new FarmerAnalyticsResource([
             'period' => $period,
@@ -30,22 +37,8 @@ class FarmerAnalyticsController extends Controller
                     'revenue' => (float) $row->revenue,
                 ])
                 ->all(),
-            'units_per_crop_type' => $analytics->unitsSoldPerCropType($user, since: $since)
-                ->map(fn (object $row): array => [
-                    'crop' => $row->crop,
-                    'unit' => $row->unit_of_measure,
-                    'units' => (float) $row->units,
-                    'revenue' => (float) $row->revenue,
-                ])
-                ->all(),
-            'best_selling' => $analytics->bestSelling($user, $period, since: $since)
-                ->map(fn (object $row): array => [
-                    'crop' => $row->crop,
-                    'unit' => $row->unit_of_measure,
-                    'units' => (float) $row->units,
-                    'revenue' => (float) $row->revenue,
-                ])
-                ->all(),
+            'units_per_crop_type' => $units->map($unitRows)->all(),
+            'best_selling' => $units->take(5)->map($unitRows)->values()->all(),
             'walk_in_share' => $analytics->walkInShare($user, since: $since),
         ]);
     }

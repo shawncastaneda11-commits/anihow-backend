@@ -83,7 +83,10 @@ Create the accounts you can actually sign in with:
 ```bash
 php artisan db:seed --class=SuperAdminSeeder
 php artisan db:seed --class=SmokeTestSeeder
+php artisan db:seed --class=DemoSeeder
 ```
+
+For a local hand-test / panel demo, **use the Demo accounts** below (PYAP Manggahan Chapter). Smoke accounts are thin fixtures for automated tests.
 
 ### 4. Run
 
@@ -105,28 +108,49 @@ php artisan schedule:work
 
 Settings → Help & contact opens the scripted FAQ bot (no LLM).
 
-### Logins
+## Logins (copy these)
 
-Seeded after `SuperAdminSeeder` and `SmokeTestSeeder`. Password is `password` for every account unless you override `SUPER_ADMIN_PASSWORD` in `.env`.
+**Shared password for every seeded account below: `password`**  
+(unless you set `SUPER_ADMIN_PASSWORD` in `.env` before running `SuperAdminSeeder`).
 
-#### Filament `/admin` (`http://localhost:8000/admin`)
+All demo emails are already verified. Do **not** use old draft emails like `juan@anihow.local`, `ana.buyer@anihow.local`, or `ben.buyer@anihow.local` — those seeders are not called and will fail login.
 
-| Role | Name | Email | Password |
-| --- | --- | --- | --- |
-| `super_admin` | AniHow Super Admin | `admin@anihow.local` | `password` |
-| `content_editor` | Smoke Content Editor | `smoke.editor@anihow.local` | `password` |
-
-`super_admin` email and password can be changed with `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD` before you run `SuperAdminSeeder`. The content editor belongs to Smoke Test Farm.
-
-#### Android app
+### Filament CMS (`http://localhost:8000/admin`)
 
 | Role | Name | Email | Password | Notes |
 | --- | --- | --- | --- | --- |
-| `farmer_seller` | Smoke Seller A | `smoke.sellera@anihow.local` | `password` | Shop: Aling Nena Produce. Farm: Smoke Test Farm. |
-| `farmer_seller` | Smoke Seller B | `smoke.sellerb@anihow.local` | `password` | Shop: Mang Tonyo Farm. Farm: Smoke Test Farm. |
-| `buyer` | Smoke Buyer | `smoke.buyer@anihow.local` | `password` | Email already verified. |
+| `super_admin` | AniHow Super Admin | `admin@anihow.local` | `password` | Full CMS. From `SuperAdminSeeder`. |
+| `content_editor` | Elena Ramos | `elena.ramos@demo.anihow.local` | `password` | Farm-scoped CMS for **PYAP Manggahan Chapter**. From `DemoSeeder`. |
+| `content_editor` | Smoke Content Editor | `smoke.editor@anihow.local` | `password` | Farm-scoped CMS for **Smoke Test Farm**. From `SmokeTestSeeder`. |
 
-Do not use `juan@anihow.local`, `maria.santos@anihow.local`, `pedro.reyes@anihow.local`, `ana.buyer@anihow.local`, or `ben.buyer@anihow.local`. Those seeders are leftover from the pre-rebuild schema and are not called.
+### Android app — Demo (use these for hand-testing)
+
+Seeded by `DemoSeeder`. Farm: **PYAP Manggahan Chapter**. Password: **`password`**.
+
+| Role | Name | Email | Password | Notes |
+| --- | --- | --- | --- | --- |
+| `buyer` | Carla Santos | `carla.santos@demo.anihow.local` | `password` | Primary demo buyer |
+| `buyer` | Miguel Reyes | `miguel.reyes@demo.anihow.local` | `password` | Verified |
+| `buyer` | Ana Dela Cruz | `ana.delacruz@demo.anihow.local` | `password` | Verified |
+| `buyer` | Paolo Garcia | `paolo.garcia@demo.anihow.local` | `password` | Verified |
+| `buyer` | Liza Ramos | `liza.ramos@demo.anihow.local` | `password` | Verified |
+| `buyer` | Benito Cruz | `benito.cruz@demo.anihow.local` | `password` | Verified |
+| `farmer_seller` | Nena Villanueva | `nena.villanueva@demo.anihow.local` | `password` | Shop: **Aling Nena Produce** |
+| `farmer_seller` | Antonio Ramirez | `antonio.ramirez@demo.anihow.local` | `password` | Shop: **Mang Tonyo Farm** |
+| `farmer_seller` | Rosa Mendoza | `rosa.mendoza@demo.anihow.local` | `password` | Shop: **Ka Rosa Gulay** |
+| `farmer_seller` | Jun Bautista | `jun.bautista@demo.anihow.local` | `password` | Shop: **Kuya Jun Harvest** |
+
+Quick picks: buyer `carla.santos@demo.anihow.local` / farmer `nena.villanueva@demo.anihow.local` / admin `admin@anihow.local` — all password `password`.
+
+### Android app — Smoke (automated tests only)
+
+Seeded by `SmokeTestSeeder`. Farm: **Smoke Test Farm**. Password: **`password`**.
+
+| Role | Name | Email | Password | Notes |
+| --- | --- | --- | --- | --- |
+| `farmer_seller` | Smoke Seller A | `smoke.sellera@anihow.local` | `password` | Shop: Aling Nena Produce |
+| `farmer_seller` | Smoke Seller B | `smoke.sellerb@anihow.local` | `password` | Shop: Mang Tonyo Farm |
+| `buyer` | Smoke Buyer | `smoke.buyer@anihow.local` | `password` | Email already verified |
 
 ## Demo data
 
@@ -138,23 +162,7 @@ Realistic Cavite fixtures for a local defense: PYAP Manggahan Chapter, four farm
 php artisan db:seed --class=DemoSeeder
 ```
 
-Safe to re-run (updateOrCreate / firstOrCreate; order history is written once). Shared password for every `@demo.anihow.local` account: `password`.
-
-| Role | Name | Email |
-| --- | --- | --- |
-| `content_editor` | Elena Ramos | `elena.ramos@demo.anihow.local` |
-| `farmer_seller` | Nena Villanueva | `nena.villanueva@demo.anihow.local` |
-| `farmer_seller` | Antonio Ramirez | `antonio.ramirez@demo.anihow.local` |
-| `farmer_seller` | Rosa Mendoza | `rosa.mendoza@demo.anihow.local` |
-| `farmer_seller` | Jun Bautista | `jun.bautista@demo.anihow.local` |
-| `buyer` | Carla Santos | `carla.santos@demo.anihow.local` |
-| `buyer` | Miguel Reyes | `miguel.reyes@demo.anihow.local` |
-| `buyer` | Ana Dela Cruz | `ana.delacruz@demo.anihow.local` |
-| `buyer` | Paolo Garcia | `paolo.garcia@demo.anihow.local` |
-| `buyer` | Liza Ramos | `liza.ramos@demo.anihow.local` |
-| `buyer` | Benito Cruz | `benito.cruz@demo.anihow.local` |
-
-Filament `/admin` still uses `admin@anihow.local` from `SuperAdminSeeder` (password `password` unless you set `SUPER_ADMIN_PASSWORD`). The content editor above can also sign in to `/admin` for the PYAP farm.
+Safe to re-run (updateOrCreate / firstOrCreate; order history is written once). Account table is under [Logins (copy these)](#logins-copy-these) above.
 
 ## Auth API (Sanctum)
 

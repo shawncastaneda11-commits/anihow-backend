@@ -69,9 +69,9 @@ def role_chart(name, login_label, home_label, tasks):
 def build_overall():
     FONT = 'fontname="Liberation Sans"'
     o = ['digraph G {',
-         '  graph [rankdir=TB, splines=ortho, nodesep=0.6, ranksep=0.7, pad=0.5, %s, newrank=true, bgcolor="white"];' % FONT,
-         '  node  [%s, fontsize=12, penwidth=1, color="#333333", style=filled, fillcolor="#FFFFFF"];' % FONT,
-         '  edge  [penwidth=1, arrowsize=0.7, color="#333333", %s, fontsize=11];' % FONT]
+         '  graph [rankdir=TB, splines=ortho, nodesep=0.65, ranksep=0.6, pad=0.5, %s, newrank=true, bgcolor="white"];' % FONT,
+         '  node  [%s, fontsize=17, penwidth=1.2, color="#333333", style=filled, fillcolor="#FFFFFF"];' % FONT,
+         '  edge  [penwidth=1.2, arrowsize=0.8, color="#333333", %s, fontsize=15];' % FONT]
     def term(k, t): o.append(f'  {k} [shape=box, style="rounded,filled", fillcolor="#F8F9FA", width=1.4, height=0.55, label="{t}"];')
     def proc(k, t): o.append(f'  {k} [shape=box, margin="0.30,0.18", label="{t}"];')
     def dec(k, t):  o.append(f'  {k} [shape=diamond, margin="0.24,0.12", label="{t}"];')

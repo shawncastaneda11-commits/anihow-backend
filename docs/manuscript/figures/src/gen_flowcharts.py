@@ -7,7 +7,7 @@ circle for an on-page connector. Run from docs/manuscript/figures.
 import subprocess
 
 HEAD = '''digraph G {
-  graph [rankdir=TB, nodesep=0.45, ranksep=0.5, pad=0.2, fontname="Liberation Sans", newrank=true, splines=ortho];
+  graph [rankdir=TB, nodesep=0.45, ranksep=0.55, pad=0.2, fontname="Liberation Sans", newrank=true, splines=polyline];
   node  [fontname="Liberation Sans", fontsize=14, penwidth=1.3, style=filled, fillcolor="#FFFFFF", margin="0.12,0.06"];
   edge  [penwidth=1.1, arrowsize=0.7, color="#333333", fontname="Liberation Sans", fontsize=12];
 '''
@@ -17,7 +17,7 @@ def dec(k, t):  return f'  {k} [shape=diamond, fillcolor="#F4F4F4", label="{t}",
 def io(k, t):   return f'  {k} [shape=parallelogram, fillcolor="#F2F2F2", label="{t}", margin="0.02,0.04"];\n'
 def conn(k, t): return f'  {k} [shape=circle, width=0.35, fixedsize=true, fillcolor="#E8E6E0", label="{t}"];\n'
 def e(a, b, l=None, **kw):
-    attrs = [f'xlabel="{l}"'] if l else []
+    attrs = [f'label="{l}"'] if l else []
     attrs += [f'{k}={v}' for k, v in kw.items()]
     return f'  {a} -> {b}' + (f' [{", ".join(attrs)}]' if attrs else '') + ';\n'
 
@@ -77,8 +77,7 @@ b += proc('tasks', 'Perform role tasks\\n(Figures 6 to 9)') + dec('out', 'Log ou
 b += e('s', 'open') + e('open', 'acct') + e('acct', 'reg', 'No') + e('reg', 'code') + e('code', 'valid')
 b += e('valid', 'resend', 'No') + e('resend', 'code', constraint='false') + e('valid', 'login', 'Yes')
 b += e('acct', 'login', 'Yes') + e('login', 'ok') + e('ok', 'err', 'No') + e('err', 'login', constraint='false') + e('ok', 'role', 'Yes')
-for tgt, lab in [('sa', 'Super Admin'), ('ce', 'Content Editor'), ('fs', 'Farmer-seller'), ('by', 'Buyer')]:
-    b += f'  role -> {tgt} [headlabel="{lab}", labeldistance=3.5, labelangle=18];\n'
+b += e('role', 'sa', 'Super Admin') + e('role', 'ce', 'Content Editor') + e('role', 'fs', 'Farmer-seller') + e('role', 'by', 'Buyer')
 for k in ['sa', 'ce', 'fs', 'by']:
     b += e('c' + k, 'tasks')
 b += e('tasks', 'out') + e('out', 'tasks', 'No', constraint='false') + e('out', 'end', 'Yes')

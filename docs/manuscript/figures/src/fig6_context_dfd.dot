@@ -1,6 +1,6 @@
 // Figure 6. Context diagram (data flow diagram, level 0) of AniHow (v3.5), Gane-Sarson notation.
 digraph G {
-  graph [rankdir=LR, nodesep=0.7, ranksep=2.2, pad=0.3, fontname="Liberation Sans", newrank=true];
+  graph [rankdir=LR, nodesep=1.5, ranksep=3.0, pad=0.3, fontname="Liberation Sans", newrank=true, splines=true];
   node  [fontname="Liberation Sans", fontsize=13];
   edge  [penwidth=1.1, arrowsize=0.75, color="#333333", fontname="Liberation Sans", fontsize=10];
 

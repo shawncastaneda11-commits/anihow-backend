@@ -64,7 +64,8 @@ def role_chart(name, login_label, home_label, tasks):
     return b
 
 # ---------------------------------------------------------------- Figure: overall
-b = term('s', 'Start') + proc('open', 'Open AniHow: Android application\\nor content management panel')
+b = '  graph [ranksep=0.9, nodesep=0.7];\n'
+b += term('s', 'Start') + proc('open', 'Open AniHow: Android application\\nor content management panel')
 b += dec('acct', 'Has an account?') + io('reg', 'Register as a buyer\\n(name, email, password)')
 b += io('code', 'Receive six-digit code\\nby email') + dec('valid', 'Code correct and\\nwithin ten minutes?') + proc('resend', 'Request a new code')
 b += io('login', 'Enter email and password') + dec('ok', 'Credentials valid and\\naccount active?') + proc('err', 'Show error message')

@@ -7,15 +7,15 @@ circle for an on-page connector. Run from docs/manuscript/figures.
 import subprocess
 
 HEAD = '''digraph G {
-  graph [rankdir=TB, nodesep=0.45, ranksep=0.55, pad=0.2, fontname="Liberation Sans", newrank=true, splines=polyline];
-  node  [fontname="Liberation Sans", fontsize=14, penwidth=1.3, style=filled, fillcolor="#FFFFFF", margin="0.12,0.06"];
-  edge  [penwidth=1.1, arrowsize=0.7, color="#333333", fontname="Liberation Sans", fontsize=12];
+  graph [rankdir=TB, nodesep=0.5, ranksep=0.6, pad=0.4, fontname="Liberation Sans", newrank=true, splines=polyline, bgcolor="white"];
+  node  [fontname="Liberation Sans", fontsize=12, penwidth=1, color="#333333", style=filled, fillcolor="#FFFFFF", margin="0.26,0.16"];
+  edge  [penwidth=1, arrowsize=0.7, color="#333333", fontname="Liberation Sans", fontsize=11];
 '''
-def term(k, t): return f'  {k} [shape=box, style="rounded,filled", fillcolor="#E1E6ED", label="{t}"];\n'
+def term(k, t): return f'  {k} [shape=box, style="rounded,filled", fillcolor="#F8F9FA", width=1.3, height=0.5, margin="0.2,0.1", label="{t}"];\n'
 def proc(k, t): return f'  {k} [shape=box, label="{t}"];\n'
-def dec(k, t):  return f'  {k} [shape=diamond, fillcolor="#F4F4F4", label="{t}", margin="0.02,0.02"];\n'
-def io(k, t):   return f'  {k} [shape=parallelogram, fillcolor="#F2F2F2", label="{t}", margin="0.02,0.04"];\n'
-def conn(k, t): return f'  {k} [shape=circle, width=0.35, fixedsize=true, fillcolor="#E8E6E0", label="{t}"];\n'
+def dec(k, t):  return f'  {k} [shape=diamond, fillcolor="#FFFFFF", label="{t}", margin="0.20,0.10"];\n'
+def io(k, t):   return f'  {k} [shape=parallelogram, fillcolor="#F8F9FA", label="{t}", margin="0.30,0.12"];\n'
+def conn(k, t): return f'  {k} [shape=circle, width=0.5, fixedsize=true, fillcolor="#F8F9FA", label="{t}"];\n'
 def e(a, b, l=None, **kw):
     attrs = [f'label="{l}"'] if l else []
     attrs += [f'{k}={v}' for k, v in kw.items()]
@@ -64,26 +64,65 @@ def role_chart(name, login_label, home_label, tasks):
     return b
 
 # ---------------------------------------------------------------- Figure: overall
-b = '  graph [ranksep=0.9, nodesep=0.7];\n'
-b += term('s', 'Start') + proc('open', 'Open AniHow: Android application\\nor content management panel')
-b += dec('acct', 'Has an account?') + io('reg', 'Register as a buyer\\n(name, email, password)')
-b += io('code', 'Receive six-digit code\\nby email') + dec('valid', 'Code correct and\\nwithin ten minutes?') + proc('resend', 'Request a new code')
-b += io('login', 'Enter email and password') + dec('ok', 'Credentials valid and\\naccount active?') + proc('err', 'Show error message')
-b += dec('role', 'Role of the user?')
-b += proc('sa', 'Super Admin dashboard\\n(content management panel)') + proc('ce', 'Content Editor dashboard\\n(own farm only)')
-b += proc('fs', 'Farmer-seller home\\n(Android application)') + proc('by', 'Buyer marketplace\\n(Android application)')
-for k, c in [('sa', 'A'), ('ce', 'B'), ('fs', 'C'), ('by', 'D')]:
-    b += conn('c' + k, c) + e(k, 'c' + k)
-b += proc('tasks', 'Perform role tasks\\n(Figures 6 to 9)') + dec('out', 'Log out?') + term('end', 'End')
-b += e('s', 'open') + e('open', 'acct') + e('acct', 'reg', 'No') + e('reg', 'code') + e('code', 'valid')
-b += e('valid', 'resend', 'No') + e('resend', 'code', constraint='false') + e('valid', 'login', 'Yes')
-b += e('acct', 'login', 'Yes') + e('login', 'ok') + e('ok', 'err', 'No') + e('err', 'login', constraint='false') + e('ok', 'role', 'Yes')
-b += e('role', 'sa', 'Super Admin') + e('role', 'ce', 'Content Editor') + e('role', 'fs', 'Farmer-seller') + e('role', 'by', 'Buyer')
-for k in ['sa', 'ce', 'fs', 'by']:
-    b += e('c' + k, 'tasks')
-b += e('tasks', 'out') + e('out', 'tasks', 'No', constraint='false') + e('out', 'end', 'Yes')
-b += '  {rank=same; sa ce fs by}\n  {rank=same; csa cce cfs cby}\n'
-save('fig5a_flow_overall', b)
+# Dedicated, publication-grade layout: orthogonal routing, grayscale fills,
+# padded nodes, aligned dashboard and connector baselines.
+def build_overall():
+    FONT = 'fontname="Liberation Sans"'
+    o = ['digraph G {',
+         '  graph [rankdir=TB, splines=ortho, nodesep=0.6, ranksep=0.7, pad=0.5, %s, newrank=true, bgcolor="white"];' % FONT,
+         '  node  [%s, fontsize=12, penwidth=1, color="#333333", style=filled, fillcolor="#FFFFFF"];' % FONT,
+         '  edge  [penwidth=1, arrowsize=0.7, color="#333333", %s, fontsize=11];' % FONT]
+    def term(k, t): o.append(f'  {k} [shape=box, style="rounded,filled", fillcolor="#F8F9FA", width=1.4, height=0.55, label="{t}"];')
+    def proc(k, t): o.append(f'  {k} [shape=box, margin="0.30,0.18", label="{t}"];')
+    def dec(k, t):  o.append(f'  {k} [shape=diamond, margin="0.24,0.12", label="{t}"];')
+    def io(k, t):   o.append(f'  {k} [shape=parallelogram, fillcolor="#F8F9FA", margin="0.34,0.16", label="{t}"];')
+    def conn(k, t): o.append(f'  {k} [shape=circle, width=0.52, fixedsize=true, fillcolor="#F8F9FA", label="{t}"];')
+    def xe(a, b, l=None, **kw):
+        at = [f'xlabel="{l}"'] if l else []
+        at += [f'{k}={v}' for k, v in kw.items()]
+        o.append(f'  {a} -> {b}' + (f' [{", ".join(at)}]' if at else '') + ';')
+    term('s', 'Start')
+    proc('open', 'Open AniHow: Android application\\nor content management panel')
+    dec('acct', 'Has an\\naccount?')
+    io('reg', 'Register as a buyer\\n(name, email, password)')
+    io('code', 'Receive six-digit\\ncode by email')
+    dec('valid', 'Code correct and\\nwithin ten minutes?')
+    proc('resend', 'Request a\\nnew code')
+    io('login', 'Enter email\\nand password')
+    dec('ok', 'Credentials valid and\\naccount active?')
+    proc('err', 'Show error\\nmessage')
+    dec('role', 'Role of\\nthe user?')
+    proc('sa', 'Super Admin dashboard\\n(content management panel)')
+    proc('ce', 'Content Editor dashboard\\n(own farm only)')
+    proc('fs', 'Farmer-seller home\\n(Android application)')
+    proc('by', 'Buyer marketplace\\n(Android application)')
+    conn('A', 'A'); conn('B', 'B'); conn('C', 'C'); conn('D', 'D')
+    proc('tasks', 'Perform role tasks\\n(Figures 6 to 9)')
+    dec('out', 'Log out?')
+    term('end', 'End')
+    # main flow
+    xe('s', 'open'); xe('open', 'acct')
+    xe('acct', 'reg', 'No'); xe('reg', 'code'); xe('code', 'valid')
+    xe('valid', 'resend', 'No'); xe('resend', 'code', constraint='false')
+    xe('valid', 'login', 'Yes'); xe('acct', 'login', 'Yes')
+    xe('login', 'ok'); xe('ok', 'err', 'No'); xe('err', 'login', constraint='false'); xe('ok', 'role', 'Yes')
+    xe('role', 'sa', 'Super Admin'); xe('role', 'ce', 'Content Editor')
+    xe('role', 'fs', 'Farmer-seller'); xe('role', 'by', 'Buyer')
+    xe('sa', 'A'); xe('ce', 'B'); xe('fs', 'C'); xe('by', 'D')
+    xe('A', 'tasks'); xe('B', 'tasks'); xe('C', 'tasks'); xe('D', 'tasks')
+    xe('tasks', 'out'); xe('out', 'tasks', 'No', constraint='false'); xe('out', 'end', 'Yes')
+    # aligned baselines
+    o.append('  {rank=same; sa; ce; fs; by}')
+    o.append('  {rank=same; A; B; C; D}')
+    # keep the spine straight
+    for k in ['s', 'open', 'acct', 'login', 'ok', 'role', 'tasks', 'out', 'end']:
+        o.append(f'  {k} [group=spine];')
+    o.append('}')
+    return '\n'.join(o) + '\n'
+
+open('src/fig5a_flow_overall.dot', 'w').write(build_overall())
+subprocess.run(['dot', '-Tpng', '-Gdpi=200', 'src/fig5a_flow_overall.dot', '-o', 'fig5a_flow_overall.png'], check=True)
+subprocess.run(['dot', '-Tsvg', 'src/fig5a_flow_overall.dot', '-o', 'fig5a_flow_overall.svg'], check=True)
 
 # ---------------------------------------------------------------- Figure: Super Admin
 save('fig5b_flow_super_admin', role_chart('sa', 'Log in to the\\nCMS', 'Super Admin\\ndashboard', [

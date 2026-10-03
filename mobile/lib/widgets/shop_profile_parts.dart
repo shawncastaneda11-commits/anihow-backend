@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../models/models.dart';
 import '../theme/anihow_space.dart';
 import 'produce_card.dart';
@@ -70,11 +71,12 @@ class ShopStatRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     final cells = <_StatCell>[
-      if (listings != null) _StatCell(value: '$listings', label: 'Listings'),
-      if (sales != null) _StatCell(value: '$sales', label: 'Sales'),
+      if (listings != null) _StatCell(value: '$listings', label: s.listings),
+      if (sales != null) _StatCell(value: '$sales', label: s.sales),
       if (rating != null && rating!.isNotEmpty)
-        _StatCell(value: AniHowMoney.rating(rating), label: 'Rating'),
+        _StatCell(value: AniHowMoney.rating(rating), label: s.rating),
     ];
     if (cells.isEmpty) {
       return const SizedBox.shrink();
@@ -140,6 +142,7 @@ class ShopAboutCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final s = AppStrings.of(context);
     final bio = shop.bio?.trim();
     final location = shop.location?.trim();
     final contact = shop.contact?.trim();
@@ -152,20 +155,18 @@ class ShopAboutCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              (bio != null && bio.isNotEmpty) ? bio : 'No bio yet',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+              (bio != null && bio.isNotEmpty) ? bio : s.noBioYet,
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: AniHowSpace.cardGap),
             _IconRow(
               icon: Icons.location_on_outlined,
-              text: (location != null && location.isNotEmpty) ? location : 'No location yet',
+              text: (location != null && location.isNotEmpty) ? location : s.noLocationYet,
             ),
             const SizedBox(height: AniHowSpace.labelGap),
             _IconRow(
               icon: Icons.phone_outlined,
-              text: (contact != null && contact.isNotEmpty) ? contact : 'No contact yet',
+              text: (contact != null && contact.isNotEmpty) ? contact : s.noContactYet,
               onTap: canCall ? () => onCall!(contact) : null,
             ),
           ],
@@ -223,10 +224,10 @@ class ShopListingsEmpty extends StatelessWidget {
         children: [
           Icon(Icons.inventory_2_outlined, size: 40, color: Theme.of(context).colorScheme.primary),
           const SizedBox(height: AniHowSpace.cardGap),
-          const Text(
-            'No active listings',
+          Text(
+            AppStrings.of(context).noActiveListings,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: AniHowSpace.body),
+            style: const TextStyle(fontSize: AniHowSpace.body),
           ),
         ],
       ),

@@ -2,14 +2,14 @@
 
 namespace App\Models;
 
-use App\Support\ListingStorage;
+use App\Support\ImageVariants;
 use Database\Factories\FarmPhotoFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['farm_id', 'path', 'sort_order'])]
+#[Fillable(['farm_id', 'path', 'caption', 'sort_order'])]
 class FarmPhoto extends Model
 {
     /** @use HasFactory<FarmPhotoFactory> */
@@ -17,10 +17,15 @@ class FarmPhoto extends Model
 
     protected static function booted(): void
     {
-        static::deleting(function (FarmPhoto $photo): void {
-            if (filled($photo->path)) {
-                ListingStorage::disk()->delete($photo->path);
+        static::updating(function (FarmPhoto $photo): void {
+            if ($photo->isDirty('path')) {
+                $previous = $photo->getOriginal('path');
+                app(ImageVariants::class)->delete(is_string($previous) ? $previous : null);
             }
+        });
+
+        static::deleting(function (FarmPhoto $photo): void {
+            app(ImageVariants::class)->delete($photo->path);
         });
     }
 
@@ -31,10 +36,11 @@ class FarmPhoto extends Model
 
     public function url(): ?string
     {
-        if (! filled($this->path)) {
-            return null;
-        }
+        return app(ImageVariants::class)->url($this->path);
+    }
 
-        return ListingStorage::disk()->url($this->path);
+    public function thumbnailUrl(): ?string
+    {
+        return app(ImageVariants::class)->thumbnailUrl($this->path);
     }
 }

@@ -1,0 +1,14 @@
+# Everyday:
+#   flutter test
+#   Live tests are skipped. Does not need a running API.
+#
+# Live (after local `php artisan migrate:fresh --seed` and `php artisan serve`):
+#   flutter test --tags live --run-skipped --concurrency=1
+#
+# Why this combo: `exclude_tags: live` plus `--tags live` matches nothing
+# (include and exclude cancel out). Flutter has no `-P` preset flag.
+# Tag skip + `--run-skipped` is the combination that works.
+
+tags:
+  live:
+    skip: "Live test: needs php artisan serve and SmokeTestSeeder. Run with: flutter test --tags live --run-skipped --concurrency=1"

@@ -20,7 +20,7 @@ class BuyerOrderController extends Controller
 
         $orders = $request->user()
             ->orders()
-            ->with(['items', 'farmerSeller', 'farm'])
+            ->with(['items', 'farmerSeller', 'farm', 'review'])
             ->latest()
             ->paginate();
 

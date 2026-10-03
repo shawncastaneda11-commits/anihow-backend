@@ -19,7 +19,7 @@ class InAppNotificationFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'type' => NotificationType::ReservationCreated,
+            'type' => NotificationType::OrderPlaced,
             'title' => 'New reservation',
             'body' => 'A buyer reserved produce.',
             'read_at' => null,

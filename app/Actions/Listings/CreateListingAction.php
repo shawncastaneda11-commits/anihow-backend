@@ -5,11 +5,13 @@ namespace App\Actions\Listings;
 use App\Enums\ListingStatus;
 use App\Models\Listing;
 use App\Models\User;
-use App\Support\ListingStorage;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Validation\ValidationException;
 
 class CreateListingAction
 {
+    public function __construct(private SyncListingImage $images) {}
+
     /**
      * Listings auto-publish. The Super Admin holds takedown power, not
      * pre-approval power: pre-approving every listing would strangle a live
@@ -19,8 +21,14 @@ class CreateListingAction
      */
     public function handle(User $farmerSeller, array $attributes, ?UploadedFile $image = null): Listing
     {
+        if ($farmerSeller->farm_id === null) {
+            throw ValidationException::withMessages([
+                'farm' => 'Assign this seller to a farm first.',
+            ]);
+        }
+
         if ($image !== null) {
-            $attributes['image_path'] = ListingStorage::store($image);
+            $attributes['image_path'] = $this->images->store($image);
         }
 
         $attributes['farmer_seller_id'] = $farmerSeller->id;

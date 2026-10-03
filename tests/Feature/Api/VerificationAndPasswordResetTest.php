@@ -11,7 +11,9 @@ use App\Notifications\ResetPasswordNotification;
 use App\Notifications\VerifyEmailNotification;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -174,7 +176,11 @@ class VerificationAndPasswordResetTest extends TestCase
         $this->withToken($response->json('token'))
             ->postJson('/api/auth/email/verification-notification')
             ->assertOk()
-            ->assertJsonPath('message', 'Verification code sent.');
+            ->assertJsonPath('message', 'Verification code sent.')
+            ->assertJsonPath(
+                'verification_code',
+                fn (mixed $code): bool => is_string($code) && (bool) preg_match('/^\d{6}$/', $code),
+            );
 
         Notification::assertSentToTimes($user, VerifyEmailNotification::class, 2);
 
@@ -282,6 +288,95 @@ class VerificationAndPasswordResetTest extends TestCase
             ->assertJsonPath('message', 'If that email is registered, a password reset link was sent.');
     }
 
+    public function test_production_with_log_mailer_never_includes_verification_code(): void
+    {
+        $this->becomeEnvironment('production');
+        config(['mail.default' => 'log']);
+        Event::fake([MessageLogged::class]);
+        Notification::fake();
+
+        $register = $this->postJson('/api/auth/register', [
+            'name' => 'Maria Buyer',
+            'email' => 'prod.log@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ]);
+
+        $register->assertStatus(503)
+            ->assertJsonPath('message', SendEmailVerificationCodeAction::unavailableMessage())
+            ->assertJsonMissingPath('verification_code');
+
+        $this->assertDatabaseHas('users', ['email' => 'prod.log@example.com']);
+        Event::assertDispatched(MessageLogged::class, function (MessageLogged $event): bool {
+            return $event->level === 'error'
+                && str_contains($event->message, 'outbound mail is not configured');
+        });
+
+        $user = User::query()->where('email', 'prod.log@example.com')->first();
+        $this->assertNotNull($user);
+        $user->syncRoles(Role::Buyer);
+        $token = $user->createToken('mobile')->plainTextToken;
+
+        $this->withToken($token)
+            ->postJson('/api/auth/email/verification-notification')
+            ->assertStatus(503)
+            ->assertJsonPath('message', SendEmailVerificationCodeAction::unavailableMessage())
+            ->assertJsonMissingPath('verification_code');
+    }
+
+    public function test_local_with_log_mailer_includes_verification_code(): void
+    {
+        $this->becomeEnvironment('local');
+        config(['mail.default' => 'log']);
+        Notification::fake();
+
+        $this->postJson('/api/auth/register', [
+            'name' => 'Maria Buyer',
+            'email' => 'local.log@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])
+            ->assertCreated()
+            ->assertJsonStructure(['verification_code']);
+
+        $user = User::query()->where('email', 'local.log@example.com')->first();
+        $token = $user->createToken('mobile')->plainTextToken;
+
+        $this->withToken($token)
+            ->postJson('/api/auth/email/verification-notification')
+            ->assertOk()
+            ->assertJsonStructure(['verification_code']);
+    }
+
+    public function test_smtp_configured_never_includes_verification_code(): void
+    {
+        config([
+            'mail.default' => 'smtp',
+            'mail.mailers.smtp.username' => 'anihow@example.com',
+            'mail.mailers.smtp.password' => 'secret',
+        ]);
+        Notification::fake();
+
+        $this->assertFalse(SendEmailVerificationCodeAction::shouldExposeCode());
+
+        $this->postJson('/api/auth/register', [
+            'name' => 'Maria Buyer',
+            'email' => 'smtp@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])
+            ->assertCreated()
+            ->assertJsonMissingPath('verification_code');
+
+        $user = User::query()->where('email', 'smtp@example.com')->first();
+        $token = $user->createToken('mobile')->plainTextToken;
+
+        $this->withToken($token)
+            ->postJson('/api/auth/email/verification-notification')
+            ->assertOk()
+            ->assertJsonMissingPath('verification_code');
+    }
+
     public function test_api_errors_are_json_for_not_found_and_unauthenticated(): void
     {
         $this->getJson('/api/buyer/marketplace')
@@ -291,5 +386,11 @@ class VerificationAndPasswordResetTest extends TestCase
         $this->getJson('/api/does-not-exist')
             ->assertNotFound()
             ->assertJson(['message' => 'Not found.']);
+    }
+
+    private function becomeEnvironment(string $environment): void
+    {
+        app()->detectEnvironment(fn (): string => $environment);
+        config(['app.env' => $environment]);
     }
 }

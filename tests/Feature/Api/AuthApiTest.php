@@ -38,7 +38,8 @@ class AuthApiTest extends TestCase
             ->assertJsonPath('data.email', 'maria@example.com')
             ->assertJsonPath('data.roles.0', Role::Buyer->value)
             ->assertJsonPath('token_type', 'Bearer')
-            ->assertJsonStructure(['token', 'data' => ['id', 'name', 'email', 'roles']]);
+            ->assertJsonStructure(['token', 'data' => ['id', 'name', 'email', 'roles'], 'verification_code']);
+        $this->assertMatchesRegularExpression('/^\d{6}$/', (string) $response->json('verification_code'));
 
         $this->assertDatabaseHas('users', [
             'email' => 'maria@example.com',

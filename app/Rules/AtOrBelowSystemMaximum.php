@@ -13,9 +13,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
  */
 class AtOrBelowSystemMaximum implements ValidationRule
 {
-    public function __construct(private readonly CropType $cropType)
-    {
-    }
+    public function __construct(private readonly CropType $cropType) {}
 
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
@@ -25,7 +23,7 @@ class AtOrBelowSystemMaximum implements ValidationRule
 
         if (PriceGuard::centavos($value) > PriceGuard::centavos($this->cropType->max_discount)) {
             $fail('The farm maximum peso discount for :attribute cannot exceed the system maximum of PHP '
-                . number_format((float) $this->cropType->max_discount, 2) . '.');
+                .number_format((float) $this->cropType->max_discount, 2).'.');
         }
     }
 }

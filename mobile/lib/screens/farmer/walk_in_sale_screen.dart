@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
+import '../../state/preferences_controller.dart';
 import '../../support/walk_in_quote.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/form_label.dart';
+import '../../widgets/hint_card.dart';
 import '../../widgets/price_breakdown.dart';
 import '../../widgets/primary_button.dart';
 
@@ -109,7 +112,7 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
     final listingId = _listingId;
     if (listingId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Choose a listing.')),
+        SnackBar(content: Text(AppStrings.read(context).chooseListing)),
       );
       return;
     }
@@ -131,8 +134,9 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
       await showDialog<void>(
         context: context,
         builder: (dialogContext) {
+          final s = AppStrings.of(dialogContext);
           return AlertDialog(
-            title: const Text('Walk-in sale recorded'),
+            title: Text(s.walkInRecorded),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,13 +147,13 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
                   total: order.total,
                 ),
                 const SizedBox(height: AniHowSpace.cardGap),
-                Text('Amount received ${AniHowMoney.peso(order.amountReceived)}'),
+                Text(s.amountReceivedLine(AniHowMoney.peso(order.amountReceived))),
               ],
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Done'),
+                child: Text(s.done),
               ),
             ],
           );
@@ -173,13 +177,14 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Record walk-in sale')),
-      body: _buildBody(),
+      appBar: AppBar(title: Text(s.recordWalkIn)),
+      body: _buildBody(s),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppStrings s) {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -187,86 +192,101 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
       return Center(child: Text('$_error'));
     }
     if (_listings.isEmpty) {
-      return const Center(child: Text('No listings available for a walk-in sale.'));
+      return Center(child: Text(s.noWalkInListings));
     }
     final selected = _selected;
     final unit = selected?.unitLabel ?? selected?.unit;
+    final language = context.watch<PreferencesController>().language;
     return Column(
       children: [
         Expanded(
           child: ListView(
             padding: AniHowSpace.screenPadding,
             children: [
-              AniHowField(
-                label: 'Listing',
-                child: DropdownButtonFormField<int>(
-                  initialValue: _listingId,
-                  items: _listings
-                      .map(
-                        (listing) => DropdownMenuItem(
-                          value: listing.id,
-                          child: Text(listing.title),
+              AniHowHintCard(
+                icon: Icons.payments_outlined,
+                title: s.payCashTitle,
+                body: s.walkInCashHint,
+                tone: AniHowHintTone.cash,
+              ),
+              const SizedBox(height: AniHowSpace.section),
+              AniHowFormCard(
+                title: s.listingLabel,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    DropdownButtonFormField<int>(
+                      initialValue: _listingId,
+                      items: _listings
+                          .map(
+                            (listing) => DropdownMenuItem(
+                              value: listing.id,
+                              child: Text(listing.title),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) => setState(() => _listingId = value),
+                    ),
+                    if (selected != null) ...[
+                      const SizedBox(height: AniHowSpace.cardGap),
+                      if (selected.category != null)
+                        Text(selected.category!.labelFor(language)),
+                      Text(s.pricePerUnit(AniHowMoney.peso(selected.pricePerUnit))),
+                      Text(s.availableQty(selected.quantityAvailable, unit)),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: AniHowSpace.cardGap),
+              AniHowFormCard(
+                child: Column(
+                  children: [
+                    AniHowField(
+                      label: s.quantity,
+                      child: TextField(
+                        controller: _quantity,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [_decimal],
+                        decoration: InputDecoration(
+                          hintText: '0',
+                          suffixText: unit,
                         ),
-                      )
-                      .toList(),
-                  onChanged: (value) => setState(() => _listingId = value),
-                ),
-              ),
-              if (selected != null) ...[
-                const SizedBox(height: AniHowSpace.cardGap),
-                if (selected.category != null)
-                  Text(selected.category!.displayLabel),
-                Text('Price per unit ${AniHowMoney.peso(selected.pricePerUnit)}'),
-                Text(
-                  unit == null || unit.isEmpty
-                      ? 'Available ${selected.quantityAvailable}'
-                      : 'Available ${selected.quantityAvailable} $unit',
-                ),
-              ],
-              const SizedBox(height: AniHowSpace.fieldGap),
-              AniHowField(
-                label: 'Quantity',
-                child: TextField(
-                  controller: _quantity,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [_decimal],
-                  decoration: InputDecoration(
-                    hintText: '0',
-                    suffixText: unit,
-                  ),
-                ),
-              ),
-              const SizedBox(height: AniHowSpace.fieldGap),
-              AniHowField(
-                label: 'Amount received',
-                child: TextField(
-                  controller: _amountReceived,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [_decimal],
-                  decoration: const InputDecoration(
-                    prefixText: '₱ ',
-                    hintText: '0.00',
-                  ),
-                ),
-              ),
-              const SizedBox(height: AniHowSpace.fieldGap),
-              AniHowField(
-                label: 'Guest name (optional)',
-                child: TextField(
-                  controller: _buyerName,
-                  maxLength: 100,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(hintText: 'For your reference only'),
-                ),
-              ),
-              const SizedBox(height: AniHowSpace.fieldGap),
-              AniHowField(
-                label: 'Note (optional)',
-                child: TextField(
-                  controller: _note,
-                  maxLength: 1000,
-                  maxLines: 3,
-                  textCapitalization: TextCapitalization.sentences,
+                      ),
+                    ),
+                    const SizedBox(height: AniHowSpace.fieldGap),
+                    AniHowField(
+                      label: s.amountReceived,
+                      child: TextField(
+                        controller: _amountReceived,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [_decimal],
+                        decoration: const InputDecoration(
+                          prefixText: '₱ ',
+                          hintText: '0.00',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AniHowSpace.fieldGap),
+                    AniHowField(
+                      label: s.guestName,
+                      child: TextField(
+                        controller: _buyerName,
+                        maxLength: 100,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: InputDecoration(hintText: s.guestNameHint),
+                      ),
+                    ),
+                    const SizedBox(height: AniHowSpace.fieldGap),
+                    AniHowField(
+                      label: s.noteOptional,
+                      child: TextField(
+                        controller: _note,
+                        maxLength: 1000,
+                        maxLines: 3,
+                        textCapitalization: TextCapitalization.sentences,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -292,7 +312,7 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
                   ),
                   const SizedBox(height: AniHowSpace.cardGap),
                 ],
-                PrimaryButton(label: 'Record sale', busy: _busy, onPressed: _save),
+                PrimaryButton(label: s.recordSale, busy: _busy, onPressed: _save),
               ],
             ),
           ),

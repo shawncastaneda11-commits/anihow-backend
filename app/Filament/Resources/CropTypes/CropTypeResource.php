@@ -14,11 +14,12 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 /**
- * The shared crop taxonomy. System-wide, Super Admin owned. Content Editors
- * do not see this resource at all: one kamatis entry, one floor price, many
- * listings, and a per-farm floor would not be a guardrail.
+ * Each farm has its own crop types. A Content Editor sees and edits only
+ * their farm's rows. The Super Admin sees every farm.
  */
 class CropTypeResource extends Resource
 {
@@ -56,11 +57,53 @@ class CropTypeResource extends Resource
     }
 
     /**
-     * CropTypePolicy::viewAny is true for everyone because every actor reads
-     * the taxonomy through the API. The panel is narrower.
+     * CropTypePolicy::viewAny stays open because the API lists crop types for
+     * every actor. The panel shows this menu to the Super Admin and to a
+     * Content Editor who belongs to a farm.
      */
     public static function canAccess(): bool
     {
-        return auth()->user()?->can(Permission::ManageCropTypes->value) ?? false;
+        return self::managesCatalog();
+    }
+
+    public static function canCreate(): bool
+    {
+        return self::managesCatalog();
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return auth()->user()?->can('update', $record) ?? false;
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return auth()->user()?->can('delete', $record) ?? false;
+    }
+
+    /**
+     * A Content Editor's table is their farm only. The Super Admin sees
+     * every farm, including shared rows that no farm has replaced yet.
+     */
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery()->with(['farm']);
+        $user = auth()->user();
+
+        if ($user === null || $user->can(Permission::ManageCropTypes->value)) {
+            return $query;
+        }
+
+        return $query->where('farm_id', $user->farm_id);
+    }
+
+    private static function managesCatalog(): bool
+    {
+        $user = auth()->user();
+
+        return $user !== null && (
+            $user->can(Permission::ManageCropTypes->value)
+            || ($user->can(Permission::ManageOwnFarmProfile->value) && $user->farm_id !== null)
+        );
     }
 }

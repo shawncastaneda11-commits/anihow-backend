@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../state/auth_controller.dart';
+import '../../state/preferences_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/async_view.dart';
@@ -12,9 +14,9 @@ import '../../widgets/cart_icon_button.dart';
 import '../../widgets/category_color.dart';
 import '../../widgets/notification_bell.dart';
 import '../../widgets/produce_card.dart';
+import '../../widgets/unverified_email_banner.dart';
 import 'listing_detail_screen.dart';
 import 'shop_profile_screen.dart';
-import 'shops_screen.dart';
 
 class MarketplaceScreen extends StatefulWidget {
   const MarketplaceScreen({super.key});
@@ -51,10 +53,10 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
   Future<void> _reload() async {
     final future = context.read<AuthController>().api.marketplace(
-          search: _search.text.trim(),
-          cropTypeId: _cropTypeId,
-          sort: _sort,
-        );
+      search: _search.text.trim(),
+      cropTypeId: _cropTypeId,
+      sort: _sort,
+    );
     setState(() {
       _listings = future;
     });
@@ -63,33 +65,17 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Column(
       children: [
         AppHeader(
-          title: 'Marketplace',
-          trailing: Row(
+          title: s.marketplace,
+          trailing: const Row(
             mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                tooltip: 'Shops',
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ShopsScreen()),
-                  );
-                },
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(width: 48, height: 48),
-                icon: Icon(
-                  Icons.storefront,
-                  size: 24,
-                  color: Theme.of(context).colorScheme.onPrimary,
-                ),
-              ),
-              const CartIconButton(),
-              const NotificationBellButton(),
-            ],
+            children: [CartIconButton(), NotificationBellButton()],
           ),
         ),
+        const UnverifiedEmailBanner(),
         Padding(
           padding: const EdgeInsets.fromLTRB(
             AniHowSpace.screen,
@@ -100,9 +86,12 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           child: TextField(
             controller: _search,
             decoration: InputDecoration(
-              hintText: 'Search produce',
+              hintText: s.searchProduce,
               prefixIcon: const Icon(Icons.search),
-              suffixIcon: IconButton(onPressed: _reload, icon: const Icon(Icons.arrow_forward)),
+              suffixIcon: IconButton(
+                onPressed: _reload,
+                icon: const Icon(Icons.arrow_forward),
+              ),
             ),
             onSubmitted: (_) => _reload(),
           ),
@@ -115,12 +104,14 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
               final cropTypes = snapshot.data ?? const <CategoryItem>[];
               return ListView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: AniHowSpace.screen),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AniHowSpace.screen,
+                ),
                 children: [
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: FilterChip(
-                      label: const Text('All'),
+                      label: Text(s.all),
                       selected: _cropTypeId == null,
                       onSelected: (_) {
                         setState(() => _cropTypeId = null);
@@ -136,7 +127,11 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                           backgroundColor: CategoryColor.of(cropType),
                           radius: 8,
                         ),
-                        label: Text(cropType.displayLabel),
+                        label: Text(
+                          cropType.labelFor(
+                            context.watch<PreferencesController>().language,
+                          ),
+                        ),
                         selected: _cropTypeId == cropType.id,
                         onSelected: (_) {
                           setState(() => _cropTypeId = cropType.id);
@@ -163,11 +158,17 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
               isDense: true,
               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
-            items: const [
-              DropdownMenuItem(value: 'freshest', child: Text('Freshest')),
-              DropdownMenuItem(value: 'price_asc', child: Text('Price: low to high')),
-              DropdownMenuItem(value: 'price_desc', child: Text('Price: high to low')),
-              DropdownMenuItem(value: 'availability', child: Text('In stock first')),
+            items: [
+              DropdownMenuItem(value: 'freshest', child: Text(s.freshest)),
+              DropdownMenuItem(value: 'price_asc', child: Text(s.priceLowHigh)),
+              DropdownMenuItem(
+                value: 'price_desc',
+                child: Text(s.priceHighLow),
+              ),
+              DropdownMenuItem(
+                value: 'availability',
+                child: Text(s.inStockFirst),
+              ),
             ],
             onChanged: (value) {
               if (value == null) {
@@ -182,22 +183,29 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           child: AsyncView<List<ListingItem>>(
             future: _listings,
             onRetry: _reload,
-            emptyMessage: 'No listings found.',
+            emptyMessage: s.noListingsFound,
             builder: (context, items) {
               return RefreshIndicator(
                 onRefresh: _reload,
-                child: ListView.separated(
+                child: GridView.builder(
                   padding: AniHowSpace.screenPadding,
                   itemCount: items.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: AniHowSpace.cardGap),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisExtent: 292,
+                    crossAxisSpacing: AniHowSpace.cardGap,
+                    mainAxisSpacing: AniHowSpace.cardGap,
+                  ),
                   itemBuilder: (context, index) {
                     final listing = items[index];
                     return ProduceCard(
                       listing: listing,
+                      style: ProduceCardStyle.poster,
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => ListingDetailScreen(listingId: listing.id),
+                            builder: (_) =>
+                                ListingDetailScreen(listingId: listing.id),
                           ),
                         );
                       },

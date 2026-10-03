@@ -16,6 +16,8 @@ class AuthController extends ChangeNotifier {
   UserAccount? user;
   bool restoring = true;
   String? error;
+  bool pendingEmailVerification = false;
+  String? pendingVerificationCode;
 
   Future<void> restoreSession() async {
     restoring = true;
@@ -69,6 +71,8 @@ class AuthController extends ChangeNotifier {
         phone: phone,
       );
       user = result.user;
+      pendingEmailVerification = true;
+      pendingVerificationCode = result.verificationCode;
       notifyListeners();
       return true;
     } on ApiException catch (e) {
@@ -76,6 +80,15 @@ class AuthController extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  void clearPendingEmailVerification() {
+    pendingEmailVerification = false;
+  }
+
+  void rememberVerificationCode(String? code) {
+    pendingVerificationCode = code;
+    notifyListeners();
   }
 
   Future<void> refreshUser() async {
@@ -86,6 +99,8 @@ class AuthController extends ChangeNotifier {
   Future<void> logout() async {
     await api.logout();
     user = null;
+    pendingEmailVerification = false;
+    pendingVerificationCode = null;
     notifyListeners();
   }
 }

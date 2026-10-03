@@ -8,6 +8,9 @@ use App\Http\Requests\Api\Cart\UpdateCartItemRequest;
 use App\Http\Resources\Api\CartItemResource;
 use App\Models\CartItem;
 use App\Models\Listing;
+use App\Models\User;
+use App\Support\ShopReviews;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -15,19 +18,30 @@ use Illuminate\Validation\ValidationException;
 
 class CartController extends Controller
 {
-    private const CART_RELATIONS = [
-        'listing.cropType',
-        'listing.farmerSeller',
-        'listing.activeTawadRule',
-    ];
+    /**
+     * @return array<int|string, mixed>
+     */
+    private function cartRelations(): array
+    {
+        return [
+            'listing.cropType',
+            'listing.farm',
+            'listing.activeTawadRule',
+            'listing.farmerSeller' => fn ($query) => $query
+                ->withAvg(ShopReviews::receivedAggregate(), 'rating')
+                ->withCount(ShopReviews::receivedAggregate()),
+        ];
+    }
 
     public function index(Request $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', CartItem::class);
 
+        $this->pruneUnavailableCartItems($request->user());
+
         $items = $request->user()
             ->cartItems()
-            ->with(self::CART_RELATIONS)
+            ->with($this->cartRelations())
             ->latest()
             ->get();
 
@@ -55,7 +69,7 @@ class CartController extends Controller
             ['quantity' => $total],
         );
 
-        $item->load(self::CART_RELATIONS);
+        $item->load($this->cartRelations());
 
         return (new CartItemResource($item))
             ->additional(['message' => 'Added to cart.'])
@@ -65,12 +79,21 @@ class CartController extends Controller
 
     public function update(UpdateCartItemRequest $request, CartItem $cartItem): CartItemResource
     {
+        $listing = $cartItem->listing;
+        if ($listing === null || ! Listing::query()->marketplaceVisible()->whereKey($listing->id)->exists()) {
+            $cartItem->delete();
+
+            throw ValidationException::withMessages([
+                'quantity' => 'This listing is no longer available.',
+            ]);
+        }
+
         $quantity = (float) $request->validated('quantity');
 
-        $this->assertStock($cartItem->listing, $quantity);
+        $this->assertStock($listing, $quantity);
 
         $cartItem->update(['quantity' => $quantity]);
-        $cartItem->load(self::CART_RELATIONS);
+        $cartItem->load($this->cartRelations());
 
         return (new CartItemResource($cartItem))
             ->additional(['message' => 'Cart updated.']);
@@ -100,5 +123,15 @@ class CartController extends Controller
         throw ValidationException::withMessages([
             'quantity' => "Only {$available} available.",
         ]);
+    }
+
+    private function pruneUnavailableCartItems(User $buyer): void
+    {
+        $buyer->cartItems()
+            ->whereDoesntHave(
+                'listing',
+                fn (Builder $listing): Builder => $listing->marketplaceVisible(),
+            )
+            ->delete();
     }
 }

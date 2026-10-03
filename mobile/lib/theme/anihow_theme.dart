@@ -52,7 +52,6 @@ class AniHowColors {
 }
 
 class AniHowTheme {
-  static const String fontFamily = 'PlusJakartaSans';
   static const double cardRadius = 16;
   static const double controlRadius = AniHowSpace.radius;
   static const EdgeInsets pagePadding = AniHowSpace.screenPadding;
@@ -98,7 +97,7 @@ class AniHowTheme {
 
     return ThemeData(
       useMaterial3: true,
-      fontFamily: fontFamily,
+      fontFamily: 'Roboto',
       colorScheme: scheme,
       scaffoldBackgroundColor: background,
       canvasColor: background,
@@ -112,7 +111,7 @@ class AniHowTheme {
         elevation: 0,
         centerTitle: true,
         titleTextStyle: TextStyle(
-          fontFamily: fontFamily,
+          fontFamily: 'Roboto',
           fontSize: AniHowSpace.header,
           fontWeight: FontWeight.w500,
           color: scheme.onPrimary,
@@ -120,11 +119,14 @@ class AniHowTheme {
       ),
       cardTheme: CardThemeData(
         color: card,
-        elevation: 1.5,
-        shadowColor: AniHowColors.text.withValues(alpha: 0.10),
+        elevation: 0,
+        shadowColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: radius),
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: BorderSide(color: hairline),
+        ),
       ),
       dividerColor: hairline,
       badgeTheme: const BadgeThemeData(
@@ -136,7 +138,6 @@ class AniHowTheme {
         selectedColor: AniHowColors.brand.withValues(alpha: 0.16),
         side: BorderSide(color: hairline),
         labelStyle: TextStyle(
-          fontFamily: fontFamily,
           color: text,
           fontWeight: FontWeight.w600,
           fontSize: AniHowSpace.label,
@@ -166,7 +167,6 @@ class AniHowTheme {
           minimumSize: const Size.fromHeight(52),
           shape: const StadiumBorder(),
           textStyle: const TextStyle(
-            fontFamily: fontFamily,
             fontWeight: FontWeight.w600,
             fontSize: AniHowSpace.name,
           ),
@@ -179,7 +179,6 @@ class AniHowTheme {
           minimumSize: const Size.fromHeight(52),
           shape: const StadiumBorder(),
           textStyle: const TextStyle(
-            fontFamily: fontFamily,
             fontWeight: FontWeight.w600,
             fontSize: AniHowSpace.name,
           ),
@@ -207,12 +206,10 @@ class AniHowTheme {
         dividerColor: hairline,
         labelPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         labelStyle: const TextStyle(
-          fontFamily: fontFamily,
           fontSize: AniHowSpace.tab,
           fontWeight: FontWeight.w700,
         ),
         unselectedLabelStyle: const TextStyle(
-          fontFamily: fontFamily,
           fontSize: AniHowSpace.tab,
           fontWeight: FontWeight.w600,
         ),
@@ -233,7 +230,7 @@ class AniHowTheme {
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return TextStyle(
-            fontFamily: fontFamily,
+            fontFamily: 'Roboto',
             fontWeight: FontWeight.w600,
             color: selected ? accent : AniHowColors.navInactive,
             fontSize: AniHowSpace.nav,
@@ -244,16 +241,17 @@ class AniHowTheme {
   }
 
   static TextTheme _textTheme(Color text) {
+    const family = 'Roboto';
     return TextTheme(
-      headlineLarge: TextStyle(fontFamily: fontFamily, fontSize: AniHowSpace.headline, fontWeight: FontWeight.w700, color: text, height: 1.25),
-      headlineMedium: TextStyle(fontFamily: fontFamily, fontSize: AniHowSpace.headline, fontWeight: FontWeight.w700, color: text, height: 1.25),
-      headlineSmall: TextStyle(fontFamily: fontFamily, fontSize: AniHowSpace.headline, fontWeight: FontWeight.w700, color: text, height: 1.25),
-      titleLarge: TextStyle(fontFamily: fontFamily, fontSize: AniHowSpace.title, fontWeight: FontWeight.w600, color: text),
-      titleMedium: TextStyle(fontFamily: fontFamily, fontSize: AniHowSpace.name, fontWeight: FontWeight.w600, color: text),
-      bodyLarge: TextStyle(fontFamily: fontFamily, fontSize: AniHowSpace.body, fontWeight: FontWeight.w400, color: text, height: AniHowSpace.articleHeight),
-      bodyMedium: TextStyle(fontFamily: fontFamily, fontSize: AniHowSpace.body, fontWeight: FontWeight.w400, color: text, height: 1.4),
-      labelLarge: TextStyle(fontFamily: fontFamily, fontSize: AniHowSpace.meta, fontWeight: FontWeight.w700, color: text),
-      labelSmall: TextStyle(fontFamily: fontFamily, fontSize: AniHowSpace.label, fontWeight: FontWeight.w600, color: text.withValues(alpha: 0.7)),
+      headlineLarge: TextStyle(fontFamily: family, fontSize: AniHowSpace.headline, fontWeight: FontWeight.w700, color: text, height: 1.25),
+      headlineMedium: TextStyle(fontFamily: family, fontSize: AniHowSpace.headline, fontWeight: FontWeight.w700, color: text, height: 1.25),
+      headlineSmall: TextStyle(fontFamily: family, fontSize: AniHowSpace.headline, fontWeight: FontWeight.w700, color: text, height: 1.25),
+      titleLarge: TextStyle(fontFamily: family, fontSize: AniHowSpace.title, fontWeight: FontWeight.w600, color: text),
+      titleMedium: TextStyle(fontFamily: family, fontSize: AniHowSpace.name, fontWeight: FontWeight.w600, color: text),
+      bodyLarge: TextStyle(fontFamily: family, fontSize: AniHowSpace.body, fontWeight: FontWeight.w400, color: text, height: AniHowSpace.articleHeight),
+      bodyMedium: TextStyle(fontFamily: family, fontSize: AniHowSpace.body, fontWeight: FontWeight.w400, color: text, height: 1.4),
+      labelLarge: TextStyle(fontFamily: family, fontSize: AniHowSpace.meta, fontWeight: FontWeight.w700, color: text),
+      labelSmall: TextStyle(fontFamily: family, fontSize: AniHowSpace.label, fontWeight: FontWeight.w600, color: text.withValues(alpha: 0.7)),
     );
   }
 }

@@ -55,7 +55,18 @@ class StoreListingRequest extends FormRequest
                     return;
                 }
 
-                $guard = app(PriceGuardResolver::class)->forFarmId($this->user()?->farm_id, $cropType);
+                $seller = $this->user();
+
+                if ($seller !== null && ! $seller->mayUseCropType($cropType->id)) {
+                    $validator->errors()->add(
+                        'crop_type_id',
+                        'This crop type is not on your list.',
+                    );
+
+                    return;
+                }
+
+                $guard = app(PriceGuardResolver::class)->forFarmId($seller?->farm_id, $cropType);
 
                 if (! $guard->allowsPrice((float) $this->validated('price_per_unit'))) {
                     $floor = number_format($guard->floor, 2, '.', '');

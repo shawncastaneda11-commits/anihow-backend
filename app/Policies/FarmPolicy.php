@@ -16,6 +16,10 @@ class FarmPolicy
 
     public function view(User $user, Farm $farm): bool
     {
+        if ($farm->is_active) {
+            return true;
+        }
+
         if ($user->can(Permission::ManageFarms->value)) {
             return true;
         }

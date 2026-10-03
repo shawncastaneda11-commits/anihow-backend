@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
@@ -29,7 +30,10 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   void initState() {
     super.initState();
     _code.addListener(_onCodeChanged);
-    _requestCodeOnOpen();
+    final existing = context.read<AuthController>().pendingVerificationCode;
+    if (existing != null && existing.length == 6) {
+      _code.text = existing;
+    }
   }
 
   @override
@@ -64,32 +68,6 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     });
   }
 
-  Future<void> _requestCodeOnOpen() async {
-    final auth = context.read<AuthController>();
-    if (auth.user?.isVerified == true) {
-      return;
-    }
-    final messenger = ScaffoldMessenger.of(context);
-    final api = auth.api;
-    setState(() => _busy = true);
-    try {
-      await api.resendVerification();
-      if (!mounted) {
-        return;
-      }
-      _startCooldown();
-    } on ApiException catch (error) {
-      if (!mounted) {
-        return;
-      }
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
-    } finally {
-      if (mounted) {
-        setState(() => _busy = false);
-      }
-    }
-  }
-
   Future<void> _verify() async {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
@@ -104,7 +82,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       if (!mounted) {
         return;
       }
-      messenger.showSnackBar(const SnackBar(content: Text('Email verified.')));
+      messenger.showSnackBar(SnackBar(content: Text(AppStrings.read(context).emailVerified)));
       navigator.pop();
     } on ApiException catch (error) {
       if (!mounted) {
@@ -123,16 +101,26 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       return;
     }
     final messenger = ScaffoldMessenger.of(context);
-    final api = context.read<AuthController>().api;
+    final auth = context.read<AuthController>();
     setState(() => _busy = true);
     try {
-      await api.resendVerification();
+      final code = await auth.api.resendVerification();
       if (!mounted) {
         return;
       }
+      if (code != null && code.length == 6) {
+        auth.rememberVerificationCode(code);
+        _code.text = code;
+      }
       _startCooldown();
       messenger.showSnackBar(
-        const SnackBar(content: Text('Verification code sent to your email.')),
+        SnackBar(
+          content: Text(
+            code == null
+                ? AppStrings.read(context).verificationSent
+                : AppStrings.read(context).verificationLocal,
+          ),
+        ),
       );
     } on ApiException catch (error) {
       if (!mounted) {
@@ -148,13 +136,16 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthController>().user;
+    final auth = context.watch<AuthController>();
+    final s = AppStrings.of(context);
+    final user = auth.user;
+    final shownCode = auth.pendingVerificationCode;
     final muted = Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7);
     final canResend = !_busy && _cooldownSeconds == 0;
     final canVerify = !_busy && _code.text.trim().length == 6;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Verify Email')),
+      appBar: AppBar(title: Text(s.verifyEmail)),
       body: ListView(
         padding: AniHowSpace.screenPadding,
         children: [
@@ -165,7 +156,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                   child: Text(user.email, style: Theme.of(context).textTheme.titleMedium),
                 ),
                 StatusPill(
-                  label: user.isVerified ? 'Verified' : 'Unverified',
+                  label: user.isVerified ? s.verified : s.unverified,
                   color: user.isVerified ? AniHowColors.ready : AniHowColors.pending,
                 ),
               ],
@@ -173,12 +164,24 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
             const SizedBox(height: AniHowSpace.cardGap),
           ],
           Text(
-            'Enter the 6-digit code we sent to your email.',
+            shownCode == null ? s.verifyHintEmail : s.verifyHintLocal,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: muted),
           ),
+          if (shownCode != null) ...[
+            const SizedBox(height: AniHowSpace.section),
+            Text(s.yourCode, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: AniHowSpace.labelGap),
+            Text(
+              shownCode,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 4,
+                  ),
+            ),
+          ],
           const SizedBox(height: AniHowSpace.section),
           AniHowField(
-            label: 'Code',
+            label: s.code,
             child: TextField(
               controller: _code,
               keyboardType: TextInputType.number,
@@ -193,7 +196,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
           ),
           const SizedBox(height: AniHowSpace.section),
           PrimaryButton(
-            label: 'Verify',
+            label: s.verify,
             busy: _busy,
             onPressed: canVerify ? _verify : null,
           ),
@@ -202,8 +205,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
             onPressed: canResend ? _resend : null,
             child: Text(
               _cooldownSeconds > 0
-                  ? 'Resend code in ${_cooldownSeconds}s'
-                  : 'Resend code',
+                  ? s.resendCodeIn(_cooldownSeconds)
+                  : s.resendCode,
             ),
           ),
         ],

@@ -136,7 +136,7 @@ class RecordWalkInSaleAction
                 'note' => 'Walk-in sale recorded.',
             ]);
 
-            return $order->load('items');
+            return $order->load(['items', 'farm', 'farmerSeller']);
         });
     }
 }

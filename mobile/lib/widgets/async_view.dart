@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../theme/anihow_space.dart';
 import '../theme/anihow_theme.dart';
 
@@ -74,7 +75,7 @@ class AsyncView<T> extends StatelessWidget {
       child: Padding(
         padding: AniHowSpace.screenPadding,
         child: Text(
-          emptyMessage ?? 'Nothing here yet.',
+          emptyMessage ?? AppStrings.maybeOf(context).nothingHere,
           style: Theme.of(context).textTheme.bodyLarge,
           textAlign: TextAlign.center,
         ),
@@ -100,14 +101,14 @@ class AsyncViewError extends StatelessWidget {
             const Icon(Icons.error_outline, size: 48, color: AniHowColors.sage),
             const SizedBox(height: AniHowSpace.cardGap),
             Text(
-              'Something went wrong.',
+              AppStrings.maybeOf(context).somethingWentWrong,
               style: theme.textTheme.titleMedium?.copyWith(color: AniHowColors.deepGreen),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AniHowSpace.section),
             FilledButton(
               onPressed: onRetry,
-              child: const Text('Retry'),
+              child: Text(AppStrings.maybeOf(context).retry),
             ),
           ],
         ),

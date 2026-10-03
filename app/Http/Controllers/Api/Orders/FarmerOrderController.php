@@ -21,7 +21,7 @@ class FarmerOrderController extends Controller
 
         $orders = $request->user()
             ->incomingOrders()
-            ->with(['items', 'buyer'])
+            ->with(['items', 'buyer', 'farm', 'review'])
             ->when(
                 $request->query('status'),
                 fn ($query, string $status) => $query->where('status', $status),
@@ -36,7 +36,7 @@ class FarmerOrderController extends Controller
     {
         $this->authorize('view', $order);
 
-        $order->load(['items', 'buyer', 'statusHistories', 'review']);
+        $order->load(['items', 'buyer', 'farm', 'statusHistories', 'review']);
 
         return new OrderResource($order);
     }
@@ -105,7 +105,7 @@ class FarmerOrderController extends Controller
 
     private function respond(Order $order, string $message): OrderResource
     {
-        $order->load(['items', 'buyer']);
+        $order->load(['items', 'buyer', 'farm', 'review']);
 
         return (new OrderResource($order))->additional(['message' => $message]);
     }

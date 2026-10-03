@@ -13,7 +13,8 @@ class EditCropType extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            DeleteAction::make(),
+            DeleteAction::make()
+                ->modalDescription('This removes the crop type and its listings. Past orders keep their item names and prices.'),
         ];
     }
 }

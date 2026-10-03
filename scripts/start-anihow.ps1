@@ -1,12 +1,12 @@
 param(
-    [ValidateSet('web', 'mobile', 'both')]
+    [ValidateSet('web', 'mobile', 'both', 'desktop')]
     [string]$Mode = 'both'
 )
 
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 if (-not (Test-Path (Join-Path $ProjectRoot 'artisan'))) {
-    $ProjectRoot = 'C:\Users\My PC\OneDrive\Documents\New Anihow System'
+    $ProjectRoot = 'C:\dev\anihow'
 }
 $MobileRoot = Join-Path $ProjectRoot 'mobile'
 Set-Location $ProjectRoot
@@ -29,10 +29,10 @@ $env:Path = @(
     $env:Path
 ) -join ';'
 
-function Test-ApiListening {
+function Test-PortListening([int]$Port) {
     try {
         $client = [System.Net.Sockets.TcpClient]::new()
-        $async = $client.BeginConnect('127.0.0.1', 8000, $null, $null)
+        $async = $client.BeginConnect('127.0.0.1', $Port, $null, $null)
         $ok = $async.AsyncWaitHandle.WaitOne(400)
         $connected = $ok -and $client.Connected
         $client.Close()
@@ -40,6 +40,10 @@ function Test-ApiListening {
     } catch {
         return $false
     }
+}
+
+function Test-ApiListening {
+    return Test-PortListening 8000
 }
 
 function Start-AniHowApi {
@@ -67,9 +71,36 @@ function Start-AniHowApi {
     Write-Host 'API is still starting. Opening the website anyway...'
 }
 
+function Start-AniHowReverb {
+    if (Test-PortListening 8080) {
+        Write-Host 'AniHow Reverb already running on ws://127.0.0.1:8080'
+        return
+    }
+
+    if (-not (Test-Path $Php)) {
+        throw "PHP was not found. Install PHP or add it to PATH."
+    }
+
+    Write-Host 'Starting AniHow Reverb (order chat)...'
+    Start-Process -FilePath $Php -ArgumentList @('artisan', 'reverb:start') -WorkingDirectory $ProjectRoot
+
+    $deadline = (Get-Date).AddSeconds(20)
+    do {
+        if (Test-PortListening 8080) {
+            Write-Host 'Reverb ready at ws://127.0.0.1:8080 (emulator uses 10.0.2.2:8080)'
+            return
+        }
+        Start-Sleep -Seconds 1
+    } while ((Get-Date) -lt $deadline)
+
+    Write-Host 'Reverb is still starting. Chat will fall back to polling until it is up.'
+}
+
 function Open-AniHowAdmin {
     $url = 'http://127.0.0.1:8000/admin'
-    Start-Process $url
+    # cmd start keeps the /admin path. Start-Process on a URL can drop it and open the site root.
+    $command = '/c start "" "{0}"' -f $url
+    Start-Process -FilePath 'cmd.exe' -ArgumentList $command -WindowStyle Hidden
     Write-Host "Opened AniHow admin: $url"
     Write-Host 'Login: admin@anihow.local / password'
 }
@@ -86,6 +117,18 @@ function Get-AdbEmulatorStatus {
     return 'none'
 }
 
+function Get-PreferredAvdName {
+    $emulator = Join-Path $env:ANDROID_HOME 'emulator\emulator.exe'
+    $available = @(& $emulator -list-avds 2>$null | ForEach-Object { "$_".Trim() } | Where-Object { $_ })
+    if ($available -contains 'AniHow_Pixel') {
+        return 'AniHow_Pixel'
+    }
+    if ($available.Count -gt 0) {
+        return $available[0]
+    }
+    return $null
+}
+
 function Start-AniHowEmulator {
     $previousNativeErrors = $PSNativeCommandUseErrorActionPreference
     $PSNativeCommandUseErrorActionPreference = $false
@@ -95,43 +138,55 @@ function Start-AniHowEmulator {
         if (-not (Test-Path $adb)) {
             throw "Android SDK adb was not found at $adb"
         }
+        if (-not (Test-Path $emulator)) {
+            throw "Android emulator.exe was not found at $emulator"
+        }
 
         & $adb start-server 2>$null | Out-Null
 
         $status = Get-AdbEmulatorStatus
         if ($status -eq 'online') {
-            Write-Host 'Android emulator already running.'
-            return
-        }
-
-        if ($status -eq 'none' -and -not (Get-Process qemu-system*, emulator -ErrorAction SilentlyContinue)) {
-            if (-not (Test-Path $emulator)) {
-                throw "Android emulator.exe was not found at $emulator"
+            $boot = ((& $adb shell getprop sys.boot_completed 2>$null) | Out-String).Trim()
+            if ($boot -eq '1') {
+                Write-Host 'Android emulator already running.'
+                return
             }
-
-            $avd = 'AniHow_Pixel'
-            $available = & $emulator -list-avds 2>$null
-            if ($available -notcontains $avd) {
-                $avd = @($available | Where-Object { $_ }) | Select-Object -First 1
-            }
-            if (-not $avd) {
-                throw 'No Android Virtual Device is installed.'
-            }
-
-            Write-Host "Starting Android emulator ($avd)..."
-            Start-Process -FilePath $emulator -ArgumentList @(
-                '-avd', $avd,
-                '-no-snapshot-load',
-                '-memory', '3072',
-                '-gpu', 'swiftshader_indirect',
-                '-netdelay', 'none',
-                '-netspeed', 'full'
-            )
+            Write-Host 'Android emulator is online but still booting...'
         } else {
-            Write-Host 'Emulator is starting. Waiting until it is ready...'
+            # Stale qemu with no adb device blocks the old "already starting" branch.
+            $leftover = @(Get-Process qemu-system*, emulator -ErrorAction SilentlyContinue)
+            if ($status -eq 'none' -and $leftover.Count -gt 0) {
+                Write-Host 'Clearing leftover emulator process that is not visible to adb...'
+                $leftover | Stop-Process -Force -ErrorAction SilentlyContinue
+                Start-Sleep -Seconds 2
+                & $adb kill-server 2>$null | Out-Null
+                & $adb start-server 2>$null | Out-Null
+                $status = 'none'
+            }
+
+            if ($status -ne 'online') {
+                $avd = Get-PreferredAvdName
+                if (-not $avd) {
+                    throw 'No Android Virtual Device is installed. Create AniHow_Pixel in Android Studio Device Manager.'
+                }
+
+                Write-Host "Starting Android emulator ($avd)..."
+                $proc = Start-Process -FilePath $emulator -ArgumentList @(
+                    '-avd', $avd,
+                    '-netdelay', 'none',
+                    '-netspeed', 'full'
+                ) -PassThru -WindowStyle Normal
+
+                if (-not $proc -or $proc.HasExited) {
+                    throw "Emulator process exited immediately. Open Android Studio Device Manager and start '$avd' once to confirm it works."
+                }
+                Write-Host "Emulator process started (PID $($proc.Id)). Waiting for boot..."
+            } else {
+                Write-Host 'Emulator is starting. Waiting until it is ready...'
+            }
         }
 
-        $deadline = (Get-Date).AddMinutes(4)
+        $deadline = (Get-Date).AddMinutes(5)
         do {
             $status = Get-AdbEmulatorStatus
             if ($status -eq 'online') {
@@ -141,13 +196,38 @@ function Start-AniHowEmulator {
                     return
                 }
             }
+            Write-Host "  waiting... (adb=$status)"
             Start-Sleep -Seconds 4
         } while ((Get-Date) -lt $deadline)
 
-        Write-Host 'Emulator is still booting. You can open the app when the phone home screen appears.'
+        throw 'Emulator did not finish booting in time. Wait for the phone home screen, then run AniHow Mobile again.'
     } finally {
         $PSNativeCommandUseErrorActionPreference = $previousNativeErrors
     }
+}
+
+function Start-AniHowDesktop {
+    $candidates = @(
+        (Join-Path $MobileRoot 'build\windows\x64\runner\Profile\anihow.exe')
+        (Join-Path $MobileRoot 'build\windows\x64\runner\Release\anihow.exe')
+        (Join-Path $MobileRoot 'build\windows\x64\runner\Debug\anihow.exe')
+    )
+    $exe = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if (-not $exe) {
+        throw "The AniHow desktop app is not built yet. From the mobile folder run: flutter build windows --profile"
+    }
+
+    $already = @(Get-Process -Name 'anihow' -ErrorAction SilentlyContinue)
+    if ($already.Count -gt 0) {
+        Write-Host 'AniHow desktop is already open.'
+        return
+    }
+
+    Write-Host 'Opening AniHow on the desktop...'
+    Start-Process -FilePath $exe -WorkingDirectory (Split-Path -Parent $exe)
+    Write-Host 'This copy talks only to this computer (127.0.0.1). Wi-Fi is not required.'
+    Write-Host 'Demo buyer: carla.santos@demo.anihow.local / password'
+    Write-Host 'Demo farmer: nena.villanueva@demo.anihow.local / password'
 }
 
 function Open-AniHowMobile {
@@ -164,9 +244,23 @@ function Open-AniHowMobile {
         $installed = (& $adb shell pm path com.anihow.anihow 2>$null | Out-String)
         if ($installed -match 'package:') {
             Write-Host 'Opening AniHow on the emulator...'
-            & $adb shell am start -n com.anihow.anihow/.MainActivity 2>$null | Out-Null
-            Write-Host 'Buyer: ana.buyer@anihow.local / password'
-            Write-Host 'Farmer: juan@anihow.local / password'
+            $started = $false
+            for ($i = 1; $i -le 8; $i++) {
+                $out = (& $adb shell am start -n com.anihow.anihow/.MainActivity 2>&1 | Out-String)
+                if ($out -match 'Error type 3|does not exist|Unable to resolve') {
+                    Write-Host "  app not ready yet, retry $i/8..."
+                    Start-Sleep -Seconds 3
+                    continue
+                }
+                $started = $true
+                break
+            }
+            if (-not $started) {
+                throw 'Could not start the AniHow app on the emulator after several tries.'
+            }
+            Write-Host 'Demo buyer: carla.santos@demo.anihow.local / password'
+            Write-Host 'Demo farmer: nena.villanueva@demo.anihow.local / password'
+            Write-Host 'Admin CMS: admin@anihow.local / password'
             return
         }
 
@@ -187,8 +281,9 @@ try {
     Write-Host "AniHow launcher ($Mode)"
     Write-Host "Project: $ProjectRoot"
     Start-AniHowApi
+    Start-AniHowReverb
 
-    if ($Mode -eq 'web' -or $Mode -eq 'both') {
+    if ($Mode -eq 'web' -or $Mode -eq 'both' -or $Mode -eq 'desktop') {
         Open-AniHowAdmin
     }
 
@@ -196,9 +291,13 @@ try {
         Open-AniHowMobile
     }
 
+    if ($Mode -eq 'desktop') {
+        Start-AniHowDesktop
+    }
+
     Write-Host ''
     Write-Host 'AniHow is starting. You can close this window.'
-    Start-Sleep -Seconds 4
+    Start-Sleep -Seconds 6
 } catch {
     Write-Host ''
     Write-Host "AniHow failed to start: $($_.Exception.Message)" -ForegroundColor Red

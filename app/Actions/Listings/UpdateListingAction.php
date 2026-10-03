@@ -3,23 +3,19 @@
 namespace App\Actions\Listings;
 
 use App\Models\Listing;
-use App\Support\ListingStorage;
 use Illuminate\Http\UploadedFile;
 
 class UpdateListingAction
 {
+    public function __construct(private SyncListingImage $images) {}
+
     /**
      * @param  array<string, mixed>  $attributes
      */
     public function handle(Listing $listing, array $attributes, ?UploadedFile $image = null): Listing
     {
         if ($image !== null) {
-            $previous = $listing->image_path;
-            $attributes['image_path'] = ListingStorage::store($image);
-
-            if (filled($previous)) {
-                ListingStorage::disk()->delete($previous);
-            }
+            $attributes['image_path'] = $this->images->replace($listing->image_path, $image);
         }
 
         // farm_id is denormalized from the seller and is never set from input.

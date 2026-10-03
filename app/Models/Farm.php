@@ -3,12 +3,14 @@
 namespace App\Models;
 
 use App\Enums\Role;
+use App\Support\ImageVariants;
 use Database\Factories\FarmFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
@@ -47,6 +49,22 @@ class Farm extends Model
     }
 
     /**
+     * Crop types assigned to this farm's sellers. An empty list for a seller
+     * means that seller may use every crop type.
+     */
+    public function sellerCropTypes(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            FarmerCropType::class,
+            User::class,
+            'farm_id',
+            'user_id',
+            'id',
+            'id',
+        );
+    }
+
+    /**
      * One Content Editor per farm. The schema cannot enforce this because the
      * role lives in model_has_roles, so validation and policy do it instead.
      */
@@ -73,6 +91,40 @@ class Farm extends Model
     public function photos(): HasMany
     {
         return $this->hasMany(FarmPhoto::class)->orderBy('sort_order');
+    }
+
+    public function announcements(): HasMany
+    {
+        return $this->hasMany(FarmAnnouncement::class);
+    }
+
+    public function faqEntries(): HasMany
+    {
+        return $this->hasMany(FaqEntry::class);
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(function (Farm $farm): void {
+            if ($farm->isDirty('cover_photo_path')) {
+                $previous = $farm->getOriginal('cover_photo_path');
+                app(ImageVariants::class)->delete(is_string($previous) ? $previous : null);
+            }
+        });
+
+        static::deleting(function (Farm $farm): void {
+            app(ImageVariants::class)->delete($farm->cover_photo_path);
+        });
+    }
+
+    public function coverPhotoUrl(): ?string
+    {
+        return app(ImageVariants::class)->url($this->cover_photo_path);
+    }
+
+    public function coverThumbnailUrl(): ?string
+    {
+        return app(ImageVariants::class)->thumbnailUrl($this->cover_photo_path);
     }
 
     /**

@@ -33,6 +33,13 @@ class OrderLinePricer
         string $belowFloorMessage,
     ): array {
         $cropType = $listing->cropType;
+
+        if ($cropType === null) {
+            throw ValidationException::withMessages([
+                $errorKey => "{$listing->title} is no longer available.",
+            ]);
+        }
+
         $guard = $listing->priceGuard();
         $unitPrice = (float) $listing->price_per_unit;
 

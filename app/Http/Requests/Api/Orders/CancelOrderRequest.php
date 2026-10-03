@@ -25,7 +25,10 @@ class CancelOrderRequest extends FormRequest
         return [
             'reason' => [
                 'sometimes',
-                Rule::enum(CancellationReason::class),
+                Rule::in(array_map(
+                    fn (CancellationReason $reason): string => $reason->value,
+                    CancellationReason::forSeller(),
+                )),
             ],
             'note' => ['nullable', 'string', 'max:500'],
         ];

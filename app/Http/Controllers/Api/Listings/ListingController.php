@@ -10,13 +10,27 @@ use App\Http\Requests\Api\Listings\StoreListingRequest;
 use App\Http\Requests\Api\Listings\UpdateListingRequest;
 use App\Http\Resources\Api\ListingResource;
 use App\Models\Listing;
+use App\Support\ShopReviews;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ListingController extends Controller
 {
-    private const RELATIONS = ['cropType', 'farmerSeller', 'farm', 'activeTawadRule'];
+    /**
+     * @return array<int|string, mixed>
+     */
+    public static function relations(): array
+    {
+        return [
+            'cropType',
+            'farm',
+            'activeTawadRule',
+            'farmerSeller' => fn ($query) => $query
+                ->withAvg(ShopReviews::receivedAggregate(), 'rating')
+                ->withCount(ShopReviews::receivedAggregate()),
+        ];
+    }
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -24,7 +38,7 @@ class ListingController extends Controller
 
         $listings = $request->user()
             ->listings()
-            ->with(self::RELATIONS)
+            ->with(self::relations())
             ->latest()
             ->paginate();
 
@@ -39,7 +53,7 @@ class ListingController extends Controller
             $request->file('image'),
         );
 
-        return (new ListingResource($listing->load(self::RELATIONS)))
+        return (new ListingResource($listing->load(self::relations())))
             ->additional(['message' => 'Listing created.'])
             ->response()
             ->setStatusCode(201);
@@ -49,7 +63,7 @@ class ListingController extends Controller
     {
         $this->authorize('view', $listing);
 
-        $listing->load(self::RELATIONS);
+        $listing->load(self::relations());
 
         return new ListingResource($listing);
     }
@@ -65,7 +79,7 @@ class ListingController extends Controller
             $request->file('image'),
         );
 
-        return (new ListingResource($listing->load(self::RELATIONS)))
+        return (new ListingResource($listing->load(self::relations())))
             ->additional(['message' => 'Listing updated.']);
     }
 

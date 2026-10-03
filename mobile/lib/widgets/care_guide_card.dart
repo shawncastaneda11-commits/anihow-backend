@@ -41,7 +41,12 @@ class CareGuideCard extends StatelessWidget {
           radius: AniHowSpace.avatar,
           backgroundColor: accent,
           foregroundColor: Theme.of(context).colorScheme.onPrimary,
-          child: const Icon(Icons.eco_outlined),
+          backgroundImage: article.thumbnailUrl != null && article.thumbnailUrl!.isNotEmpty
+              ? NetworkImage(article.thumbnailUrl!)
+              : null,
+          child: article.thumbnailUrl == null || article.thumbnailUrl!.isEmpty
+              ? const Icon(Icons.eco_outlined)
+              : null,
         ),
         title: Text(
           article.title,

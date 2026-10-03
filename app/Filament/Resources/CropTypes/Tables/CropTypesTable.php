@@ -2,14 +2,14 @@
 
 namespace App\Filament\Resources\CropTypes\Tables;
 
-use App\Enums\ListingUnit;
-use App\Models\CropType;
+use App\Enums\Permission;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 
@@ -19,15 +19,17 @@ class CropTypesTable
     {
         return $table
             ->columns([
+                TextColumn::make('farm.name')
+                    ->label('Farm')
+                    ->placeholder('Shared')
+                    ->sortable()
+                    ->visible(fn (): bool => auth()->user()?->can(Permission::ManageCropTypes->value) ?? false),
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('label_fil')
                     ->label('Filipino')
                     ->searchable(),
-                TextColumn::make('unit_of_measure')
-                    ->label('Unit')
-                    ->formatStateUsing(fn (ListingUnit $state): string => $state->label()),
                 TextColumn::make('floor_price')
                     ->label('Floor')
                     ->money('PHP')
@@ -44,21 +46,23 @@ class CropTypesTable
                     ->boolean(),
             ])
             ->filters([
+                SelectFilter::make('farm_id')
+                    ->label('Farm')
+                    ->relationship('farm', 'name')
+                    ->visible(fn (): bool => auth()->user()?->can(Permission::ManageCropTypes->value) ?? false),
                 TernaryFilter::make('is_active')->label('Active'),
             ])
+            ->emptyStateHeading('No crop types yet')
+            ->emptyStateDescription('Crop types you add here belong to one farm. Another farm does not see them.')
             ->recordActions([
                 EditAction::make(),
-                /*
-                 * Listings hold a restrictOnDelete foreign key, so a crop type
-                 * in use cannot be deleted. Hiding the button is kinder than
-                 * letting the database throw.
-                 */
                 DeleteAction::make()
-                    ->visible(fn (CropType $record): bool => $record->listings()->doesntExist()),
+                    ->modalDescription('This removes the crop type and its listings. Past orders keep their item names and prices.'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->modalDescription('This removes the selected crop types and their listings. Past orders keep their item names and prices.'),
                 ]),
             ]);
     }

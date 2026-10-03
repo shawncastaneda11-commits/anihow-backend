@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources\Api;
 
+use App\Enums\Permission;
+use App\Models\ShopFavorite;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -22,6 +24,16 @@ class ShopProfileResource extends JsonResource
             'average_rating' => $this->averageRating(),
             'reviews_count' => (int) ($this->reviews_received_count ?? 0),
             'listings' => ListingResource::collection($this->whenLoaded('listings')),
+            'farm' => new FarmResource($this->whenLoaded('farm')),
+            'is_favorited' => $this->when(
+                $request->user()?->can(Permission::BrowseMarketplace->value) ?? false,
+                fn (): bool => array_key_exists('is_favorited', $this->getAttributes())
+                    ? (bool) $this->getAttribute('is_favorited')
+                    : ShopFavorite::query()
+                        ->where('buyer_id', $request->user()?->id)
+                        ->where('farmer_seller_id', $this->id)
+                        ->exists(),
+            ),
         ];
     }
 }

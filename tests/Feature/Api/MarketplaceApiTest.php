@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Enums\TawadType;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesMarketplaceActors;
@@ -191,5 +192,34 @@ class MarketplaceApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.title', 'Sunset sitaw bundle');
+    }
+
+    public function test_marketplace_shows_tawad_added_to_an_existing_listing(): void
+    {
+        $farmer = $this->farmer();
+        $listing = $this->listingFor($farmer, [
+            'title' => 'Talong, mahaba',
+            'price_per_unit' => 40,
+        ]);
+        $buyer = $this->buyer();
+
+        $this->asUser($farmer)
+            ->postJson('/api/farmer/listings/'.$listing->id.'/tawad', [
+                'type' => TawadType::Flat->value,
+                'discount_amount' => 5,
+            ])
+            ->assertCreated();
+
+        $this->asUser($buyer)
+            ->getJson('/api/buyer/marketplace/'.$listing->id)
+            ->assertOk()
+            ->assertJsonPath('data.tawad.type', TawadType::Flat->value)
+            ->assertJsonPath('data.tawad.discount_amount', 5);
+
+        $this->asUser($buyer)
+            ->getJson('/api/buyer/marketplace')
+            ->assertOk()
+            ->assertJsonPath('data.0.tawad.type', TawadType::Flat->value)
+            ->assertJsonPath('data.0.tawad.discount_amount', 5);
     }
 }

@@ -53,14 +53,14 @@ class MarketplaceController extends Controller
 
     public function show(Listing $listing): ListingResource
     {
-        abort_unless(
-            Listing::query()->marketplaceVisible()->whereKey($listing->id)->exists(),
-            404,
-        );
+        $visible = Listing::query()
+            ->marketplaceVisible()
+            ->with($this->relations())
+            ->find($listing->id);
 
-        $listing->load($this->relations());
+        abort_if($visible === null, 404);
 
-        return new ListingResource($listing);
+        return new ListingResource($visible);
     }
 
     /**

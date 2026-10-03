@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('web', 'mobile', 'both')]
+    [ValidateSet('web', 'mobile', 'both', 'desktop')]
     [string]$Mode = 'both'
 )
 
@@ -98,7 +98,9 @@ function Start-AniHowReverb {
 
 function Open-AniHowAdmin {
     $url = 'http://127.0.0.1:8000/admin'
-    Start-Process $url
+    # cmd start keeps the /admin path. Start-Process on a URL can drop it and open the site root.
+    $command = '/c start "" "{0}"' -f $url
+    Start-Process -FilePath 'cmd.exe' -ArgumentList $command -WindowStyle Hidden
     Write-Host "Opened AniHow admin: $url"
     Write-Host 'Login: admin@anihow.local / password'
 }
@@ -204,6 +206,30 @@ function Start-AniHowEmulator {
     }
 }
 
+function Start-AniHowDesktop {
+    $candidates = @(
+        (Join-Path $MobileRoot 'build\windows\x64\runner\Profile\anihow.exe')
+        (Join-Path $MobileRoot 'build\windows\x64\runner\Release\anihow.exe')
+        (Join-Path $MobileRoot 'build\windows\x64\runner\Debug\anihow.exe')
+    )
+    $exe = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if (-not $exe) {
+        throw "The AniHow desktop app is not built yet. From the mobile folder run: flutter build windows --profile"
+    }
+
+    $already = @(Get-Process -Name 'anihow' -ErrorAction SilentlyContinue)
+    if ($already.Count -gt 0) {
+        Write-Host 'AniHow desktop is already open.'
+        return
+    }
+
+    Write-Host 'Opening AniHow on the desktop...'
+    Start-Process -FilePath $exe -WorkingDirectory (Split-Path -Parent $exe)
+    Write-Host 'This copy talks only to this computer (127.0.0.1). Wi-Fi is not required.'
+    Write-Host 'Demo buyer: carla.santos@demo.anihow.local / password'
+    Write-Host 'Demo farmer: nena.villanueva@demo.anihow.local / password'
+}
+
 function Open-AniHowMobile {
     $previousNativeErrors = $PSNativeCommandUseErrorActionPreference
     $PSNativeCommandUseErrorActionPreference = $false
@@ -257,12 +283,16 @@ try {
     Start-AniHowApi
     Start-AniHowReverb
 
-    if ($Mode -eq 'web' -or $Mode -eq 'both') {
+    if ($Mode -eq 'web' -or $Mode -eq 'both' -or $Mode -eq 'desktop') {
         Open-AniHowAdmin
     }
 
     if ($Mode -eq 'mobile' -or $Mode -eq 'both') {
         Open-AniHowMobile
+    }
+
+    if ($Mode -eq 'desktop') {
+        Start-AniHowDesktop
     }
 
     Write-Host ''

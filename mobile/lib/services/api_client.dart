@@ -27,17 +27,17 @@ class PagedItems<T> {
 
 class ApiClient {
   ApiClient({required this.onUnauthorized})
-      : _dio = Dio(
-          BaseOptions(
-            baseUrl: ApiConfig.baseUrl,
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-            },
-            connectTimeout: const Duration(seconds: 20),
-            receiveTimeout: const Duration(seconds: 20),
-          ),
-        ) {
+    : _dio = Dio(
+        BaseOptions(
+          baseUrl: ApiConfig.baseUrl,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          connectTimeout: const Duration(seconds: 20),
+          receiveTimeout: const Duration(seconds: 20),
+        ),
+      ) {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -86,13 +86,11 @@ class ApiClient {
     });
     final token = response['token'] as String;
     await saveToken(token);
-    return (
-      user: UserAccount.fromJson(_asMap(response['data'])),
-      token: token,
-    );
+    return (user: UserAccount.fromJson(_asMap(response['data'])), token: token);
   }
 
-  Future<({UserAccount user, String token, String? verificationCode})> registerBuyer({
+  Future<({UserAccount user, String token, String? verificationCode})>
+  registerBuyer({
     required String name,
     required String email,
     required String password,
@@ -153,14 +151,19 @@ class ApiClient {
     return null;
   }
 
-  Future<AccountDeletionRequest> requestAccountDeletion({String? reason}) async {
+  Future<AccountDeletionRequest> requestAccountDeletion({
+    String? reason,
+  }) async {
     final response = await _post('/auth/user/deletion-request', {
       if (reason != null && reason.isNotEmpty) 'reason': reason,
     });
-    return AccountDeletionRequest.fromJson(_asMap(response['data'] ?? response));
+    return AccountDeletionRequest.fromJson(
+      _asMap(response['data'] ?? response),
+    );
   }
 
-  Future<void> cancelAccountDeletion() => _delete('/auth/user/deletion-request');
+  Future<void> cancelAccountDeletion() =>
+      _delete('/auth/user/deletion-request');
 
   Future<void> logout() async {
     try {
@@ -172,7 +175,11 @@ class ApiClient {
     }
   }
 
-  Future<List<ListingItem>> marketplace({String? search, int? cropTypeId, String? sort}) async {
+  Future<List<ListingItem>> marketplace({
+    String? search,
+    int? cropTypeId,
+    String? sort,
+  }) async {
     return _list(
       '/buyer/marketplace',
       query: {
@@ -235,6 +242,16 @@ class ApiClient {
   Future<void> removeShopFavorite(int sellerId) =>
       _delete('/buyer/shop-favorites/$sellerId');
 
+  Future<List<FarmFavoriteRecord>> farmFavorites() {
+    return _list('/buyer/farm-favorites', parse: FarmFavoriteRecord.fromJson);
+  }
+
+  Future<void> addFarmFavorite(int farmId) =>
+      _post('/buyer/farm-favorites', {'farm_id': farmId});
+
+  Future<void> removeFarmFavorite(int farmId) =>
+      _delete('/buyer/farm-favorites/$farmId');
+
   Future<ListingItem> farmerListing(int id) async {
     final response = await _get('/farmer/listings/$id');
     return ListingItem.fromJson(_asMap(response['data'] ?? response));
@@ -252,7 +269,11 @@ class ApiClient {
     Map<String, dynamic> body, {
     String? imagePath,
   }) async {
-    final response = await _sendListing('/farmer/listings', body, imagePath: imagePath);
+    final response = await _sendListing(
+      '/farmer/listings',
+      body,
+      imagePath: imagePath,
+    );
     return ListingItem.fromJson(_asMap(response['data'] ?? response));
   }
 
@@ -263,16 +284,26 @@ class ApiClient {
   }) async {
     final response = imagePath == null
         ? await _put('/farmer/listings/$id', body)
-        : await _sendListing('/farmer/listings/$id', body, imagePath: imagePath);
+        : await _sendListing(
+            '/farmer/listings/$id',
+            body,
+            imagePath: imagePath,
+          );
     return ListingItem.fromJson(_asMap(response['data'] ?? response));
   }
 
-  Future<ListingItem> toggleListingActive(int id, {required bool isActive}) async {
+  Future<ListingItem> toggleListingActive(
+    int id, {
+    required bool isActive,
+  }) async {
     try {
-      final response = await _dio.patch('/farmer/listings/$id/active', data: {
-        'is_active': isActive,
-      });
-      return ListingItem.fromJson(_asMap(_asMap(response.data)['data'] ?? response.data));
+      final response = await _dio.patch(
+        '/farmer/listings/$id/active',
+        data: {'is_active': isActive},
+      );
+      return ListingItem.fromJson(
+        _asMap(_asMap(response.data)['data'] ?? response.data),
+      );
     } on DioException catch (error) {
       throw ApiException(_messageFrom(error));
     }
@@ -330,7 +361,10 @@ class ApiClient {
   }
 
   Future<List<OrderRecord>> buyerOrders() async {
-    final pages = await _listPages('/buyer/orders', parse: OrderRecord.fromJson);
+    final pages = await _listPages(
+      '/buyer/orders',
+      parse: OrderRecord.fromJson,
+    );
     return pages.items;
   }
 
@@ -342,15 +376,45 @@ class ApiClient {
   Future<List<OrderMessage>> orderMessages(int orderId, {int? afterId}) {
     return _list(
       '/orders/$orderId/messages',
-      query: {
-        'after_id': ?afterId,
-      },
+      query: {'after_id': ?afterId},
       parse: OrderMessage.fromJson,
     );
   }
 
-  Future<OrderMessage> sendOrderMessage(int orderId, {required String body}) async {
+  Future<OrderMessage> sendOrderMessage(
+    int orderId, {
+    required String body,
+  }) async {
     final response = await _post('/orders/$orderId/messages', {'body': body});
+    return OrderMessage.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<List<StallChat>> stallChats() {
+    return _list('/stall-chats', parse: StallChat.fromJson);
+  }
+
+  Future<StallChat> openStallChat(int sellerId) async {
+    final response = await _post('/stall-chats', {
+      'farmer_seller_id': sellerId,
+    });
+    return StallChat.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<List<OrderMessage>> stallMessages(int conversationId, {int? afterId}) {
+    return _list(
+      '/stall-chats/$conversationId/messages',
+      query: {'after_id': ?afterId},
+      parse: OrderMessage.fromJson,
+    );
+  }
+
+  Future<OrderMessage> sendStallMessage(
+    int conversationId, {
+    required String body,
+  }) async {
+    final response = await _post('/stall-chats/$conversationId/messages', {
+      'body': body,
+    });
     return OrderMessage.fromJson(_asMap(response['data'] ?? response));
   }
 
@@ -382,7 +446,10 @@ class ApiClient {
     return _list(CartRequests.cartPath, parse: CartLine.fromJson);
   }
 
-  Future<CartLine> addCartItem({required int listingId, required String quantity}) async {
+  Future<CartLine> addCartItem({
+    required int listingId,
+    required String quantity,
+  }) async {
     final response = await _post(
       CartRequests.cartPath,
       CartRequests.addItem(listingId: listingId, quantity: quantity),
@@ -417,9 +484,7 @@ class ApiClient {
   Future<List<OrderRecord>> farmerOrders({String? status}) async {
     final pages = await _listPages(
       '/farmer/orders',
-      query: {
-        if (status != null && status.isNotEmpty) 'status': status,
-      },
+      query: {if (status != null && status.isNotEmpty) 'status': status},
       parse: OrderRecord.fromJson,
     );
     return pages.items;
@@ -430,9 +495,11 @@ class ApiClient {
     return OrderRecord.fromJson(_asMap(response['data'] ?? response));
   }
 
-  Future<OrderRecord> confirmOrder(int id) => _farmerOrderAction('/farmer/orders/$id/confirm');
+  Future<OrderRecord> confirmOrder(int id) =>
+      _farmerOrderAction('/farmer/orders/$id/confirm');
 
-  Future<OrderRecord> markOrderReady(int id) => _farmerOrderAction('/farmer/orders/$id/ready');
+  Future<OrderRecord> markOrderReady(int id) =>
+      _farmerOrderAction('/farmer/orders/$id/ready');
 
   Future<OrderRecord> completeOrder(int id, {required String amountReceived}) {
     return _farmerOrderAction('/farmer/orders/$id/complete', {
@@ -440,7 +507,11 @@ class ApiClient {
     });
   }
 
-  Future<OrderRecord> cancelOrder(int id, {required String reason, String? note}) {
+  Future<OrderRecord> cancelOrder(
+    int id, {
+    required String reason,
+    String? note,
+  }) {
     return _farmerOrderAction('/farmer/orders/$id/cancel', {
       'reason': reason,
       if (note != null && note.isNotEmpty) 'note': note,
@@ -464,7 +535,10 @@ class ApiClient {
     return OrderRecord.fromJson(_asMap(response['data'] ?? response));
   }
 
-  Future<OrderRecord> _farmerOrderAction(String path, [Map<String, dynamic>? body]) async {
+  Future<OrderRecord> _farmerOrderAction(
+    String path, [
+    Map<String, dynamic>? body,
+  ]) async {
     final response = await _patchJson(path, body);
     return OrderRecord.fromJson(_asMap(response['data'] ?? response));
   }
@@ -486,7 +560,10 @@ class ApiClient {
     return _pagedShopReviews('/farmer/shop/reviews', page: page);
   }
 
-  Future<PagedShopReviews> _pagedShopReviews(String path, {int page = 1}) async {
+  Future<PagedShopReviews> _pagedShopReviews(
+    String path, {
+    int page = 1,
+  }) async {
     final response = await _get(path, query: {'page': page});
     final meta = _asMap(response['meta']);
     return PagedShopReviews(
@@ -523,7 +600,9 @@ class ApiClient {
   Future<ShopProfile> updateFarmerShop(Map<String, dynamic> body) async {
     try {
       final response = await _dio.patch('/farmer/shop', data: body);
-      return ShopProfile.fromJson(_asMap(_asMap(response.data)['data'] ?? response.data));
+      return ShopProfile.fromJson(
+        _asMap(_asMap(response.data)['data'] ?? response.data),
+      );
     } on DioException catch (error) {
       throw ApiException(_messageFrom(error));
     }
@@ -546,27 +625,29 @@ class ApiClient {
     return int.tryParse('$count') ?? 0;
   }
 
-  Future<void> markNotificationRead(int id) => _patch('/notifications/$id/read');
+  Future<void> markNotificationRead(int id) =>
+      _patch('/notifications/$id/read');
 
-  Future<void> markAllNotificationsRead() => _post('/notifications/read-all', {});
+  Future<void> markAllNotificationsRead() =>
+      _post('/notifications/read-all', {});
 
   Future<String?> resendVerification() async {
     final response = await _post('/auth/email/verification-notification', {});
     return response['verification_code'] as String?;
   }
 
-  Future<void> verifyEmail(String code) => _post('/auth/email/verify', {'code': code});
+  Future<void> verifyEmail(String code) =>
+      _post('/auth/email/verify', {'code': code});
 
   Future<void> changePassword({
     required String currentPassword,
     required String password,
     required String passwordConfirmation,
-  }) =>
-      _post('/auth/password', {
-        'current_password': currentPassword,
-        'password': password,
-        'password_confirmation': passwordConfirmation,
-      });
+  }) => _post('/auth/password', {
+    'current_password': currentPassword,
+    'password': password,
+    'password_confirmation': passwordConfirmation,
+  });
 
   Future<Map<String, dynamic>> _sendListing(
     String path,
@@ -641,7 +722,10 @@ class ApiClient {
     await _patchJson(path, body);
   }
 
-  Future<Map<String, dynamic>> _patchJson(String path, [Map<String, dynamic>? body]) async {
+  Future<Map<String, dynamic>> _patchJson(
+    String path, [
+    Map<String, dynamic>? body,
+  ]) async {
     try {
       final response = await _dio.patch(path, data: body);
       return _asMap(response.data);
@@ -684,10 +768,7 @@ class ApiClient {
       do {
         final response = await _dio.get(
           path,
-          queryParameters: {
-            ...?query,
-            'page': page,
-          },
+          queryParameters: {...?query, 'page': page},
         );
         items.addAll(_parseList(response.data, parse));
         final body = response.data;
@@ -701,15 +782,12 @@ class ApiClient {
     }
   }
 
-  List<T> _parseList<T>(
-    dynamic body,
-    T Function(Map<String, dynamic>) parse,
-  ) {
+  List<T> _parseList<T>(dynamic body, T Function(Map<String, dynamic>) parse) {
     final raw = body is Map && body['data'] is List
         ? body['data'] as List
         : body is List
-            ? body
-            : const [];
+        ? body
+        : const [];
     return raw
         .whereType<Map>()
         .map((item) => parse(Map<String, dynamic>.from(item)))

@@ -5,19 +5,18 @@ import '../../l10n/app_strings.dart';
 import '../../navigation/route_observer.dart';
 import '../../state/auth_controller.dart';
 import '../../widgets/notification_bell.dart';
+import '../../widgets/order_chat_head.dart';
 import '../../widgets/unverified_email_banner.dart';
 import 'favorites_screen.dart';
 import 'marketplace_screen.dart';
 import 'order_history_screen.dart';
+import 'shops_screen.dart';
 import '../profile/profile_screen.dart';
 import '../profile/verify_email_screen.dart';
 
 /// Test hook so the banner layout can be pumped without live API pages.
 class BuyerShellPreview {
-  const BuyerShellPreview({
-    this.index = 0,
-    this.pages,
-  });
+  const BuyerShellPreview({this.index = 0, this.pages});
 
   final int index;
   final List<Widget>? pages;
@@ -39,9 +38,11 @@ class _BuyerShellState extends State<BuyerShell> {
   @override
   void initState() {
     super.initState();
-    _index = widget.preview?.index ?? 0;
+    _index = widget.preview?.index ?? 1;
     if (widget.preview == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _openVerifyAfterRegister());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _openVerifyAfterRegister(),
+      );
     }
   }
 
@@ -51,64 +52,86 @@ class _BuyerShellState extends State<BuyerShell> {
       return;
     }
     auth.clearPendingEmailVerification();
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const VerifyEmailScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const VerifyEmailScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
-    final pages = widget.preview?.pages ??
-        const [
-          MarketplaceScreen(),
-          OrderHistoryScreen(),
-          FavoritesScreen(),
-          ProfileScreen(),
+    final pages =
+        widget.preview?.pages ??
+        [
+          const ShopsScreen(),
+          const MarketplaceScreen(),
+          const OrderHistoryScreen(),
+          FavoritesScreen(active: _index == 3),
+          const ProfileScreen(),
         ];
-    final titles = [s.marketplace, s.orders, s.favorites, s.profile];
-    final hasAppBar = _index != 0 && _index != 1;
+    final titles = [s.shops, s.marketplace, s.orders, s.favorites, s.profile];
+    final hasAppBar = _index > 2;
 
     return VerifyBannerScope(
       hidden: _hideVerifyBanner,
       hide: () => setState(() => _hideVerifyBanner = true),
       child: Scaffold(
-      appBar: hasAppBar
-          ? AppBar(
-              title: Text(titles[_index]),
-              actions: const [NotificationBellButton()],
-            )
-          : null,
-      body: Column(
-        children: [
-          if (hasAppBar) const UnverifiedEmailBanner(),
-          Expanded(
-            child: IndexedStack(
-              index: _index,
-              children: pages,
+        appBar: hasAppBar
+            ? AppBar(
+                title: Text(titles[_index]),
+                actions: const [NotificationBellButton()],
+              )
+            : null,
+        body: Column(
+          children: [
+            if (hasAppBar) const UnverifiedEmailBanner(),
+            Expanded(
+              child: IndexedStack(index: _index, children: pages),
             ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
-        ),
-        child: NavigationBar(
-          selectedIndex: _index,
-          onDestinationSelected: (value) {
-            dismissAniHowSnackBars();
-            setState(() => _index = value);
-          },
-          destinations: [
-            NavigationDestination(icon: const Icon(Icons.storefront_outlined), label: s.market),
-            NavigationDestination(icon: const Icon(Icons.receipt_long_outlined), label: s.orders),
-            NavigationDestination(icon: const Icon(Icons.favorite_outline), label: s.favorites),
-            NavigationDestination(icon: const Icon(Icons.person_outline), label: s.profile),
           ],
         ),
+        floatingActionButton: widget.preview == null
+            ? const OrderChatHead()
+            : null,
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        bottomNavigationBar: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(color: Theme.of(context).dividerColor),
+            ),
+          ),
+          child: NavigationBar(
+            selectedIndex: _index,
+            onDestinationSelected: (value) {
+              dismissAniHowSnackBars();
+              setState(() => _index = value);
+            },
+            destinations: [
+              NavigationDestination(
+                icon: const Icon(Icons.storefront),
+                selectedIcon: const Icon(Icons.storefront),
+                label: s.shops,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.storefront_outlined),
+                label: s.market,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.receipt_long_outlined),
+                label: s.orders,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.favorite_outline),
+                label: s.favorites,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.person_outline),
+                label: s.profile,
+              ),
+            ],
+          ),
+        ),
       ),
-    ),
     );
   }
 }

@@ -150,14 +150,6 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     return null;
   }
 
-  String? _unitFor(List<CategoryItem> cropTypes) {
-    final cropType = _selectedCrop(cropTypes);
-    if (cropType != null) {
-      return cropType.unitLabel ?? cropType.unit;
-    }
-    return widget.listing?.unitLabel ?? widget.listing?.unit;
-  }
-
   Future<void> _openTawad() async {
     final listing = _listing;
     if (listing == null) {
@@ -267,7 +259,6 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
           }
           final cropTypes = snapshot.data ?? const [];
           final selectedCrop = _selectedCrop(cropTypes);
-          final unit = _unitFor(cropTypes);
           final floor = selectedCrop?.sellerFloorPrice;
           return Column(
             children: [
@@ -330,10 +321,6 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                               onChanged: (value) => setState(() => _cropTypeId = value),
                             ),
                           ),
-                          if (unit != null && unit.isNotEmpty) ...[
-                            const SizedBox(height: AniHowSpace.cardGap),
-                            Text(s.unitLine(unit), style: Theme.of(context).textTheme.bodyMedium),
-                          ],
                           const SizedBox(height: AniHowSpace.fieldGap),
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,

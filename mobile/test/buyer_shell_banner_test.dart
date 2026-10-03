@@ -25,11 +25,13 @@ Widget _shell({
 }) {
   return MultiProvider(
     providers: [
-      ChangeNotifierProvider(create: (_) {
-        final preferences = PreferencesController();
-        preferences.notificationsEnabled = false;
-        return preferences;
-      }),
+      ChangeNotifierProvider(
+        create: (_) {
+          final preferences = PreferencesController();
+          preferences.notificationsEnabled = false;
+          return preferences;
+        },
+      ),
       ChangeNotifierProvider.value(value: auth),
     ],
     child: MaterialApp(
@@ -116,7 +118,9 @@ void main() {
           final s = AppStrings(false);
           expect(find.text(s.verifyBanner), findsOneWidget);
 
-          final banner = tester.getRect(find.byKey(UnverifiedEmailBanner.bannerKey));
+          final banner = tester.getRect(
+            find.byKey(UnverifiedEmailBanner.bannerKey),
+          );
           final firstItem = tester.getRect(find.byKey(_firstItemKey));
           expect(banner.top, greaterThanOrEqualTo(inset));
           expect(banner.bottom, lessThanOrEqualTo(firstItem.top));
@@ -132,8 +136,9 @@ void main() {
           await tester.pumpWidget(
             _shell(
               auth: _unverifiedAuth(),
-              index: 2,
+              index: 3,
               pages: [
+                const SizedBox.shrink(),
                 const SizedBox.shrink(),
                 const SizedBox.shrink(),
                 _listPage(),
@@ -145,7 +150,9 @@ void main() {
           );
           await tester.pump();
 
-          final banner = tester.getRect(find.byKey(UnverifiedEmailBanner.bannerKey));
+          final banner = tester.getRect(
+            find.byKey(UnverifiedEmailBanner.bannerKey),
+          );
           final firstItem = tester.getRect(find.byKey(_firstItemKey));
           expect(banner.top, greaterThanOrEqualTo(inset));
           expect(banner.bottom, lessThanOrEqualTo(firstItem.top));

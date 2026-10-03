@@ -12,6 +12,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -98,6 +99,8 @@ class UsersTable
                         'suspended_at' => now(),
                         'suspension_reason' => $data['suspension_reason'],
                     ])),
+                ViewAction::make()
+                    ->visible(fn (User $record): bool => ! (auth()->user()?->can('update', $record) ?? false)),
                 EditAction::make(),
                 DeleteAction::make()
                     ->visible(fn (User $record): bool => ! $record->isSuperAdmin()),

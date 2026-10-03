@@ -10,10 +10,7 @@ import 'package:provider/provider.dart';
 Widget _app({required Widget home}) {
   return ChangeNotifierProvider(
     create: (_) => PreferencesController(),
-    child: MaterialApp(
-      theme: AniHowTheme.dark(),
-      home: home,
-    ),
+    child: MaterialApp(theme: AniHowTheme.dark(), home: home),
   );
 }
 
@@ -22,17 +19,18 @@ const _shop = ShopProfile(
   shopName: 'Mang Tonyo Farm',
   name: 'Tonyo',
   location: 'Manggahan, General Trias',
+  farmId: 2,
+  farmName: 'PYAP Manggahan Chapter',
+  farmIsActive: true,
 );
 
 void main() {
-  testWidgets('Shop page has a Save store control', (tester) async {
+  testWidgets('Shop page saves that store', (tester) async {
     await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
-      _app(
-        home: const ShopProfileScreen(sellerId: 7, preview: _shop),
-      ),
+      _app(home: const ShopProfileScreen(sellerId: 7, preview: _shop)),
     );
     await tester.pump();
 

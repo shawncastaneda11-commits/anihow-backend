@@ -180,7 +180,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item.body,
+                    _notificationBody(item.body),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: AniHowSpace.body),
@@ -403,4 +403,24 @@ Future<void> _pushList(
       ),
     ),
   );
+}
+
+/// Older notices stored the order code in the sentence. The order link is separate.
+String _notificationBody(String body) {
+  var text = body;
+  text = text.replaceAll(
+    RegExp(r'Order AH-\d{6}-[A-Z0-9]+ is now '),
+    'This order is now ',
+  );
+  text = text.replaceAll(
+    RegExp(r'Order AH-\d{6}-[A-Z0-9]+ is still waiting'),
+    'An order is still waiting',
+  );
+  text = text.replaceAll(
+    RegExp(r' placed order AH-\d{6}-[A-Z0-9]+ totaling '),
+    ' placed an order totaling ',
+  );
+  text = text.replaceAll(RegExp(r' on order AH-\d{6}-[A-Z0-9]+: '), ': ');
+  text = text.replaceAll(RegExp(r'\bAH-\d{6}-[A-Z0-9]+\b'), '');
+  return text.replaceAll(RegExp(r' {2,}'), ' ').trim();
 }

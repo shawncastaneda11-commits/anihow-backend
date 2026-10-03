@@ -17,7 +17,6 @@ import '../../widgets/produce_card.dart';
 import '../../widgets/unverified_email_banner.dart';
 import 'listing_detail_screen.dart';
 import 'shop_profile_screen.dart';
-import 'shops_screen.dart';
 
 class MarketplaceScreen extends StatefulWidget {
   const MarketplaceScreen({super.key});
@@ -54,10 +53,10 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
   Future<void> _reload() async {
     final future = context.read<AuthController>().api.marketplace(
-          search: _search.text.trim(),
-          cropTypeId: _cropTypeId,
-          sort: _sort,
-        );
+      search: _search.text.trim(),
+      cropTypeId: _cropTypeId,
+      sort: _sort,
+    );
     setState(() {
       _listings = future;
     });
@@ -71,27 +70,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       children: [
         AppHeader(
           title: s.marketplace,
-          trailing: Row(
+          trailing: const Row(
             mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                tooltip: s.shops,
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ShopsScreen()),
-                  );
-                },
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(width: 48, height: 48),
-                icon: Icon(
-                  Icons.storefront,
-                  size: 24,
-                  color: Theme.of(context).colorScheme.onPrimary,
-                ),
-              ),
-              const CartIconButton(),
-              const NotificationBellButton(),
-            ],
+            children: [CartIconButton(), NotificationBellButton()],
           ),
         ),
         const UnverifiedEmailBanner(),
@@ -107,7 +88,10 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
             decoration: InputDecoration(
               hintText: s.searchProduce,
               prefixIcon: const Icon(Icons.search),
-              suffixIcon: IconButton(onPressed: _reload, icon: const Icon(Icons.arrow_forward)),
+              suffixIcon: IconButton(
+                onPressed: _reload,
+                icon: const Icon(Icons.arrow_forward),
+              ),
             ),
             onSubmitted: (_) => _reload(),
           ),
@@ -120,7 +104,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
               final cropTypes = snapshot.data ?? const <CategoryItem>[];
               return ListView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: AniHowSpace.screen),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AniHowSpace.screen,
+                ),
                 children: [
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
@@ -142,7 +128,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                           radius: 8,
                         ),
                         label: Text(
-                          cropType.labelFor(context.watch<PreferencesController>().language),
+                          cropType.labelFor(
+                            context.watch<PreferencesController>().language,
+                          ),
                         ),
                         selected: _cropTypeId == cropType.id,
                         onSelected: (_) {
@@ -173,8 +161,14 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
             items: [
               DropdownMenuItem(value: 'freshest', child: Text(s.freshest)),
               DropdownMenuItem(value: 'price_asc', child: Text(s.priceLowHigh)),
-              DropdownMenuItem(value: 'price_desc', child: Text(s.priceHighLow)),
-              DropdownMenuItem(value: 'availability', child: Text(s.inStockFirst)),
+              DropdownMenuItem(
+                value: 'price_desc',
+                child: Text(s.priceHighLow),
+              ),
+              DropdownMenuItem(
+                value: 'availability',
+                child: Text(s.inStockFirst),
+              ),
             ],
             onChanged: (value) {
               if (value == null) {
@@ -210,7 +204,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => ListingDetailScreen(listingId: listing.id),
+                            builder: (_) =>
+                                ListingDetailScreen(listingId: listing.id),
                           ),
                         );
                       },

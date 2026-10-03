@@ -31,7 +31,9 @@ class UserAccount {
 
   factory UserAccount.fromJson(Map<String, dynamic> json) {
     final farmJson = json['farm'];
-    final farmMap = farmJson is Map ? Map<String, dynamic>.from(farmJson) : null;
+    final farmMap = farmJson is Map
+        ? Map<String, dynamic>.from(farmJson)
+        : null;
     return UserAccount(
       id: ListingItem._asCount(json['id']) ?? 0,
       name: json['name'] as String? ?? '',
@@ -258,7 +260,8 @@ class ListingItem {
 
   String get name => title;
 
-  bool get hasRating => reviewsCount > 0 && averageRating != null && averageRating!.isNotEmpty;
+  bool get hasRating =>
+      reviewsCount > 0 && averageRating != null && averageRating!.isNotEmpty;
 
   bool get isLowStock {
     final quantity = double.tryParse(quantityAvailable) ?? 0;
@@ -300,9 +303,13 @@ class ListingItem {
 
   factory ListingItem.fromJson(Map<String, dynamic> json) {
     final cropTypeJson = json['crop_type'];
-    final cropTypeMap = cropTypeJson is Map ? Map<String, dynamic>.from(cropTypeJson) : null;
+    final cropTypeMap = cropTypeJson is Map
+        ? Map<String, dynamic>.from(cropTypeJson)
+        : null;
     final sellerJson = json['seller'];
-    final sellerMap = sellerJson is Map ? Map<String, dynamic>.from(sellerJson) : null;
+    final sellerMap = sellerJson is Map
+        ? Map<String, dynamic>.from(sellerJson)
+        : null;
     final tawadJson = json['tawad'];
     return ListingItem(
       id: ListingItem._asCount(json['id']) ?? 0,
@@ -313,16 +320,23 @@ class ListingItem {
       quantityAvailable: '${json['quantity_available'] ?? '0'}',
       description: json['description'] as String?,
       imageUrl: ApiConfig.mediaUrl(json['image_url']?.toString()),
-      thumbnailUrl: ApiConfig.mediaUrl(json['thumbnail_url']?.toString()) ??
+      thumbnailUrl:
+          ApiConfig.mediaUrl(json['thumbnail_url']?.toString()) ??
           ApiConfig.mediaUrl(json['image_url']?.toString()),
       isActive: json['is_active'] == true || json['is_active'] == 1,
       status: json['status'] as String?,
       category: cropTypeMap == null ? null : CategoryItem.fromJson(cropTypeMap),
-      sellerName: sellerMap?['shop_name'] as String? ?? sellerMap?['name'] as String?,
+      sellerName:
+          sellerMap?['shop_name'] as String? ?? sellerMap?['name'] as String?,
       sellerLocation: sellerMap?['location'] as String?,
       sellerId: _asCount(sellerMap?['id']),
-      averageRating: json['average_rating']?.toString() ?? sellerMap?['average_rating']?.toString(),
-      reviewsCount: _asCount(json['reviews_count']) ?? _asCount(sellerMap?['reviews_count']) ?? 0,
+      averageRating:
+          json['average_rating']?.toString() ??
+          sellerMap?['average_rating']?.toString(),
+      reviewsCount:
+          _asCount(json['reviews_count']) ??
+          _asCount(sellerMap?['reviews_count']) ??
+          0,
       tawad: tawadJson is Map && tawadJson['id'] != null
           ? TawadRule.fromJson(Map<String, dynamic>.from(tawadJson))
           : null,
@@ -467,19 +481,24 @@ class OrderRecord {
       fulfillmentNote: json['fulfillment_note'] as String?,
       fulfillmentPreference: json['fulfillment_preference'] as String?,
       fulfillmentLabel: json['fulfillment_label'] as String?,
-      counterpartyName: buyerMap?['name'] as String? ??
+      counterpartyName:
+          buyerMap?['name'] as String? ??
           sellerMap?['shop_name'] as String? ??
           sellerMap?['name'] as String?,
-      shopName: sellerMap?['shop_name'] as String? ?? sellerMap?['name'] as String?,
+      shopName:
+          sellerMap?['shop_name'] as String? ?? sellerMap?['name'] as String?,
       location: locationParts.isEmpty ? null : locationParts.join(', '),
-      contact: sellerMap?['contact'] as String? ??
+      contact:
+          sellerMap?['contact'] as String? ??
           sellerMap?['phone'] as String? ??
           buyerMap?['contact'] as String? ??
           buyerMap?['phone'] as String?,
       sellerId: ListingItem._asCount(sellerMap?['id']),
       placedAt: json['placed_at'] as String?,
       canBeReviewed: json['can_be_reviewed'] == true,
-      reviewRating: reviewMap == null ? null : ListingItem._asCount(reviewMap['rating']),
+      reviewRating: reviewMap == null
+          ? null
+          : ListingItem._asCount(reviewMap['rating']),
       cancellationReason: json['cancellation_reason'] as String?,
       cancellationLabel: json['cancellation_label'] as String?,
       cancellationNote: json['cancellation_note'] as String?,
@@ -490,9 +509,7 @@ class OrderRecord {
       allowedNext: ((json['allowed_next'] as List?) ?? const [])
           .map((item) => item.toString())
           .toList(),
-      items: _jsonMaps(json['items'])
-          .map(OrderItemRow.fromJson)
-          .toList(),
+      items: _jsonMaps(json['items']).map(OrderItemRow.fromJson).toList(),
     );
   }
 
@@ -500,8 +517,8 @@ class OrderRecord {
     final raw = value is List
         ? value
         : value is Map && value['data'] is List
-            ? value['data'] as List
-            : const [];
+        ? value['data'] as List
+        : const [];
     return raw
         .whereType<Map>()
         .map((item) => Map<String, dynamic>.from(item))
@@ -528,11 +545,14 @@ class OrderRecord {
   bool get isCancelled => status == 'cancelled';
 
   bool get hasCancellationReason =>
-      isCancelled && ((cancellationReason != null && cancellationReason!.isNotEmpty) ||
+      isCancelled &&
+      ((cancellationReason != null && cancellationReason!.isNotEmpty) ||
           (cancellationLabel != null && cancellationLabel!.isNotEmpty));
 
   bool get hasCancellationNote =>
-      isCancelled && cancellationNote != null && cancellationNote!.trim().isNotEmpty;
+      isCancelled &&
+      cancellationNote != null &&
+      cancellationNote!.trim().isNotEmpty;
 
   String get buyerName {
     if (isWalkIn) {
@@ -551,8 +571,8 @@ class OrderRecord {
 
   String get paymentLabel =>
       paymentMethod == null || paymentMethod == 'cash_on_handover'
-          ? 'Cash on handover'
-          : paymentMethod!;
+      ? 'Cash on handover'
+      : paymentMethod!;
 
   bool canAdvanceTo(String next) {
     if (isWalkIn) {
@@ -688,7 +708,10 @@ class SellerCartGroup {
   double get total => _sum((item) => item.lineTotal);
 
   double _sum(String Function(CartLine) read) {
-    return items.fold<double>(0, (sum, item) => sum + (double.tryParse(read(item)) ?? 0));
+    return items.fold<double>(
+      0,
+      (sum, item) => sum + (double.tryParse(read(item)) ?? 0),
+    );
   }
 }
 
@@ -727,7 +750,9 @@ class CartSnapshot {
   String get splitMessage {
     final count = upcomingOrderCount;
     if (count <= 1) {
-      final name = groupsBySeller.isEmpty ? 'this seller' : groupsBySeller.first.sellerName;
+      final name = groupsBySeller.isEmpty
+          ? 'this seller'
+          : groupsBySeller.first.sellerName;
       return 'This will be one order with $name.';
     }
     return 'This cart will become $count orders, one per seller.';
@@ -753,8 +778,8 @@ class FavoriteRecord {
       listing: listingJson is Map<String, dynamic>
           ? ListingItem.fromJson(listingJson)
           : listingJson is Map
-              ? ListingItem.fromJson(Map<String, dynamic>.from(listingJson))
-              : null,
+          ? ListingItem.fromJson(Map<String, dynamic>.from(listingJson))
+          : null,
     );
   }
 }
@@ -778,6 +803,32 @@ class ShopFavoriteRecord {
       shop: shopJson is Map
           ? ShopProfile.fromJson(Map<String, dynamic>.from(shopJson))
           : null,
+    );
+  }
+}
+
+class FarmFavoriteRecord {
+  const FarmFavoriteRecord({
+    required this.id,
+    required this.farmId,
+    required this.name,
+    this.place,
+    this.sellersCount = 0,
+  });
+
+  final int id;
+  final int farmId;
+  final String name;
+  final String? place;
+  final int sellersCount;
+
+  factory FarmFavoriteRecord.fromJson(Map<String, dynamic> json) {
+    return FarmFavoriteRecord(
+      id: ListingItem._asCount(json['id']) ?? 0,
+      farmId: ListingItem._asCount(json['farm_id']) ?? 0,
+      name: json['name'] as String? ?? 'Farm',
+      place: json['place'] as String?,
+      sellersCount: ListingItem._asCount(json['sellers_count']) ?? 0,
     );
   }
 }
@@ -816,10 +867,10 @@ class CropCareArticle {
   final List<CategoryItem> cropTypes;
 
   CategoryItem get categoryChip => CategoryItem(
-        id: 0,
-        name: categoryLabel.isNotEmpty ? categoryLabel : category,
-        slug: category,
-      );
+    id: 0,
+    name: categoryLabel.isNotEmpty ? categoryLabel : category,
+    slug: category,
+  );
 
   String get authorLabel {
     final author = authorName?.trim();
@@ -835,7 +886,9 @@ class CropCareArticle {
 
   factory CropCareArticle.fromJson(Map<String, dynamic> json) {
     final farmJson = json['farm'];
-    final farmMap = farmJson is Map ? Map<String, dynamic>.from(farmJson) : null;
+    final farmMap = farmJson is Map
+        ? Map<String, dynamic>.from(farmJson)
+        : null;
     return CropCareArticle(
       id: ListingItem._asCount(json['id']) ?? 0,
       title: json['title'] as String? ?? '',
@@ -846,7 +899,8 @@ class CropCareArticle {
       categoryLabel: json['category_label'] as String? ?? '',
       authorName: json['author_name'] as String?,
       imageUrl: ApiConfig.mediaUrl(json['image_url']?.toString()),
-      thumbnailUrl: ApiConfig.mediaUrl(json['thumbnail_url']?.toString()) ??
+      thumbnailUrl:
+          ApiConfig.mediaUrl(json['thumbnail_url']?.toString()) ??
           ApiConfig.mediaUrl(json['image_url']?.toString()),
       publishedAt: json['published_at'] as String?,
       farmId: ListingItem._asCount(farmMap?['id']),
@@ -865,8 +919,14 @@ class CropCareCategory {
   final String value;
   final String label;
 
-  static const cropCare = CropCareCategory(value: 'crop_care', label: 'Crop care');
-  static const pestManagement = CropCareCategory(value: 'pest_management', label: 'Pest management');
+  static const cropCare = CropCareCategory(
+    value: 'crop_care',
+    label: 'Crop care',
+  );
+  static const pestManagement = CropCareCategory(
+    value: 'pest_management',
+    label: 'Pest management',
+  );
   static const filters = [cropCare, pestManagement];
 }
 
@@ -883,6 +943,8 @@ class ShopProfile {
     this.listings = const [],
     this.farmId,
     this.farmName,
+    this.farmBarangay,
+    this.farmMunicipality,
     this.farmIsActive = false,
     this.isFavorited = false,
   });
@@ -898,14 +960,19 @@ class ShopProfile {
   final List<ListingItem> listings;
   final int? farmId;
   final String? farmName;
+  final String? farmBarangay;
+  final String? farmMunicipality;
   final bool farmIsActive;
   final bool isFavorited;
 
-  bool get hasRating => reviewsCount > 0 && averageRating != null && averageRating!.isNotEmpty;
+  bool get hasRating =>
+      reviewsCount > 0 && averageRating != null && averageRating!.isNotEmpty;
 
   factory ShopProfile.fromJson(Map<String, dynamic> json) {
     final farmJson = json['farm'];
-    final farmMap = farmJson is Map ? Map<String, dynamic>.from(farmJson) : null;
+    final farmMap = farmJson is Map
+        ? Map<String, dynamic>.from(farmJson)
+        : null;
     return ShopProfile(
       id: ListingItem._asCount(json['id']) ?? 0,
       shopName: json['shop_name'] as String? ?? json['name'] as String? ?? '',
@@ -921,8 +988,13 @@ class ShopProfile {
           .toList(),
       farmId: ListingItem._asCount(farmMap?['id']),
       farmName: farmMap?['name'] as String?,
-      farmIsActive: farmMap != null &&
-          (farmMap['is_active'] == true || farmMap['is_active'] == 1 || farmMap['is_active'] == '1'),
+      farmBarangay: farmMap?['barangay'] as String?,
+      farmMunicipality: farmMap?['municipality'] as String?,
+      farmIsActive:
+          farmMap != null &&
+          (farmMap['is_active'] == true ||
+              farmMap['is_active'] == 1 ||
+              farmMap['is_active'] == '1'),
       isFavorited: json['is_favorited'] == true || json['is_favorited'] == 1,
     );
   }
@@ -940,6 +1012,8 @@ class ShopProfile {
       listings: listings,
       farmId: farmId,
       farmName: farmName,
+      farmBarangay: farmBarangay,
+      farmMunicipality: farmMunicipality,
       farmIsActive: farmIsActive,
       isFavorited: isFavorited ?? this.isFavorited,
     );
@@ -975,7 +1049,10 @@ class FarmAnnouncement {
       audience: json['audience'] as String?,
       startsAt: json['starts_at'] as String?,
       endsAt: json['ends_at'] as String?,
-      isPinned: json['is_pinned'] == true || json['is_pinned'] == 1 || json['is_pinned'] == '1',
+      isPinned:
+          json['is_pinned'] == true ||
+          json['is_pinned'] == 1 ||
+          json['is_pinned'] == '1',
       createdAt: json['created_at'] as String?,
     );
   }
@@ -1006,7 +1083,8 @@ class FarmPhotoItem {
     return FarmPhotoItem(
       id: ListingItem._asCount(json['id']) ?? 0,
       url: ApiConfig.mediaUrl(json['url'] as String?) ?? '',
-      thumbnailUrl: ApiConfig.mediaUrl(json['thumbnail_url']?.toString()) ??
+      thumbnailUrl:
+          ApiConfig.mediaUrl(json['thumbnail_url']?.toString()) ??
           ApiConfig.mediaUrl(json['url'] as String?),
       caption: json['caption'] as String?,
     );
@@ -1014,11 +1092,7 @@ class FarmPhotoItem {
 }
 
 class FarmStorefront {
-  const FarmStorefront({
-    required this.id,
-    required this.shopName,
-    this.avatar,
-  });
+  const FarmStorefront({required this.id, required this.shopName, this.avatar});
 
   final int id;
   final String shopName;
@@ -1090,20 +1164,31 @@ class FarmProfile {
       municipality: json['municipality'] as String?,
       pickupPoint: json['pickup_point'] as String?,
       coverPhotoUrl: ApiConfig.mediaUrl(json['cover_photo_url'] as String?),
-      isActive: json['is_active'] == true || json['is_active'] == 1 || json['is_active'] == '1',
+      isActive:
+          json['is_active'] == true ||
+          json['is_active'] == 1 ||
+          json['is_active'] == '1',
       photos: ((json['photos'] as List?) ?? const [])
           .whereType<Map>()
-          .map((item) => FarmPhotoItem.fromJson(Map<String, dynamic>.from(item)))
+          .map(
+            (item) => FarmPhotoItem.fromJson(Map<String, dynamic>.from(item)),
+          )
           .where((photo) => photo.url.isNotEmpty)
           .toList(),
-      farmerSellersCount: ListingItem._asCount(json['farmer_sellers_count']) ?? 0,
+      farmerSellersCount:
+          ListingItem._asCount(json['farmer_sellers_count']) ?? 0,
       storefronts: ((json['storefronts'] as List?) ?? const [])
           .whereType<Map>()
-          .map((item) => FarmStorefront.fromJson(Map<String, dynamic>.from(item)))
+          .map(
+            (item) => FarmStorefront.fromJson(Map<String, dynamic>.from(item)),
+          )
           .toList(),
       announcements: ((json['announcements'] as List?) ?? const [])
           .whereType<Map>()
-          .map((item) => FarmAnnouncement.fromJson(Map<String, dynamic>.from(item)))
+          .map(
+            (item) =>
+                FarmAnnouncement.fromJson(Map<String, dynamic>.from(item)),
+          )
           .toList(),
     );
   }
@@ -1207,7 +1292,9 @@ class AppNotification {
   }
 
   bool get isReportNotice =>
-      type == 'report_submitted' || type == 'report_resolved' || type == 'report_dismissed';
+      type == 'report_submitted' ||
+      type == 'report_resolved' ||
+      type == 'report_dismissed';
 
   bool get pointsToOrder {
     final related = relatedType ?? '';
@@ -1263,6 +1350,44 @@ class OrderMessage {
       authorName: authorMap?['name'] as String? ?? 'Someone',
       authorRole: authorMap?['role'] as String?,
       createdAt: json['created_at'] as String?,
+    );
+  }
+}
+
+class StallChat {
+  const StallChat({
+    required this.id,
+    required this.sellerId,
+    required this.shopName,
+    required this.buyerName,
+    this.updatedAt,
+    this.latestBody,
+    this.latestAt,
+  });
+
+  final int id;
+  final int sellerId;
+  final String shopName;
+  final String buyerName;
+  final String? updatedAt;
+  final String? latestBody;
+  final String? latestAt;
+
+  String title({required bool viewingAsSeller}) {
+    return viewingAsSeller ? buyerName : shopName;
+  }
+
+  factory StallChat.fromJson(Map<String, dynamic> json) {
+    final latest = json['latest_message'];
+    final latestMap = latest is Map ? Map<String, dynamic>.from(latest) : null;
+    return StallChat(
+      id: ListingItem._asCount(json['id']) ?? 0,
+      sellerId: ListingItem._asCount(json['farmer_seller_id']) ?? 0,
+      shopName: json['shop_name'] as String? ?? 'Stall',
+      buyerName: json['buyer_name'] as String? ?? 'Buyer',
+      updatedAt: json['updated_at'] as String?,
+      latestBody: latestMap?['body'] as String?,
+      latestAt: latestMap?['created_at'] as String?,
     );
   }
 }
@@ -1401,22 +1526,33 @@ class FarmerAnalytics {
       windowStart: json['window_start'] as String?,
       windowEnd: json['window_end'] as String?,
       summary: FarmerAnalyticsSummary.fromJson(
-        json['summary'] is Map ? Map<String, dynamic>.from(json['summary'] as Map) : <String, dynamic>{},
+        json['summary'] is Map
+            ? Map<String, dynamic>.from(json['summary'] as Map)
+            : <String, dynamic>{},
       ),
       salesPerPeriod: ((json['sales_per_period'] as List?) ?? const [])
           .whereType<Map>()
-          .map((item) => FarmerSalesPoint.fromJson(Map<String, dynamic>.from(item)))
+          .map(
+            (item) =>
+                FarmerSalesPoint.fromJson(Map<String, dynamic>.from(item)),
+          )
           .toList(),
       unitsPerCropType: ((json['units_per_crop_type'] as List?) ?? const [])
           .whereType<Map>()
-          .map((item) => FarmerCropSales.fromJson(Map<String, dynamic>.from(item)))
+          .map(
+            (item) => FarmerCropSales.fromJson(Map<String, dynamic>.from(item)),
+          )
           .toList(),
       bestSelling: ((json['best_selling'] as List?) ?? const [])
           .whereType<Map>()
-          .map((item) => FarmerCropSales.fromJson(Map<String, dynamic>.from(item)))
+          .map(
+            (item) => FarmerCropSales.fromJson(Map<String, dynamic>.from(item)),
+          )
           .toList(),
       walkInShare: FarmerWalkInShare.fromJson(
-        json['walk_in_share'] is Map ? Map<String, dynamic>.from(json['walk_in_share'] as Map) : <String, dynamic>{},
+        json['walk_in_share'] is Map
+            ? Map<String, dynamic>.from(json['walk_in_share'] as Map)
+            : <String, dynamic>{},
       ),
     );
   }
@@ -1446,9 +1582,10 @@ class FaqAnswer {
       matchedId: json['matched_id'] as String?,
       suggestions: ((json['suggestions'] as List?) ?? const [])
           .whereType<Map>()
-          .map((item) => FaqSuggestion.fromJson(Map<String, dynamic>.from(item)))
+          .map(
+            (item) => FaqSuggestion.fromJson(Map<String, dynamic>.from(item)),
+          )
           .toList(),
     );
   }
 }
-

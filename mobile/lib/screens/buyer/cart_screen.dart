@@ -8,6 +8,8 @@ import '../../state/cart_controller.dart';
 import '../../state/preferences_controller.dart';
 import '../../support/crop_language.dart';
 import '../../theme/anihow_space.dart';
+import '../../state/auth_controller.dart';
+import '../../widgets/chat_with_stall_button.dart';
 import '../../widgets/hint_card.dart';
 import '../../widgets/order_look.dart';
 import '../../widgets/primary_button.dart';
@@ -41,11 +43,13 @@ class _CartScreenState extends State<CartScreen> {
       await action();
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$error')));
       }
     } finally {
       if (mounted) {
@@ -64,7 +68,10 @@ class _CartScreenState extends State<CartScreen> {
     if (!mounted || next == null || next.isEmpty || next == item.quantity) {
       return;
     }
-    await _run(item.id, () => context.read<CartController>().updateQuantity(item.id, next));
+    await _run(
+      item.id,
+      () => context.read<CartController>().updateQuantity(item.id, next),
+    );
   }
 
   @override
@@ -104,8 +111,14 @@ class _CartScreenState extends State<CartScreen> {
       return Center(child: Text(s.emptyCart));
     }
     final groups = cart.snapshot.groupsBySeller;
-    final listed = groups.fold<double>(0, (sum, group) => sum + group.listedSubtotal);
-    final tawad = groups.fold<double>(0, (sum, group) => sum + group.tawadTotal);
+    final listed = groups.fold<double>(
+      0,
+      (sum, group) => sum + group.listedSubtotal,
+    );
+    final tawad = groups.fold<double>(
+      0,
+      (sum, group) => sum + group.tawadTotal,
+    );
     final total = groups.fold<double>(0, (sum, group) => sum + group.total);
     return RefreshIndicator(
       onRefresh: cart.reload,
@@ -137,6 +150,11 @@ class _CartScreenState extends State<CartScreen> {
                         ),
                       ],
                     ),
+                    if (context.watch<AuthController>().user?.isBuyer == true)
+                      ChatWithStallButton(
+                        sellerId: group.sellerId,
+                        compact: true,
+                      ),
                     const SizedBox(height: AniHowSpace.cardGap),
                     for (final item in group.items)
                       ListTile(
@@ -144,7 +162,8 @@ class _CartScreenState extends State<CartScreen> {
                         title: Text(item.listingName),
                         subtitle: Text(
                           [
-                            if (item.cropLabel(language) != null) item.cropLabel(language)!,
+                            if (item.cropLabel(language) != null)
+                              item.cropLabel(language)!,
                             '${item.quantity}${item.unitLabel.isEmpty ? '' : ' ${item.unitLabel}'}',
                           ].join(' · '),
                         ),
@@ -161,7 +180,8 @@ class _CartScreenState extends State<CartScreen> {
                     OrderTotalHero(
                       total: group.total,
                       tawadLine: tawadIsActive(group.tawadTotal)
-                          ? AppStrings.of(context).tawadMinus(AniHowMoney.peso(group.tawadTotal))
+                          ? AppStrings.of(context)
+                                .tawadMinus(AniHowMoney.peso(group.tawadTotal))
                           : null,
                     ),
                   ],
@@ -219,7 +239,10 @@ class _CartQuantityDialogState extends State<CartQuantityDialog> {
         onSubmitted: (value) => Navigator.pop(context, value.trim()),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: Text(s.back)),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(s.back),
+        ),
         TextButton(
           key: const ValueKey('cart-quantity-update'),
           onPressed: () => Navigator.pop(context, _controller.text.trim()),
@@ -249,7 +272,10 @@ class _CartOrderSummary extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(AppStrings.of(context).orderSummary, style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              AppStrings.of(context).orderSummary,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: AniHowSpace.cardGap),
             OrderTotalHero(
               total: total,

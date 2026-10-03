@@ -5,6 +5,7 @@ import '../../l10n/app_strings.dart';
 import '../../navigation/route_observer.dart';
 import '../../state/auth_controller.dart';
 import '../../widgets/notification_bell.dart';
+import '../../widgets/order_chat_head.dart';
 import '../../widgets/profile_avatar_button.dart';
 import '../faq/faq_bot_screen.dart';
 import '../profile/profile_screen.dart';
@@ -55,20 +56,23 @@ class _FarmerShellState extends State<FarmerShell> {
               name: user?.shopName ?? user?.name ?? 'F',
               onPressed: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const FarmerProfileScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const FarmerProfileScreen(),
+                  ),
                 );
               },
             ),
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _index,
-        children: pages,
-      ),
+      body: IndexedStack(index: _index, children: pages),
+      floatingActionButton: const OrderChatHead(forSeller: true),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
+          border: Border(
+            top: BorderSide(color: Theme.of(context).dividerColor),
+          ),
         ),
         child: NavigationBar(
           selectedIndex: _index,
@@ -77,10 +81,22 @@ class _FarmerShellState extends State<FarmerShell> {
             setState(() => _index = value);
           },
           destinations: [
-            NavigationDestination(icon: const Icon(Icons.inventory_2_outlined), label: s.listings),
-            NavigationDestination(icon: const Icon(Icons.inbox_outlined), label: s.orders),
-            NavigationDestination(icon: const Icon(Icons.insights_outlined), label: s.mySales),
-            NavigationDestination(icon: const Icon(Icons.menu_book_outlined), label: s.cropCare),
+            NavigationDestination(
+              icon: const Icon(Icons.inventory_2_outlined),
+              label: s.listings,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.inbox_outlined),
+              label: s.orders,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.insights_outlined),
+              label: s.mySales,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.menu_book_outlined),
+              label: s.cropCare,
+            ),
           ],
         ),
       ),

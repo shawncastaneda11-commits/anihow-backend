@@ -11,13 +11,16 @@ import '../../theme/anihow_theme.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/produce_card.dart';
 import '../../widgets/shop_profile_parts.dart';
+import '../../widgets/chat_with_stall_button.dart';
 import '../../widgets/shop_review_tile.dart';
 import '../farm/farm_profile_screen.dart';
 import 'listing_detail_screen.dart';
 
 void openBuyerShop(BuildContext context, int sellerId) {
   Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => ShopProfileScreen(sellerId: sellerId)),
+    MaterialPageRoute<void>(
+      builder: (_) => ShopProfileScreen(sellerId: sellerId),
+    ),
   );
 }
 
@@ -98,9 +101,9 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
     try {
       final page = more ? _page + 1 : 1;
       final result = await context.read<AuthController>().api.shopReviews(
-            widget.sellerId,
-            page: page,
-          );
+        widget.sellerId,
+        page: page,
+      );
       if (!mounted) {
         return;
       }
@@ -148,7 +151,9 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
       }
       if (!wasFavorited) {
         messenger.showSnackBar(
-          SnackBar(content: Text(AppStrings.read(context).storeSavedToFavorites)),
+          SnackBar(
+            content: Text(AppStrings.read(context).storeSavedToFavorites),
+          ),
         );
       }
     } on ApiException catch (error) {
@@ -192,8 +197,14 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                 }
                 final s = AppStrings.of(context);
                 return IconButton(
-                  icon: Icon(_isFavorited(shop) ? Icons.favorite : Icons.favorite_outline),
-                  tooltip: _isFavorited(shop) ? s.removeStoreFromFavorites : s.addStoreToFavorites,
+                  icon: Icon(
+                    _isFavorited(shop)
+                        ? Icons.favorite
+                        : Icons.favorite_outline,
+                  ),
+                  tooltip: _isFavorited(shop)
+                      ? s.removeStoreFromFavorites
+                      : s.addStoreToFavorites,
                   onPressed: _favoriteBusy ? null : () => _toggleFavorite(shop),
                   style: IconButton.styleFrom(
                     minimumSize: const Size(48, 48),
@@ -227,12 +238,24 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                     if (_canFavorite) ...[
                       const SizedBox(height: AniHowSpace.cardGap),
                       OutlinedButton.icon(
-                        onPressed: _favoriteBusy ? null : () => _toggleFavorite(shop),
-                        icon: Icon(_isFavorited(shop) ? Icons.favorite : Icons.favorite_outline),
+                        onPressed: _favoriteBusy
+                            ? null
+                            : () => _toggleFavorite(shop),
+                        icon: Icon(
+                          _isFavorited(shop)
+                              ? Icons.favorite
+                              : Icons.favorite_outline,
+                        ),
                         label: Text(
-                          _isFavorited(shop) ? s.removeStoreFromFavorites : s.addStoreToFavorites,
+                          _isFavorited(shop)
+                              ? s.removeStoreFromFavorites
+                              : s.addStoreToFavorites,
                         ),
                       ),
+                    ],
+                    if (!_previewing && _canFavorite) ...[
+                      const SizedBox(height: AniHowSpace.cardGap),
+                      ChatWithStallButton(sellerId: shop.id),
                     ],
                     if (shop.farmId != null && shop.farmIsActive) ...[
                       const SizedBox(height: AniHowSpace.cardGap),
@@ -242,9 +265,13 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                             ? s.farm
                             : s.farmLine(shop.farmName!),
                       ),
-                    ] else if (shop.farmName != null && shop.farmName!.isNotEmpty) ...[
+                    ] else if (shop.farmName != null &&
+                        shop.farmName!.isNotEmpty) ...[
                       const SizedBox(height: AniHowSpace.cardGap),
-                      Text(s.farmLine(shop.farmName!), style: Theme.of(context).textTheme.bodyMedium),
+                      Text(
+                        s.farmLine(shop.farmName!),
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
                     ],
                     const SizedBox(height: AniHowSpace.section),
                     Text(
@@ -278,14 +305,18 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                     else
                       ...shop.listings.map(
                         (listing) => Padding(
-                          padding: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
+                          padding: const EdgeInsets.only(
+                            bottom: AniHowSpace.cardGap,
+                          ),
                           child: ProduceCard(
                             listing: listing,
                             showSeller: false,
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute<void>(
-                                  builder: (_) => ListingDetailScreen(listingId: listing.id),
+                                  builder: (_) => ListingDetailScreen(
+                                    listingId: listing.id,
+                                  ),
                                 ),
                               );
                             },
@@ -300,11 +331,16 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                     const SizedBox(height: AniHowSpace.cardGap),
                     if (_loadingReviews)
                       const Padding(
-                        padding: EdgeInsets.symmetric(vertical: AniHowSpace.section),
+                        padding: EdgeInsets.symmetric(
+                          vertical: AniHowSpace.section,
+                        ),
                         child: Center(child: CircularProgressIndicator()),
                       )
                     else if (_reviewsError != null)
-                      Text(_reviewsError!, style: Theme.of(context).textTheme.bodyMedium)
+                      Text(
+                        _reviewsError!,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      )
                     else if (_reviews.isEmpty)
                       const _EmptyNote(
                         icon: Icons.rate_review_outlined,
@@ -313,13 +349,17 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                     else ...[
                       ..._reviews.map(
                         (review) => Padding(
-                          padding: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
+                          padding: const EdgeInsets.only(
+                            bottom: AniHowSpace.cardGap,
+                          ),
                           child: ShopReviewTile(review: review),
                         ),
                       ),
                       if (_page < _lastPage)
                         TextButton(
-                          onPressed: _loadingMore ? null : () => _loadReviews(more: true),
+                          onPressed: _loadingMore
+                              ? null
+                              : () => _loadReviews(more: true),
                           child: Text(_loadingMore ? 'Loading…' : 'Show more'),
                         ),
                     ],

@@ -16,11 +16,13 @@ use App\Http\Controllers\Api\Auth\UpdateProfileController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\Cart\CartController;
 use App\Http\Controllers\Api\Chat\OrderMessageController;
+use App\Http\Controllers\Api\Chat\StallConversationController;
 use App\Http\Controllers\Api\CropCare\CropCareArticleController;
 use App\Http\Controllers\Api\Faq\FaqController;
 use App\Http\Controllers\Api\Farmer\FarmerAnalyticsController;
 use App\Http\Controllers\Api\Farmer\FarmerAnnouncementController;
 use App\Http\Controllers\Api\Farms\FarmController;
+use App\Http\Controllers\Api\Favorites\FarmFavoriteController;
 use App\Http\Controllers\Api\Favorites\FavoriteController;
 use App\Http\Controllers\Api\Favorites\ShopFavoriteController;
 use App\Http\Controllers\Api\Listings\ListingController;
@@ -98,6 +100,16 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->name('orders.messages.index');
     Route::post('orders/{order}/messages', [OrderMessageController::class, 'store'])
         ->name('orders.messages.store');
+
+    // A buyer can message a stall before, during, or after an order.
+    Route::get('stall-chats', [StallConversationController::class, 'index'])
+        ->name('stall-chats.index');
+    Route::post('stall-chats', [StallConversationController::class, 'store'])
+        ->name('stall-chats.store');
+    Route::get('stall-chats/{stallConversation}/messages', [StallConversationController::class, 'messages'])
+        ->name('stall-chats.messages.index');
+    Route::post('stall-chats/{stallConversation}/messages', [StallConversationController::class, 'storeMessage'])
+        ->name('stall-chats.messages.store');
 
     Route::get('faq', [FaqController::class, 'index'])->name('faq.index');
     Route::post('faq/ask', [FaqController::class, 'ask'])->name('faq.ask');
@@ -187,6 +199,7 @@ Route::middleware([
 
     Route::get('favorites', [FavoriteController::class, 'index'])->name('buyer.favorites.index');
     Route::get('shop-favorites', [ShopFavoriteController::class, 'index'])->name('buyer.shop-favorites.index');
+    Route::get('farm-favorites', [FarmFavoriteController::class, 'index'])->name('buyer.farm-favorites.index');
 
     Route::middleware('verified')->group(function (): void {
         Route::post('cart', [CartController::class, 'store'])->name('buyer.cart.store');
@@ -205,5 +218,8 @@ Route::middleware([
         Route::post('shop-favorites', [ShopFavoriteController::class, 'store'])->name('buyer.shop-favorites.store');
         Route::delete('shop-favorites/{farmerSeller}', [ShopFavoriteController::class, 'destroy'])
             ->name('buyer.shop-favorites.destroy');
+        Route::post('farm-favorites', [FarmFavoriteController::class, 'store'])->name('buyer.farm-favorites.store');
+        Route::delete('farm-favorites/{farm}', [FarmFavoriteController::class, 'destroy'])
+            ->name('buyer.farm-favorites.destroy');
     });
 });

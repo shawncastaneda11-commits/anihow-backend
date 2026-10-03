@@ -49,7 +49,9 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
       _error = null;
     });
     try {
-      final items = await context.read<AuthController>().api.orderMessages(widget.order.id);
+      final items = await context.read<AuthController>().api.orderMessages(
+        widget.order.id,
+      );
       if (!mounted) {
         return;
       }
@@ -86,9 +88,9 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
     }
     try {
       final newer = await context.read<AuthController>().api.orderMessages(
-            widget.order.id,
-            afterId: _messages.isEmpty ? null : _messages.last.id,
-          );
+        widget.order.id,
+        afterId: _messages.isEmpty ? null : _messages.last.id,
+      );
       for (final message in newer) {
         _appendIfNew(message);
       }
@@ -129,9 +131,9 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
     setState(() => _sending = true);
     try {
       final message = await context.read<AuthController>().api.sendOrderMessage(
-            widget.order.id,
-            body: body,
-          );
+        widget.order.id,
+        body: body,
+      );
       if (!mounted) {
         return;
       }
@@ -139,7 +141,8 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
       _appendIfNew(message);
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) {
@@ -179,8 +182,14 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
               child: !_canSend
                   ? Text(
                       widget.order.isWalkIn
-                          ? s.t('Walk-in sales have no buyer chat.', 'Walang chat ang walk-in sale.')
-                          : s.t('This order is cancelled. Chat is read-only.', 'Kinansela ang order. Basahin lang ang chat.'),
+                          ? s.t(
+                              'Walk-in sales have no buyer chat.',
+                              'Walang chat ang walk-in sale.',
+                            )
+                          : s.t(
+                              'This order is cancelled. Chat is read-only.',
+                              'Kinansela ang order. Basahin lang ang chat.',
+                            ),
                       style: Theme.of(context).textTheme.bodyMedium,
                     )
                   : Row(

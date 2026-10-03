@@ -55,6 +55,22 @@ class UpdateListingRequest extends FormRequest
                     return;
                 }
 
+                $seller = $this->user();
+
+                if (
+                    $seller !== null
+                    && $this->has('crop_type_id')
+                    && (int) $cropType->id !== (int) $listing->crop_type_id
+                    && ! $seller->mayUseCropType($cropType->id)
+                ) {
+                    $validator->errors()->add(
+                        'crop_type_id',
+                        'This crop type is not on your list.',
+                    );
+
+                    return;
+                }
+
                 $price = $this->has('price_per_unit')
                     ? (float) $this->validated('price_per_unit')
                     : (float) $listing->price_per_unit;

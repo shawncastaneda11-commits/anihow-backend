@@ -60,7 +60,7 @@ class InAppNotifier
             $farmer,
             NotificationType::OrderPlaced,
             NotificationType::OrderPlaced->label(),
-            "{$buyerName} placed order {$order->order_number} totaling PHP {$total}.",
+            "{$buyerName} placed an order totaling PHP {$total}.",
             $order,
         );
     }
@@ -74,7 +74,7 @@ class InAppNotifier
             $farmer,
             NotificationType::OrderAwaitingConfirmation,
             NotificationType::OrderAwaitingConfirmation->label(),
-            "Order {$order->order_number} is still waiting for your confirmation.",
+            'An order is still waiting for your confirmation.',
             $order,
         );
     }
@@ -94,7 +94,7 @@ class InAppNotifier
             $recipient,
             $type,
             $type->label(),
-            "Order {$order->order_number} is now {$status->label()}.",
+            "This order is now {$status->label()}.",
             $order,
         );
     }
@@ -334,7 +334,7 @@ class InAppNotifier
             $recipient,
             NotificationType::OrderMessage,
             NotificationType::OrderMessage->label(),
-            "{$sender->name} on order {$order->order_number}: {$preview}",
+            "{$sender->name}: {$preview}",
             $order,
         );
     }

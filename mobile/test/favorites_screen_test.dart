@@ -17,64 +17,49 @@ Widget _app({required Widget home}) {
   );
 }
 
-const _shop = ShopProfile(
-  id: 7,
-  shopName: 'Aling Nena Produce',
-  name: 'Nena',
-  location: 'Manggahan',
-);
-
 const _stores = [
-  ShopFavoriteRecord(id: 1, sellerId: 7, shop: _shop),
+  ShopFavoriteRecord(
+    id: 1,
+    sellerId: 7,
+    shop: ShopProfile(
+      id: 7,
+      shopName: 'Aling Nena Produce',
+      name: 'Nena Villanueva',
+      location: 'Manggahan, General Trias',
+    ),
+  ),
 ];
 
 void main() {
-  testWidgets('Favorites crops tab shows the crop empty state', (tester) async {
+  testWidgets('Favorites shows the store empty state', (tester) async {
     await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
-      _app(home: const FavoritesScreen(preview: FavoritesPreview(stores: _stores))),
+      _app(home: const FavoritesScreen(preview: FavoritesPreview())),
     );
     await tester.pump();
 
     final s = AppStrings(false);
-    expect(find.text(s.favoriteCrops), findsOneWidget);
-    expect(find.text(s.favoriteStores), findsOneWidget);
-    expect(find.text(s.noFavorites), findsOneWidget);
-    expect(find.text('Aling Nena Produce'), findsNothing);
+    expect(find.text(s.favoriteCrops), findsNothing);
+    expect(find.text(s.noFavoriteStores), findsOneWidget);
   });
 
-  testWidgets('Favorites stores tab lists saved shops', (tester) async {
+  testWidgets('Favorites lists one saved store', (tester) async {
     await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
       _app(
-        home: const FavoritesScreen(
-          preview: FavoritesPreview(kind: FavoriteKind.stores, stores: _stores),
-        ),
+        home: const FavoritesScreen(preview: FavoritesPreview(stores: _stores)),
       ),
     );
     await tester.pump();
 
     expect(find.text('Aling Nena Produce'), findsOneWidget);
-    expect(find.text('Manggahan'), findsOneWidget);
-    expect(find.text(AppStrings(false).noFavorites), findsNothing);
-  });
-
-  testWidgets('Favorites toggle switches from crops to stores', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(360, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-
-    await tester.pumpWidget(
-      _app(home: const FavoritesScreen(preview: FavoritesPreview(stores: _stores))),
-    );
-    await tester.pump();
-
-    await tester.tap(find.byKey(const ValueKey('favorite-stores-tab')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Aling Nena Produce'), findsOneWidget);
+    expect(find.text('Nena Villanueva'), findsOneWidget);
+    expect(find.text('Manggahan, General Trias'), findsOneWidget);
+    expect(find.text('PYAP Manggahan Chapter'), findsNothing);
+    expect(find.text(AppStrings(false).noFavoriteStores), findsNothing);
   });
 }

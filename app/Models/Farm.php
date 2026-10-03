@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
@@ -45,6 +46,22 @@ class Farm extends Model
     public function farmerSellers(): HasMany
     {
         return $this->hasMany(User::class)->role(Role::FarmerSeller->value);
+    }
+
+    /**
+     * Crop types assigned to this farm's sellers. An empty list for a seller
+     * means that seller may use every crop type.
+     */
+    public function sellerCropTypes(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            FarmerCropType::class,
+            User::class,
+            'farm_id',
+            'user_id',
+            'id',
+            'id',
+        );
     }
 
     /**

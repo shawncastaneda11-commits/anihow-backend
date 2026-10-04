@@ -81,4 +81,19 @@ void main() {
 
     expect(find.text('₱60.00 / g'), findsOneWidget);
   });
+
+  testWidgets('a small unit price keeps the extra decimals', (tester) async {
+    const listing = ListingItem(
+      id: 2,
+      title: 'Kamatis',
+      pricePerUnit: '0.055',
+      quantityAvailable: '500',
+      unit: 'g',
+    );
+
+    await tester.pumpWidget(_app(const ProduceCard(listing: listing)));
+    await tester.pump();
+
+    expect(find.text('₱0.055 / g'), findsOneWidget);
+  });
 }

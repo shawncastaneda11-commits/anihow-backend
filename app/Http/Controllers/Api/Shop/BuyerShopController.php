@@ -41,7 +41,7 @@ class BuyerShopController extends Controller
         $farmerSeller->load([
             'farm',
             'listings' => fn ($query) => $query
-                ->marketplaceVisible()
+                ->buyerVisible()
                 ->with(['cropType', 'farm', 'activeTawadRule'])
                 ->latest(),
         ]);

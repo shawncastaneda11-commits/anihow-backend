@@ -122,7 +122,7 @@ class _TawadFormScreenState extends State<TawadFormScreen> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 Text(
-                  '${s.listed} ${AniHowMoney.peso(widget.listing.pricePerUnit)}',
+                  '${s.listed} ${AniHowMoney.pesoUnit(widget.listing.pricePerUnit)}',
                 ),
                 if ((crop?.sellerMaxDiscount?.isNotEmpty ?? false) ||
                     (crop?.sellerFloorPrice?.isNotEmpty ?? false)) ...[

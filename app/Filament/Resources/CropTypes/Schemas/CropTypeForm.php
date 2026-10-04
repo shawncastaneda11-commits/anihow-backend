@@ -2,10 +2,12 @@
 
 namespace App\Filament\Resources\CropTypes\Schemas;
 
+use App\Actions\Pricing\ChangeCropTypeUnitAction;
 use App\Enums\ListingUnit;
 use App\Enums\Permission;
 use App\Models\CropType;
 use App\Policies\CropTypePolicy;
+use Closure;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -71,11 +73,40 @@ class CropTypeForm
 
                 Select::make('unit_of_measure')
                     ->label('Unit of the floor price')
-                    ->options(ListingUnit::options())
+                    ->options(function (?CropType $record): array {
+                        if ($record === null || ! app(ChangeCropTypeUnitAction::class)->isLocked($record)) {
+                            return ListingUnit::options();
+                        }
+
+                        return collect(ListingUnit::cases())
+                            ->filter(fn (ListingUnit $unit): bool => $record->unit_of_measure->convertsTo($unit))
+                            ->mapWithKeys(fn (ListingUnit $unit): array => [$unit->value => $unit->label()])
+                            ->all();
+                    })
+                    ->rule(function (?CropType $record): Closure {
+                        return function (string $attribute, mixed $value, Closure $fail) use ($record): void {
+                            if (! $record instanceof CropType || $value === null || $value === '') {
+                                return;
+                            }
+
+                            $action = app(ChangeCropTypeUnitAction::class);
+                            $newUnit = ListingUnit::tryFrom((string) $value);
+
+                            if ($newUnit !== null && $action->isLocked($record) && ! $record->unit_of_measure->convertsTo($newUnit)) {
+                                $fail($action->refusalMessage($record));
+                            }
+                        };
+                    })
                     ->required()
                     ->native(false)
                     ->default(ListingUnit::Kilogram->value)
-                    ->helperText('This is the unit the floor price is quoted in. It decides which units a seller may use on a listing.'),
+                    ->helperText(function (?CropType $record): string {
+                        if ($record !== null && app(ChangeCropTypeUnitAction::class)->isLocked($record)) {
+                            return 'Listings or a farm price already use this crop, so the unit can only change within the same family. Saving converts the floor price so the real value stays the same.';
+                        }
+
+                        return 'This is the unit the floor price is quoted in. It decides which units a seller may use on a listing.';
+                    }),
 
                 TextInput::make('floor_price')
                     ->label('Floor price (PHP)')

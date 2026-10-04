@@ -43,7 +43,7 @@ class OrderItem extends Model
             'unit' => ListingUnit::class,
             'tawad_type' => TawadType::class,
             'quantity' => 'decimal:2',
-            'unit_price' => 'decimal:2',
+            'unit_price' => 'decimal:4',
             'line_subtotal' => 'decimal:2',
             'tawad_amount' => 'decimal:2',
             'line_total' => 'decimal:2',

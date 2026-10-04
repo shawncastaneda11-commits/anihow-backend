@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Actions\Pricing\FlagStrandedListingsAction;
+use App\Enums\ListingUnit;
 use App\Models\CropType;
 use App\Models\Farm;
 use App\Support\Pricing\PriceGuard;
@@ -36,7 +37,16 @@ class CropTypeObserver
         $ceilingLowered = $cropType->wasChanged('max_discount')
             && PriceGuard::centavos($newCeiling) < PriceGuard::centavos($oldCeiling);
 
-        if (! $floorRaised && ! $ceilingLowered) {
+        $oldUnit = $this->unit($cropType->getOriginal('unit_of_measure'));
+        $newUnit = $cropType->unit_of_measure;
+        $familyChanged = $oldUnit !== null
+            && $newUnit !== null
+            && $oldUnit !== $newUnit
+            && ! $oldUnit->convertsTo($newUnit);
+        $systemWasGuarded = $oldFloor > 0 || $oldCeiling > 0;
+        $systemNowGuarded = $newFloor > 0 || $newCeiling > 0;
+
+        if (! $floorRaised && ! $ceilingLowered && ! $familyChanged && ! (! $systemWasGuarded && $systemNowGuarded)) {
             return;
         }
 
@@ -48,7 +58,7 @@ class CropTypeObserver
             // note: exactly one crop type is in play for this whole pass.
             ->with(['cropTypeOverrides' => fn ($query) => $query->where('crop_type_id', $cropTypeId)])
             ->each(function (Farm $farm) use (
-                $cropType, $cropTypeId, $oldFloor, $newFloor, $oldCeiling, $newCeiling, $floorRaised, $ceilingLowered,
+                $cropType, $cropTypeId, $oldFloor, $newFloor, $oldCeiling, $newCeiling, $floorRaised, $ceilingLowered, $familyChanged, $systemWasGuarded, $systemNowGuarded,
             ): void {
                 $override = $farm->overrideFor($cropTypeId);
 
@@ -79,6 +89,28 @@ class CropTypeObserver
                         $toldAboutFloor,
                     );
                 }
+
+                if ($familyChanged || (! $systemWasGuarded && $systemNowGuarded)) {
+                    $overrideAlreadyGuarded = $override !== null
+                        && ((float) ($override->floor_price ?? 0) > 0 || (float) ($override->max_discount ?? 0) > 0);
+
+                    if ($familyChanged || ! $overrideAlreadyGuarded) {
+                        $this->flagStranded->incompatibleUnits($farm, $cropType);
+                    }
+                }
             });
+    }
+
+    private function unit(mixed $value): ?ListingUnit
+    {
+        if ($value instanceof ListingUnit) {
+            return $value;
+        }
+
+        if (is_string($value) && $value !== '') {
+            return ListingUnit::tryFrom($value);
+        }
+
+        return null;
     }
 }

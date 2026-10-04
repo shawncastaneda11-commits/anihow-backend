@@ -218,8 +218,8 @@ class FarmPriceGuardTest extends TestCase
             'crop_type_id' => $cropType->id,
             'floor_price' => 35,
         ]);
-        $this->assertSame('30.00', $below->refresh()->price_per_unit);
-        $this->assertSame('35.00', $clear->refresh()->price_per_unit);
+        $this->assertSame('30.0000', $below->refresh()->price_per_unit);
+        $this->assertSame('35.0000', $clear->refresh()->price_per_unit);
 
         $below->load(['cropType', 'farm.cropTypeOverrides']);
         $clear->load(['cropType', 'farm.cropTypeOverrides']);

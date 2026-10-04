@@ -13,6 +13,7 @@ use App\Models\Listing;
 use App\Models\Order;
 use App\Models\Report;
 use App\Models\User;
+use App\Support\Pricing\UnitConverter;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
@@ -124,6 +125,27 @@ class InAppNotifier
      * quote the system floor to a seller whose farm sits above it, and the
      * seller would set a price that is still rejected.
      */
+    /**
+     * The listing's unit cannot convert into a crop that is now guarded.
+     * Same notification type as a stranded price: the seller has to pick an
+     * allowed unit, and buyers no longer see the listing until they do.
+     */
+    public function listingUnitNotAllowed(User $farmer, Listing $listing): InAppNotification
+    {
+        $unit = $listing->unit?->value ?? 'its current unit';
+        $reason = $listing->cropType === null
+            ? 'Choose a unit this crop allows.'
+            : app(UnitConverter::class)->refusalMessage($listing->cropType, $listing->farm_id);
+
+        return $this->send(
+            $farmer,
+            NotificationType::FloorPriceRaised,
+            NotificationType::FloorPriceRaised->label(),
+            "{$listing->title} is sold per {$unit}, which is no longer allowed. {$reason}",
+            $listing,
+        );
+    }
+
     public function floorPriceRaised(User $farmer, Listing $listing, float $effectiveFloor): InAppNotification
     {
         $floor = number_format($effectiveFloor, 2, '.', '');

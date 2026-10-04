@@ -34,7 +34,7 @@ class TawadRule extends Model
     {
         return [
             'type' => TawadType::class,
-            'discount_amount' => 'decimal:2',
+            'discount_amount' => 'decimal:4',
             'min_quantity' => 'decimal:2',
             'is_active' => 'boolean',
             'ended_at' => 'datetime',
@@ -96,10 +96,14 @@ class TawadRule extends Model
         $converter = app(UnitConverter::class);
         $unitPrice = $cropUnit === null
             ? (float) $listing->price_per_unit
-            : $converter->priceIn($listing->unit, $cropUnit, $listing->price_per_unit);
+            : $converter->guardPrice($listing->unit, $cropUnit, $listing->price_per_unit);
         $discount = $cropUnit === null
             ? (float) $this->discount_amount
-            : $converter->priceIn($listing->unit, $cropUnit, $this->discount_amount);
+            : $converter->guardPrice($listing->unit, $cropUnit, $this->discount_amount);
+
+        if ($unitPrice === null || $discount === null) {
+            return $floor <= 0;
+        }
 
         $quantity = match ($this->type) {
             TawadType::Flat => 1.0,

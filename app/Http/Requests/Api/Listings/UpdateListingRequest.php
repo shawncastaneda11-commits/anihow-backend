@@ -28,7 +28,7 @@ class UpdateListingRequest extends FormRequest
             'unit' => ['sometimes', 'required', Rule::enum(ListingUnit::class)],
             'title' => ['sometimes', 'string', 'max:150'],
             'description' => ['sometimes', 'nullable', 'string', 'max:5000'],
-            'price_per_unit' => ['sometimes', 'numeric', 'gt:0', 'max:99999.99'],
+            'price_per_unit' => ['sometimes', 'numeric', 'gt:0', 'decimal:0,4', 'max:99999.9999'],
             'quantity_available' => ['sometimes', 'numeric', 'min:0', 'max:99999.99'],
             'is_active' => ['sometimes', 'boolean'],
             'image' => ['nullable', 'image', 'max:5120'],
@@ -95,7 +95,18 @@ class UpdateListingRequest extends FormRequest
                     : (float) $listing->price_per_unit;
 
                 $guard = app(PriceGuardResolver::class)->forFarmId($listing->farm_id, $cropType);
-                $price = $converter->priceIn($unit, $cropType->unit_of_measure, $price);
+                $price = $converter->guardPrice($unit, $cropType->unit_of_measure, $price);
+
+                if ($price === null) {
+                    if ($converter->isGuarded($cropType, $listing->farm_id)) {
+                        $validator->errors()->add(
+                            'unit',
+                            $converter->refusalMessage($cropType, $listing->farm_id),
+                        );
+                    }
+
+                    return;
+                }
 
                 if ($guard->allowsPrice($price)) {
                     return;

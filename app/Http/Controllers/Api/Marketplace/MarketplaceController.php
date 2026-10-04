@@ -14,7 +14,7 @@ class MarketplaceController extends Controller
     public function index(MarketplaceIndexRequest $request): AnonymousResourceCollection
     {
         $listings = Listing::query()
-            ->marketplaceVisible()
+            ->buyerVisible()
             ->with($this->relations())
             ->when(
                 $request->validated('crop_type_id'),
@@ -54,7 +54,7 @@ class MarketplaceController extends Controller
     public function show(Listing $listing): ListingResource
     {
         $visible = Listing::query()
-            ->marketplaceVisible()
+            ->buyerVisible()
             ->with($this->relations())
             ->find($listing->id);
 

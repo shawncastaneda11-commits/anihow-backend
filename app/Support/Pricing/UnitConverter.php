@@ -5,7 +5,9 @@ namespace App\Support\Pricing;
 use App\Enums\ListingUnit;
 use App\Models\CropType;
 use App\Models\FarmCropTypeOverride;
+use App\Models\Listing;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 /**
  * Converts a price or a quantity inside one unit family, and decides which
@@ -38,11 +40,28 @@ class UnitConverter
     {
         $value = (float) $amount;
 
-        if ($from === null || $from === $to || ! $from->convertsTo($to)) {
+        if ($from === null || $from === $to) {
             return $value;
         }
 
+        if (! $from->convertsTo($to)) {
+            throw new InvalidArgumentException("Cannot convert {$from->value} to {$to->value}.");
+        }
+
         return round($value * ($to->baseFactor() / $from->baseFactor()), 4);
+    }
+
+    /**
+     * The listing price in the crop type's unit, or null when the units
+     * cannot convert. Guard checks treat null as not allowed.
+     */
+    public function guardPrice(?ListingUnit $from, ListingUnit $to, float|string $amount): ?float
+    {
+        if ($from !== null && $from !== $to && ! $from->convertsTo($to)) {
+            return null;
+        }
+
+        return $this->priceIn($from, $to, $amount);
     }
 
     public function accepts(CropType $cropType, ListingUnit $unit, ?int $farmId): bool
@@ -125,8 +144,78 @@ class UnitConverter
     {
         $listingFactor = self::sqlFactor('listings.unit');
         $cropFactor = self::sqlFactor('crop_types.unit_of_measure');
+        $converts = self::sqlConverts('listings.unit', 'crop_types.unit_of_measure');
+        $numeric = '('.$floorSql.') * ('.$listingFactor.') > listings.price_per_unit * ('.$cropFactor.')';
 
-        return '('.$floorSql.') * ('.$listingFactor.') > listings.price_per_unit * ('.$cropFactor.')';
+        return "(({$converts}) AND ({$numeric})) OR (".self::incompatibleGuardSql().')';
+    }
+
+    /**
+     * A guarded crop whose listing unit cannot convert into the crop unit.
+     * Used by the below-floor filter and by the buyer catalogue.
+     */
+    public static function incompatibleGuardSql(): string
+    {
+        $converts = self::sqlConverts('listings.unit', 'crop_types.unit_of_measure');
+
+        return '(NOT ('.$converts.')) AND ('.self::sqlGuarded().')';
+    }
+
+    public static function sqlConverts(string $listingUnit, string $cropUnit): string
+    {
+        $listingFamily = self::sqlFamily($listingUnit);
+        $cropFamily = self::sqlFamily($cropUnit);
+
+        return "(
+            {$listingUnit} = {$cropUnit}
+            OR (
+                ({$listingFamily}) = ({$cropFamily})
+                AND ({$listingFamily}) <> 'package'
+            )
+        )";
+    }
+
+    public static function sqlFamily(string $column): string
+    {
+        $cases = [];
+
+        foreach (ListingUnit::cases() as $unit) {
+            $cases[] = "WHEN {$column} = '{$unit->value}' THEN '{$unit->family()->value}'";
+        }
+
+        return 'CASE '.implode(' ', $cases)." ELSE '' END";
+    }
+
+    public static function sqlGuarded(): string
+    {
+        return <<<'SQL'
+            (
+                crop_types.floor_price > 0
+                OR crop_types.max_discount > 0
+                OR EXISTS (
+                    SELECT 1 FROM farm_crop_type_overrides fo
+                    WHERE fo.farm_id = listings.farm_id
+                      AND fo.crop_type_id = listings.crop_type_id
+                      AND (
+                          COALESCE(fo.floor_price, 0) > 0
+                          OR COALESCE(fo.max_discount, 0) > 0
+                      )
+                )
+            )
+            SQL;
+    }
+
+    public function checkoutRefusal(Listing $listing): string
+    {
+        $unit = $listing->unit?->value ?? 'its unit';
+        $cropType = $listing->cropType;
+
+        if ($cropType === null) {
+            return "{$listing->title} is no longer available.";
+        }
+
+        return "{$listing->title} is sold per {$unit}, which cannot be checked against this crop's price. "
+            .$this->refusalMessage($cropType, $listing->farm_id);
     }
 
     public function backfillListingUnits(): void

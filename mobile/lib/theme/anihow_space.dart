@@ -32,8 +32,36 @@ class AniHowSpace {
 class AniHowMoney {
   /// Pesos only: ₱ symbol, thousands separators, two decimals (e.g. ₱1,250.00).
   static String peso(Object? value) {
-    final amount = value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+    final amount = value is num
+        ? value.toDouble()
+        : double.tryParse('$value') ?? 0;
     final fixed = amount.toStringAsFixed(2);
+    final parts = fixed.split('.');
+    final negative = parts[0].startsWith('-');
+    final digits = negative ? parts[0].substring(1) : parts[0];
+    final grouped = StringBuffer();
+    for (var i = 0; i < digits.length; i++) {
+      final fromEnd = digits.length - i;
+      if (i > 0 && fromEnd % 3 == 0) {
+        grouped.write(',');
+      }
+      grouped.write(digits[i]);
+    }
+    return '₱${negative ? '-' : ''}$grouped.${parts[1]}';
+  }
+
+  /// Unit prices keep extra decimals when they matter (₱0.055 / g) and
+  /// otherwise stay at two (₱60.00 / kg). Totals still use [peso].
+  static String pesoUnit(Object? value) {
+    final amount = value is num
+        ? value.toDouble()
+        : double.tryParse('$value') ?? 0;
+    var fixed = amount.toStringAsFixed(4);
+    while (fixed.contains('.') &&
+        fixed.endsWith('0') &&
+        fixed.split('.').last.length > 2) {
+      fixed = fixed.substring(0, fixed.length - 1);
+    }
     final parts = fixed.split('.');
     final negative = parts[0].startsWith('-');
     final digits = negative ? parts[0].substring(1) : parts[0];

@@ -47,7 +47,7 @@ class Listing extends Model
     {
         return [
             'unit' => ListingUnit::class,
-            'price_per_unit' => 'decimal:2',
+            'price_per_unit' => 'decimal:4',
             'quantity_available' => 'decimal:2',
             'quantity_held' => 'decimal:2',
             'is_active' => 'boolean',
@@ -164,11 +164,16 @@ class Listing extends Model
      */
     public function isBelowFloor(): bool
     {
-        $price = app(UnitConverter::class)->priceIn(
+        $converter = app(UnitConverter::class);
+        $price = $converter->guardPrice(
             $this->unit,
             $this->cropType->unit_of_measure,
             $this->price_per_unit,
         );
+
+        if ($price === null) {
+            return $converter->isGuarded($this->cropType, $this->farm_id);
+        }
 
         return ! $this->priceGuard()->allowsPrice($price);
     }
@@ -186,6 +191,24 @@ class Listing extends Model
             ->where('listings.is_active', true)
             ->whereHas('farmerSeller', fn (Builder $seller): Builder => $seller->where('status', UserStatus::Active))
             ->whereHas('cropType', fn (Builder $cropType): Builder => $cropType->where('is_active', true));
+    }
+
+    /**
+     * The buyer catalogue. A published listing whose unit cannot convert into
+     * a guarded crop is stranded and stays off the market until the seller
+     * picks an allowed unit.
+     *
+     * @param  Builder<Listing>  $query
+     * @return Builder<Listing>
+     */
+    public function scopeBuyerVisible(Builder $query): Builder
+    {
+        return $query
+            ->marketplaceVisible()
+            ->whereDoesntHave(
+                'cropType',
+                fn (Builder $cropType): Builder => $cropType->whereRaw(UnitConverter::incompatibleGuardSql()),
+            );
     }
 
     /**

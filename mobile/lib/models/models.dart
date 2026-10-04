@@ -303,7 +303,7 @@ class ListingItem {
 
   /// Short unit code, for example ₱60.00 / kg.
   String get priceLabel {
-    final peso = AniHowMoney.peso(pricePerUnit);
+    final peso = AniHowMoney.pesoUnit(pricePerUnit);
     final code = unit;
     if (code == null || code.isEmpty) {
       return peso;

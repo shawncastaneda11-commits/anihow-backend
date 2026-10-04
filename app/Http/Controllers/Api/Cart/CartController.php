@@ -51,7 +51,7 @@ class CartController extends Controller
     public function store(StoreCartItemRequest $request): JsonResponse
     {
         $listing = Listing::query()
-            ->marketplaceVisible()
+            ->buyerVisible()
             ->with('cropType')
             ->findOrFail($request->validated('listing_id'));
 
@@ -80,7 +80,7 @@ class CartController extends Controller
     public function update(UpdateCartItemRequest $request, CartItem $cartItem): CartItemResource
     {
         $listing = $cartItem->listing;
-        if ($listing === null || ! Listing::query()->marketplaceVisible()->whereKey($listing->id)->exists()) {
+        if ($listing === null || ! Listing::query()->buyerVisible()->whereKey($listing->id)->exists()) {
             $cartItem->delete();
 
             throw ValidationException::withMessages([

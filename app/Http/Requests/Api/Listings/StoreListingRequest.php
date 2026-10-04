@@ -33,7 +33,7 @@ class StoreListingRequest extends FormRequest
             'unit' => ['required', Rule::enum(ListingUnit::class)],
             'title' => ['required', 'string', 'max:150'],
             'description' => ['nullable', 'string', 'max:5000'],
-            'price_per_unit' => ['required', 'numeric', 'gt:0', 'max:99999.99'],
+            'price_per_unit' => ['required', 'numeric', 'gt:0', 'decimal:0,4', 'max:99999.9999'],
             'quantity_available' => ['required', 'numeric', 'min:0', 'max:99999.99'],
             'is_active' => ['sometimes', 'boolean'],
             'image' => ['nullable', 'image', 'max:5120'],
@@ -85,7 +85,18 @@ class StoreListingRequest extends FormRequest
                 }
 
                 $guard = app(PriceGuardResolver::class)->forFarmId($seller?->farm_id, $cropType);
-                $price = $converter->priceIn($unit, $cropType->unit_of_measure, $this->validated('price_per_unit'));
+                $price = $converter->guardPrice($unit, $cropType->unit_of_measure, $this->validated('price_per_unit'));
+
+                if ($price === null) {
+                    if ($converter->isGuarded($cropType, $seller?->farm_id)) {
+                        $validator->errors()->add(
+                            'unit',
+                            $converter->refusalMessage($cropType, $seller?->farm_id),
+                        );
+                    }
+
+                    return;
+                }
 
                 if (! $guard->allowsPrice($price)) {
                     $floor = number_format($guard->floor, 2, '.', '');

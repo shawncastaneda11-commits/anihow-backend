@@ -364,6 +364,18 @@ class AppStrings {
   String get you => t('You', 'Ikaw');
   String get sendMessageHint =>
       t('Message about this order', 'Mensahe tungkol sa order na ito');
+  String get attachFile => t('Attach a file', 'Maglakip ng file');
+  String get attachPhoto => t('Photo', 'Larawan');
+  String get attachCamera => t('Camera', 'Camera');
+  String get attachPdf => t('PDF', 'PDF');
+  String get attachmentTooLarge =>
+      t('This file is over 5 MB.', 'Lampas sa 5 MB ang file na ito.');
+  String get attachmentOpenFailed =>
+      t('Could not open that file.', 'Hindi mabuksan ang file.');
+  String get attachmentSendFailed => t(
+    'That file could not be sent. Try again.',
+    'Hindi maipadala ang file. Subukan ulit.',
+  );
   String get noMessages => t(
     'No messages yet. Say hello about the handover.',
     'Wala pang mensahe. Mag-hello tungkol sa handover.',

@@ -29,7 +29,17 @@ class OrderMessageController extends Controller
             ->orderBy('id')
             ->get();
 
-        return OrderMessageResource::collection($messages);
+        $conversationId = null;
+
+        if ($order->buyer_id !== null && ! $order->isWalkIn()) {
+            $conversationId = StallConversation::query()->firstOrCreate([
+                'buyer_id' => $order->buyer_id,
+                'farmer_seller_id' => $order->farmer_seller_id,
+            ])->id;
+        }
+
+        return OrderMessageResource::collection($messages)
+            ->additional(['stall_conversation_id' => $conversationId]);
     }
 
     public function store(

@@ -18,7 +18,7 @@ class OrderMessageResource extends JsonResource
 
         return [
             'id' => $this->id,
-            'body' => $this->body,
+            'body' => (string) ($this->body ?? ''),
             'created_at' => $this->created_at?->toIso8601String(),
             'author' => [
                 'id' => $author?->id,

@@ -487,18 +487,64 @@ class ApiClient {
     );
   }
 
+  Future<int?> orderStallConversationId(int orderId) async {
+    final response = await _get('/orders/$orderId/messages');
+    final value = response['stall_conversation_id'];
+    if (value == null) {
+      return null;
+    }
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    return int.tryParse('$value');
+  }
+
+  Future<List<int>> downloadAuthorized(String url) async {
+    try {
+      final response = await _dio.get<List<int>>(
+        url,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return response.data ?? const [];
+    } on DioException catch (error) {
+      throw ApiException(_messageFrom(error));
+    }
+  }
+
   Future<OrderMessage> sendStallMessage(
     int conversationId, {
     required String body,
     int? orderId,
     int? listingId,
+    String? attachmentPath,
   }) async {
-    final response = await _post('/stall-chats/$conversationId/messages', {
-      'body': body,
-      'order_id': ?orderId,
-      'listing_id': ?listingId,
-    });
-    return OrderMessage.fromJson(_asMap(response['data'] ?? response));
+    if (attachmentPath == null || attachmentPath.isEmpty) {
+      final response = await _post('/stall-chats/$conversationId/messages', {
+        'body': body,
+        'order_id': ?orderId,
+        'listing_id': ?listingId,
+      });
+      return OrderMessage.fromJson(_asMap(response['data'] ?? response));
+    }
+
+    try {
+      final response = await _dio.post(
+        '/stall-chats/$conversationId/messages',
+        data: FormData.fromMap({
+          if (body.trim().isNotEmpty) 'body': body.trim(),
+          'order_id': ?orderId,
+          'listing_id': ?listingId,
+          'attachment': await MultipartFile.fromFile(attachmentPath),
+        }),
+      );
+      final data = _asMap(response.data);
+      return OrderMessage.fromJson(_asMap(data['data'] ?? data));
+    } on DioException catch (error) {
+      throw ApiException(_messageFrom(error));
+    }
   }
 
   Future<List<FaqSuggestion>> faqSuggestions() async {

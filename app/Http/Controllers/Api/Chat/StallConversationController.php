@@ -11,6 +11,7 @@ use App\Http\Resources\Api\StallConversationResource;
 use App\Http\Resources\Api\StallMessageResource;
 use App\Models\StallConversation;
 use App\Models\User;
+use App\Support\ChatAttachmentLimiter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -78,12 +79,17 @@ class StallConversationController extends Controller
         StoreStallMessageRequest $request,
         StallConversation $stallConversation,
         SendStallMessage $sendStallMessage,
+        ChatAttachmentLimiter $attachments,
     ): JsonResponse {
+        if ($request->hasFile('attachment')) {
+            $attachments->consume($request);
+        }
+
         $message = $sendStallMessage->handle($request->user(), $stallConversation, [
             'body' => $request->validated('body'),
             'order_id' => $request->validated('order_id'),
             'listing_id' => $request->validated('listing_id'),
-        ]);
+        ], $request->file('attachment'));
 
         return (new StallMessageResource($message))
             ->additional(['message' => 'Message sent.'])

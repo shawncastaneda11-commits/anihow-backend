@@ -10,8 +10,8 @@ import '../../services/stall_chat_realtime.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/async_view.dart';
+import '../../widgets/chat_composer.dart';
 import '../../widgets/chat_message_bubble.dart';
-import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
 
 class OrderChatScreen extends StatefulWidget {
@@ -24,7 +24,6 @@ class OrderChatScreen extends StatefulWidget {
 }
 
 class _OrderChatScreenState extends State<OrderChatScreen> {
-  final _input = TextEditingController();
   final _scroll = ScrollController();
   final _anchor = GlobalKey();
   final List<OrderMessage> _messages = [];
@@ -232,40 +231,63 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
     );
   }
 
-  Future<void> _send() async {
-    final body = _input.text.trim();
-    if (!_canSend || _sending || body.isEmpty) {
+  Future<StallChat?> _chatFromOrderThread(ApiClient api) async {
+    final id = await api.orderStallConversationId(widget.order.id);
+    if (id == null) {
+      return null;
+    }
+    return StallChat(
+      id: id,
+      sellerId: widget.order.sellerId ?? 0,
+      shopName: widget.order.stallName,
+      buyerName: widget.order.buyerName,
+      buyerId: widget.order.buyerId,
+    );
+  }
+
+  Future<void> _send(String body, String? attachmentPath) async {
+    final hasFile = attachmentPath != null && attachmentPath.isNotEmpty;
+    if (!_canSend || _sending || (body.isEmpty && !hasFile)) {
       return;
     }
+    final attachmentFailed = AppStrings.of(context).attachmentSendFailed;
     setState(() => _sending = true);
     try {
       final api = context.read<AuthController>().api;
-      final chat = _chat;
+      var chat = _chat ?? await _findChat();
+      if (chat == null && hasFile) {
+        chat = await _chatFromOrderThread(api);
+      }
       if (chat == null) {
+        if (hasFile) {
+          throw ApiException(attachmentFailed);
+        }
         await api.sendOrderMessage(widget.order.id, body: body);
         if (!mounted) {
           return;
         }
-        _input.clear();
         _chat = null;
         await _reload();
         return;
       }
+      _chat = chat;
+      await _listen(chat);
       final message = await api.sendStallMessage(
         chat.id,
         body: body,
         orderId: widget.order.id,
+        attachmentPath: hasFile ? attachmentPath : null,
       );
       if (!mounted) {
         return;
       }
-      _input.clear();
       _appendIfNew(message);
     } on ApiException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(error.message)));
       }
+      rethrow;
     } finally {
       if (mounted) {
         setState(() => _sending = false);
@@ -278,7 +300,6 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
     _poll?.cancel();
     _liveSub?.cancel();
     unawaited(_realtime?.dispose() ?? Future<void>.value());
-    _input.dispose();
     _scroll.dispose();
     super.dispose();
   }
@@ -330,31 +351,7 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
                             ),
                       style: Theme.of(context).textTheme.bodyMedium,
                     )
-                  : Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _input,
-                            minLines: 1,
-                            maxLines: 4,
-                            maxLength: 1000,
-                            decoration: InputDecoration(
-                              hintText: s.sendMessageHint,
-                              counterText: '',
-                            ),
-                            textInputAction: TextInputAction.send,
-                            onSubmitted: (_) => _send(),
-                          ),
-                        ),
-                        const SizedBox(width: AniHowSpace.cardGap),
-                        PrimaryButton(
-                          label: s.send,
-                          busy: _sending,
-                          expand: false,
-                          onPressed: _send,
-                        ),
-                      ],
-                    ),
+                  : ChatComposer(busy: _sending, onSend: _send),
             ),
           ),
         ],

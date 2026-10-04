@@ -3,6 +3,7 @@
 namespace App\Actions\Privacy;
 
 use App\Enums\UserStatus;
+use App\Models\StallMessage;
 use App\Models\TawadRule;
 use App\Models\User;
 use Illuminate\Support\Str;
@@ -31,6 +32,20 @@ class AnonymizeUserAction
                 'is_active' => false,
                 'ended_at' => now(),
             ]);
+
+        StallMessage::query()
+            ->where('user_id', $user->id)
+            ->whereNotNull('attachment_path')
+            ->orderBy('id')
+            ->each(function (StallMessage $message): void {
+                $message->deleteStoredAttachment();
+                $message->forceFill([
+                    'attachment_path' => null,
+                    'attachment_mime' => null,
+                    'attachment_size' => null,
+                    'attachment_name' => null,
+                ])->save();
+            });
 
         $user->cartItems()->delete();
         $user->favorites()->delete();

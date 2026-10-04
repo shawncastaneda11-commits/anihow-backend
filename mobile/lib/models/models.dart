@@ -1516,6 +1516,39 @@ class AppNotification {
   }
 }
 
+class ChatAttachment {
+  const ChatAttachment({
+    required this.name,
+    required this.mime,
+    required this.size,
+    required this.url,
+    this.thumbnailUrl,
+  });
+
+  final String name;
+  final String mime;
+  final int size;
+  final String url;
+  final String? thumbnailUrl;
+
+  bool get isPhoto => mime.startsWith('image/');
+
+  factory ChatAttachment.fromJson(Map<String, dynamic> json) {
+    final size = json['size'];
+    return ChatAttachment(
+      name: json['name'] as String? ?? 'Attachment',
+      mime: json['mime'] as String? ?? '',
+      size: size is int
+          ? size
+          : size is num
+          ? size.toInt()
+          : int.tryParse('$size') ?? 0,
+      url: json['url'] as String? ?? '',
+      thumbnailUrl: json['thumbnail_url'] as String?,
+    );
+  }
+}
+
 class OrderMessage {
   const OrderMessage({
     required this.id,
@@ -1531,6 +1564,7 @@ class OrderMessage {
     this.listingPrice,
     this.listingUnit,
     this.listingThumbnailUrl,
+    this.attachment,
   });
 
   final int id;
@@ -1546,6 +1580,7 @@ class OrderMessage {
   final String? listingPrice;
   final String? listingUnit;
   final String? listingThumbnailUrl;
+  final ChatAttachment? attachment;
 
   bool get hasProductCard =>
       listingTitle != null && listingTitle!.trim().isNotEmpty;
@@ -1569,6 +1604,11 @@ class OrderMessage {
       listingThumbnailUrl: ApiConfig.mediaUrl(
         json['listing_thumbnail_url'] as String?,
       ),
+      attachment: json['attachment'] is Map
+          ? ChatAttachment.fromJson(
+              Map<String, dynamic>.from(json['attachment'] as Map),
+            )
+          : null,
     );
   }
 }

@@ -76,9 +76,12 @@ class OrderForm
         $lines = $record->stallMessages->map(function ($message): string {
             $author = e($message->author?->name ?? 'Unknown');
             $when = e(optional($message->created_at)?->timezone(config('app.timezone'))->format('Y-m-d H:i') ?? '');
-            $body = nl2br(e($message->body));
+            $body = nl2br(e((string) $message->body));
+            $file = filled($message->attachment_name)
+                ? '<div class="text-sm text-gray-500">'.e($message->attachment_name).'</div>'
+                : '';
 
-            return "<div class=\"mb-3\"><div class=\"text-sm font-medium\">{$author} <span class=\"font-normal text-gray-500\">{$when}</span></div><div class=\"text-sm\">{$body}</div></div>";
+            return "<div class=\"mb-3\"><div class=\"text-sm font-medium\">{$author} <span class=\"font-normal text-gray-500\">{$when}</span></div><div class=\"text-sm\">{$body}</div>{$file}</div>";
         })->implode('');
 
         return new HtmlString($lines);

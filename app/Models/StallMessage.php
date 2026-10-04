@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Support\ImageVariants;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 #[Fillable([
     'stall_conversation_id',
@@ -17,6 +19,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'listing_unit',
     'listing_thumbnail_path',
     'source_order_message_id',
+    'attachment_path',
+    'attachment_mime',
+    'attachment_size',
+    'attachment_name',
 ])]
 class StallMessage extends Model
 {
@@ -32,7 +38,32 @@ class StallMessage extends Model
     {
         return [
             'listing_price_per_unit' => 'decimal:4',
+            'attachment_size' => 'integer',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::deleting(function (StallMessage $message): void {
+            $message->deleteStoredAttachment();
+        });
+    }
+
+    public function deleteStoredAttachment(): void
+    {
+        if (! filled($this->attachment_path)) {
+            return;
+        }
+
+        $disk = Storage::disk('local');
+
+        if (str_starts_with((string) $this->attachment_mime, 'image/')) {
+            app(ImageVariants::class)->delete($this->attachment_path, $disk);
+
+            return;
+        }
+
+        $disk->delete($this->attachment_path);
     }
 
     /**
@@ -65,5 +96,13 @@ class StallMessage extends Model
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id')->withTrashed();
+    }
+
+    /**
+     * @return BelongsTo<Order, $this>
+     */
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
     }
 }

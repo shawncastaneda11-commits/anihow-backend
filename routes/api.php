@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\Auth\UpdateProfileController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\Buyer\BuyerAnnouncementController;
 use App\Http\Controllers\Api\Cart\CartController;
+use App\Http\Controllers\Api\Chat\ChatAttachmentController;
 use App\Http\Controllers\Api\Chat\OrderMessageController;
 use App\Http\Controllers\Api\Chat\StallConversationController;
 use App\Http\Controllers\Api\CropCare\CropCareArticleController;
@@ -117,6 +118,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->name('stall-chats.messages.index');
     Route::post('stall-chats/{stallConversation}/messages', [StallConversationController::class, 'storeMessage'])
         ->name('stall-chats.messages.store');
+    Route::get('chat/attachments/{stallMessage}', ChatAttachmentController::class)
+        ->name('chat.attachments.show');
 
     Route::get('faq', [FaqController::class, 'index'])->name('faq.index');
     Route::post('faq/ask', [FaqController::class, 'ask'])->name('faq.ask');

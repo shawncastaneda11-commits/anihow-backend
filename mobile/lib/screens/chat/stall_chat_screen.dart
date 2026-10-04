@@ -10,8 +10,8 @@ import '../../services/stall_chat_realtime.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/async_view.dart';
+import '../../widgets/chat_composer.dart';
 import '../../widgets/chat_message_bubble.dart';
-import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
 
 /// A conversation with a stall that stays after any order is finished.
@@ -32,7 +32,6 @@ class StallChatScreen extends StatefulWidget {
 }
 
 class _StallChatScreenState extends State<StallChatScreen> {
-  final _input = TextEditingController();
   final _scroll = ScrollController();
   final List<OrderMessage> _messages = [];
   StallChatRealtime? _realtime;
@@ -132,9 +131,9 @@ class _StallChatScreenState extends State<StallChatScreen> {
     });
   }
 
-  Future<void> _send() async {
-    final body = _input.text.trim();
-    if (_sending || body.isEmpty) {
+  Future<void> _send(String body, String? attachmentPath) async {
+    final hasFile = attachmentPath != null && attachmentPath.isNotEmpty;
+    if (_sending || (body.isEmpty && !hasFile)) {
       return;
     }
     setState(() => _sending = true);
@@ -143,18 +142,19 @@ class _StallChatScreenState extends State<StallChatScreen> {
         widget.chat.id,
         body: body,
         listingId: _pendingListingId,
+        attachmentPath: hasFile ? attachmentPath : null,
       );
       if (!mounted) {
         return;
       }
       _pendingListingId = null;
-      _input.clear();
       _appendIfNew(message);
     } on ApiException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(error.message)));
       }
+      rethrow;
     } finally {
       if (mounted) {
         setState(() => _sending = false);
@@ -167,7 +167,6 @@ class _StallChatScreenState extends State<StallChatScreen> {
     _poll?.cancel();
     _liveSub?.cancel();
     unawaited(_realtime?.dispose() ?? Future<void>.value());
-    _input.dispose();
     _scroll.dispose();
     super.dispose();
   }
@@ -203,31 +202,7 @@ class _StallChatScreenState extends State<StallChatScreen> {
             top: false,
             child: Padding(
               padding: AniHowSpace.screenPadding,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _input,
-                      minLines: 1,
-                      maxLines: 4,
-                      maxLength: 1000,
-                      decoration: InputDecoration(
-                        hintText: s.sendMessageHint,
-                        counterText: '',
-                      ),
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _send(),
-                    ),
-                  ),
-                  const SizedBox(width: AniHowSpace.cardGap),
-                  PrimaryButton(
-                    label: s.send,
-                    busy: _sending,
-                    expand: false,
-                    onPressed: _send,
-                  ),
-                ],
-              ),
+              child: ChatComposer(busy: _sending, onSend: _send),
             ),
           ),
         ],

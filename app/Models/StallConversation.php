@@ -19,6 +19,15 @@ class StallConversation extends Model
     /** @use HasFactory<StallConversationFactory> */
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::deleting(function (StallConversation $conversation): void {
+            $conversation->messages()->get()->each(function (StallMessage $message): void {
+                $message->delete();
+            });
+        });
+    }
+
     /**
      * @return BelongsTo<User, $this>
      */

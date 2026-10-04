@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Filament\Forms\Components\FileUpload;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -22,33 +23,37 @@ class ImageVariants
 
     public const MAX_PIXELS = 40_000_000;
 
-    public function store(UploadedFile $file, string $directory): string
+    private ?Filesystem $workingDisk = null;
+
+    public function store(UploadedFile $file, string $directory, ?Filesystem $disk = null): string
     {
-        return $this->withRaisedMemoryLimit(function () use ($file, $directory): string {
-            $basename = Str::uuid()->toString();
-            $path = trim($directory, '/').'/'.$basename.'.jpg';
+        return $this->onDisk($disk, function () use ($file, $directory): string {
+            return $this->withRaisedMemoryLimit(function () use ($file, $directory): string {
+                $basename = Str::uuid()->toString();
+                $path = trim($directory, '/').'/'.$basename.'.jpg';
 
-            [$image, $orientation] = $this->loadUploaded($file);
-            $this->writeVariants($image, $path, $orientation);
+                [$image, $orientation] = $this->loadUploaded($file);
+                $this->writeVariants($image, $path, $orientation);
 
-            return $path;
+                return $path;
+            });
         });
     }
 
-    public function replace(?string $currentPath, UploadedFile $file, string $directory): string
+    public function replace(?string $currentPath, UploadedFile $file, string $directory, ?Filesystem $disk = null): string
     {
-        $this->delete($currentPath);
+        $this->delete($currentPath, $disk);
 
-        return $this->store($file, $directory);
+        return $this->store($file, $directory, $disk);
     }
 
-    public function delete(?string $path): void
+    public function delete(?string $path, ?Filesystem $disk = null): void
     {
         if (! filled($path)) {
             return;
         }
 
-        $disk = ListingStorage::disk();
+        $disk ??= ListingStorage::disk();
         $disk->delete($path);
         $disk->delete($this->thumbnailPath($path));
     }
@@ -71,54 +76,80 @@ class ImageVariants
     }
 
     /** exists() is a network call on S3 disks; the VPS uses the public disk. */
-    public function thumbnailUrl(?string $path): ?string
+    public function thumbnailUrl(?string $path, ?Filesystem $disk = null): ?string
     {
         if (! filled($path)) {
             return null;
         }
 
+        $disk ??= ListingStorage::disk();
         $thumb = $this->thumbnailPath($path);
 
-        if (! ListingStorage::disk()->exists($thumb)) {
+        if (! $disk->exists($thumb)) {
             return null;
         }
 
-        return ListingStorage::disk()->url($thumb);
+        return $disk->url($thumb);
     }
 
     /**
      * Create a missing thumbnail next to an existing original. Safe to rerun.
      */
-    public function backfill(?string $path): bool
+    public function backfill(?string $path, ?Filesystem $disk = null): bool
     {
-        return $this->withRaisedMemoryLimit(function () use ($path): bool {
-            if (! filled($path)) {
-                return false;
-            }
+        return $this->onDisk($disk, function () use ($path): bool {
+            return $this->withRaisedMemoryLimit(function () use ($path): bool {
+                if (! filled($path)) {
+                    return false;
+                }
 
-            $disk = ListingStorage::disk();
+                $disk = $this->workingDisk();
 
-            if (! $disk->exists($path)) {
-                return false;
-            }
+                if (! $disk->exists($path)) {
+                    return false;
+                }
 
-            $thumb = $this->thumbnailPath($path);
+                $thumb = $this->thumbnailPath($path);
 
-            if ($disk->exists($thumb)) {
-                return false;
-            }
+                if ($disk->exists($thumb)) {
+                    return false;
+                }
 
-            $image = @imagecreatefromstring((string) $disk->get($path));
+                $image = @imagecreatefromstring((string) $disk->get($path));
 
-            if ($image === false) {
-                return false;
-            }
+                if ($image === false) {
+                    return false;
+                }
 
-            $this->writeJpeg($thumb, $this->fit($image, self::THUMB_LONG_SIDE));
-            imagedestroy($image);
+                $this->writeJpeg($thumb, $this->fit($image, self::THUMB_LONG_SIDE));
+                imagedestroy($image);
 
-            return true;
+                return true;
+            });
         });
+    }
+
+    /**
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T
+     */
+    private function onDisk(?Filesystem $disk, callable $callback): mixed
+    {
+        $previous = $this->workingDisk;
+        $this->workingDisk = $disk;
+
+        try {
+            return $callback();
+        } finally {
+            $this->workingDisk = $previous;
+        }
+    }
+
+    private function workingDisk(): Filesystem
+    {
+        return $this->workingDisk ?? ListingStorage::disk();
     }
 
     /**
@@ -231,7 +262,7 @@ class ImageVariants
             imagedestroy($flat);
         }
 
-        ListingStorage::disk()->put($path, $bytes);
+        $this->workingDisk()->put($path, $bytes);
     }
 
     private function flattenOntoWhite(\GdImage $image): \GdImage

@@ -82,6 +82,17 @@ class ExportOwnDataAction
                     'listing_thumbnail_path' => $message->listing_thumbnail_path,
                     'created_at' => $message->created_at?->toIso8601String(),
                 ])->all(),
+            'attachments' => StallMessage::query()
+                ->where('user_id', $user->id)
+                ->whereNotNull('attachment_path')
+                ->orderBy('id')
+                ->get()
+                ->map(fn (StallMessage $message): array => [
+                    'name' => $message->attachment_name,
+                    'mime' => $message->attachment_mime,
+                    'size' => $message->attachment_size,
+                    'created_at' => $message->created_at?->toIso8601String(),
+                ])->all(),
             'notifications' => $user->inAppNotifications()
                 ->orderByDesc('id')
                 ->get(['id', 'type', 'title', 'body', 'read_at', 'created_at'])

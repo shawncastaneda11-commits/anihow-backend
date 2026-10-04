@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Support\ChatAttachmentLimiter;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
@@ -74,6 +75,14 @@ class AppServiceProvider extends ServiceProvider
             }
 
             return Limit::perHour(10)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('chat-attachments', function (Request $request) {
+            if (app()->runningUnitTests()) {
+                return Limit::none();
+            }
+
+            return app(ChatAttachmentLimiter::class)->limit($request);
         });
     }
 }

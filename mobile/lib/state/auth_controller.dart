@@ -10,12 +10,14 @@ class AuthController extends ChangeNotifier {
       return;
     }
 
-    this.api = ApiClient(onUnauthorized: () {
-      user = null;
-      sessionEnded = true;
-      notifyListeners();
-      this.api.clearToken();
-    });
+    this.api = ApiClient(
+      onUnauthorized: () {
+        user = null;
+        sessionEnded = true;
+        notifyListeners();
+        this.api.clearToken();
+      },
+    );
   }
 
   late final ApiClient api;
@@ -45,7 +47,11 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  Future<bool> login(String email, String password, {bool remember = true}) async {
+  Future<bool> login(
+    String email,
+    String password, {
+    bool remember = true,
+  }) async {
     error = null;
     sessionEnded = false;
     notifyListeners();
@@ -105,6 +111,11 @@ class AuthController extends ChangeNotifier {
 
   Future<void> refreshUser() async {
     user = await api.currentUser();
+    notifyListeners();
+  }
+
+  void applyAccount(UserAccount next) {
+    user = next;
     notifyListeners();
   }
 

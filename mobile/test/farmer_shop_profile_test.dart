@@ -51,6 +51,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.widgetWithText(TextField, 'malaki ako'), 'sariwa ang ani');
+    await tester.ensureVisible(find.text(s.saveShopProfile));
+    await tester.pumpAndSettle();
     await tester.tap(find.text(s.saveShopProfile));
     await tester.pumpAndSettle();
 

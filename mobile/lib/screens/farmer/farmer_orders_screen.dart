@@ -18,7 +18,8 @@ import '../../widgets/status_pill.dart';
 import '../chat/order_chat_screen.dart';
 import 'walk_in_sale_screen.dart';
 
-List<({String status, String label, String empty})> _orderTabs(AppStrings s) => [
+List<({String status, String label, String empty})> _orderTabs(AppStrings s) =>
+    [
       (status: 'placed', label: s.placed, empty: s.noPlacedOrders),
       (status: 'confirmed', label: s.confirmed, empty: s.noConfirmedOrders),
       (status: 'ready', label: s.ready, empty: s.noReadyOrders),
@@ -92,7 +93,10 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen> {
     _replace(updated);
   }
 
-  Future<void> _run(OrderRecord order, Future<OrderRecord> Function() action) async {
+  Future<void> _run(
+    OrderRecord order,
+    Future<OrderRecord> Function() action,
+  ) async {
     if (_acting.contains(order.id)) {
       return;
     }
@@ -119,11 +123,17 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen> {
   }
 
   Future<void> _confirm(OrderRecord order) {
-    return _run(order, () => context.read<AuthController>().api.confirmOrder(order.id));
+    return _run(
+      order,
+      () => context.read<AuthController>().api.confirmOrder(order.id),
+    );
   }
 
   Future<void> _ready(OrderRecord order) {
-    return _run(order, () => context.read<AuthController>().api.markOrderReady(order.id));
+    return _run(
+      order,
+      () => context.read<AuthController>().api.markOrderReady(order.id),
+    );
   }
 
   Future<void> _complete(OrderRecord order) async {
@@ -146,18 +156,14 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen> {
     }
     await _run(
       order,
-      () => api.cancelOrder(
-            order.id,
-            reason: choice.reason,
-            note: choice.note,
-          ),
+      () => api.cancelOrder(order.id, reason: choice.reason, note: choice.note),
     );
   }
 
   Future<void> _openWalkIn() async {
-    final recorded = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const WalkInSaleScreen()),
-    );
+    final recorded = await Navigator.of(
+      context,
+    ).push<bool>(MaterialPageRoute(builder: (_) => const WalkInSaleScreen()));
     if (!mounted || recorded != true) {
       return;
     }
@@ -173,7 +179,8 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen> {
       child: Scaffold(
         body: Column(
           children: [
-            if (context.watch<AuthController>().user?.canRecordWalkInSales ?? false)
+            if (context.watch<AuthController>().user?.canRecordWalkInSales ??
+                false)
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AniHowSpace.screen,
@@ -310,10 +317,7 @@ class _OrderCard extends StatelessWidget {
       color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
     );
     final when = order.placedAt == null ? null : relativeTime(order.placedAt);
-    final summary = [
-      AniHowMoney.peso(order.total),
-      ?when,
-    ].join('  ·  ');
+    final summary = [AniHowMoney.peso(order.total), ?when].join('  ·  ');
 
     return Card(
       child: Padding(
@@ -330,20 +334,29 @@ class _OrderCard extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      AniHowAvatar(name: order.buyerName, radius: 20),
+                      AniHowAvatar(
+                        name: order.buyerName,
+                        imageUrl: order.buyerAvatarUrl,
+                        radius: 20,
+                      ),
                       const SizedBox(width: AniHowSpace.cardGap),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(order.buyerName, style: theme.textTheme.titleMedium),
+                            Text(
+                              order.buyerName,
+                              style: theme.textTheme.titleMedium,
+                            ),
                             const SizedBox(height: 4),
                             Text(summary, style: muted),
                             if (tawadIsActive(order.tawadDisplay))
                               Padding(
                                 padding: const EdgeInsets.only(top: 2),
                                 child: Text(
-                                  s.tawadMinus(AniHowMoney.peso(order.tawadDisplay)),
+                                  s.tawadMinus(
+                                    AniHowMoney.peso(order.tawadDisplay),
+                                  ),
                                   style: muted?.copyWith(
                                     color: AniHowColors.sage,
                                     fontWeight: FontWeight.w600,
@@ -358,11 +371,20 @@ class _OrderCard extends StatelessWidget {
                     ],
                   ),
                   if (order.isWalkIn)
-                    OrderMetaRow(icon: Icons.storefront_outlined, text: s.walkIn),
+                    OrderMetaRow(
+                      icon: Icons.storefront_outlined,
+                      text: s.walkIn,
+                    ),
                   if (order.items.isNotEmpty)
-                    OrderMetaRow(icon: Icons.shopping_basket_outlined, text: order.itemSummary),
+                    OrderMetaRow(
+                      icon: Icons.shopping_basket_outlined,
+                      text: order.itemSummary,
+                    ),
                   if (order.fulfillmentLabel != null)
-                    OrderMetaRow(icon: Icons.handshake_outlined, text: order.fulfillmentLabel!),
+                    OrderMetaRow(
+                      icon: Icons.handshake_outlined,
+                      text: order.fulfillmentLabel!,
+                    ),
                   if (order.hasCancellationReason)
                     OrderMetaRow(
                       icon: Icons.info_outline,
@@ -415,13 +437,14 @@ class _OrderCard extends StatelessWidget {
 
 class FarmerOrderDetailScreen extends StatefulWidget {
   const FarmerOrderDetailScreen({super.key, this.order, this.orderId})
-      : assert(order != null || orderId != null);
+    : assert(order != null || orderId != null);
 
   final OrderRecord? order;
   final int? orderId;
 
   @override
-  State<FarmerOrderDetailScreen> createState() => _FarmerOrderDetailScreenState();
+  State<FarmerOrderDetailScreen> createState() =>
+      _FarmerOrderDetailScreenState();
 }
 
 class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
@@ -508,9 +531,7 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
     if (!mounted || amount == null) {
       return;
     }
-    await _run(
-      () => api.completeOrder(_id, amountReceived: amount),
-    );
+    await _run(() => api.completeOrder(_id, amountReceived: amount));
   }
 
   Future<void> _cancel() async {
@@ -520,11 +541,7 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
       return;
     }
     await _run(
-      () => api.cancelOrder(
-            _id,
-            reason: choice.reason,
-            note: choice.note,
-          ),
+      () => api.cancelOrder(_id, reason: choice.reason, note: choice.note),
     );
   }
 
@@ -568,17 +585,26 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
               children: [
                 Row(
                   children: [
-                    AniHowAvatar(name: order.buyerName, radius: 20),
+                    AniHowAvatar(
+                      name: order.buyerName,
+                      imageUrl: order.buyerAvatarUrl,
+                      radius: 20,
+                    ),
                     const SizedBox(width: AniHowSpace.cardGap),
                     Expanded(
-                      child: Text(order.buyerName, style: theme.textTheme.titleMedium),
+                      child: Text(
+                        order.buyerName,
+                        style: theme.textTheme.titleMedium,
+                      ),
                     ),
                     StatusPill.order(order.status, strings: s),
                   ],
                 ),
                 if (order.isWalkIn)
                   OrderMetaRow(icon: Icons.storefront_outlined, text: s.walkIn),
-                if (!order.isWalkIn && order.contact != null && order.contact!.isNotEmpty)
+                if (!order.isWalkIn &&
+                    order.contact != null &&
+                    order.contact!.isNotEmpty)
                   OrderMetaRow(icon: Icons.call_outlined, text: order.contact!),
                 if (!order.isWalkIn)
                   Align(
@@ -625,15 +651,27 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
                       : null,
                 ),
                 if (order.fulfillmentLabel != null)
-                  OrderMetaRow(icon: Icons.handshake_outlined, text: order.fulfillmentLabel!),
-                if (order.fulfillmentNote != null && order.fulfillmentNote!.isNotEmpty)
-                  OrderMetaRow(icon: Icons.notes_outlined, text: order.fulfillmentNote!),
+                  OrderMetaRow(
+                    icon: Icons.handshake_outlined,
+                    text: order.fulfillmentLabel!,
+                  ),
+                if (order.fulfillmentNote != null &&
+                    order.fulfillmentNote!.isNotEmpty)
+                  OrderMetaRow(
+                    icon: Icons.notes_outlined,
+                    text: order.fulfillmentNote!,
+                  ),
                 if (order.placedAt != null)
-                  OrderMetaRow(icon: Icons.schedule_outlined, text: relativeTime(order.placedAt)),
+                  OrderMetaRow(
+                    icon: Icons.schedule_outlined,
+                    text: relativeTime(order.placedAt),
+                  ),
                 if (order.amountReceived != null)
                   OrderMetaRow(
                     icon: Icons.payments_outlined,
-                    text: s.cashReceivedLine(AniHowMoney.peso(order.amountReceived)),
+                    text: s.cashReceivedLine(
+                      AniHowMoney.peso(order.amountReceived),
+                    ),
                   ),
                 if (order.hasCancellationReason)
                   OrderMetaRow(
@@ -649,7 +687,10 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
                     text: order.cancellationNote!.trim(),
                   ),
                 if (order.canBeReviewed)
-                  OrderMetaRow(icon: Icons.star_outline, text: s.reviewUnlocked),
+                  OrderMetaRow(
+                    icon: Icons.star_outline,
+                    text: s.reviewUnlocked,
+                  ),
                 if (order.reviewRating != null)
                   OrderMetaRow(
                     icon: Icons.star_outline,
@@ -679,18 +720,24 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(item.listingName, style: theme.textTheme.titleSmall),
+                                Text(
+                                  item.listingName,
+                                  style: theme.textTheme.titleSmall,
+                                ),
                                 Text(
                                   item.quantityLabel,
                                   style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.68),
                                   ),
                                 ),
                               ],
                             ),
                           ),
                           Text(
-                            AniHowMoney.peso(item.lineTotal ?? item.lineSubtotal),
+                            AniHowMoney.peso(
+                              item.lineTotal ?? item.lineSubtotal,
+                            ),
                             style: theme.textTheme.titleSmall,
                           ),
                         ],
@@ -755,7 +802,11 @@ class OrderAdvanceButtons extends StatelessWidget {
       children: [
         if (confirm) ...[
           const SizedBox(height: AniHowSpace.cardGap),
-          PrimaryButton(label: s.confirmOrder, onPressed: onConfirm, busy: busy),
+          PrimaryButton(
+            label: s.confirmOrder,
+            onPressed: onConfirm,
+            busy: busy,
+          ),
         ],
         if (ready) ...[
           const SizedBox(height: AniHowSpace.cardGap),
@@ -763,7 +814,11 @@ class OrderAdvanceButtons extends StatelessWidget {
         ],
         if (complete) ...[
           const SizedBox(height: AniHowSpace.cardGap),
-          PrimaryButton(label: s.completeHandover, onPressed: onComplete, busy: busy),
+          PrimaryButton(
+            label: s.completeHandover,
+            onPressed: onComplete,
+            busy: busy,
+          ),
         ],
         if (cancel) ...[
           const SizedBox(height: AniHowSpace.cardGap),
@@ -819,19 +874,25 @@ class _AmountReceivedDialogState extends State<_AmountReceivedDialog> {
           controller: _controller,
           autofocus: true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
-          decoration: InputDecoration(hintText: s.orderTotalHint(AniHowMoney.peso(widget.order.total))),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+          ],
+          decoration: InputDecoration(
+            hintText: s.orderTotalHint(AniHowMoney.peso(widget.order.total)),
+          ),
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: Text(s.back)),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(s.back),
+        ),
         TextButton(
           onPressed: () {
             final amount = _controller.text.trim();
             if (amount.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(s.enterCashReceived)),
-              );
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(SnackBar(content: Text(s.enterCashReceived)));
               return;
             }
             Navigator.pop(context, amount);
@@ -916,9 +977,8 @@ class _CancelOrderDialogState extends State<_CancelOrderDialog> {
         TextButton(
           onPressed: () {
             if (_reason == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(s.chooseCancelReason)),
-              );
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(SnackBar(content: Text(s.chooseCancelReason)));
               return;
             }
             final trimmed = _note.text.trim();

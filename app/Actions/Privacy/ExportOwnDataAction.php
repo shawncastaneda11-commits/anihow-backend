@@ -144,6 +144,8 @@ class ExportOwnDataAction
             'shop_name' => $user->shop_name,
             'bio' => $user->bio,
             'contact' => $user->contact,
+            'avatar_url' => $user->avatarUrl(),
+            'cover_url' => $user->coverUrl(),
             'status' => $user->status->value,
             'roles' => $user->roles->pluck('name')->values()->all(),
             'farm' => $user->farm === null ? null : [

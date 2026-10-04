@@ -4,6 +4,7 @@ use App\Enums\Role;
 use App\Http\Controllers\Api\Admin\CreateFarmerSellerController;
 use App\Http\Controllers\Api\Auth\AccountDeletionRequestController;
 use App\Http\Controllers\Api\Auth\ChangePasswordController;
+use App\Http\Controllers\Api\Auth\DeleteUserAvatarController;
 use App\Http\Controllers\Api\Auth\ExportOwnDataController;
 use App\Http\Controllers\Api\Auth\ForgotPasswordController;
 use App\Http\Controllers\Api\Auth\LoginController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\Api\Auth\MeController;
 use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\Auth\ResendVerificationController;
 use App\Http\Controllers\Api\Auth\ResetPasswordController;
+use App\Http\Controllers\Api\Auth\StoreUserAvatarController;
 use App\Http\Controllers\Api\Auth\UpdateProfileController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
 use App\Http\Controllers\Api\Buyer\BuyerAnnouncementController;
@@ -40,7 +42,9 @@ use App\Http\Controllers\Api\Orders\WalkInSaleController;
 use App\Http\Controllers\Api\Reports\SubmitReportController;
 use App\Http\Controllers\Api\Reviews\ReviewController;
 use App\Http\Controllers\Api\Shop\BuyerShopController;
+use App\Http\Controllers\Api\Shop\DeleteShopCoverController;
 use App\Http\Controllers\Api\Shop\FarmerShopController;
+use App\Http\Controllers\Api\Shop\StoreShopCoverController;
 use Illuminate\Support\Facades\Route;
 use Spatie\Permission\Middleware\RoleMiddleware;
 
@@ -56,6 +60,8 @@ Route::prefix('auth')->group(function (): void {
         Route::post('logout', LogoutController::class)->name('auth.logout');
         Route::get('user', MeController::class)->name('auth.user');
         Route::patch('user', UpdateProfileController::class)->name('auth.user.update');
+        Route::post('user/avatar', StoreUserAvatarController::class)->name('auth.user.avatar.store');
+        Route::delete('user/avatar', DeleteUserAvatarController::class)->name('auth.user.avatar.destroy');
         Route::get('user/export', ExportOwnDataController::class)
             ->middleware('throttle:data-export')
             ->name('auth.user.export');
@@ -174,6 +180,8 @@ Route::middleware([
     Route::get('shop', [FarmerShopController::class, 'show'])->name('farmer.shop.show');
     Route::get('shop/reviews', [FarmerShopController::class, 'reviews'])->name('farmer.shop.reviews');
     Route::match(['put', 'patch'], 'shop', [FarmerShopController::class, 'update'])->name('farmer.shop.update');
+    Route::post('shop/cover', StoreShopCoverController::class)->name('farmer.shop.cover.store');
+    Route::delete('shop/cover', DeleteShopCoverController::class)->name('farmer.shop.cover.destroy');
 
     Route::get('announcements', [FarmerAnnouncementController::class, 'index'])
         ->name('farmer.announcements.index');

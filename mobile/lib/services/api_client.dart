@@ -37,11 +37,7 @@ Map<String, dynamic> buyerAnnouncementQuery({
   int? farmId,
   required int page,
 }) {
-  return {
-    'page': page,
-    if (following) 'following': 1,
-    'farm_id': ?farmId,
-  };
+  return {'page': page, if (following) 'following': 1, 'farm_id': ?farmId};
 }
 
 /// Multipart fields for a listing save. A cleared availability or harvest date
@@ -744,6 +740,52 @@ class ApiClient {
 
   Future<void> verifyEmail(String code) =>
       _post('/auth/email/verify', {'code': code});
+
+  Future<UserAccount> uploadAvatar(String imagePath) async {
+    try {
+      final response = await _dio.post(
+        '/auth/user/avatar',
+        data: FormData.fromMap({
+          'image': await MultipartFile.fromFile(imagePath),
+        }),
+      );
+      return UserAccount.fromJson(_asMap(_asMap(response.data)['data']));
+    } on DioException catch (error) {
+      throw ApiException(_messageFrom(error));
+    }
+  }
+
+  Future<UserAccount> deleteAvatar() async {
+    try {
+      final response = await _dio.delete('/auth/user/avatar');
+      return UserAccount.fromJson(_asMap(_asMap(response.data)['data']));
+    } on DioException catch (error) {
+      throw ApiException(_messageFrom(error));
+    }
+  }
+
+  Future<ShopProfile> uploadShopCover(String imagePath) async {
+    try {
+      final response = await _dio.post(
+        '/farmer/shop/cover',
+        data: FormData.fromMap({
+          'image': await MultipartFile.fromFile(imagePath),
+        }),
+      );
+      return ShopProfile.fromJson(_asMap(_asMap(response.data)['data']));
+    } on DioException catch (error) {
+      throw ApiException(_messageFrom(error));
+    }
+  }
+
+  Future<ShopProfile> deleteShopCover() async {
+    try {
+      final response = await _dio.delete('/farmer/shop/cover');
+      return ShopProfile.fromJson(_asMap(_asMap(response.data)['data']));
+    } on DioException catch (error) {
+      throw ApiException(_messageFrom(error));
+    }
+  }
 
   Future<void> changePassword({
     required String currentPassword,

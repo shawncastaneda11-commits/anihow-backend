@@ -46,6 +46,8 @@ class AnonymizeUserAction
             'shop_name' => null,
             'bio' => null,
             'contact' => null,
+            'avatar_path' => null,
+            'cover_photo_path' => null,
             'password' => Str::password(32),
             'status' => UserStatus::Suspended,
             'suspended_at' => now(),

@@ -256,9 +256,13 @@ class AppStrings {
   String get noContactYet => t('No contact yet', 'Wala pang contact');
   String get pickupOnly => t('Pickup only', 'Pickup lang');
   String get callToPickup => t(
-    'Call to coordinate pickup at the stall.',
-    'Tumawag para mag-usap tungkol sa pickup sa stall.',
+    'Message the stall in the app to coordinate pickup.',
+    'Mag-message sa stall sa app para ayusin ang pickup.',
   );
+  String get changePhoto => t('Change photo', 'Palitan ang larawan');
+  String get removePhoto => t('Remove photo', 'Alisin ang larawan');
+  String get changeCover => t('Change cover', 'Palitan ang cover');
+  String get removeCover => t('Remove cover', 'Alisin ang cover');
   String get reviews => t('Reviews', 'Mga review');
   String get noReviewsYet => t('No reviews yet.', 'Wala pang review.');
   String get orderHistory => t('Order history', 'Kasaysayan ng order');

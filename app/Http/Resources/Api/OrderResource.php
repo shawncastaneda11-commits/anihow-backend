@@ -58,6 +58,7 @@ class OrderResource extends JsonResource
                 'name' => $this->farmerSeller->name,
                 'shop_name' => $this->farmerSeller->shop_name,
                 'contact' => $this->farmerSeller->shopContact(),
+                'avatar_url' => $this->farmerSeller->avatarUrl(),
             ]),
             // Null on a walk-in. whenLoaded() returns null for a loaded but
             // empty relation without calling the closure, so no buyer is fine.
@@ -65,6 +66,7 @@ class OrderResource extends JsonResource
                 'id' => $this->buyer->id,
                 'name' => $this->buyer->name,
                 'contact' => $this->buyer->phone,
+                'avatar_url' => $this->buyer->avatarUrl(),
             ]),
             'history' => $this->whenLoaded('statusHistories', fn () => $this->statusHistories->map(
                 fn ($entry): array => [

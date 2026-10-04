@@ -11,6 +11,7 @@ import '../../support/relative_time.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/primary_button.dart';
+import '../../widgets/profile_avatar_button.dart';
 
 /// A conversation with a stall that stays after any order is finished.
 class StallChatScreen extends StatefulWidget {
@@ -155,7 +156,23 @@ class _StallChatScreenState extends State<StallChatScreen> {
     final title = widget.chat.title(viewingAsSeller: widget.viewingAsSeller);
 
     return Scaffold(
-      appBar: AppBar(title: Text(s.chatTitle(title))),
+      appBar: AppBar(
+        title: Row(
+          children: [
+            AniHowAvatar(
+              name: title,
+              imageUrl: widget.chat.avatarUrl(
+                viewingAsSeller: widget.viewingAsSeller,
+              ),
+              radius: 16,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(s.chatTitle(title), overflow: TextOverflow.ellipsis),
+            ),
+          ],
+        ),
+      ),
       body: Column(
         children: [
           Expanded(child: _buildThread(userId)),

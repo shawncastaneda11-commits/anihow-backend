@@ -470,7 +470,11 @@ class _SellerCard extends StatelessWidget {
           padding: AniHowSpace.cardPadding,
           child: Row(
             children: [
-              AniHowAvatar(name: shop.shopName, radius: 26),
+              AniHowAvatar(
+                name: shop.shopName,
+                imageUrl: shop.avatarUrl,
+                radius: 26,
+              ),
               const SizedBox(width: AniHowSpace.cardGap),
               Expanded(
                 child: Column(

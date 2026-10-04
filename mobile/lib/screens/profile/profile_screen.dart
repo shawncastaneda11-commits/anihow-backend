@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -40,8 +43,8 @@ class ProfileScreen extends StatelessWidget {
     final role = user.isFarmerSeller
         ? s.roleFarmer
         : user.isBuyer
-            ? s.roleBuyer
-            : user.roleLabel;
+        ? s.roleBuyer
+        : user.roleLabel;
 
     return ListView(
       padding: AniHowSpace.screenPadding,
@@ -49,36 +52,57 @@ class ProfileScreen extends StatelessWidget {
         Card(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                AniHowAvatar(name: user.name, radius: 28),
-                const SizedBox(width: AniHowSpace.cardGap),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(user.name, style: theme.textTheme.titleMedium),
-                      const SizedBox(height: 2),
-                      Text(
-                        user.email,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
+                Row(
+                  children: [
+                    AniHowAvatar(
+                      name: user.name,
+                      imageUrl: user.avatarUrl,
+                      radius: 28,
+                    ),
+                    const SizedBox(width: AniHowSpace.cardGap),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          StatusPill(label: role, color: AniHowColors.brand),
-                          user.isVerified
-                              ? StatusPill(label: s.verified, color: AniHowColors.ready)
-                              : StatusPill(label: s.unverified, color: AniHowColors.pending),
+                          Text(user.name, style: theme.textTheme.titleMedium),
+                          const SizedBox(height: 2),
+                          Text(
+                            user.email,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.68,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: [
+                              StatusPill(
+                                label: role,
+                                color: AniHowColors.brand,
+                              ),
+                              user.isVerified
+                                  ? StatusPill(
+                                      label: s.verified,
+                                      color: AniHowColors.ready,
+                                    )
+                                  : StatusPill(
+                                      label: s.unverified,
+                                      color: AniHowColors.pending,
+                                    ),
+                            ],
+                          ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
+                _PhotoActions(user: user),
               ],
             ),
           ),
@@ -94,7 +118,9 @@ class ProfileScreen extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: TextButton(
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const VerifyEmailScreen()),
+                MaterialPageRoute<void>(
+                  builder: (_) => const VerifyEmailScreen(),
+                ),
               ),
               child: Text(s.verifyNow),
             ),
@@ -109,7 +135,9 @@ class ProfileScreen extends StatelessWidget {
                   icon: Icons.receipt_long_outlined,
                   label: s.orderHistory,
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(builder: (_) => const OrderHistoryScreen()),
+                    MaterialPageRoute<void>(
+                      builder: (_) => const OrderHistoryScreen(),
+                    ),
                   ),
                 ),
                 const Divider(height: 1),
@@ -139,7 +167,9 @@ class ProfileScreen extends StatelessWidget {
                 icon: Icons.settings_outlined,
                 label: s.settings,
                 onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SettingsScreen(),
+                  ),
                 ),
               ),
             ],
@@ -206,8 +236,12 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
     if (preview != null) {
       _view = _FarmerShopView(
         shop: preview,
-        activeListings: preview.listings.where((listing) => listing.isActive).toList(),
-        listingsCount: preview.listings.where((listing) => listing.isActive).length,
+        activeListings: preview.listings
+            .where((listing) => listing.isActive)
+            .toList(),
+        listingsCount: preview.listings
+            .where((listing) => listing.isActive)
+            .length,
       );
       _loading = false;
       return;
@@ -227,7 +261,9 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
     String? listingsError;
     try {
       final pages = await listingsFuture;
-      activeListings = pages.items.where((listing) => listing.isActive).toList();
+      activeListings = pages.items
+          .where((listing) => listing.isActive)
+          .toList();
       if (pages.complete) {
         listingsCount = activeListings.length;
       }
@@ -316,9 +352,9 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
   }
 
   Future<void> _openWalkIn() async {
-    await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const WalkInSaleScreen()),
-    );
+    await Navigator.of(
+      context,
+    ).push<bool>(MaterialPageRoute(builder: (_) => const WalkInSaleScreen()));
   }
 
   @override
@@ -331,25 +367,24 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
           IconButton(
             tooltip: s.faq,
             icon: const Icon(Icons.help_outline),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const FaqBotScreen()),
-            ),
+            onPressed: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const FaqBotScreen())),
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            ),
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
           ),
         ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Text('$_error'))
-              : _view == null
-                  ? Center(child: Text(s.shopNotFound))
-                  : _shopBody(context, s, _view!),
+          ? Center(child: Text('$_error'))
+          : _view == null
+          ? Center(child: Text(s.shopNotFound))
+          : _shopBody(context, s, _view!),
     );
   }
 
@@ -363,16 +398,26 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
       child: ListView(
         padding: AniHowSpace.screenPadding,
         children: [
+          if (shop.coverUrl != null && shop.coverUrl!.isNotEmpty) ...[
+            _CoverBanner(url: shop.coverUrl),
+            const SizedBox(height: AniHowSpace.cardGap),
+          ],
           Card(
             child: Padding(
               padding: AniHowSpace.cardPadding,
               child: ShopIdentityHeader(shop: shop),
             ),
           ),
-          if (farmId != null && farmName != null && farmName.isNotEmpty && shop.farmIsActive)
+          if (farmId != null &&
+              farmName != null &&
+              farmName.isNotEmpty &&
+              shop.farmIsActive)
             FarmLinkChip(farmId: farmId, label: s.farmLine(farmName))
           else if (farmName != null && farmName.isNotEmpty)
-            OrderMetaRow(icon: Icons.agriculture_outlined, text: s.farmLine(farmName)),
+            OrderMetaRow(
+              icon: Icons.agriculture_outlined,
+              text: s.farmLine(farmName),
+            ),
           if (view.listingsCount != null || shop.hasRating) ...[
             const SizedBox(height: AniHowSpace.cardGap),
             ShopStatRow(
@@ -423,7 +468,10 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
             ),
           ],
           const SizedBox(height: AniHowSpace.section),
-          Text(s.activeListings, style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            s.activeListings,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: AniHowSpace.cardGap),
           if (view.listingsError != null)
             Text(view.listingsError!)
@@ -461,6 +509,94 @@ class _FarmerShopView {
   final String? listingsError;
 }
 
+class _PhotoActions extends StatefulWidget {
+  const _PhotoActions({required this.user});
+
+  final UserAccount user;
+
+  @override
+  State<_PhotoActions> createState() => _PhotoActionsState();
+}
+
+class _PhotoActionsState extends State<_PhotoActions> {
+  bool _busy = false;
+
+  Future<void> _change() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1600,
+      imageQuality: 82,
+    );
+    if (picked == null || !mounted) {
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final auth = context.read<AuthController>();
+      final account = await auth.api.uploadAvatar(picked.path);
+      if (mounted) {
+        auth.applyAccount(account);
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$error')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _remove() async {
+    setState(() => _busy = true);
+    try {
+      final auth = context.read<AuthController>();
+      final account = await auth.api.deleteAvatar();
+      if (mounted) {
+        auth.applyAccount(account);
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$error')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final hasPhoto =
+        widget.user.avatarUrl != null && widget.user.avatarUrl!.isNotEmpty;
+    final style = TextButton.styleFrom(minimumSize: const Size(48, 48));
+
+    return Wrap(
+      spacing: 8,
+      children: [
+        TextButton(
+          key: const Key('change-profile-photo'),
+          style: style,
+          onPressed: _busy ? null : _change,
+          child: Text(s.changePhoto),
+        ),
+        if (hasPhoto)
+          TextButton(
+            key: const Key('remove-profile-photo'),
+            style: style,
+            onPressed: _busy ? null : _remove,
+            child: Text(s.removePhoto),
+          ),
+      ],
+    );
+  }
+}
+
 class ShopEditScreen extends StatefulWidget {
   const ShopEditScreen({super.key, required this.shop, this.preview = false});
 
@@ -477,6 +613,7 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
   late final TextEditingController _location;
   late final TextEditingController _contact;
   bool _busy = false;
+  late String? _coverUrl;
 
   @override
   void initState() {
@@ -485,6 +622,7 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
     _bio = TextEditingController(text: widget.shop.bio ?? '');
     _location = TextEditingController(text: widget.shop.location ?? '');
     _contact = TextEditingController(text: widget.shop.contact ?? '');
+    _coverUrl = widget.shop.coverUrl;
   }
 
   @override
@@ -507,6 +645,8 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
       bio: bio.isEmpty ? null : bio,
       location: location.isEmpty ? null : location,
       contact: contact.isEmpty ? null : contact,
+      avatarUrl: widget.shop.avatarUrl,
+      coverUrl: _coverUrl,
       averageRating: widget.shop.averageRating,
       reviewsCount: widget.shop.reviewsCount,
       listings: widget.shop.listings,
@@ -515,6 +655,62 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
       farmIsActive: widget.shop.farmIsActive,
       isFavorited: widget.shop.isFavorited,
     );
+  }
+
+  Future<void> _changeCover() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1600,
+      imageQuality: 82,
+    );
+    if (picked == null || !mounted) {
+      return;
+    }
+    if (widget.preview) {
+      setState(() => _coverUrl = picked.path);
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final shop = await context.read<AuthController>().api.uploadShopCover(
+        picked.path,
+      );
+      if (mounted) {
+        setState(() => _coverUrl = shop.coverUrl);
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$error')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _removeCover() async {
+    if (widget.preview) {
+      setState(() => _coverUrl = null);
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final shop = await context.read<AuthController>().api.deleteShopCover();
+      if (mounted) {
+        setState(() => _coverUrl = shop.coverUrl);
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$error')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
   }
 
   Future<void> _save() async {
@@ -531,11 +727,13 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
         'contact': _contact.text.trim(),
       });
       if (mounted) {
-        Navigator.of(context).pop(shop.bio == _bio.text.trim() ? shop : _shopFromFields());
+        Navigator.of(context)
+            .pop(shop.bio == _bio.text.trim() ? shop : _shopFromFields());
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$error')));
       }
     } finally {
       if (mounted) {
@@ -556,19 +754,86 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
             title: s.shopProfile,
             child: Column(
               children: [
-                AniHowField(label: s.shopName, child: TextField(controller: _name)),
+                _CoverBanner(url: _coverUrl),
                 const SizedBox(height: AniHowSpace.fieldGap),
-                AniHowField(label: s.bio, child: TextField(controller: _bio, maxLines: 4)),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(48, 48),
+                      ),
+                      onPressed: _busy ? null : _changeCover,
+                      child: Text(s.changeCover),
+                    ),
+                    if (_coverUrl != null && _coverUrl!.isNotEmpty)
+                      TextButton(
+                        key: const Key('remove-shop-cover'),
+                        style: TextButton.styleFrom(
+                          minimumSize: const Size(48, 48),
+                        ),
+                        onPressed: _busy ? null : _removeCover,
+                        child: Text(s.removeCover),
+                      ),
+                  ],
+                ),
                 const SizedBox(height: AniHowSpace.fieldGap),
-                AniHowField(label: s.location, child: TextField(controller: _location)),
+                AniHowField(
+                  label: s.shopName,
+                  child: TextField(controller: _name),
+                ),
                 const SizedBox(height: AniHowSpace.fieldGap),
-                AniHowField(label: s.contact, child: TextField(controller: _contact)),
+                AniHowField(
+                  label: s.bio,
+                  child: TextField(controller: _bio, maxLines: 4),
+                ),
+                const SizedBox(height: AniHowSpace.fieldGap),
+                AniHowField(
+                  label: s.location,
+                  child: TextField(controller: _location),
+                ),
+                const SizedBox(height: AniHowSpace.fieldGap),
+                AniHowField(
+                  label: s.contact,
+                  child: TextField(controller: _contact),
+                ),
               ],
             ),
           ),
           const SizedBox(height: AniHowSpace.section),
-          PrimaryButton(label: s.saveShopProfile, busy: _busy, onPressed: _save),
+          PrimaryButton(
+            label: s.saveShopProfile,
+            busy: _busy,
+            onPressed: _save,
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _CoverBanner extends StatelessWidget {
+  const _CoverBanner({required this.url});
+
+  final String? url;
+
+  @override
+  Widget build(BuildContext context) {
+    final photo = url?.trim();
+    final hasPhoto = photo != null && photo.isNotEmpty;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        height: 120,
+        width: double.infinity,
+        child: hasPhoto
+            ? photo.startsWith('http')
+                  ? Image.network(photo, fit: BoxFit.cover)
+                  : Image.file(File(photo), fit: BoxFit.cover)
+            : ColoredBox(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              ),
       ),
     );
   }

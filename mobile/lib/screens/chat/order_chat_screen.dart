@@ -12,6 +12,7 @@ import '../../support/relative_time.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/primary_button.dart';
+import '../../widgets/profile_avatar_button.dart';
 
 class OrderChatScreen extends StatefulWidget {
   const OrderChatScreen({super.key, required this.order});
@@ -171,7 +172,23 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: Text(s.chatTitle(title))),
+      appBar: AppBar(
+        title: Row(
+          children: [
+            AniHowAvatar(
+              name: title,
+              imageUrl: widget.order.chatPeerAvatar(
+                viewingAsSeller: user?.isFarmerSeller == true,
+              ),
+              radius: 16,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(s.chatTitle(title), overflow: TextOverflow.ellipsis),
+            ),
+          ],
+        ),
+      ),
       body: Column(
         children: [
           Expanded(child: _buildThread(userId)),

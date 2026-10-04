@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
@@ -168,19 +167,6 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
     }
   }
 
-  Future<void> _call(String number) async {
-    final digits = number.replaceAll(RegExp(r'[^\d+]'), '');
-    if (digits.isEmpty) {
-      return;
-    }
-    final opened = await launchUrl(Uri(scheme: 'tel', path: digits));
-    if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppStrings.read(context).couldNotOpenPhone)),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -229,6 +215,18 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                 child: ListView(
                   padding: AniHowSpace.screenPadding,
                   children: [
+                    if (shop.coverUrl != null && shop.coverUrl!.isNotEmpty) ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          shop.coverUrl!,
+                          height: 140,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      const SizedBox(height: AniHowSpace.cardGap),
+                    ],
                     Card(
                       child: Padding(
                         padding: AniHowSpace.cardPadding,
@@ -283,17 +281,6 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                       s.callToPickup,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    if (shop.contact != null && shop.contact!.isNotEmpty) ...[
-                      const SizedBox(height: AniHowSpace.cardGap),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          onPressed: () => _call(shop.contact!),
-                          icon: const Icon(Icons.phone_outlined),
-                          label: Text(shop.contact!),
-                        ),
-                      ),
-                    ],
                     const SizedBox(height: AniHowSpace.section),
                     Text(
                       s.activeListings,

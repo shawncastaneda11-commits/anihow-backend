@@ -45,4 +45,29 @@ void main() {
     expect(find.text(s.removeStoreFromFavorites), findsOneWidget);
     expect(find.text(s.addStoreToFavorites), findsNothing);
   });
+
+  testWidgets('shop page does not show a contact number', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _app(
+        home: const ShopProfileScreen(
+          sellerId: 7,
+          preview: ShopProfile(
+            id: 7,
+            shopName: 'Mang Tonyo Farm',
+            name: 'Tonyo',
+            contact: '09171234567',
+            location: 'Manggahan, General Trias',
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('09171234567'), findsNothing);
+    expect(find.byIcon(Icons.phone_outlined), findsNothing);
+    expect(find.text('Mang Tonyo Farm'), findsOneWidget);
+  });
 }

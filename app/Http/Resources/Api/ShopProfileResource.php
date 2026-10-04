@@ -20,7 +20,12 @@ class ShopProfileResource extends JsonResource
             'name' => $this->name,
             'bio' => $this->bio,
             'location' => $this->location,
-            'contact' => $this->shopContact(),
+            'avatar_url' => $this->avatarUrl(),
+            'cover_url' => $this->coverUrl(),
+            'contact' => $this->when(
+                $request->user() !== null && (int) $request->user()->id === (int) $this->id,
+                fn (): ?string => $this->shopContact(),
+            ),
             'average_rating' => $this->averageRating(),
             'reviews_count' => (int) ($this->reviews_received_count ?? 0),
             'listings' => ListingResource::collection($this->whenLoaded('listings')),

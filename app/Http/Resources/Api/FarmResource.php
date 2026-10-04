@@ -41,7 +41,7 @@ class FarmResource extends JsonResource
                     ->map(fn ($seller): array => [
                         'id' => $seller->id,
                         'shop_name' => $seller->shop_name ?: $seller->name,
-                        'avatar' => null,
+                        'avatar' => $seller->avatarUrl(),
                     ])
                     ->values()
                     ->all(),

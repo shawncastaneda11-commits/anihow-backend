@@ -71,20 +71,20 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen> {
 
   void _openChat(OrderRecord order) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => OrderChatScreen(order: order),
-      ),
+      MaterialPageRoute<void>(builder: (_) => OrderChatScreen(order: order)),
     );
   }
 
   bool _needsCashHint(OrderRecord order) {
-    return !order.isWalkIn && (order.isPlaced || order.isConfirmed || order.isReady);
+    return !order.isWalkIn &&
+        (order.isPlaced || order.isConfirmed || order.isReady);
   }
 
   Future<void> _submitReview(OrderRecord order) async {
     final s = AppStrings.read(context);
     if (_rating < 1) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s.chooseARating)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(s.chooseARating)));
       return;
     }
     if (widget.preview) {
@@ -98,18 +98,20 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen> {
     setState(() => _submitting = true);
     try {
       await context.read<AuthController>().api.submitReview(
-            orderId: order.id,
-            rating: _rating,
-            comment: _comment.text.trim(),
-          );
+        orderId: order.id,
+        rating: _rating,
+        comment: _comment.text.trim(),
+      );
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s.reviewSaved)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(s.reviewSaved)));
       await _reload();
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) {
@@ -122,9 +124,7 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen> {
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.order?.stallName ?? s.order),
-      ),
+      appBar: AppBar(title: Text(widget.order?.stallName ?? s.order)),
       body: AsyncView<OrderRecord>(
         future: _future,
         onRetry: _reload,
@@ -141,7 +141,11 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen> {
                     children: [
                       Row(
                         children: [
-                          AniHowAvatar(name: order.stallName, radius: 20),
+                          AniHowAvatar(
+                            name: order.stallName,
+                            imageUrl: order.sellerAvatarUrl,
+                            radius: 20,
+                          ),
                           const SizedBox(width: AniHowSpace.cardGap),
                           Expanded(
                             child: Text(
@@ -157,7 +161,10 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen> {
                           alignment: Alignment.centerLeft,
                           child: TextButton.icon(
                             onPressed: () => _openChat(order),
-                            icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                            icon: const Icon(
+                              Icons.chat_bubble_outline,
+                              size: 18,
+                            ),
                             label: Text(s.chatWithStall),
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.only(top: 10, right: 8),
@@ -195,7 +202,8 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen> {
                           icon: Icons.handshake_outlined,
                           text: order.fulfillmentLabel!,
                         ),
-                      if (order.fulfillmentNote != null && order.fulfillmentNote!.isNotEmpty)
+                      if (order.fulfillmentNote != null &&
+                          order.fulfillmentNote!.isNotEmpty)
                         OrderMetaRow(
                           icon: Icons.notes_outlined,
                           text: order.fulfillmentNote!,
@@ -234,8 +242,12 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen> {
                   rating: order.reviewRating ?? _rating,
                   comment: _comment,
                   busy: _submitting,
-                  onRating: order.canBeReviewed ? (value) => setState(() => _rating = value) : null,
-                  onSubmit: order.canBeReviewed ? () => _submitReview(order) : null,
+                  onRating: order.canBeReviewed
+                      ? (value) => setState(() => _rating = value)
+                      : null,
+                  onSubmit: order.canBeReviewed
+                      ? () => _submitReview(order)
+                      : null,
                 ),
               ],
               if (order.items.isNotEmpty) ...[
@@ -256,20 +268,28 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen> {
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text(item.listingName, style: theme.textTheme.titleSmall),
+                                      Text(
+                                        item.listingName,
+                                        style: theme.textTheme.titleSmall,
+                                      ),
                                       Text(
                                         item.quantityLabel,
-                                        style: theme.textTheme.bodyMedium?.copyWith(
-                                          color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
-                                        ),
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                              color: theme.colorScheme.onSurface
+                                                  .withValues(alpha: 0.68),
+                                            ),
                                       ),
                                     ],
                                   ),
                                 ),
                                 Text(
-                                  AniHowMoney.peso(item.lineTotal ?? item.lineSubtotal),
+                                  AniHowMoney.peso(
+                                    item.lineTotal ?? item.lineSubtotal,
+                                  ),
                                   style: theme.textTheme.titleSmall,
                                 ),
                               ],
@@ -337,10 +357,14 @@ class _OrderReviewCard extends StatelessWidget {
                     key: ValueKey('review-star-$star'),
                     onPressed: onRating == null ? null : () => onRating!(star),
                     icon: Icon(
-                      star <= rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                      star <= rating
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
                       color: AniHowColors.pending,
                     ),
-                    style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
+                    style: IconButton.styleFrom(
+                      minimumSize: const Size(48, 48),
+                    ),
                   ),
               ],
             ),

@@ -24,6 +24,7 @@ class StallMessageResource extends JsonResource
                 'id' => $author?->id,
                 'name' => $author?->name,
                 'role' => $author?->roles->first()?->name,
+                'avatar_url' => $author?->avatarUrl(),
             ],
         ];
     }

@@ -22,7 +22,9 @@ class StallConversationResource extends JsonResource
             'buyer_id' => $this->buyer_id,
             'farmer_seller_id' => $this->farmer_seller_id,
             'shop_name' => $seller?->shop_name ?: $seller?->name,
+            'seller_avatar_url' => $seller?->avatarUrl(),
             'buyer_name' => $this->buyer?->name,
+            'buyer_avatar_url' => $this->buyer?->avatarUrl(),
             'updated_at' => $this->updated_at?->toIso8601String(),
             'latest_message' => $latest === null ? null : [
                 'body' => $latest->body,

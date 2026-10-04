@@ -19,11 +19,7 @@ void openFarmProfile(BuildContext context, int farmId) {
 }
 
 class FarmLinkChip extends StatelessWidget {
-  const FarmLinkChip({
-    super.key,
-    required this.farmId,
-    this.label,
-  });
+  const FarmLinkChip({super.key, required this.farmId, this.label});
 
   final int farmId;
   final String? label;
@@ -46,11 +42,7 @@ class FarmLinkChip extends StatelessWidget {
 }
 
 class FarmProfileScreen extends StatefulWidget {
-  const FarmProfileScreen({
-    super.key,
-    required this.farmId,
-    this.preview,
-  });
+  const FarmProfileScreen({super.key, required this.farmId, this.preview});
 
   final int farmId;
   final FarmProfile? preview;
@@ -99,9 +91,7 @@ class _FarmProfileScreenState extends State<FarmProfileScreen> {
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(s.farmProfile),
-      ),
+      appBar: AppBar(title: Text(s.farmProfile)),
       body: FutureBuilder<FarmProfile>(
         future: _farm,
         builder: (context, snapshot) {
@@ -146,7 +136,7 @@ class FarmProfileView extends StatelessWidget {
     final description = farm.description?.trim();
     final pickup = farm.pickupPoint?.trim();
     final contactPerson = farm.contactPerson?.trim();
-    final contactNumber = farm.contactNumber?.trim();
+    final contactNumber = _isBuyer(context) ? null : farm.contactNumber?.trim();
 
     return ListView(
       children: [
@@ -156,7 +146,12 @@ class FarmProfileView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(farm.name, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+              Text(
+                farm.name,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
               if (place.isNotEmpty) ...[
                 const SizedBox(height: AniHowSpace.labelGap),
                 Text(place, style: theme.textTheme.bodyMedium),
@@ -182,7 +177,9 @@ class FarmProfileView extends StatelessWidget {
                   (item) => Padding(
                     padding: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
                     child: AniHowHintCard(
-                      icon: item.isPinned ? Icons.push_pin_outlined : Icons.campaign_outlined,
+                      icon: item.isPinned
+                          ? Icons.push_pin_outlined
+                          : Icons.campaign_outlined,
                       title: item.title,
                       body: item.body,
                       tone: AniHowHintTone.brand,
@@ -198,16 +195,24 @@ class FarmProfileView extends StatelessWidget {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton.icon(
-                      onPressed: onCall == null ? null : () => onCall!(contactNumber),
+                      onPressed: onCall == null
+                          ? null
+                          : () => onCall!(contactNumber),
                       icon: const Icon(Icons.phone_outlined),
                       label: Text('$contactPerson · $contactNumber'),
                     ),
                   )
                 else
-                  SelectableText(contactPerson, style: theme.textTheme.bodyMedium),
+                  SelectableText(
+                    contactPerson,
+                    style: theme.textTheme.bodyMedium,
+                  ),
                 if (_isBuyer(context)) ...[
                   const SizedBox(height: AniHowSpace.labelGap),
-                  Text(s.farmContactBuyerHint, style: theme.textTheme.bodyMedium),
+                  Text(
+                    s.farmContactBuyerHint,
+                    style: theme.textTheme.bodyMedium,
+                  ),
                 ],
               ],
               const SizedBox(height: AniHowSpace.section),
@@ -242,7 +247,9 @@ class FarmProfileView extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
                     child: _StorefrontTile(
                       storefront: storefront,
-                      onTap: onStorefront == null ? null : () => onStorefront!(storefront.id),
+                      onTap: onStorefront == null
+                          ? null
+                          : () => onStorefront!(storefront.id),
                     ),
                   ),
                 ),
@@ -299,7 +306,8 @@ class _CoverFallback extends StatelessWidget {
         child: Icon(
           Icons.agriculture_outlined,
           size: 56,
-          color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.88),
+          color: Theme.of(context).colorScheme.onPrimary
+              .withValues(alpha: 0.88),
         ),
       ),
     );
@@ -325,7 +333,10 @@ class _PhotoTile extends StatelessWidget {
             filterQuality: FilterQuality.high,
             errorBuilder: (_, _, _) => ColoredBox(
               color: AniHowColors.brand.withValues(alpha: 0.12),
-              child: const Icon(Icons.image_outlined, color: AniHowColors.brand),
+              child: const Icon(
+                Icons.image_outlined,
+                color: AniHowColors.brand,
+              ),
             ),
           ),
           if (caption != null && caption.isNotEmpty)
@@ -339,9 +350,8 @@ class _PhotoTile extends StatelessWidget {
                     caption,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.white,
-                        ),
+                    style: Theme.of(context).textTheme.labelSmall
+                        ?.copyWith(color: Colors.white),
                   ),
                 ),
               ),
@@ -353,10 +363,7 @@ class _PhotoTile extends StatelessWidget {
 }
 
 class _StorefrontTile extends StatelessWidget {
-  const _StorefrontTile({
-    required this.storefront,
-    this.onTap,
-  });
+  const _StorefrontTile({required this.storefront, this.onTap});
 
   final FarmStorefront storefront;
   final VoidCallback? onTap;
@@ -373,7 +380,11 @@ class _StorefrontTile extends StatelessWidget {
             padding: AniHowSpace.cardPadding,
             child: Row(
               children: [
-                AniHowAvatar(name: storefront.shopName, radius: 22),
+                AniHowAvatar(
+                  name: storefront.shopName,
+                  imageUrl: storefront.avatar,
+                  radius: 22,
+                ),
                 const SizedBox(width: AniHowSpace.cardGap),
                 Expanded(
                   child: Text(

@@ -7,6 +7,7 @@ use App\Enums\OrderStatus;
 use App\Enums\Role;
 use App\Enums\UserStatus;
 use App\Notifications\ResetPasswordNotification;
+use App\Support\ImageVariants;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -37,6 +38,8 @@ use Spatie\Permission\Traits\HasRoles;
     'shop_name',
     'bio',
     'contact',
+    'avatar_path',
+    'cover_photo_path',
     'password',
     'status',
     'approved_at',
@@ -69,6 +72,26 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             'approved_at' => 'datetime',
             'suspended_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(function (User $user): void {
+            $images = app(ImageVariants::class);
+
+            foreach (['avatar_path', 'cover_photo_path'] as $column) {
+                if ($user->isDirty($column)) {
+                    $previous = $user->getOriginal($column);
+                    $images->delete(is_string($previous) ? $previous : null);
+                }
+            }
+        });
+
+        static::deleting(function (User $user): void {
+            $images = app(ImageVariants::class);
+            $images->delete($user->avatar_path);
+            $images->delete($user->cover_photo_path);
+        });
     }
 
     /**
@@ -245,6 +268,16 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     public function shopContact(): ?string
     {
         return $this->contact ?: $this->phone;
+    }
+
+    public function avatarUrl(): ?string
+    {
+        return app(ImageVariants::class)->url($this->avatar_path);
+    }
+
+    public function coverUrl(): ?string
+    {
+        return app(ImageVariants::class)->url($this->cover_photo_path);
     }
 
     public function averageRating(): ?string

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\Listings;
 
+use App\Enums\GrowingMethod;
 use App\Enums\ListingUnit;
 use App\Models\CropType;
 use App\Models\Listing;
@@ -34,6 +35,7 @@ class UpdateListingRequest extends FormRequest
             'available_from' => ['sometimes', 'nullable', 'date'],
             'available_until' => ['sometimes', 'nullable', 'date'],
             'harvested_on' => ['sometimes', 'nullable', 'date', 'before_or_equal:today'],
+            'growing_method' => ['sometimes', 'nullable', Rule::enum(GrowingMethod::class)],
             'image' => ['nullable', 'image', 'max:5120'],
         ];
     }
@@ -59,6 +61,14 @@ class UpdateListingRequest extends FormRequest
                     $this->exists('available_from') ? $this->input('available_from') : $listing->available_from,
                     $this->exists('available_until') ? $this->input('available_until') : $listing->available_until,
                 );
+
+                if ($this->exists('growing_method')) {
+                    StoreListingRequest::assertGrowingMethod(
+                        $validator,
+                        $this->input('growing_method'),
+                        $listing->farm,
+                    );
+                }
 
                 $cropType = $this->has('crop_type_id')
                     ? CropType::find($this->validated('crop_type_id'))
@@ -145,6 +155,7 @@ class UpdateListingRequest extends FormRequest
                 'available_from',
                 'available_until',
                 'harvested_on',
+                'growing_method',
             ])
             ->all();
     }

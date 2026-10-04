@@ -291,6 +291,19 @@ class AppStrings {
       t('No shops match that search.', 'Walang tindahang tumugma sa hinanap.');
   String get shop => t('Shop', 'Tindahan');
   String get all => t('All', 'Lahat');
+  String get freshProduce => t('Fresh Produce', 'Sariwang Ani');
+  String get valueAdded => t('Value-Added', 'Prosesong Produkto');
+  String get howWasItGrown => t('How was it grown?', 'Paano ito pinalaki?');
+  String get notStated => t('Not stated', 'Hindi sinabi');
+  String get naturallyGrown => t('Naturally grown', 'Likas na pinatubo');
+  String get certifiedOrganic =>
+      t('Certified Organic', 'Sertipikadong Organiko');
+  String get naturallyGrownDeclared => t(
+    'Naturally grown (self-declared)',
+    'Likas na pinatubo (sariling pahayag)',
+  );
+  String certifiedBy(String name) =>
+      t('Certified by $name', 'Sertipikado ng $name');
   String get searchProduce => t('Search produce', 'Maghanap ng ani');
   String get freshest => t('Freshest', 'Pinakabago');
   String get priceLowHigh =>

@@ -2,7 +2,10 @@
 
 namespace App\Filament\Resources\Farms\Schemas;
 
+use App\Models\Farm;
+use App\Policies\FarmPolicy;
 use App\Support\ImageVariants;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -63,6 +66,35 @@ class FarmForm
                 Toggle::make('is_active')
                     ->label('Active')
                     ->default(true),
+
+                TextInput::make('organic_certifier')
+                    ->label('Organic certifier')
+                    ->maxLength(150)
+                    ->visible(fn (?Farm $record): bool => self::canManageOrganicCertification($record))
+                    ->dehydrated(fn (?Farm $record): bool => self::canManageOrganicCertification($record))
+                    ->helperText('The body that certified this farm. Leave blank when the farm is not certified.'),
+                TextInput::make('organic_certificate_no')
+                    ->label('Organic certificate number')
+                    ->maxLength(100)
+                    ->visible(fn (?Farm $record): bool => self::canManageOrganicCertification($record))
+                    ->dehydrated(fn (?Farm $record): bool => self::canManageOrganicCertification($record)),
+                DatePicker::make('organic_certified_until')
+                    ->label('Organic certificate valid until')
+                    ->native(false)
+                    ->visible(fn (?Farm $record): bool => self::canManageOrganicCertification($record))
+                    ->dehydrated(fn (?Farm $record): bool => self::canManageOrganicCertification($record))
+                    ->helperText('A listing may say certified organic only while this date is today or later, and the certifier and number are both filled in.'),
             ]);
+    }
+
+    private static function canManageOrganicCertification(?Farm $record): bool
+    {
+        $user = auth()->user();
+
+        if ($user === null) {
+            return false;
+        }
+
+        return app(FarmPolicy::class)->manageOrganicCertification($user, $record);
     }
 }

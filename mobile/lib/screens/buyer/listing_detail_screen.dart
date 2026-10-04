@@ -12,6 +12,7 @@ import '../../theme/anihow_theme.dart';
 import '../../widgets/cart_icon_button.dart';
 import '../../widgets/chat_with_stall_button.dart';
 import '../../widgets/form_label.dart';
+import '../../widgets/growing_badge.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/produce_card.dart';
 import '../../widgets/produce_photo.dart';
@@ -264,6 +265,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ],
+                      ),
+                      GrowingBadge(
+                        badge: listing.organicBadge,
+                        certifier: listing.organicCertifier,
                       ),
                       if (listing.harvestedOn != null)
                         Text(

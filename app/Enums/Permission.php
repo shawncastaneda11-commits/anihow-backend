@@ -14,6 +14,9 @@ enum Permission: string
     case ManageOwnFarmProfile = 'manage_own_farm_profile';
     case ViewOwnFarmRoster = 'view_own_farm_roster';
 
+    // Organic certification is a legal claim. Only the Super Admin records it.
+    case ManageOrganicCertification = 'manage_organic_certification';
+
     // Crop taxonomy
     case ManageCropTypes = 'manage_crop_types';
     case SetCropPricing = 'set_crop_pricing';
@@ -78,6 +81,7 @@ enum Permission: string
             self::ManageFarms => 'Manage farms',
             self::ManageOwnFarmProfile => 'Manage own farm profile',
             self::ViewOwnFarmRoster => 'View own farm roster',
+            self::ManageOrganicCertification => 'Manage organic certification',
             self::ManageCropTypes => 'Manage crop taxonomy',
             self::SetCropPricing => 'Set floor price and maximum discount',
             self::SetFarmPricing => 'Tighten a farm floor price and maximum discount',
@@ -135,6 +139,7 @@ enum Permission: string
                 self::ApproveFarmerSeller,
                 self::SuspendAccounts,
                 self::ManageFarms,
+                self::ManageOrganicCertification,
                 self::ManageCropTypes,
                 self::SetCropPricing,
                 self::SetFarmPricing,

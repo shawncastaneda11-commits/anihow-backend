@@ -31,6 +31,7 @@ class UserResource extends JsonResource
                     : [
                         'id' => $this->farm->id,
                         'name' => $this->farm->name,
+                        'is_organic_certified' => $this->farm->isOrganicCertified(),
                     ],
             ),
             'permissions' => $this->getAllPermissions()->pluck('name')->values(),

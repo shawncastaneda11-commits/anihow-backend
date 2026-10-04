@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\GrowingMethod;
 use App\Enums\ListingStatus;
 use App\Enums\ListingUnit;
 use App\Enums\UserStatus;
@@ -40,6 +41,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'available_from',
     'available_until',
     'harvested_on',
+    'growing_method',
 ])]
 class Listing extends Model
 {
@@ -59,7 +61,25 @@ class Listing extends Model
             'available_from' => 'datetime',
             'available_until' => 'datetime',
             'harvested_on' => 'date',
+            'growing_method' => GrowingMethod::class,
         ];
+    }
+
+    /**
+     * The badge is decided when the listing is read. An expired certificate
+     * drops the certified badge and leaves the stored method unchanged.
+     */
+    public function organicBadge(): ?string
+    {
+        if ($this->growing_method === GrowingMethod::CertifiedOrganic) {
+            return $this->farm?->isOrganicCertified() ? 'certified' : null;
+        }
+
+        if ($this->growing_method === GrowingMethod::NaturallyGrown) {
+            return 'naturally_grown';
+        }
+
+        return null;
     }
 
     protected static function booted(): void

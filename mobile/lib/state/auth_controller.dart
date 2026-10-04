@@ -4,12 +4,17 @@ import '../models/models.dart';
 import '../services/api_client.dart';
 
 class AuthController extends ChangeNotifier {
-  AuthController() {
-    api = ApiClient(onUnauthorized: () {
+  AuthController({ApiClient? api}) {
+    if (api != null) {
+      this.api = api;
+      return;
+    }
+
+    this.api = ApiClient(onUnauthorized: () {
       user = null;
       sessionEnded = true;
       notifyListeners();
-      api.clearToken();
+      this.api.clearToken();
     });
   }
 

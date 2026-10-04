@@ -29,6 +29,7 @@ class MarketplaceScreen extends StatefulWidget {
 class _MarketplaceScreenState extends State<MarketplaceScreen> {
   final _search = TextEditingController();
   int? _cropTypeId;
+  String? _category;
   String _sort = 'freshest';
   late Future<List<ListingItem>> _listings;
   late Future<List<CategoryItem>> _cropTypes;
@@ -60,6 +61,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       search: _search.text.trim(),
       cropTypeId: _cropTypeId,
       sort: _sort,
+      category: _category,
     );
     final updates = api.buyerAnnouncements().then(
       (page) => page.items.take(3).toList(),
@@ -187,6 +189,32 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
             },
           ),
         ),
+        SizedBox(
+          height: 48,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: AniHowSpace.screen),
+            children: [
+              for (final choice in <(String?, String)>[
+                (null, s.all),
+                ('fresh_produce', s.freshProduce),
+                ('value_added', s.valueAdded),
+              ])
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    key: ValueKey('category-${choice.$1 ?? 'all'}'),
+                    label: Text(choice.$2),
+                    selected: _category == choice.$1,
+                    onSelected: (_) {
+                      setState(() => _category = choice.$1);
+                      _reload();
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
         FutureBuilder<List<BuyerFarmAnnouncement>>(
           future: _updates,
           builder: (context, snapshot) {
@@ -207,7 +235,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                   itemCount: items.length,
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    mainAxisExtent: 292,
+                    mainAxisExtent: 328,
                     crossAxisSpacing: AniHowSpace.cardGap,
                     mainAxisSpacing: AniHowSpace.cardGap,
                   ),

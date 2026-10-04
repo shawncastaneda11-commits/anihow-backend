@@ -52,6 +52,15 @@ class FarmPolicy
         return $user->can(Permission::ManageFarms->value);
     }
 
+    /**
+     * Recording a certifier, certificate number, and expiry is governance.
+     * A Content Editor maintains the farm profile and never this claim.
+     */
+    public function manageOrganicCertification(User $user, ?Farm $farm = null): bool
+    {
+        return $user->can(Permission::ManageOrganicCertification->value);
+    }
+
     private function scopedToFarm(User $user, int $farmId): bool
     {
         return $user->farm_id !== null && $user->farm_id === $farmId;

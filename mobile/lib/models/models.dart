@@ -15,6 +15,7 @@ class UserAccount {
     this.emailVerifiedAt,
     this.farmId,
     this.farmName,
+    this.farmIsOrganicCertified = false,
   });
 
   final int id;
@@ -28,6 +29,7 @@ class UserAccount {
   final String? emailVerifiedAt;
   final int? farmId;
   final String? farmName;
+  final bool farmIsOrganicCertified;
 
   factory UserAccount.fromJson(Map<String, dynamic> json) {
     final farmJson = json['farm'];
@@ -50,6 +52,7 @@ class UserAccount {
       emailVerifiedAt: json['email_verified_at']?.toString(),
       farmId: ListingItem._asCount(farmMap?['id']),
       farmName: farmMap?['name'] as String?,
+      farmIsOrganicCertified: farmMap?['is_organic_certified'] == true,
     );
   }
 
@@ -267,6 +270,9 @@ class ListingItem {
     this.harvestedOn,
     this.isUpcoming = false,
     this.availabilityState,
+    this.growingMethod,
+    this.organicBadge,
+    this.organicCertifier,
   });
 
   final int id;
@@ -293,6 +299,9 @@ class ListingItem {
   final DateTime? harvestedOn;
   final bool isUpcoming;
   final String? availabilityState;
+  final String? growingMethod;
+  final String? organicBadge;
+  final String? organicCertifier;
 
   String get name => title;
 
@@ -349,6 +358,9 @@ class ListingItem {
       harvestedOn: harvestedOn,
       isUpcoming: isUpcoming,
       availabilityState: availabilityState,
+      growingMethod: growingMethod,
+      organicBadge: organicBadge,
+      organicCertifier: organicCertifier,
     );
   }
 
@@ -400,6 +412,9 @@ class ListingItem {
       harvestedOn: _asDate(json['harvested_on']),
       isUpcoming: json['is_upcoming'] == true,
       availabilityState: json['availability_state'] as String?,
+      growingMethod: json['growing_method'] as String?,
+      organicBadge: json['organic_badge'] as String?,
+      organicCertifier: json['organic_certifier'] as String?,
     );
   }
 

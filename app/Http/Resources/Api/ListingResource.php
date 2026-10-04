@@ -30,6 +30,16 @@ class ListingResource extends JsonResource
             'harvested_on' => $this->harvested_on?->toDateString(),
             'is_upcoming' => $this->isUpcoming(),
             'availability_state' => $this->availabilityState(),
+            'category' => $this->cropType === null ? null : [
+                'value' => $this->cropType->category->value,
+                'label' => $this->cropType->category->label(),
+                'label_fil' => $this->cropType->category->labelFil(),
+            ],
+            'growing_method' => $this->growing_method?->value,
+            'organic_badge' => $this->organicBadge(),
+            'organic_certifier' => $this->organicBadge() === 'certified'
+                ? $this->farm?->organic_certifier
+                : null,
             'image_url' => $this->imageUrl(),
             'thumbnail_url' => $this->thumbnailUrl(),
             'crop_type' => new CropTypeResource($this->whenLoaded('cropType')),

@@ -29,6 +29,7 @@ const _datesClearedAsEmpty = {
   'available_from',
   'available_until',
   'harvested_on',
+  'growing_method',
 };
 
 Map<String, dynamic> buyerAnnouncementQuery({
@@ -255,6 +256,7 @@ class ApiClient {
     String? search,
     int? cropTypeId,
     String? sort,
+    String? category,
   }) async {
     return _list(
       '/buyer/marketplace',
@@ -262,6 +264,7 @@ class ApiClient {
         if (search != null && search.isNotEmpty) 'search': search,
         'crop_type_id': ?cropTypeId,
         if (sort != null && sort.isNotEmpty) 'sort': sort,
+        if (category != null && category.isNotEmpty) 'category': category,
       },
       parse: ListingItem.fromJson,
     );

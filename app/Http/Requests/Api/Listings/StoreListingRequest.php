@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Api\Listings;
 
+use App\Enums\GrowingMethod;
 use App\Enums\ListingUnit;
 use App\Models\CropType;
+use App\Models\Farm;
 use App\Models\Listing;
 use App\Support\Pricing\PriceGuardResolver;
 use App\Support\Pricing\UnitConverter;
@@ -40,6 +42,7 @@ class StoreListingRequest extends FormRequest
             'available_from' => ['nullable', 'date'],
             'available_until' => ['nullable', 'date'],
             'harvested_on' => ['nullable', 'date', 'before_or_equal:today'],
+            'growing_method' => ['nullable', Rule::enum(GrowingMethod::class)],
             'image' => ['nullable', 'image', 'max:5120'],
         ];
     }
@@ -65,13 +68,18 @@ class StoreListingRequest extends FormRequest
                     $this->input('available_until'),
                 );
 
+                $seller = $this->user();
+                self::assertGrowingMethod(
+                    $validator,
+                    $this->input('growing_method'),
+                    $seller?->farm_id === null ? null : Farm::query()->find($seller->farm_id),
+                );
+
                 $cropType = CropType::find($this->validated('crop_type_id'));
 
                 if ($cropType === null) {
                     return;
                 }
-
-                $seller = $this->user();
 
                 if ($seller !== null && ! $seller->mayUseCropType($cropType->id)) {
                     $validator->errors()->add(
@@ -133,6 +141,7 @@ class StoreListingRequest extends FormRequest
             'quantity_available' => $this->validated('quantity_available'),
             'is_active' => $this->boolean('is_active', true),
             ...$this->availabilityAttributes(),
+            ...($this->exists('growing_method') ? ['growing_method' => $this->validated('growing_method')] : []),
         ];
     }
 
@@ -162,6 +171,24 @@ class StoreListingRequest extends FormRequest
             $validator->errors()->add(
                 'available_until',
                 'The available until date must be after the available from date.',
+            );
+        }
+    }
+
+    public static function assertGrowingMethod(Validator $validator, mixed $method, ?Farm $farm): void
+    {
+        if ($method === null || $method === '') {
+            return;
+        }
+
+        if ($method !== GrowingMethod::CertifiedOrganic->value) {
+            return;
+        }
+
+        if ($farm === null || ! $farm->isOrganicCertified()) {
+            $validator->errors()->add(
+                'growing_method',
+                'Your farm has no valid organic certificate on file.',
             );
         }
     }

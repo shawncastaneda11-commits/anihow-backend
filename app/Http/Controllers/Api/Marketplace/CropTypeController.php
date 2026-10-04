@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api\Marketplace;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\Marketplace\CropTypeIndexRequest;
 use App\Http\Resources\Api\CropTypeResource;
 use App\Models\CropType;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
@@ -15,7 +15,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  */
 class CropTypeController extends Controller
 {
-    public function __invoke(Request $request): AnonymousResourceCollection
+    public function __invoke(CropTypeIndexRequest $request): AnonymousResourceCollection
     {
         $seller = $request->user();
 
@@ -34,6 +34,10 @@ class CropTypeController extends Controller
                     'crop_types.id',
                     $seller->farmerCropTypes()->select('crop_type_id'),
                 ),
+            )
+            ->when(
+                $request->validated('category'),
+                fn ($query, string $category) => $query->where('category', $category),
             )
             ->orderBy('name')
             ->orderBy('id')

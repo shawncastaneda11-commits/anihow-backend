@@ -38,6 +38,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   DateTime? _availableFrom;
   DateTime? _availableUntil;
   DateTime? _harvestedOn;
+  String _growingMethod = '';
   bool _busy = false;
   late Future<List<CategoryItem>> _cropTypes;
   ListingItem? _listing;
@@ -57,6 +58,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       _availableFrom = listing.availableFrom?.toLocal();
       _availableUntil = listing.availableUntil?.toLocal();
       _harvestedOn = listing.harvestedOn?.toLocal();
+      _growingMethod = listing.growingMethod ?? '';
     }
     _cropTypes =
         widget.cropTypes ?? context.read<AuthController>().api.cropTypes();
@@ -136,6 +138,10 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     }
     setState(() => _busy = true);
     final api = context.read<AuthController>().api;
+    final farmCertified =
+        context.read<AuthController>().user?.farmIsOrganicCertified == true;
+    final keepStoredClaim =
+        !farmCertified && _growingMethod == 'certified_organic';
     final body = {
       'title': _name.text.trim(),
       'crop_type_id': _cropTypeId,
@@ -146,6 +152,8 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       'available_from': _dayStart(_availableFrom),
       'available_until': _dayEnd(_availableUntil),
       'harvested_on': _dayOnly(_harvestedOn),
+      if (!keepStoredClaim)
+        'growing_method': _growingMethod.isEmpty ? null : _growingMethod,
     };
     try {
       if (widget.listing == null) {
@@ -474,6 +482,45 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                                 _cropTypeId = value;
                                 _unit = _resolvedUnit(_selectedCrop(cropTypes));
                               }),
+                            ),
+                          ),
+                          const SizedBox(height: AniHowSpace.fieldGap),
+                          AniHowField(
+                            label: s.howWasItGrown,
+                            child: DropdownButtonFormField<String>(
+                              key: const ValueKey('listing-growing-method'),
+                              initialValue:
+                                  context
+                                              .watch<AuthController>()
+                                              .user
+                                              ?.farmIsOrganicCertified ==
+                                          true ||
+                                      _growingMethod != 'certified_organic'
+                                  ? _growingMethod
+                                  : '',
+                              isExpanded: true,
+                              items: [
+                                DropdownMenuItem(
+                                  value: '',
+                                  child: Text(s.notStated),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'naturally_grown',
+                                  child: Text(s.naturallyGrown),
+                                ),
+                                if (context
+                                        .watch<AuthController>()
+                                        .user
+                                        ?.farmIsOrganicCertified ==
+                                    true)
+                                  DropdownMenuItem(
+                                    value: 'certified_organic',
+                                    child: Text(s.certifiedOrganic),
+                                  ),
+                              ],
+                              onChanged: (value) {
+                                setState(() => _growingMethod = value ?? '');
+                              },
                             ),
                           ),
                           if (selectedCrop != null) ...[

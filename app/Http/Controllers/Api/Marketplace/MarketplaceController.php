@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Marketplace;
 
+use App\Enums\GrowingMethod;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Marketplace\MarketplaceIndexRequest;
 use App\Http\Resources\Api\ListingResource;
@@ -23,6 +24,28 @@ class MarketplaceController extends Controller
             ->when(
                 $request->validated('farm_id'),
                 fn (Builder $query, $farmId) => $query->where('farm_id', $farmId),
+            )
+            ->when(
+                $request->validated('category'),
+                fn (Builder $query, string $category): Builder => $query->whereHas(
+                    'cropType',
+                    fn (Builder $cropType): Builder => $cropType->where('category', $category),
+                ),
+            )
+            ->when(
+                $request->validated('growing_method'),
+                function (Builder $query, string $method): Builder {
+                    $query->where('growing_method', $method);
+
+                    if ($method === GrowingMethod::CertifiedOrganic->value) {
+                        $query->whereHas(
+                            'farm',
+                            fn (Builder $farm): Builder => $farm->organicCertified(),
+                        );
+                    }
+
+                    return $query;
+                },
             )
             ->when(
                 $request->validated('search'),

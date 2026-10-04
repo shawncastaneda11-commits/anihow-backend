@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ListingUnit;
+use App\Enums\ProductCategory;
 use App\Observers\CropTypeObserver;
 use Database\Factories\CropTypeFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -35,6 +36,7 @@ use Illuminate\Support\Facades\DB;
     'label_fil',
     'description',
     'unit_of_measure',
+    'category',
     'floor_price',
     'max_discount',
     'is_active',
@@ -54,12 +56,14 @@ class CropType extends Model
      */
     protected $attributes = [
         'unit_of_measure' => 'kg',
+        'category' => 'fresh_produce',
     ];
 
     protected function casts(): array
     {
         return [
             'unit_of_measure' => ListingUnit::class,
+            'category' => ProductCategory::class,
             'floor_price' => 'decimal:4',
             'max_discount' => 'decimal:4',
             'is_active' => 'boolean',

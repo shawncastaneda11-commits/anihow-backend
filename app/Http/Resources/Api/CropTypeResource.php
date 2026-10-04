@@ -41,6 +41,11 @@ class CropTypeResource extends JsonResource
             'slug' => $this->slug,
             'label_en' => $this->label_en,
             'label_fil' => $this->label_fil,
+            'category' => [
+                'value' => $this->category->value,
+                'label' => $this->category->label(),
+                'label_fil' => $this->category->labelFil(),
+            ],
             'unit_of_measure' => $this->unit_of_measure->value,
             'unit_label' => $this->unit_of_measure->label(),
             'allowed_units' => app(UnitConverter::class)->allowedUnits(

@@ -5,6 +5,7 @@ namespace App\Filament\Resources\CropTypes\Schemas;
 use App\Actions\Pricing\ChangeCropTypeUnitAction;
 use App\Enums\ListingUnit;
 use App\Enums\Permission;
+use App\Enums\ProductCategory;
 use App\Models\CropType;
 use App\Policies\CropTypePolicy;
 use Closure;
@@ -70,6 +71,14 @@ class CropTypeForm
                     ->required()
                     ->maxLength(100)
                     ->placeholder('Kamatis'),
+
+                Select::make('category')
+                    ->label('Category')
+                    ->options(ProductCategory::options())
+                    ->required()
+                    ->native(false)
+                    ->default(ProductCategory::FreshProduce->value)
+                    ->helperText('Fresh produce is produce as harvested. Value-added is something the farm has processed, such as banana chips.'),
 
                 Select::make('unit_of_measure')
                     ->label('Unit of the floor price')

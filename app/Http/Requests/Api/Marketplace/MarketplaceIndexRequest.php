@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Api\Marketplace;
 
+use App\Enums\GrowingMethod;
+use App\Enums\ProductCategory;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -22,6 +24,8 @@ class MarketplaceIndexRequest extends FormRequest
             'farm_id' => ['sometimes', 'integer', 'exists:farms,id'],
             'search' => ['sometimes', 'string', 'max:100'],
             'sort' => ['sometimes', Rule::in(['freshest', 'price_asc', 'price_desc', 'availability'])],
+            'category' => ['sometimes', 'nullable', Rule::enum(ProductCategory::class)],
+            'growing_method' => ['sometimes', 'nullable', Rule::enum(GrowingMethod::class)],
         ];
     }
 }

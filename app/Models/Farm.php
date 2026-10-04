@@ -25,6 +25,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'pickup_point',
     'cover_photo_path',
     'is_active',
+    'organic_certifier',
+    'organic_certificate_no',
+    'organic_certified_until',
 ])]
 class Farm extends Model
 {
@@ -35,7 +38,35 @@ class Farm extends Model
     {
         return [
             'is_active' => 'boolean',
+            'organic_certified_until' => 'date',
         ];
+    }
+
+    /**
+     * A certificate counts only while the certifier, the number, and an
+     * unexpired date are all on file. Any gap means the farm is not certified.
+     */
+    public function isOrganicCertified(): bool
+    {
+        return filled($this->organic_certifier)
+            && filled($this->organic_certificate_no)
+            && $this->organic_certified_until !== null
+            && $this->organic_certified_until->greaterThanOrEqualTo(today());
+    }
+
+    /**
+     * @param  Builder<Farm>  $query
+     * @return Builder<Farm>
+     */
+    public function scopeOrganicCertified(Builder $query): Builder
+    {
+        return $query
+            ->whereNotNull('organic_certifier')
+            ->where('organic_certifier', '!=', '')
+            ->whereNotNull('organic_certificate_no')
+            ->where('organic_certificate_no', '!=', '')
+            ->whereNotNull('organic_certified_until')
+            ->whereDate('organic_certified_until', '>=', today());
     }
 
     public function users(): HasMany

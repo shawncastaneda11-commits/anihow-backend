@@ -7,6 +7,7 @@ import '../models/models.dart';
 import '../state/preferences_controller.dart';
 import '../theme/anihow_space.dart';
 import '../theme/anihow_theme.dart';
+import 'growing_badge.dart';
 import 'produce_photo.dart';
 import 'status_pill.dart';
 
@@ -151,6 +152,9 @@ class ProduceCard extends StatelessWidget {
           ),
         ),
       );
+    }
+    if (listing.organicBadge != null) {
+      notes.add(GrowingBadge(badge: listing.organicBadge));
     }
     if (listing.harvestedOn != null) {
       notes.add(

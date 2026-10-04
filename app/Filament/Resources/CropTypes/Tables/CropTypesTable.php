@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\CropTypes\Tables;
 
 use App\Enums\Permission;
+use App\Enums\ProductCategory;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -30,6 +31,9 @@ class CropTypesTable
                 TextColumn::make('label_fil')
                     ->label('Filipino')
                     ->searchable(),
+                TextColumn::make('category')
+                    ->badge()
+                    ->formatStateUsing(fn (ProductCategory $state): string => $state->label()),
                 TextColumn::make('floor_price')
                     ->label('Floor')
                     ->money('PHP')
@@ -50,6 +54,8 @@ class CropTypesTable
                     ->label('Farm')
                     ->relationship('farm', 'name')
                     ->visible(fn (): bool => auth()->user()?->can(Permission::ManageCropTypes->value) ?? false),
+                SelectFilter::make('category')
+                    ->options(ProductCategory::options()),
                 TernaryFilter::make('is_active')->label('Active'),
             ])
             ->emptyStateHeading('No crop types yet')

@@ -54,6 +54,12 @@ class UpdateListingRequest extends FormRequest
 
                 $listing = $this->listing();
 
+                StoreListingRequest::assertAvailabilityWindow(
+                    $validator,
+                    $this->exists('available_from') ? $this->input('available_from') : $listing->available_from,
+                    $this->exists('available_until') ? $this->input('available_until') : $listing->available_until,
+                );
+
                 $cropType = $this->has('crop_type_id')
                     ? CropType::find($this->validated('crop_type_id'))
                     : $listing->cropType;
@@ -118,12 +124,6 @@ class UpdateListingRequest extends FormRequest
                         "The floor price for {$cropType->name} is PHP {$floor} per {$cropType->unit_of_measure->value}.",
                     );
                 }
-
-                StoreListingRequest::assertAvailabilityWindow(
-                    $validator,
-                    $this->exists('available_from') ? $this->input('available_from') : $listing->available_from,
-                    $this->exists('available_until') ? $this->input('available_until') : $listing->available_until,
-                );
             },
         ];
     }

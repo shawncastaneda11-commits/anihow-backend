@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ListingStatus;
+use App\Models\CartItem;
 use App\Models\Listing;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -128,6 +130,78 @@ class ListingAvailabilityTest extends TestCase
         $this->checkout($buyer)
             ->assertUnprocessable()
             ->assertJsonValidationErrors('cart');
+    }
+
+    public function test_checkout_refuses_a_line_that_became_upcoming_and_keeps_it(): void
+    {
+        $farmer = $this->farmer();
+        $buyer = $this->buyer();
+        $listing = $this->listingFor($farmer, [
+            'title' => 'Next week okra',
+            'quantity_available' => 10,
+        ]);
+
+        $this->addToCart($buyer, $listing, 1);
+        $listing->update(['available_from' => now()->addDays(4)]);
+
+        $this->checkout($buyer)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'cart' => 'Next week okra is not available yet. Remove it from your cart to check out.',
+            ]);
+
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseHas('cart_items', [
+            'buyer_id' => $buyer->id,
+            'listing_id' => $listing->id,
+        ]);
+    }
+
+    public function test_a_taken_down_expired_listing_is_hidden_from_the_cart(): void
+    {
+        $farmer = $this->farmer();
+        $buyer = $this->buyer();
+        $listing = $this->listingFor($farmer, [
+            'title' => 'Hidden crate',
+            'status' => ListingStatus::TakenDown,
+            'available_until' => now()->subHour(),
+        ]);
+
+        $response = $this->asUser($buyer)
+            ->postJson('/api/buyer/cart', [
+                'listing_id' => $listing->id,
+                'quantity' => 1,
+            ])
+            ->assertNotFound();
+
+        $this->assertStringNotContainsString('Hidden crate', $response->getContent());
+    }
+
+    public function test_updating_an_expired_line_deletes_it(): void
+    {
+        $farmer = $this->farmer();
+        $buyer = $this->buyer();
+        $listing = $this->listingFor($farmer, [
+            'title' => 'Morning sitaw',
+            'available_until' => Carbon::parse('2026-10-04 17:00:00'),
+            'quantity_available' => 10,
+        ]);
+
+        $this->travelTo(Carbon::parse('2026-10-04 09:00:00'));
+        $this->addToCart($buyer, $listing, 1);
+
+        $item = CartItem::query()
+            ->where('buyer_id', $buyer->id)
+            ->where('listing_id', $listing->id)
+            ->firstOrFail();
+
+        $this->travelTo(Carbon::parse('2026-10-04 17:00:00'));
+
+        $this->asUser($buyer)
+            ->patchJson('/api/buyer/cart/'.$item->id, ['quantity' => 2])
+            ->assertUnprocessable();
+
+        $this->assertDatabaseMissing('cart_items', ['id' => $item->id]);
     }
 
     public function test_listing_dates_are_validated(): void

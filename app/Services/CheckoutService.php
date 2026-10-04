@@ -63,6 +63,16 @@ class CheckoutService
                 ->filter(fn (CartItem $item): bool => $item->listing !== null)
                 ->values();
 
+            $upcoming = $cartItems->first(
+                fn (CartItem $item): bool => $item->listing->isUpcoming(),
+            );
+
+            if ($upcoming !== null) {
+                throw ValidationException::withMessages([
+                    'cart' => "{$upcoming->listing->title} is not available yet. Remove it from your cart to check out.",
+                ]);
+            }
+
             if ($cartItems->isEmpty()) {
                 throw ValidationException::withMessages([
                     'cart' => 'Your cart is empty.',

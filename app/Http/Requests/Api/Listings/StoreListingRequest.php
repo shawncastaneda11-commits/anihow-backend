@@ -59,6 +59,12 @@ class StoreListingRequest extends FormRequest
                     return;
                 }
 
+                self::assertAvailabilityWindow(
+                    $validator,
+                    $this->input('available_from'),
+                    $this->input('available_until'),
+                );
+
                 $cropType = CropType::find($this->validated('crop_type_id'));
 
                 if ($cropType === null) {
@@ -109,12 +115,6 @@ class StoreListingRequest extends FormRequest
                         "The floor price for {$cropType->name} is PHP {$floor} per {$cropType->unit_of_measure->value}.",
                     );
                 }
-
-                self::assertAvailabilityWindow(
-                    $validator,
-                    $this->input('available_from'),
-                    $this->input('available_until'),
-                );
             },
         ];
     }

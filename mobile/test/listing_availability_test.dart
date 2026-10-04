@@ -1,4 +1,6 @@
 import 'package:anihow/models/models.dart';
+import 'package:anihow/services/api_client.dart';
+import 'package:dio/dio.dart';
 import 'package:anihow/screens/buyer/listing_detail_screen.dart';
 import 'package:anihow/state/auth_controller.dart';
 import 'package:anihow/state/cart_controller.dart';
@@ -70,6 +72,40 @@ void main() {
       find.widgetWithText(FilledButton, 'Add to cart'),
     );
     expect(button.onPressed, isNull);
+  });
+
+  test('a cleared date is an empty multipart field', () {
+    final fields = listingMultipartFields({
+      'title': 'Pechay',
+      'description': null,
+      'available_from': null,
+      'available_until': null,
+      'harvested_on': null,
+    });
+
+    expect(fields['available_from'], '');
+    expect(fields['available_until'], '');
+    expect(fields['harvested_on'], '');
+    expect(fields.containsKey('description'), isFalse);
+    expect(fields['title'], 'Pechay');
+
+    final form = FormData.fromMap({
+      ...fields,
+      'image': MultipartFile.fromString('photo', filename: 'cover.jpg'),
+    });
+    String? field(String key) {
+      for (final entry in form.fields) {
+        if (entry.key == key) {
+          return entry.value;
+        }
+      }
+      return null;
+    }
+
+    expect(field('available_from'), '');
+    expect(field('available_until'), '');
+    expect(field('harvested_on'), '');
+    expect(field('description'), isNull);
   });
 
   testWidgets('the farmer list chip names the availability state', (

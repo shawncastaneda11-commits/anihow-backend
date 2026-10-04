@@ -289,21 +289,37 @@ class Listing extends Model
     }
 
     /**
+     * A listing a buyer is allowed to know about: published, active, from an
+     * active seller, under an active crop type, and in a unit that crop
+     * accepts. The availability window is a separate question.
+     *
+     * @param  Builder<Listing>  $query
+     * @return Builder<Listing>
+     */
+    public function scopeListedForBuyers(Builder $query): Builder
+    {
+        return $query
+            ->where('listings.status', ListingStatus::Published)
+            ->where('listings.is_active', true)
+            ->whereHas('farmerSeller', fn (Builder $seller): Builder => $seller->where('status', UserStatus::Active))
+            ->whereHas('cropType', fn (Builder $cropType): Builder => $cropType->where('is_active', true))
+            ->whereDoesntHave(
+                'cropType',
+                fn (Builder $cropType): Builder => $cropType->whereRaw(UnitConverter::incompatibleGuardSql()),
+            );
+    }
+
+    /**
      * The buyer catalogue. A published listing whose unit cannot convert into
      * a guarded crop is stranded and stays off the market until the seller
-     * picks an allowed unit.
+     * picks an allowed unit. An ended window is off the catalogue too.
      *
      * @param  Builder<Listing>  $query
      * @return Builder<Listing>
      */
     public function scopeBuyerVisible(Builder $query): Builder
     {
-        return $query
-            ->marketplaceVisible()
-            ->whereDoesntHave(
-                'cropType',
-                fn (Builder $cropType): Builder => $cropType->whereRaw(UnitConverter::incompatibleGuardSql()),
-            );
+        return $query->listedForBuyers()->notExpired();
     }
 
     /**

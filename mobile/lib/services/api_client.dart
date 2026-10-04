@@ -25,6 +25,25 @@ class PagedItems<T> {
   final bool complete;
 }
 
+const _datesClearedAsEmpty = {
+  'available_from',
+  'available_until',
+  'harvested_on',
+};
+
+/// Multipart fields for a listing save. A cleared availability or harvest date
+/// is sent as an empty string so the server can null it. Other null fields
+/// stay out of the body.
+Map<String, String> listingMultipartFields(Map<String, dynamic> body) {
+  return {
+    for (final entry in body.entries)
+      if (entry.value != null)
+        entry.key: '${entry.value}'
+      else if (_datesClearedAsEmpty.contains(entry.key))
+        entry.key: '',
+  };
+}
+
 class ApiClient {
   ApiClient({required this.onUnauthorized})
     : _dio = Dio(
@@ -704,8 +723,7 @@ class ApiClient {
     }
     try {
       final map = <String, dynamic>{
-        for (final entry in body.entries)
-          if (entry.value != null) entry.key: '${entry.value}',
+        ...listingMultipartFields(body),
         'image': await MultipartFile.fromFile(imagePath),
       };
       final response = await _dio.post(path, data: FormData.fromMap(map));

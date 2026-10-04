@@ -24,7 +24,7 @@ class FarmProximity
 
         if ($latitude === null || $longitude === null) {
             return $query
-                ->orderByRaw("(select case when f.municipality is null or f.municipality = '' then 1 else 0 end from farms f where f.id = {$key})")
+                ->orderByRaw("coalesce((select case when f.municipality is null or f.municipality = '' then 1 else 0 end from farms f where f.id = {$key}), 1)")
                 ->orderByRaw("(select f.municipality from farms f where f.id = {$key})")
                 ->orderByRaw("(select f.name from farms f where f.id = {$key})")
                 ->orderBy($table.'.id');
@@ -33,7 +33,7 @@ class FarmProximity
         $cosLat = cos(deg2rad($latitude));
 
         return $query
-            ->orderByRaw("(select case when f.latitude is null or f.longitude is null then 1 else 0 end from farms f where f.id = {$key})")
+            ->orderByRaw("coalesce((select case when f.latitude is null or f.longitude is null then 1 else 0 end from farms f where f.id = {$key}), 1)")
             ->orderByRaw(
                 '(select (f.latitude - ?) * (f.latitude - ?) + ((f.longitude - ?) * ?) * ((f.longitude - ?) * ?) from farms f where f.id = '.$key.')',
                 [$latitude, $latitude, $longitude, $cosLat, $longitude, $cosLat],

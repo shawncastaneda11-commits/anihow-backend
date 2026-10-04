@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Role;
 use App\Models\Farm;
 use App\Models\Review;
 use App\Models\ShopFavorite;
@@ -173,6 +174,35 @@ class FarmProximityTest extends TestCase
             collect($shops->json('data'))->pluck('shop_name')->all(),
         );
         $shops->assertJsonMissingPath('data.0.distance_km');
+    }
+
+    public function test_a_seller_without_a_farm_sorts_last_on_nearest(): void
+    {
+        $this->pinnedFarmer('Close Stall', 'Close Farm', 'Cavite', 14.21, 120.91);
+        $this->pinnedFarmer('Far Stall', 'Far Farm', 'Albay', 13.2, 123.7);
+        $seller = User::factory()->create([
+            'farm_id' => null,
+            'shop_name' => 'No Farm Stall',
+        ]);
+        $seller->syncRoles(Role::FarmerSeller);
+
+        $buyer = $this->buyer();
+
+        $withLocation = $this->asUser($buyer)
+            ->getJson('/api/buyer/shops?sort=nearest&near_lat=14.20&near_lng=120.90')
+            ->assertOk();
+        $this->assertSame(
+            'No Farm Stall',
+            collect($withLocation->json('data'))->pluck('shop_name')->last(),
+        );
+
+        $fallback = $this->asUser($buyer)
+            ->getJson('/api/buyer/shops?sort=nearest')
+            ->assertOk();
+        $this->assertSame(
+            'No Farm Stall',
+            collect($fallback->json('data'))->pluck('shop_name')->last(),
+        );
     }
 
     public function test_nearest_shop_sort_keeps_review_counts_and_favorites(): void

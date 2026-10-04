@@ -32,6 +32,7 @@ class UpdateListingRequest extends FormRequest
             'price_per_unit' => ['sometimes', 'numeric', 'gt:0', 'decimal:0,4', 'max:99999.9999'],
             'quantity_available' => ['sometimes', 'numeric', 'min:0', 'max:99999.99'],
             'is_active' => ['sometimes', 'boolean'],
+            'confirm_cancel_reservations' => ['sometimes', 'boolean'],
             'available_from' => ['sometimes', 'nullable', 'date'],
             'available_until' => ['sometimes', 'nullable', 'date'],
             'harvested_on' => ['sometimes', 'nullable', 'date', 'before_or_equal:today'],

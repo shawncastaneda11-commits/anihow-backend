@@ -9,6 +9,7 @@ import '../../theme/anihow_space.dart';
 import '../../widgets/availability_chip.dart';
 import '../../widgets/listing_active_badge.dart';
 import '../../widgets/produce_card.dart';
+import 'cancel_reservations_dialog.dart';
 import 'farm_announcements_screen.dart';
 import 'listing_form_screen.dart';
 import 'listing_reservations_screen.dart';
@@ -81,14 +82,27 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
       return;
     }
 
+    var confirm = false;
+    final reserved = listing.activeReservationsCount ?? 0;
+    if (!isActive && reserved > 0) {
+      final accepted = await confirmCancelReservations(
+        context,
+        count: reserved,
+        quantity: formatReservedQuantity(listing.reservedQuantity),
+        unit: listing.unit ?? '',
+        deleting: false,
+      );
+      if (!accepted || !mounted) {
+        return;
+      }
+      confirm = true;
+    }
+
     _toggling.add(listing.id);
     _replace(listing.copyWith(isActive: isActive));
 
     try {
-      final updated = await context
-          .read<AuthController>()
-          .api
-          .toggleListingActive(listing.id, isActive: isActive);
+      final updated = await _setActive(listing, isActive, confirm);
       if (mounted) {
         _replace(updated);
       }
@@ -97,11 +111,51 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
         return;
       }
       _replace(listing);
+      final conflict = ReservationConflict.fromException(error);
+      if (conflict != null && !confirm) {
+        final accepted = await confirmCancelReservations(
+          context,
+          count: conflict.count,
+          quantity: conflict.quantity,
+          unit: listing.unit ?? '',
+          deleting: false,
+        );
+        if (!accepted || !mounted) {
+          return;
+        }
+        _replace(listing.copyWith(isActive: isActive));
+        try {
+          final updated = await _setActive(listing, isActive, true);
+          if (mounted) {
+            _replace(updated);
+          }
+        } on ApiException catch (again) {
+          if (!mounted) {
+            return;
+          }
+          _replace(listing);
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(again.message)));
+        }
+        return;
+      }
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(error.message)));
     } finally {
       _toggling.remove(listing.id);
     }
+  }
+
+  Future<ListingItem> _setActive(
+    ListingItem listing,
+    bool isActive,
+    bool confirm,
+  ) {
+    return context.read<AuthController>().api.toggleListingActive(
+      listing.id,
+      isActive: isActive,
+      confirmCancelReservations: confirm,
+    );
   }
 
   Future<void> _openForm([ListingItem? listing]) async {

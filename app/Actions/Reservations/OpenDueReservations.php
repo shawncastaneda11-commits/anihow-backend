@@ -3,7 +3,6 @@
 namespace App\Actions\Reservations;
 
 use App\Enums\FulfillmentPreference;
-use App\Enums\ListingStatus;
 use App\Enums\ReservationCancellationReason;
 use App\Enums\ReservationStatus;
 use App\Models\Listing;
@@ -117,8 +116,8 @@ class OpenDueReservations
 
         $buyer = $reservation->buyer;
 
-        if ($buyer === null) {
-            $this->canceller->handle($reservation, ReservationCancellationReason::ListingRemoved);
+        if ($buyer === null || ! $buyer->isActive()) {
+            $this->canceller->handle($reservation, ReservationCancellationReason::AccountClosed);
 
             return;
         }
@@ -148,17 +147,11 @@ class OpenDueReservations
 
     private function mustRemove(Listing $listing): bool
     {
-        if ($listing->trashed() || ! $listing->is_active) {
+        if ($listing->trashed() || $listing->isExpired()) {
             return true;
         }
 
-        if ($listing->status === ListingStatus::TakenDown || $listing->isExpired()) {
-            return true;
-        }
-
-        $seller = $listing->farmerSeller;
-
-        return $seller === null || ! $seller->isActive();
+        return ! Listing::query()->listedForBuyers()->whereKey($listing->id)->exists();
     }
 
     private function windowHasOpened(Listing $listing): bool

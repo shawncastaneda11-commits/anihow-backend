@@ -3,6 +3,7 @@
 namespace App\Actions\Listings;
 
 use App\Actions\Reservations\CancelReservation;
+use App\Actions\Reservations\GuardListingReservationCancellation;
 use App\Enums\ListingStatus;
 use App\Enums\ReservationCancellationReason;
 use App\Models\CartItem;
@@ -15,10 +16,13 @@ class TakeDownListingAction
     public function __construct(
         private InAppNotifier $notifier,
         private CancelReservation $cancelReservation,
+        private GuardListingReservationCancellation $reservationGuard,
     ) {}
 
-    public function handle(Listing $listing, User $moderator, string $reason): Listing
+    public function handle(Listing $listing, User $moderator, string $reason, bool $confirmCancelReservations = false): Listing
     {
+        $this->reservationGuard->ensure($listing, $confirmCancelReservations, asValidationException: true);
+
         $listing->forceFill([
             'status' => ListingStatus::TakenDown,
             'is_active' => false,

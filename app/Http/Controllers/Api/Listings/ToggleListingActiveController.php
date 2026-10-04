@@ -18,6 +18,7 @@ class ToggleListingActiveController extends Controller
         $listing = $toggleListingActive->handle(
             $listing,
             $request->has('is_active') ? $request->boolean('is_active') : null,
+            $request->boolean('confirm_cancel_reservations'),
         );
 
         $listing = Listing::query()

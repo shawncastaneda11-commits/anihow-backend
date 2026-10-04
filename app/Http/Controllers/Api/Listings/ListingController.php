@@ -86,6 +86,7 @@ class ListingController extends Controller
             $listing,
             $request->listingAttributes(),
             $request->file('image'),
+            $request->boolean('confirm_cancel_reservations'),
         );
 
         $listing = Listing::query()
@@ -103,11 +104,11 @@ class ListingController extends Controller
             ->additional($additional);
     }
 
-    public function destroy(Listing $listing, DeleteListingAction $deleteListing): JsonResponse
+    public function destroy(Request $request, Listing $listing, DeleteListingAction $deleteListing): JsonResponse
     {
         $this->authorize('delete', $listing);
 
-        $deleteListing->handle($listing);
+        $deleteListing->handle($listing, $request->boolean('confirm_cancel_reservations'));
 
         return response()->json(['message' => 'Listing deleted.']);
     }

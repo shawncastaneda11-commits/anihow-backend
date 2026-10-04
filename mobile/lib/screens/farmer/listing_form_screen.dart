@@ -12,6 +12,7 @@ import '../../widgets/hint_card.dart';
 import '../../widgets/primary_button.dart';
 import '../../state/auth_controller.dart';
 import '../../state/preferences_controller.dart';
+import 'cancel_reservations_dialog.dart';
 import 'tawad_form_screen.dart';
 import 'walk_in_sale_screen.dart';
 
@@ -39,6 +40,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   DateTime? _availableUntil;
   DateTime? _harvestedOn;
   String _growingMethod = '';
+  bool _isActive = true;
   bool _busy = false;
   late Future<List<CategoryItem>> _cropTypes;
   ListingItem? _listing;
@@ -59,6 +61,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       _availableUntil = listing.availableUntil?.toLocal();
       _harvestedOn = listing.harvestedOn?.toLocal();
       _growingMethod = listing.growingMethod ?? '';
+      _isActive = listing.isActive;
     }
     _cropTypes =
         widget.cropTypes ?? context.read<AuthController>().api.cropTypes();
@@ -129,12 +132,29 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     }
   }
 
-  Future<void> _save() async {
+  Future<void> _save({bool confirmed = false}) async {
     if (_cropTypeId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppStrings.read(context).chooseCrop)),
       );
       return;
+    }
+    final listing = widget.listing;
+    final turningOff = listing != null && listing.isActive && !_isActive;
+    if (!confirmed &&
+        turningOff &&
+        (listing.activeReservationsCount ?? 0) > 0) {
+      final accepted = await confirmCancelReservations(
+        context,
+        count: listing.activeReservationsCount ?? 0,
+        quantity: formatReservedQuantity(listing.reservedQuantity),
+        unit: listing.unit ?? '',
+        deleting: false,
+      );
+      if (!accepted || !mounted) {
+        return;
+      }
+      confirmed = true;
     }
     setState(() => _busy = true);
     final api = context.read<AuthController>().api;
@@ -154,21 +174,38 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       'harvested_on': _dayOnly(_harvestedOn),
       if (!keepStoredClaim)
         'growing_method': _growingMethod.isEmpty ? null : _growingMethod,
+      if (listing != null && !listing.isTakenDown) 'is_active': _isActive,
     };
     try {
-      if (widget.listing == null) {
+      if (listing == null) {
         await api.createListing(body, imagePath: _imagePath);
       } else {
         await api.updateListing(
-          widget.listing!.id,
+          listing.id,
           body,
           imagePath: _imagePath,
+          confirmCancelReservations: confirmed,
         );
       }
       if (mounted) {
         Navigator.of(context).pop(true);
       }
     } on ApiException catch (error) {
+      final conflict = ReservationConflict.fromException(error);
+      if (conflict != null && !confirmed && mounted) {
+        setState(() => _busy = false);
+        final accepted = await confirmCancelReservations(
+          context,
+          count: conflict.count,
+          quantity: conflict.quantity,
+          unit: listing?.unit ?? '',
+          deleting: false,
+        );
+        if (accepted && mounted) {
+          await _save(confirmed: true);
+        }
+        return;
+      }
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(error.message)));
@@ -180,41 +217,74 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     }
   }
 
-  Future<void> _deleteListing() async {
+  Future<void> _deleteListing({bool confirmed = false}) async {
     final listing = _listing;
     if (listing == null || _busy) {
       return;
     }
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        final s = AppStrings.of(context);
-        return AlertDialog(
-          title: Text(s.deleteListingAsk),
-          content: Text(listing.title),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(s.cancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(s.delete),
-            ),
-          ],
-        );
-      },
-    );
-    if (confirmed != true || !mounted) {
-      return;
+    final reserved = listing.activeReservationsCount ?? 0;
+    if (!confirmed && reserved > 0) {
+      final accepted = await confirmCancelReservations(
+        context,
+        count: reserved,
+        quantity: formatReservedQuantity(listing.reservedQuantity),
+        unit: listing.unit ?? '',
+        deleting: true,
+      );
+      if (!accepted || !mounted) {
+        return;
+      }
+      confirmed = true;
+    } else if (!confirmed) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          final s = AppStrings.of(context);
+          return AlertDialog(
+            title: Text(s.deleteListingAsk),
+            content: Text(listing.title),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(s.cancel),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(s.delete),
+              ),
+            ],
+          );
+        },
+      );
+      if (confirmed != true || !mounted) {
+        return;
+      }
     }
     setState(() => _busy = true);
     try {
-      await context.read<AuthController>().api.deleteListing(listing.id);
+      await context.read<AuthController>().api.deleteListing(
+        listing.id,
+        confirmCancelReservations: confirmed,
+      );
       if (mounted) {
         Navigator.of(context).pop(true);
       }
     } on ApiException catch (error) {
+      final conflict = ReservationConflict.fromException(error);
+      if (conflict != null && !confirmed && mounted) {
+        setState(() => _busy = false);
+        final accepted = await confirmCancelReservations(
+          context,
+          count: conflict.count,
+          quantity: conflict.quantity,
+          unit: listing.unit ?? '',
+          deleting: true,
+        );
+        if (accepted && mounted) {
+          await _deleteListing(confirmed: true);
+        }
+        return;
+      }
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(error.message)));
@@ -650,6 +720,21 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                             onClear: () => setState(() => _harvestedOn = null),
                           ),
                           const SizedBox(height: AniHowSpace.fieldGap),
+                          if (_listing != null && !_listing!.isTakenDown) ...[
+                            SwitchListTile(
+                              key: const Key('listing-active-switch'),
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(
+                                _isActive ? s.listingActive : s.listingInactive,
+                              ),
+                              value: _isActive,
+                              onChanged: _busy
+                                  ? null
+                                  : (value) =>
+                                        setState(() => _isActive = value),
+                            ),
+                            const SizedBox(height: AniHowSpace.fieldGap),
+                          ],
                           AniHowField(
                             label: s.description,
                             child: TextField(

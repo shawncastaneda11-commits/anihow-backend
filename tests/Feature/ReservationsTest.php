@@ -7,12 +7,19 @@ use App\Actions\Privacy\AnonymizeUserAction;
 use App\Actions\Privacy\ExportOwnDataAction;
 use App\Actions\Reservations\ReserveListing;
 use App\Enums\FulfillmentPreference;
+use App\Enums\ListingStatus;
+use App\Enums\ListingUnit;
 use App\Enums\NotificationType;
 use App\Enums\OrderSource;
 use App\Enums\OrderStatus;
+use App\Enums\ReportReason;
+use App\Enums\ReportStatus;
 use App\Enums\ReservationCancellationReason;
 use App\Enums\ReservationStatus;
 use App\Enums\Role;
+use App\Enums\UserStatus;
+use App\Filament\Resources\Listings\Pages\ListListings;
+use App\Filament\Resources\Reports\Pages\ListReports;
 use App\Filament\Resources\Reservations\ReservationResource;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Models\CartItem;
@@ -20,6 +27,7 @@ use App\Models\Farm;
 use App\Models\InAppNotification;
 use App\Models\Listing;
 use App\Models\Order;
+use App\Models\Report;
 use App\Models\Reservation;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
@@ -27,6 +35,7 @@ use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Testing\TestResponse;
+use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Tests\Concerns\CreatesMarketplaceActors;
 use Tests\TestCase;
@@ -330,17 +339,20 @@ class ReservationsTest extends TestCase
 
         $takenDown = $this->upcoming($farmer);
         $this->reserve($buyer, $takenDown, 1)->assertCreated();
-        app(TakeDownListingAction::class)->handle($takenDown, $admin, 'Not this harvest');
+        app(TakeDownListingAction::class)->handle($takenDown, $admin, 'Not this harvest', true);
 
         $paused = $this->upcoming($farmer);
         $this->reserve($buyer, $paused, 1)->assertCreated();
         $this->asUser($farmer)->patchJson("/api/farmer/listings/{$paused->id}/active", [
             'is_active' => false,
+            'confirm_cancel_reservations' => true,
         ])->assertOk();
 
         $removed = $this->upcoming($farmer);
         $this->reserve($buyer, $removed, 1)->assertCreated();
-        $this->asUser($farmer)->deleteJson("/api/farmer/listings/{$removed->id}")->assertOk();
+        $this->asUser($farmer)->deleteJson("/api/farmer/listings/{$removed->id}", [
+            'confirm_cancel_reservations' => true,
+        ])->assertOk();
 
         $this->assertSame(3, Reservation::query()->where('status', ReservationStatus::Cancelled)->count());
         $this->assertSame(
@@ -379,6 +391,255 @@ class ReservationsTest extends TestCase
         $this->assertSame(ReservationStatus::Cancelled, $reservation->status);
         $this->assertSame(ReservationCancellationReason::ListingRemoved, $reservation->cancellation_reason);
         $this->assertSame(1, $this->notices($buyer->id, NotificationType::ReservationCancelled));
+    }
+
+    public function test_a_listing_that_leaves_the_market_cancels_reservations_before_opening(): void
+    {
+        $archived = $this->reservedUpcoming();
+        $archived['listing']->update(['status' => ListingStatus::Archived]);
+
+        $deactivatedCrop = $this->reservedUpcoming();
+        $deactivatedCrop['listing']->cropType->update(['is_active' => false]);
+
+        $crop = $this->cropType([
+            'unit_of_measure' => ListingUnit::Kilogram,
+            'floor_price' => 0,
+            'max_discount' => 0,
+        ]);
+        $farmer = $this->farmer();
+        $incompatible = $this->listingFor($farmer, [
+            'crop_type_id' => $crop->id,
+            'unit' => ListingUnit::Piece,
+            'price_per_unit' => 30,
+            'quantity_available' => 10,
+            'available_from' => now()->addDays(3),
+            'available_until' => now()->addDays(10),
+        ]);
+        $incompatibleBuyer = $this->buyer();
+        $this->reserve($incompatibleBuyer, $incompatible, 2)->assertCreated();
+        $crop->update(['floor_price' => 10]);
+
+        $this->artisan('reservations:open-due')->assertSuccessful();
+
+        foreach ([$archived, $deactivatedCrop] as $held) {
+            $reservation = Reservation::query()->where('listing_id', $held['listing']->id)->first();
+            $this->assertSame(ReservationStatus::Cancelled, $reservation->status);
+            $this->assertSame(ReservationCancellationReason::ListingRemoved, $reservation->cancellation_reason);
+            $this->assertSame(1, $this->notices($held['buyer']->id, NotificationType::ReservationCancelled));
+        }
+
+        $stranded = Reservation::query()->where('listing_id', $incompatible->id)->first();
+        $this->assertSame(ReservationCancellationReason::ListingRemoved, $stranded->cancellation_reason);
+        $this->assertSame(1, $this->notices($incompatibleBuyer->id, NotificationType::ReservationCancelled));
+        $this->assertSame(0, Order::query()->count());
+    }
+
+    public function test_a_suspended_buyer_is_cancelled_and_the_next_buyer_converts(): void
+    {
+        $farmer = $this->farmer();
+        $listing = $this->upcoming($farmer, quantity: 10);
+        $suspended = $this->buyer();
+        $next = $this->buyer();
+        $this->reserve($suspended, $listing, 4)->assertCreated();
+        $this->reserve($next, $listing, 4)->assertCreated();
+
+        $suspended->update(['status' => UserStatus::Suspended]);
+        $this->travelToOpen($listing);
+        $this->artisan('reservations:open-due')->assertSuccessful();
+
+        $first = Reservation::query()->where('buyer_id', $suspended->id)->first();
+        $second = Reservation::query()->where('buyer_id', $next->id)->first();
+        $this->assertSame(ReservationStatus::Cancelled, $first->status);
+        $this->assertSame(ReservationCancellationReason::AccountClosed, $first->cancellation_reason);
+        $this->assertSame(ReservationStatus::Converted, $second->status);
+        $this->assertSame($next->id, Order::query()->value('buyer_id'));
+        $this->assertSame(4.0, (float) $listing->fresh()->quantity_held);
+        $this->assertSame(0, $this->notices($suspended->id, NotificationType::ReservationCancelled));
+    }
+
+    public function test_turning_a_listing_off_requires_confirmation_when_reservations_are_active(): void
+    {
+        $farmer = $this->farmer();
+        $buyer = $this->buyer();
+        $message = 'This listing has 1 active reservation(s) (2.50 kg). Turning it off cancels them and notifies the buyers.';
+
+        $paused = $this->upcoming($farmer);
+        $this->reserve($buyer, $paused, 2.5)->assertCreated();
+        $this->asUser($farmer)->patchJson("/api/farmer/listings/{$paused->id}/active", [
+            'is_active' => false,
+        ])->assertConflict()
+            ->assertJsonPath('message', $message)
+            ->assertJsonPath('active_reservations_count', 1)
+            ->assertJsonPath('reserved_quantity', 2.5);
+        $this->assertTrue($paused->fresh()->is_active);
+        $this->assertSame(ReservationStatus::Active, Reservation::query()->where('listing_id', $paused->id)->first()->status);
+
+        $this->asUser($farmer)->patchJson("/api/farmer/listings/{$paused->id}/active", [
+            'is_active' => false,
+            'confirm_cancel_reservations' => true,
+        ])->assertOk();
+        $this->assertFalse($paused->fresh()->is_active);
+        $this->assertSame(ReservationCancellationReason::ListingRemoved, Reservation::query()->where('listing_id', $paused->id)->first()->cancellation_reason);
+        $this->assertSame(1, $this->notices($buyer->id, NotificationType::ReservationCancelled));
+
+        $edited = $this->upcoming($farmer);
+        $this->reserve($buyer, $edited, 2.5)->assertCreated();
+        $this->asUser($farmer)->patchJson("/api/farmer/listings/{$edited->id}", [
+            'is_active' => false,
+        ])->assertConflict()
+            ->assertJsonPath('active_reservations_count', 1)
+            ->assertJsonPath('reserved_quantity', 2.5);
+        $this->assertTrue($edited->fresh()->is_active);
+
+        $this->asUser($farmer)->patchJson("/api/farmer/listings/{$edited->id}", [
+            'is_active' => false,
+            'confirm_cancel_reservations' => true,
+        ])->assertOk();
+        $this->assertSame(ReservationCancellationReason::ListingRemoved, Reservation::query()->where('listing_id', $edited->id)->first()->cancellation_reason);
+
+        $removed = $this->upcoming($farmer);
+        $this->reserve($buyer, $removed, 2.5)->assertCreated();
+        $this->asUser($farmer)->deleteJson("/api/farmer/listings/{$removed->id}")
+            ->assertConflict()
+            ->assertJsonPath('active_reservations_count', 1);
+        $this->assertNotSoftDeleted($removed);
+
+        $this->asUser($farmer)->deleteJson("/api/farmer/listings/{$removed->id}", [
+            'confirm_cancel_reservations' => true,
+        ])->assertOk();
+        $this->assertSoftDeleted($removed);
+        $this->assertSame(ReservationCancellationReason::ListingRemoved, Reservation::query()->where('listing_id', $removed->id)->first()->cancellation_reason);
+
+        $quiet = $this->upcoming($farmer);
+        $this->asUser($farmer)->patchJson("/api/farmer/listings/{$quiet->id}/active", [
+            'is_active' => false,
+        ])->assertOk();
+        $this->assertFalse($quiet->fresh()->is_active);
+
+        $this->asUser($farmer)->patchJson("/api/farmer/listings/{$quiet->id}/active", [
+            'is_active' => true,
+        ])->assertOk();
+        $this->assertTrue($quiet->fresh()->is_active);
+    }
+
+    public function test_takedown_refuses_without_confirmation_when_reservations_are_active(): void
+    {
+        $admin = $this->staff(Role::SuperAdmin);
+        $farmer = $this->farmer();
+        $buyer = $this->buyer();
+        $listing = $this->upcoming($farmer);
+        app(ReserveListing::class)->handle($buyer, $listing->id, 2, FulfillmentPreference::BuyerPickup, null);
+
+        try {
+            app(TakeDownListingAction::class)->handle($listing, $admin, 'Not this harvest');
+            $this->fail('Takedown should refuse while reservations are active.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('confirm_cancel_reservations', $exception->errors());
+        }
+
+        $this->assertSame(ListingStatus::Published, $listing->fresh()->status);
+        $this->assertSame(ReservationStatus::Active, Reservation::query()->first()->status);
+
+        app(TakeDownListingAction::class)->handle($listing, $admin, 'Not this harvest', true);
+
+        $this->assertSame(ListingStatus::TakenDown, $listing->fresh()->status);
+        $this->assertSame(ReservationCancellationReason::ListingRemoved, Reservation::query()->first()->cancellation_reason);
+        $this->assertSame(1, $this->notices($buyer->id, NotificationType::ReservationCancelled));
+    }
+
+    public function test_filament_takedown_and_report_resolve_require_the_reservation_checkbox(): void
+    {
+        $admin = $this->staff(Role::SuperAdmin);
+        $farmer = $this->farmer();
+        $buyer = $this->buyer();
+        $reserved = $this->upcoming($farmer);
+        app(ReserveListing::class)->handle($buyer, $reserved->id, 2, FulfillmentPreference::BuyerPickup, null);
+        $clear = $this->listingFor($farmer);
+
+        $this->openFilament($admin);
+
+        Livewire::test(ListListings::class)
+            ->callTableAction('takedown', $reserved, data: [
+                'takedown_reason' => 'Not this harvest',
+            ])
+            ->assertHasTableActionErrors(['confirm_cancel_reservations']);
+
+        $this->assertSame(ListingStatus::Published, $reserved->fresh()->status);
+
+        Livewire::test(ListListings::class)
+            ->callTableAction('takedown', $reserved, data: [
+                'takedown_reason' => 'Not this harvest',
+                'confirm_cancel_reservations' => true,
+            ])
+            ->assertHasNoTableActionErrors();
+
+        $this->assertSame(ListingStatus::TakenDown, $reserved->fresh()->status);
+        $this->assertSame(ReservationCancellationReason::ListingRemoved, Reservation::query()->where('listing_id', $reserved->id)->first()->cancellation_reason);
+
+        Livewire::test(ListListings::class)
+            ->callTableAction('takedown', $clear, data: [
+                'takedown_reason' => 'Clear listing',
+            ])
+            ->assertHasNoTableActionErrors();
+
+        $this->assertSame(ListingStatus::TakenDown, $clear->fresh()->status);
+
+        $reported = $this->upcoming($farmer);
+        app(ReserveListing::class)->handle($buyer, $reported->id, 1, FulfillmentPreference::BuyerPickup, null);
+        $report = Report::factory()->create([
+            'reporter_id' => $buyer->id,
+            'reportable_id' => $reported->id,
+            'reportable_type' => Listing::class,
+            'reason' => ReportReason::ProhibitedItem,
+            'status' => ReportStatus::Open,
+        ]);
+        $clearReport = Report::factory()->create([
+            'reporter_id' => $buyer->id,
+            'reportable_id' => $this->listingFor($farmer)->id,
+            'reportable_type' => Listing::class,
+            'reason' => ReportReason::SpamOrFake,
+            'status' => ReportStatus::Open,
+        ]);
+
+        $this->openFilament($admin);
+
+        Livewire::test(ListReports::class)
+            ->callTableAction('resolve', $report, data: [
+                'resolution_note' => 'Removed from the marketplace.',
+                'apply_moderation' => true,
+                'moderation_reason' => 'Not allowed.',
+            ])
+            ->assertHasTableActionErrors(['confirm_cancel_reservations']);
+
+        $this->assertSame(ReportStatus::Open, $report->fresh()->status);
+        $this->assertSame(ListingStatus::Published, $reported->fresh()->status);
+
+        Livewire::test(ListReports::class)
+            ->callTableAction('resolve', $report, data: [
+                'resolution_note' => 'Removed from the marketplace.',
+                'apply_moderation' => true,
+                'moderation_reason' => 'Not allowed.',
+                'confirm_cancel_reservations' => true,
+            ])
+            ->assertHasNoTableActionErrors();
+
+        $this->assertSame(ReportStatus::Resolved, $report->fresh()->status);
+        $this->assertSame(ListingStatus::TakenDown, $reported->fresh()->status);
+        $this->assertSame(
+            ReservationCancellationReason::ListingRemoved,
+            Reservation::query()->where('listing_id', $reported->id)->first()->cancellation_reason,
+        );
+
+        Livewire::test(ListReports::class)
+            ->callTableAction('resolve', $clearReport, data: [
+                'resolution_note' => 'Removed.',
+                'apply_moderation' => true,
+                'moderation_reason' => 'Spam.',
+            ])
+            ->assertHasNoTableActionErrors();
+
+        $this->assertSame(ReportStatus::Resolved, $clearReport->fresh()->status);
+        $this->assertSame(ListingStatus::TakenDown, Listing::query()->find($clearReport->reportable_id)->status);
     }
 
     public function test_the_buyer_and_the_seller_can_cancel_and_nobody_else_can(): void
@@ -517,6 +778,26 @@ class ReservationsTest extends TestCase
         $sellerReservation = Reservation::query()->where('buyer_id', $nextBuyer->id)->first();
         $this->assertSame(ReservationCancellationReason::AccountClosed, $sellerReservation->cancellation_reason);
         $this->assertSame(1, $this->notices($nextBuyer->id, NotificationType::ReservationCancelled));
+    }
+
+    /**
+     * @return array{listing: Listing, buyer: User}
+     */
+    private function reservedUpcoming(): array
+    {
+        $listing = $this->upcoming($this->farmer());
+        $buyer = $this->buyer();
+        $this->reserve($buyer, $listing, 2)->assertCreated();
+
+        return ['listing' => $listing, 'buyer' => $buyer];
+    }
+
+    private function openFilament(User $admin): void
+    {
+        $this->flushHeaders();
+        $this->actingAs($admin);
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        Livewire::actingAs($admin);
     }
 
     private function upcoming(

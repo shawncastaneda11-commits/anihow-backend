@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\ReservationsRequireConfirmation;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -105,6 +106,18 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json([
                 'message' => 'Too many attempts. Please try again later.',
             ], 429);
+        });
+
+        $exceptions->render(function (ReservationsRequireConfirmation $e, Request $request) {
+            if (! $request->is('api/*') && ! $request->expectsJson()) {
+                return null;
+            }
+
+            return response()->json([
+                'message' => $e->getMessage(),
+                'active_reservations_count' => $e->activeReservationsCount,
+                'reserved_quantity' => $e->reservedQuantity,
+            ], 409);
         });
 
         $exceptions->render(function (HttpException $e, Request $request) {

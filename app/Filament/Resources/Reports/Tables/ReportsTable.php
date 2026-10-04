@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Reports\Tables;
 
 use App\Actions\Reports\DismissReportAction;
 use App\Actions\Reports\ResolveReportAction;
+use App\Actions\Reservations\GuardListingReservationCancellation;
 use App\Enums\ReportReason;
 use App\Enums\ReportStatus;
 use App\Filament\Resources\Listings\ListingResource;
@@ -12,6 +13,8 @@ use App\Models\Listing;
 use App\Models\Report;
 use App\Models\Review;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Utilities\Get;
@@ -91,6 +94,59 @@ class ReportsTable
                             ->required(fn (Get $get): bool => (bool) $get('apply_moderation'))
                             ->visible(fn (Get $get): bool => (bool) $get('apply_moderation'))
                             ->rows(2),
+                        Placeholder::make('reservation_warning')
+                            ->label('')
+                            ->content(function (Report $record): string {
+                                $listing = $record->reportable;
+
+                                if (! $listing instanceof Listing) {
+                                    return '';
+                                }
+
+                                return app(GuardListingReservationCancellation::class)->warning($listing) ?? '';
+                            })
+                            ->visible(function (Report $record, Get $get): bool {
+                                if (! (bool) $get('apply_moderation')) {
+                                    return false;
+                                }
+
+                                $listing = $record->reportable;
+
+                                return $listing instanceof Listing
+                                    && app(GuardListingReservationCancellation::class)->describe($listing) !== null;
+                            }),
+                        Checkbox::make('confirm_cancel_reservations')
+                            ->label('I understand the reservations will be cancelled')
+                            ->visible(function (Report $record, Get $get): bool {
+                                if (! (bool) $get('apply_moderation')) {
+                                    return false;
+                                }
+
+                                $listing = $record->reportable;
+
+                                return $listing instanceof Listing
+                                    && app(GuardListingReservationCancellation::class)->describe($listing) !== null;
+                            })
+                            ->required(function (Report $record, Get $get): bool {
+                                if (! (bool) $get('apply_moderation')) {
+                                    return false;
+                                }
+
+                                $listing = $record->reportable;
+
+                                return $listing instanceof Listing
+                                    && app(GuardListingReservationCancellation::class)->describe($listing) !== null;
+                            })
+                            ->accepted(function (Report $record, Get $get): bool {
+                                if (! (bool) $get('apply_moderation')) {
+                                    return false;
+                                }
+
+                                $listing = $record->reportable;
+
+                                return $listing instanceof Listing
+                                    && app(GuardListingReservationCancellation::class)->describe($listing) !== null;
+                            }),
                     ])
                     ->action(function (Report $record, array $data): void {
                         app(ResolveReportAction::class)->handle(
@@ -99,6 +155,7 @@ class ReportsTable
                             $data['resolution_note'],
                             (bool) ($data['apply_moderation'] ?? false),
                             $data['moderation_reason'] ?? null,
+                            (bool) ($data['confirm_cancel_reservations'] ?? false),
                         );
                     }),
                 Action::make('dismiss')

@@ -11,8 +11,10 @@ import 'cart_requests.dart';
 import 'tawad_requests.dart';
 
 class ApiException implements Exception {
-  ApiException(this.message);
+  ApiException(this.message, {this.statusCode, this.body});
   final String message;
+  final int? statusCode;
+  final Map<String, dynamic>? body;
 
   @override
   String toString() => message;
@@ -360,12 +362,17 @@ class ApiClient {
     int id,
     Map<String, dynamic> body, {
     String? imagePath,
+    bool confirmCancelReservations = false,
   }) async {
+    final payload = {
+      ...body,
+      if (confirmCancelReservations) 'confirm_cancel_reservations': true,
+    };
     final response = imagePath == null
-        ? await _put('/farmer/listings/$id', body)
+        ? await _put('/farmer/listings/$id', payload)
         : await _sendListing(
             '/farmer/listings/$id',
-            body,
+            payload,
             imagePath: imagePath,
           );
     return ListingItem.fromJson(_asMap(response['data'] ?? response));
@@ -374,21 +381,39 @@ class ApiClient {
   Future<ListingItem> toggleListingActive(
     int id, {
     required bool isActive,
+    bool confirmCancelReservations = false,
   }) async {
     try {
       final response = await _dio.patch(
         '/farmer/listings/$id/active',
-        data: {'is_active': isActive},
+        data: {
+          'is_active': isActive,
+          if (confirmCancelReservations) 'confirm_cancel_reservations': true,
+        },
       );
       return ListingItem.fromJson(
         _asMap(_asMap(response.data)['data'] ?? response.data),
       );
     } on DioException catch (error) {
-      throw ApiException(_messageFrom(error));
+      throw _apiException(error);
     }
   }
 
-  Future<void> deleteListing(int id) => _delete('/farmer/listings/$id');
+  Future<void> deleteListing(
+    int id, {
+    bool confirmCancelReservations = false,
+  }) async {
+    try {
+      await _dio.delete(
+        '/farmer/listings/$id',
+        data: {
+          if (confirmCancelReservations) 'confirm_cancel_reservations': true,
+        },
+      );
+    } on DioException catch (error) {
+      throw _apiException(error);
+    }
+  }
 
   Future<TawadRule> saveTawad({
     required int listingId,
@@ -972,7 +997,7 @@ class ApiClient {
       final response = await _dio.put(path, data: body);
       return _asMap(response.data);
     } on DioException catch (error) {
-      throw ApiException(_messageFrom(error));
+      throw _apiException(error);
     }
   }
 
@@ -1070,6 +1095,15 @@ class ApiClient {
       return value.toInt();
     }
     return int.tryParse('$value') ?? fallback;
+  }
+
+  ApiException _apiException(DioException error) {
+    final data = error.response?.data;
+    return ApiException(
+      _messageFrom(error),
+      statusCode: error.response?.statusCode,
+      body: data is Map ? _asMap(data) : null,
+    );
   }
 
   String _messageFrom(DioException error) {

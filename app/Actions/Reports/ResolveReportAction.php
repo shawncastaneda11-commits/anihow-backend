@@ -28,8 +28,9 @@ class ResolveReportAction
         string $resolutionNote,
         bool $applyModeration = false,
         ?string $moderationReason = null,
+        bool $confirmCancelReservations = false,
     ): Report {
-        return DB::transaction(function () use ($report, $admin, $resolutionNote, $applyModeration, $moderationReason): Report {
+        return DB::transaction(function () use ($report, $admin, $resolutionNote, $applyModeration, $moderationReason, $confirmCancelReservations): Report {
             $locked = Report::query()
                 ->whereKey($report->id)
                 ->lockForUpdate()
@@ -44,7 +45,7 @@ class ResolveReportAction
             $locked->load(['reportable', 'reporter']);
 
             if ($applyModeration) {
-                $this->applyModeration($locked, $admin, $moderationReason ?? $resolutionNote);
+                $this->applyModeration($locked, $admin, $moderationReason ?? $resolutionNote, $confirmCancelReservations);
             }
 
             $locked->update([
@@ -63,12 +64,12 @@ class ResolveReportAction
         });
     }
 
-    private function applyModeration(Report $report, User $admin, string $reason): void
+    private function applyModeration(Report $report, User $admin, string $reason, bool $confirmCancelReservations): void
     {
         $target = $report->reportable;
 
         if ($target instanceof Listing && $target->status === ListingStatus::Published) {
-            $this->takeDownListing->handle($target, $admin, $reason);
+            $this->takeDownListing->handle($target, $admin, $reason, $confirmCancelReservations);
 
             return;
         }

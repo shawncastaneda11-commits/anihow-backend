@@ -3,12 +3,14 @@
 namespace App\Filament\Resources\Listings\Tables;
 
 use App\Actions\Listings\TakeDownListingAction;
+use App\Actions\Reservations\GuardListingReservationCancellation;
 use App\Enums\ListingStatus;
 use App\Models\Listing;
 use App\Support\InAppNotifier;
 use App\Support\Pricing\UnitConverter;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Textarea;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
@@ -160,18 +162,25 @@ class ListingsTable
                     ->color('danger')
                     ->requiresConfirmation()
                     ->visible(fn (Listing $record): bool => $record->status === ListingStatus::Published)
+                    ->modalDescription(fn (Listing $record): ?string => app(GuardListingReservationCancellation::class)->warning($record))
                     ->schema([
                         Textarea::make('takedown_reason')
                             ->label('Reason')
                             ->required()
                             ->rows(2)
                             ->helperText('Shown to the seller.'),
+                        Checkbox::make('confirm_cancel_reservations')
+                            ->label('I understand the reservations will be cancelled')
+                            ->visible(fn (Listing $record): bool => app(GuardListingReservationCancellation::class)->describe($record) !== null)
+                            ->required(fn (Listing $record): bool => app(GuardListingReservationCancellation::class)->describe($record) !== null)
+                            ->accepted(fn (Listing $record): bool => app(GuardListingReservationCancellation::class)->describe($record) !== null),
                     ])
                     ->action(function (Listing $record, array $data): void {
                         app(TakeDownListingAction::class)->handle(
                             $record,
                             auth()->user(),
                             $data['takedown_reason'],
+                            (bool) ($data['confirm_cancel_reservations'] ?? false),
                         );
                     }),
 

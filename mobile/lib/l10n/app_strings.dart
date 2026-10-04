@@ -708,6 +708,17 @@ class AppStrings {
   String get deleteListing => t('Delete listing', 'Tanggalin ang listing');
   String get deleteListingAsk =>
       t('Delete this listing?', 'Tanggalin ang listing na ito?');
+  String cancelReservationsTitle(int count) =>
+      t('Cancel $count reservation(s)?', 'Kanselahin ang $count reservation?');
+  String cancelReservationsBody(String quantity, String unit, int count) => t(
+    '$quantity $unit is reserved by $count buyer(s). Turning this listing off (or deleting it) cancels those reservations and notifies the buyers.',
+    '$quantity $unit ang nakareserba ng $count buyer. Kapag pinatay o tinanggal ang listing, makakansela ang mga reservation at maaabisuhan ang mga buyer.',
+  );
+  String get keepListing => t('Keep listing', 'Panatilihin ang listing');
+  String get turnOffAndCancel =>
+      t('Turn off and cancel', 'Patayin at kanselahin');
+  String get deleteAndCancel =>
+      t('Delete and cancel', 'Tanggalin at kanselahin');
   String get endTawadAsk => t('End this tawad?', 'Tapusin ang tawad na ito?');
   String get addPhoto => t('Add photo', 'Magdagdag ng larawan');
   String get listingPhotoHint => t(

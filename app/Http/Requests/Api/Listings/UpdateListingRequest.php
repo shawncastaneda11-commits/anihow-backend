@@ -31,6 +31,9 @@ class UpdateListingRequest extends FormRequest
             'price_per_unit' => ['sometimes', 'numeric', 'gt:0', 'decimal:0,4', 'max:99999.9999'],
             'quantity_available' => ['sometimes', 'numeric', 'min:0', 'max:99999.99'],
             'is_active' => ['sometimes', 'boolean'],
+            'available_from' => ['sometimes', 'nullable', 'date'],
+            'available_until' => ['sometimes', 'nullable', 'date'],
+            'harvested_on' => ['sometimes', 'nullable', 'date', 'before_or_equal:today'],
             'image' => ['nullable', 'image', 'max:5120'],
         ];
     }
@@ -108,14 +111,18 @@ class UpdateListingRequest extends FormRequest
                     return;
                 }
 
-                if ($guard->allowsPrice($price)) {
-                    return;
+                if (! $guard->allowsPrice($price)) {
+                    $floor = number_format($guard->floor, 2, '.', '');
+                    $validator->errors()->add(
+                        'price_per_unit',
+                        "The floor price for {$cropType->name} is PHP {$floor} per {$cropType->unit_of_measure->value}.",
+                    );
                 }
 
-                $floor = number_format($guard->floor, 2, '.', '');
-                $validator->errors()->add(
-                    'price_per_unit',
-                    "The floor price for {$cropType->name} is PHP {$floor} per {$cropType->unit_of_measure->value}.",
+                StoreListingRequest::assertAvailabilityWindow(
+                    $validator,
+                    $this->exists('available_from') ? $this->input('available_from') : $listing->available_from,
+                    $this->exists('available_until') ? $this->input('available_until') : $listing->available_until,
                 );
             },
         ];
@@ -135,6 +142,9 @@ class UpdateListingRequest extends FormRequest
                 'price_per_unit',
                 'quantity_available',
                 'is_active',
+                'available_from',
+                'available_until',
+                'harvested_on',
             ])
             ->all();
     }

@@ -244,22 +244,40 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                     horizontal: 14,
                     vertical: 12,
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          listing.priceLabel,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                color: AniHowColors.brand,
-                                fontWeight: FontWeight.w800,
-                              ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              listing.priceLabel,
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    color: AniHowColors.brand,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                            ),
+                          ),
+                          Text(
+                            '${listing.quantityAvailable} ${s.t('available', 'available')}',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                      if (listing.harvestedOn != null)
+                        Text(
+                          s.harvestedLine(
+                            s.shortDate(listing.harvestedOn!.toLocal()),
+                          ),
                         ),
-                      ),
-                      Text(
-                        '${listing.quantityAvailable} ${s.t('available', 'available')}',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
+                      if (listing.isUpcoming && listing.availableFrom != null)
+                        Text(
+                          key: const ValueKey('upcoming-badge'),
+                          s.availableFromBadge(
+                            s.shortDate(listing.availableFrom!.toLocal()),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -296,7 +314,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               const SizedBox(height: AniHowSpace.fieldGap),
               PrimaryButton(
                 label: s.addToCart,
-                onPressed: _addToCart,
+                onPressed: listing.isUpcoming ? null : _addToCart,
                 busy: _adding,
               ),
             ],

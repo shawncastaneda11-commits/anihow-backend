@@ -22,7 +22,7 @@ class CropTypeController extends Controller
         $cropTypes = CropType::query()
             ->active()
             ->withCount([
-                'listings as listings_count' => fn ($query) => $query->marketplaceVisible(),
+                'listings as listings_count' => fn ($query) => $query->buyerVisible(),
             ])
             ->when(
                 $seller?->isFarmerSeller(),

@@ -9,6 +9,7 @@ use App\Support\Pricing\PriceGuardResolver;
 use App\Support\Pricing\UnitConverter;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 
 class StoreListingRequest extends FormRequest
@@ -36,6 +37,9 @@ class StoreListingRequest extends FormRequest
             'price_per_unit' => ['required', 'numeric', 'gt:0', 'decimal:0,4', 'max:99999.9999'],
             'quantity_available' => ['required', 'numeric', 'min:0', 'max:99999.99'],
             'is_active' => ['sometimes', 'boolean'],
+            'available_from' => ['nullable', 'date'],
+            'available_until' => ['nullable', 'date'],
+            'harvested_on' => ['nullable', 'date', 'before_or_equal:today'],
             'image' => ['nullable', 'image', 'max:5120'],
         ];
     }
@@ -105,6 +109,12 @@ class StoreListingRequest extends FormRequest
                         "The floor price for {$cropType->name} is PHP {$floor} per {$cropType->unit_of_measure->value}.",
                     );
                 }
+
+                self::assertAvailabilityWindow(
+                    $validator,
+                    $this->input('available_from'),
+                    $this->input('available_until'),
+                );
             },
         ];
     }
@@ -122,6 +132,37 @@ class StoreListingRequest extends FormRequest
             'price_per_unit' => $this->validated('price_per_unit'),
             'quantity_available' => $this->validated('quantity_available'),
             'is_active' => $this->boolean('is_active', true),
+            ...$this->availabilityAttributes(),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function availabilityAttributes(): array
+    {
+        $attributes = [];
+
+        foreach (['available_from', 'available_until', 'harvested_on'] as $field) {
+            if ($this->exists($field)) {
+                $attributes[$field] = $this->validated($field);
+            }
+        }
+
+        return $attributes;
+    }
+
+    public static function assertAvailabilityWindow(Validator $validator, mixed $from, mixed $until): void
+    {
+        if ($from === null || $from === '' || $until === null || $until === '') {
+            return;
+        }
+
+        if (Carbon::parse((string) $until)->lessThanOrEqualTo(Carbon::parse((string) $from))) {
+            $validator->errors()->add(
+                'available_until',
+                'The available until date must be after the available from date.',
+            );
+        }
     }
 }

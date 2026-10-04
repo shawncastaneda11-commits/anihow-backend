@@ -6,6 +6,7 @@ import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
+import '../../widgets/availability_chip.dart';
 import '../../widgets/listing_active_badge.dart';
 import '../../widgets/produce_card.dart';
 import 'farm_announcements_screen.dart';
@@ -235,11 +236,18 @@ class _List extends StatelessWidget {
             showSeller: false,
             showStock: true,
             onTap: () => onOpen(listing),
-            trailing: ListingActiveBadge(
-              isActive: listing.isSellerActive,
-              onTap: listing.isTakenDown
-                  ? null
-                  : () => onToggle(listing, !listing.isActive),
+            trailing: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                AvailabilityChip(state: listing.availabilityState),
+                ListingActiveBadge(
+                  isActive: listing.isSellerActive,
+                  onTap: listing.isTakenDown
+                      ? null
+                      : () => onToggle(listing, !listing.isActive),
+                ),
+              ],
             ),
           );
         },

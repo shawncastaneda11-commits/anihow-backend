@@ -51,9 +51,20 @@ class CartController extends Controller
     public function store(StoreCartItemRequest $request): JsonResponse
     {
         $listing = Listing::query()
-            ->buyerVisible()
             ->with('cropType')
             ->findOrFail($request->validated('listing_id'));
+
+        if ($listing->isUpcoming() || $listing->isExpired()) {
+            throw ValidationException::withMessages([
+                'listing_id' => $listing->isExpired()
+                    ? "{$listing->title} is no longer available."
+                    : "{$listing->title} is not available yet.",
+            ]);
+        }
+
+        if (! Listing::query()->buyerVisible()->whereKey($listing->id)->exists()) {
+            abort(404);
+        }
 
         $existing = $request->user()
             ->cartItems()
@@ -80,6 +91,14 @@ class CartController extends Controller
     public function update(UpdateCartItemRequest $request, CartItem $cartItem): CartItemResource
     {
         $listing = $cartItem->listing;
+        if ($listing !== null && ($listing->isUpcoming() || $listing->isExpired())) {
+            throw ValidationException::withMessages([
+                'quantity' => $listing->isExpired()
+                    ? "{$listing->title} is no longer available."
+                    : "{$listing->title} is not available yet.",
+            ]);
+        }
+
         if ($listing === null || ! Listing::query()->buyerVisible()->whereKey($listing->id)->exists()) {
             $cartItem->delete();
 

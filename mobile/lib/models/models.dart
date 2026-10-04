@@ -262,6 +262,11 @@ class ListingItem {
     this.tawad,
     this.status,
     this.takedownReason,
+    this.availableFrom,
+    this.availableUntil,
+    this.harvestedOn,
+    this.isUpcoming = false,
+    this.availabilityState,
   });
 
   final int id;
@@ -283,6 +288,11 @@ class ListingItem {
   final int reviewsCount;
   final TawadRule? tawad;
   final String? takedownReason;
+  final DateTime? availableFrom;
+  final DateTime? availableUntil;
+  final DateTime? harvestedOn;
+  final bool isUpcoming;
+  final String? availabilityState;
 
   String get name => title;
 
@@ -334,6 +344,11 @@ class ListingItem {
       reviewsCount: reviewsCount,
       tawad: tawad,
       takedownReason: takedownReason,
+      availableFrom: availableFrom,
+      availableUntil: availableUntil,
+      harvestedOn: harvestedOn,
+      isUpcoming: isUpcoming,
+      availabilityState: availabilityState,
     );
   }
 
@@ -380,7 +395,19 @@ class ListingItem {
           ? TawadRule.fromJson(Map<String, dynamic>.from(tawadJson))
           : null,
       takedownReason: json['takedown_reason'] as String?,
+      availableFrom: _asDate(json['available_from']),
+      availableUntil: _asDate(json['available_until']),
+      harvestedOn: _asDate(json['harvested_on']),
+      isUpcoming: json['is_upcoming'] == true,
+      availabilityState: json['availability_state'] as String?,
     );
+  }
+
+  static DateTime? _asDate(Object? value) {
+    if (value == null) {
+      return null;
+    }
+    return DateTime.tryParse(value.toString());
   }
 
   static int? _asCount(Object? value) {

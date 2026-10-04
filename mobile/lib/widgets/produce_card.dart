@@ -102,6 +102,7 @@ class ProduceCard extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
+          ..._buyerNotes(context),
         ],
       ),
     );
@@ -130,6 +131,41 @@ class ProduceCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  List<Widget> _buyerNotes(BuildContext context) {
+    if (!showSeller) {
+      return const [];
+    }
+    final s = AppStrings.of(context);
+    final notes = <Widget>[];
+    if (listing.isUpcoming && listing.availableFrom != null) {
+      notes.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            s.availableFromBadge(s.shortDate(listing.availableFrom!.toLocal())),
+            key: const ValueKey('upcoming-badge'),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      );
+    }
+    if (listing.harvestedOn != null) {
+      notes.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Text(
+            s.harvestedLine(s.shortDate(listing.harvestedOn!.toLocal())),
+            key: const ValueKey('harvest-line'),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      );
+    }
+    return notes;
   }
 
   Widget _row(BuildContext context) {
@@ -213,6 +249,7 @@ class ProduceCard extends StatelessWidget {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
+                          ..._buyerNotes(context),
                           if (listing.tawad != null &&
                               listing.tawad!.isActive) ...[
                             const SizedBox(height: AniHowSpace.labelGap),

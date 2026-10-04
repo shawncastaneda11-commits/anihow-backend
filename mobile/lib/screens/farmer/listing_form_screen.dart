@@ -35,6 +35,9 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   int? _cropTypeId;
   String? _unit;
   String? _imagePath;
+  DateTime? _availableFrom;
+  DateTime? _availableUntil;
+  DateTime? _harvestedOn;
   bool _busy = false;
   late Future<List<CategoryItem>> _cropTypes;
   ListingItem? _listing;
@@ -51,6 +54,9 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       _description.text = listing.description ?? '';
       _cropTypeId = listing.category?.id;
       _unit = listing.unit;
+      _availableFrom = listing.availableFrom?.toLocal();
+      _availableUntil = listing.availableUntil?.toLocal();
+      _harvestedOn = listing.harvestedOn?.toLocal();
     }
     _cropTypes =
         widget.cropTypes ?? context.read<AuthController>().api.cropTypes();
@@ -63,6 +69,52 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     _quantity.dispose();
     _description.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickDate({
+    required DateTime? current,
+    required ValueChanged<DateTime> onPicked,
+    DateTime? lastDate,
+  }) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: lastDate ?? DateTime.now().add(const Duration(days: 365 * 3)),
+    );
+    if (picked != null) {
+      onPicked(picked);
+    }
+  }
+
+  String? _dayStart(DateTime? date) {
+    if (date == null) {
+      return null;
+    }
+    return DateTime(date.year, date.month, date.day).toIso8601String();
+  }
+
+  String? _dayEnd(DateTime? date) {
+    if (date == null) {
+      return null;
+    }
+    return DateTime(
+      date.year,
+      date.month,
+      date.day,
+      23,
+      59,
+      59,
+    ).toIso8601String();
+  }
+
+  String? _dayOnly(DateTime? date) {
+    if (date == null) {
+      return null;
+    }
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day';
   }
 
   Future<void> _pickPhoto() async {
@@ -91,6 +143,9 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       'price_per_unit': _price.text.trim(),
       'quantity_available': _quantity.text.trim(),
       'description': _description.text.trim(),
+      'available_from': _dayStart(_availableFrom),
+      'available_until': _dayEnd(_availableUntil),
+      'harvested_on': _dayOnly(_harvestedOn),
     };
     try {
       if (widget.listing == null) {
@@ -497,6 +552,57 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                             ),
                           ],
                           const SizedBox(height: AniHowSpace.fieldGap),
+                          _DateField(
+                            label: s.availableFromLabel,
+                            value: _availableFrom,
+                            clearLabel: s.clearDate,
+                            emptyLabel: s.dateNotSet,
+                            formatted: _availableFrom == null
+                                ? null
+                                : s.shortDate(_availableFrom!),
+                            onPick: () => _pickDate(
+                              current: _availableFrom,
+                              onPicked: (date) =>
+                                  setState(() => _availableFrom = date),
+                            ),
+                            onClear: () =>
+                                setState(() => _availableFrom = null),
+                          ),
+                          const SizedBox(height: AniHowSpace.fieldGap),
+                          _DateField(
+                            label: s.availableUntilLabel,
+                            value: _availableUntil,
+                            clearLabel: s.clearDate,
+                            emptyLabel: s.dateNotSet,
+                            formatted: _availableUntil == null
+                                ? null
+                                : s.shortDate(_availableUntil!),
+                            onPick: () => _pickDate(
+                              current: _availableUntil,
+                              onPicked: (date) =>
+                                  setState(() => _availableUntil = date),
+                            ),
+                            onClear: () =>
+                                setState(() => _availableUntil = null),
+                          ),
+                          const SizedBox(height: AniHowSpace.fieldGap),
+                          _DateField(
+                            label: s.harvestedOnLabel,
+                            value: _harvestedOn,
+                            clearLabel: s.clearDate,
+                            emptyLabel: s.dateNotSet,
+                            formatted: _harvestedOn == null
+                                ? null
+                                : s.shortDate(_harvestedOn!),
+                            onPick: () => _pickDate(
+                              current: _harvestedOn,
+                              lastDate: DateTime.now(),
+                              onPicked: (date) =>
+                                  setState(() => _harvestedOn = date),
+                            ),
+                            onClear: () => setState(() => _harvestedOn = null),
+                          ),
+                          const SizedBox(height: AniHowSpace.fieldGap),
                           AniHowField(
                             label: s.description,
                             child: TextField(
@@ -584,6 +690,54 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _DateField extends StatelessWidget {
+  const _DateField({
+    required this.label,
+    required this.value,
+    required this.clearLabel,
+    required this.emptyLabel,
+    required this.formatted,
+    required this.onPick,
+    required this.onClear,
+  });
+
+  final String label;
+  final DateTime? value;
+  final String clearLabel;
+  final String emptyLabel;
+  final String? formatted;
+  final VoidCallback onPick;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return AniHowField(
+      label: label,
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+                alignment: Alignment.centerLeft,
+              ),
+              onPressed: onPick,
+              child: Text(formatted ?? emptyLabel),
+            ),
+          ),
+          if (value != null) ...[
+            const SizedBox(width: 8),
+            SizedBox(
+              height: 48,
+              child: TextButton(onPressed: onClear, child: Text(clearLabel)),
+            ),
+          ],
+        ],
       ),
     );
   }

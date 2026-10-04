@@ -458,6 +458,57 @@ class AppStrings {
     _ => family,
   };
   String get price => t('Price', 'Presyo');
+  String get availableFromLabel => t('Available from', 'Available simula');
+  String get availableUntilLabel => t('Available until', 'Available hanggang');
+  String get harvestedOnLabel => t('Harvested on', 'Araw ng ani');
+  String get dateNotSet => t('Not set', 'Hindi nakatakda');
+  String get clearDate => t('Clear', 'Alisin');
+  String harvestedLine(String date) =>
+      t('Harvested $date', 'Inani noong $date');
+  String availableFromBadge(String date) =>
+      t('Available from $date', 'Available simula $date');
+  String get availabilityAvailable => t('Available', 'Nabibili');
+  String get availabilityUpcoming => t('Upcoming', 'Paparating');
+  String get availabilityExpired => t('Expired', 'Paso na');
+
+  String shortDate(DateTime date) {
+    const english = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    const filipino = [
+      'Ene',
+      'Peb',
+      'Mar',
+      'Abr',
+      'May',
+      'Hun',
+      'Hul',
+      'Ago',
+      'Set',
+      'Okt',
+      'Nob',
+      'Dis',
+    ];
+    final months = this.filipino ? filipino : english;
+    return '${months[date.month - 1]} ${date.day}';
+  }
+
+  String availabilityChip(String? state) => switch (state) {
+    'upcoming' => availabilityUpcoming,
+    'expired' => availabilityExpired,
+    _ => availabilityAvailable,
+  };
   String get description => t('Description', 'Deskripsyon');
   String get setTawad => t('Set tawad', 'Magtakda ng tawad');
   String get replaceTawad => t('Replace tawad', 'Palitan ang tawad');

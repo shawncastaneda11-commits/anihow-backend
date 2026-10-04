@@ -37,6 +37,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'image_path',
     'is_active',
     'status',
+    'available_from',
+    'available_until',
+    'harvested_on',
 ])]
 class Listing extends Model
 {
@@ -53,6 +56,9 @@ class Listing extends Model
             'is_active' => 'boolean',
             'status' => ListingStatus::class,
             'taken_down_at' => 'datetime',
+            'available_from' => 'datetime',
+            'available_until' => 'datetime',
+            'harvested_on' => 'date',
         ];
     }
 
@@ -179,7 +185,95 @@ class Listing extends Model
     }
 
     /**
-     * Published listings, from active sellers, under active crop types.
+     * On sale at this moment. A null start means available now. A null end
+     * means the listing does not expire. The end instant itself is already over.
+     *
+     * @param  Builder<Listing>  $query
+     * @return Builder<Listing>
+     */
+    public function scopeAvailableNow(Builder $query): Builder
+    {
+        $now = now();
+
+        return $query
+            ->where(function (Builder $window) use ($now): void {
+                $window->whereNull('listings.available_from')
+                    ->orWhere('listings.available_from', '<=', $now);
+            })
+            ->where(function (Builder $window) use ($now): void {
+                $window->whereNull('listings.available_until')
+                    ->orWhere('listings.available_until', '>', $now);
+            });
+    }
+
+    /**
+     * @param  Builder<Listing>  $query
+     * @return Builder<Listing>
+     */
+    public function scopeNotExpired(Builder $query): Builder
+    {
+        $now = now();
+
+        return $query->where(function (Builder $window) use ($now): void {
+            $window->whereNull('listings.available_until')
+                ->orWhere('listings.available_until', '>', $now);
+        });
+    }
+
+    /**
+     * @param  Builder<Listing>  $query
+     * @return Builder<Listing>
+     */
+    public function scopeUpcoming(Builder $query): Builder
+    {
+        return $query
+            ->notExpired()
+            ->whereNotNull('listings.available_from')
+            ->where('listings.available_from', '>', now());
+    }
+
+    /**
+     * @param  Builder<Listing>  $query
+     * @return Builder<Listing>
+     */
+    public function scopeExpired(Builder $query): Builder
+    {
+        return $query
+            ->whereNotNull('listings.available_until')
+            ->where('listings.available_until', '<=', now());
+    }
+
+    public function isUpcoming(): bool
+    {
+        if ($this->isExpired()) {
+            return false;
+        }
+
+        return $this->available_from !== null && $this->available_from->isFuture();
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->available_until !== null && ! $this->available_until->isFuture();
+    }
+
+    public function availabilityState(): string
+    {
+        if ($this->isExpired()) {
+            return 'expired';
+        }
+
+        if ($this->isUpcoming()) {
+            return 'upcoming';
+        }
+
+        return 'available';
+    }
+
+    /**
+     * Published listings, from active sellers, under active crop types, whose
+     * availability window has not ended. An ended window leaves the market the
+     * same way a taken-down listing does: checkout drops the cart line.
      *
      * @param  Builder<Listing>  $query
      * @return Builder<Listing>
@@ -189,6 +283,7 @@ class Listing extends Model
         return $query
             ->where('listings.status', ListingStatus::Published)
             ->where('listings.is_active', true)
+            ->notExpired()
             ->whereHas('farmerSeller', fn (Builder $seller): Builder => $seller->where('status', UserStatus::Active))
             ->whereHas('cropType', fn (Builder $cropType): Builder => $cropType->where('is_active', true));
     }

@@ -88,6 +88,15 @@ class ListingsTable
                 TextColumn::make('quantity_held')
                     ->label('Held')
                     ->toggleable(),
+                TextColumn::make('availability_state')
+                    ->label('Availability')
+                    ->badge()
+                    ->getStateUsing(fn (Listing $record): string => ucfirst($record->availabilityState()))
+                    ->color(fn (string $state): string => match ($state) {
+                        'Upcoming' => 'warning',
+                        'Expired' => 'gray',
+                        default => 'success',
+                    }),
                 TextColumn::make('status')
                     ->badge()
                     ->formatStateUsing(fn (ListingStatus $state): string => $state->label())
@@ -105,6 +114,21 @@ class ListingsTable
             ->filters([
                 SelectFilter::make('status')
                     ->options(ListingStatus::options()),
+                SelectFilter::make('availability')
+                    ->label('Availability')
+                    ->options([
+                        'available' => 'Available',
+                        'upcoming' => 'Upcoming',
+                        'expired' => 'Expired',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return match ($data['value'] ?? null) {
+                            'available' => $query->availableNow(),
+                            'upcoming' => $query->upcoming(),
+                            'expired' => $query->expired(),
+                            default => $query,
+                        };
+                    }),
                 SelectFilter::make('crop_type')
                     ->relationship('cropType', 'name')
                     ->label('Crop type'),

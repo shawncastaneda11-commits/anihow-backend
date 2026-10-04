@@ -128,6 +128,15 @@ class Order extends Model
         return $this->hasMany(OrderMessage::class)->orderBy('id');
     }
 
+    /**
+     * Stall-thread rows tagged with this order. Untagged stall chatter stays
+     * out of the order ledger.
+     */
+    public function stallMessages(): HasMany
+    {
+        return $this->hasMany(StallMessage::class, 'order_id')->orderBy('id');
+    }
+
     public function isWalkIn(): bool
     {
         return $this->source === OrderSource::WalkIn;

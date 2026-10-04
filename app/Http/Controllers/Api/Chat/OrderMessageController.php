@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers\Api\Chat;
 
-use App\Events\OrderMessageCreated;
+use App\Actions\Chat\SendStallMessage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Chat\StoreOrderMessageRequest;
 use App\Http\Resources\Api\OrderMessageResource;
 use App\Models\Order;
-use App\Models\OrderMessage;
-use App\Support\InAppNotifier;
-use Illuminate\Broadcasting\BroadcastException;
+use App\Models\StallConversation;
+use App\Models\StallMessage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -20,7 +19,8 @@ class OrderMessageController extends Controller
     {
         $this->authorize('chat', $order);
 
-        $messages = $order->messages()
+        $messages = StallMessage::query()
+            ->where('order_id', $order->id)
             ->with('author.roles')
             ->when(
                 $request->filled('after_id'),
@@ -35,30 +35,17 @@ class OrderMessageController extends Controller
     public function store(
         StoreOrderMessageRequest $request,
         Order $order,
-        InAppNotifier $notifier,
+        SendStallMessage $sendStallMessage,
     ): JsonResponse {
-        /** @var OrderMessage $message */
-        $message = $order->messages()->create([
-            'user_id' => $request->user()->id,
-            'body' => $request->validated('body'),
+        $conversation = StallConversation::query()->firstOrCreate([
+            'buyer_id' => $order->buyer_id,
+            'farmer_seller_id' => $order->farmer_seller_id,
         ]);
 
-        $message->load('author.roles');
-
-        $counterpart = $order->isOwnedByBuyer($request->user())
-            ? $order->farmerSeller
-            : $order->buyer;
-
-        if ($counterpart !== null) {
-            $notifier->orderMessage($counterpart, $order, $request->user(), $message->body);
-        }
-
-        try {
-            event(new OrderMessageCreated($message));
-        } catch (BroadcastException $exception) {
-            // Keep the saved message usable when Reverb is down; clients fall back to polling.
-            report($exception);
-        }
+        $message = $sendStallMessage->handle($request->user(), $conversation, [
+            'body' => $request->validated('body'),
+            'order_id' => $order->id,
+        ]);
 
         return (new OrderMessageResource($message))
             ->additional(['message' => 'Message sent.'])

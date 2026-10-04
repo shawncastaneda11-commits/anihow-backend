@@ -158,7 +158,9 @@ class PrivacyRightsTest extends TestCase
         $this->assertNotEmpty($payload['reviews_written']);
         $this->assertNotEmpty($payload['favorites']);
         $this->assertNotEmpty($payload['cart']);
-        $this->assertNotEmpty($payload['order_messages']);
+        $this->assertNotEmpty($payload['stall_messages']);
+        $this->assertSame($order->id, $payload['stall_messages'][0]['order_id']);
+        $this->assertArrayNotHasKey('order_messages', $payload);
         $this->assertNotEmpty($payload['notifications']);
         $this->assertSame([], $payload['listings']);
         $this->assertSame([], $payload['tawad_rules']);
@@ -170,6 +172,8 @@ class PrivacyRightsTest extends TestCase
         $sellerExport = json_decode($this->asUser($farmer)->get('/api/auth/user/export')->streamedContent(), true);
         $sellerEncoded = json_encode($sellerExport);
 
+        $this->assertArrayHasKey('stall_messages', $sellerExport);
+        $this->assertArrayNotHasKey('order_messages', $sellerExport);
         $this->assertSame('seller-secret@example.com', $sellerExport['profile']['email']);
         $this->assertNotEmpty($sellerExport['listings']);
         $this->assertNotEmpty($sellerExport['tawad_rules']);

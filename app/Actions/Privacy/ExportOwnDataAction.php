@@ -4,8 +4,8 @@ namespace App\Actions\Privacy;
 
 use App\Models\Listing;
 use App\Models\Order;
-use App\Models\OrderMessage;
 use App\Models\Review;
+use App\Models\StallMessage;
 use App\Models\TawadRule;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -67,14 +67,19 @@ class ExportOwnDataAction
                     'listing_title' => $item->listing?->title,
                     'quantity' => $item->quantity,
                 ])->all(),
-            'order_messages' => OrderMessage::query()
+            'stall_messages' => StallMessage::query()
                 ->where('user_id', $user->id)
                 ->orderBy('id')
-                ->get(['id', 'order_id', 'body', 'created_at'])
-                ->map(fn (OrderMessage $message): array => [
+                ->get()
+                ->map(fn (StallMessage $message): array => [
                     'id' => $message->id,
                     'order_id' => $message->order_id,
                     'body' => $message->body,
+                    'listing_id' => $message->listing_id,
+                    'listing_title' => $message->listing_title,
+                    'listing_price_per_unit' => $message->listing_price_per_unit,
+                    'listing_unit' => $message->listing_unit,
+                    'listing_thumbnail_path' => $message->listing_thumbnail_path,
                     'created_at' => $message->created_at?->toIso8601String(),
                 ])->all(),
             'notifications' => $user->inAppNotifications()

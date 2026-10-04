@@ -2,7 +2,8 @@
 
 namespace App\Events;
 
-use App\Http\Resources\Api\OrderMessageResource;
+use App\Actions\Chat\PresentStallMessages;
+use App\Http\Resources\Api\StallMessageResource;
 use App\Models\StallMessage;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
@@ -10,7 +11,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class OrderMessageCreated implements ShouldBroadcastNow
+class StallMessageCreated implements ShouldBroadcastNow
 {
     use Dispatchable;
     use InteractsWithSockets;
@@ -19,6 +20,7 @@ class OrderMessageCreated implements ShouldBroadcastNow
     public function __construct(public StallMessage $message)
     {
         $this->message->loadMissing('author.roles');
+        app(PresentStallMessages::class)->links([$this->message]);
     }
 
     /**
@@ -27,25 +29,22 @@ class OrderMessageCreated implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('orders.'.$this->message->order_id),
+            new PrivateChannel('stall-conversations.'.$this->message->stall_conversation_id),
         ];
     }
 
     public function broadcastAs(): string
     {
-        return 'order.message.created';
+        return 'stall.message.created';
     }
 
     /**
-     * The payload stays the original order-message keys so older app builds
-     * can keep listening on private-orders.{orderId} for one release.
-     *
      * @return array<string, mixed>
      */
     public function broadcastWith(): array
     {
         return [
-            'data' => (new OrderMessageResource($this->message))->resolve(),
+            'data' => (new StallMessageResource($this->message))->resolve(),
         ];
     }
 }

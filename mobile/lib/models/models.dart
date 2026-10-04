@@ -509,6 +509,7 @@ class OrderRecord {
     this.sellerAvatarUrl,
     this.buyerAvatarUrl,
     this.sellerId,
+    this.buyerId,
     this.placedAt,
     this.canBeReviewed = false,
     this.reviewRating,
@@ -545,6 +546,7 @@ class OrderRecord {
   final String? sellerAvatarUrl;
   final String? buyerAvatarUrl;
   final int? sellerId;
+  final int? buyerId;
   final String? placedAt;
   final bool canBeReviewed;
   final int? reviewRating;
@@ -598,6 +600,7 @@ class OrderRecord {
       sellerAvatarUrl: ApiConfig.mediaUrl(sellerMap?['avatar_url'] as String?),
       buyerAvatarUrl: ApiConfig.mediaUrl(buyerMap?['avatar_url'] as String?),
       sellerId: ListingItem._asCount(sellerMap?['id']),
+      buyerId: ListingItem._asCount(buyerMap?['id']),
       placedAt: json['placed_at'] as String?,
       canBeReviewed: json['can_be_reviewed'] == true,
       reviewRating: reviewMap == null
@@ -729,6 +732,7 @@ class OrderRecord {
       sellerAvatarUrl: sellerAvatarUrl,
       buyerAvatarUrl: buyerAvatarUrl,
       sellerId: sellerId,
+      buyerId: buyerId,
       placedAt: placedAt,
       canBeReviewed: canBeReviewed ?? this.canBeReviewed,
       reviewRating: reviewRating ?? this.reviewRating,
@@ -1521,6 +1525,12 @@ class OrderMessage {
     this.authorRole,
     this.authorAvatarUrl,
     this.createdAt,
+    this.orderId,
+    this.listingId,
+    this.listingTitle,
+    this.listingPrice,
+    this.listingUnit,
+    this.listingThumbnailUrl,
   });
 
   final int id;
@@ -1530,6 +1540,15 @@ class OrderMessage {
   final String? authorRole;
   final String? authorAvatarUrl;
   final String? createdAt;
+  final int? orderId;
+  final int? listingId;
+  final String? listingTitle;
+  final String? listingPrice;
+  final String? listingUnit;
+  final String? listingThumbnailUrl;
+
+  bool get hasProductCard =>
+      listingTitle != null && listingTitle!.trim().isNotEmpty;
 
   factory OrderMessage.fromJson(Map<String, dynamic> json) {
     final author = json['author'];
@@ -1542,6 +1561,14 @@ class OrderMessage {
       authorRole: authorMap?['role'] as String?,
       authorAvatarUrl: ApiConfig.mediaUrl(authorMap?['avatar_url'] as String?),
       createdAt: json['created_at'] as String?,
+      orderId: ListingItem._asCount(json['order_id']),
+      listingId: ListingItem._asCount(json['listing_id']),
+      listingTitle: json['listing_title'] as String?,
+      listingPrice: json['listing_price_per_unit']?.toString(),
+      listingUnit: json['listing_unit'] as String?,
+      listingThumbnailUrl: ApiConfig.mediaUrl(
+        json['listing_thumbnail_url'] as String?,
+      ),
     );
   }
 }
@@ -1552,6 +1579,7 @@ class StallChat {
     required this.sellerId,
     required this.shopName,
     required this.buyerName,
+    this.buyerId,
     this.sellerAvatarUrl,
     this.buyerAvatarUrl,
     this.updatedAt,
@@ -1563,6 +1591,7 @@ class StallChat {
   final int sellerId;
   final String shopName;
   final String buyerName;
+  final int? buyerId;
   final String? sellerAvatarUrl;
   final String? buyerAvatarUrl;
   final String? updatedAt;
@@ -1585,6 +1614,7 @@ class StallChat {
       sellerId: ListingItem._asCount(json['farmer_seller_id']) ?? 0,
       shopName: json['shop_name'] as String? ?? 'Stall',
       buyerName: json['buyer_name'] as String? ?? 'Buyer',
+      buyerId: ListingItem._asCount(json['buyer_id']),
       sellerAvatarUrl: ApiConfig.mediaUrl(json['seller_avatar_url'] as String?),
       buyerAvatarUrl: ApiConfig.mediaUrl(json['buyer_avatar_url'] as String?),
       updatedAt: json['updated_at'] as String?,

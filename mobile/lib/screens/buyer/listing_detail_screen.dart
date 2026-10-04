@@ -231,7 +231,11 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   context.watch<AuthController>().user?.isBuyer == true &&
                   listing.sellerId != null &&
                   listing.sellerId != context.watch<AuthController>().user?.id)
-                ChatWithStallButton(sellerId: listing.sellerId!, compact: true),
+                ChatWithStallButton(
+                  sellerId: listing.sellerId!,
+                  compact: true,
+                  listingId: listing.id,
+                ),
               const SizedBox(height: AniHowSpace.cardGap),
               DecoratedBox(
                 decoration: BoxDecoration(

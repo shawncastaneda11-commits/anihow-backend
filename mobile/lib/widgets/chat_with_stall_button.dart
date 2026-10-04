@@ -12,10 +12,12 @@ class ChatWithStallButton extends StatefulWidget {
     super.key,
     required this.sellerId,
     this.compact = false,
+    this.listingId,
   });
 
   final int sellerId;
   final bool compact;
+  final int? listingId;
 
   @override
   State<ChatWithStallButton> createState() => _ChatWithStallButtonState();
@@ -30,7 +32,11 @@ class _ChatWithStallButtonState extends State<ChatWithStallButton> {
     }
     setState(() => _busy = true);
     try {
-      await openChatWithStall(context, sellerId: widget.sellerId);
+      await openChatWithStall(
+        context,
+        sellerId: widget.sellerId,
+        listingId: widget.listingId,
+      );
     } on ApiException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -45,7 +51,13 @@ class _ChatWithStallButtonState extends State<ChatWithStallButton> {
 
   @override
   Widget build(BuildContext context) {
-    final label = AppStrings.of(context).chatWithStall;
+    final strings = AppStrings.of(context);
+    final label = widget.listingId == null
+        ? strings.chatWithStall
+        : strings.messageSeller;
+    final sellerStyle = widget.listingId == null
+        ? null
+        : const ButtonStyle(minimumSize: WidgetStatePropertyAll(Size(48, 48)));
     final icon = _busy
         ? const SizedBox(
             width: 18,
@@ -58,6 +70,7 @@ class _ChatWithStallButtonState extends State<ChatWithStallButton> {
       return Align(
         alignment: Alignment.centerLeft,
         child: TextButton.icon(
+          style: sellerStyle,
           onPressed: _busy ? null : _open,
           icon: icon,
           label: Text(label),

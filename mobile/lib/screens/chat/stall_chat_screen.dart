@@ -6,10 +6,11 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
+import '../../services/stall_chat_realtime.dart';
 import '../../state/auth_controller.dart';
-import '../../support/relative_time.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/async_view.dart';
+import '../../widgets/chat_message_bubble.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
 
@@ -19,10 +20,12 @@ class StallChatScreen extends StatefulWidget {
     super.key,
     required this.chat,
     this.viewingAsSeller = false,
+    this.attachListingId,
   });
 
   final StallChat chat;
   final bool viewingAsSeller;
+  final int? attachListingId;
 
   @override
   State<StallChatScreen> createState() => _StallChatScreenState();
@@ -32,16 +35,32 @@ class _StallChatScreenState extends State<StallChatScreen> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
   final List<OrderMessage> _messages = [];
+  StallChatRealtime? _realtime;
+  StreamSubscription<OrderMessage>? _liveSub;
   Timer? _poll;
   bool _loading = true;
   Object? _error;
   bool _sending = false;
+  int? _pendingListingId;
 
   @override
   void initState() {
     super.initState();
+    _pendingListingId = widget.attachListingId;
     _reload();
+    _startRealtime();
     _poll = Timer.periodic(const Duration(seconds: 8), (_) => _pollNewer());
+  }
+
+  Future<void> _startRealtime() async {
+    final api = context.read<AuthController>().api;
+    final realtime = StallChatRealtime(
+      api: api,
+      conversationId: widget.chat.id,
+    );
+    _realtime = realtime;
+    _liveSub = realtime.messages.listen(_appendIfNew);
+    await realtime.connect();
   }
 
   Future<void> _reload() async {
@@ -123,10 +142,12 @@ class _StallChatScreenState extends State<StallChatScreen> {
       final message = await context.read<AuthController>().api.sendStallMessage(
         widget.chat.id,
         body: body,
+        listingId: _pendingListingId,
       );
       if (!mounted) {
         return;
       }
+      _pendingListingId = null;
       _input.clear();
       _appendIfNew(message);
     } on ApiException catch (error) {
@@ -144,6 +165,8 @@ class _StallChatScreenState extends State<StallChatScreen> {
   @override
   void dispose() {
     _poll?.cancel();
+    _liveSub?.cancel();
+    unawaited(_realtime?.dispose() ?? Future<void>.value());
     _input.dispose();
     _scroll.dispose();
     super.dispose();
@@ -237,40 +260,7 @@ class _StallChatScreenState extends State<StallChatScreen> {
       itemBuilder: (context, index) {
         final message = _messages[index];
         final mine = userId != null && message.authorId == userId;
-        return Align(
-          alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            margin: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
-            padding: AniHowSpace.cardPadding,
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.sizeOf(context).width * 0.8,
-            ),
-            decoration: BoxDecoration(
-              color: mine
-                  ? Theme.of(context).colorScheme.primaryContainer
-                  : Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(AniHowSpace.radius),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  mine ? AppStrings.of(context).you : message.authorName,
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-                const SizedBox(height: 4),
-                Text(message.body),
-                if (message.createdAt != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    relativeTime(message.createdAt),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
+        return ChatMessageBubble(message: message, mine: mine);
       },
     );
   }

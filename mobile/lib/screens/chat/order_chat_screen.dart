@@ -6,11 +6,11 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
-import '../../services/order_chat_realtime.dart';
+import '../../services/stall_chat_realtime.dart';
 import '../../state/auth_controller.dart';
-import '../../support/relative_time.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/async_view.dart';
+import '../../widgets/chat_message_bubble.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
 
@@ -26,8 +26,10 @@ class OrderChatScreen extends StatefulWidget {
 class _OrderChatScreenState extends State<OrderChatScreen> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
+  final _anchor = GlobalKey();
   final List<OrderMessage> _messages = [];
-  OrderChatRealtime? _realtime;
+  StallChat? _chat;
+  StallChatRealtime? _realtime;
   StreamSubscription<OrderMessage>? _liveSub;
   Timer? _poll;
   bool _loading = true;
@@ -40,8 +42,43 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
     super.initState();
     _canSend = !widget.order.isCancelled && !widget.order.isWalkIn;
     _reload();
-    _startRealtime();
     _poll = Timer.periodic(const Duration(seconds: 8), (_) => _pollNewer());
+  }
+
+  Future<StallChat?> _findChat() async {
+    final auth = context.read<AuthController>();
+    final api = auth.api;
+    final sellerId = widget.order.sellerId;
+    final viewingAsSeller = auth.user?.isFarmerSeller == true;
+
+    if (!viewingAsSeller && sellerId != null) {
+      return api.openStallChat(sellerId);
+    }
+
+    final chats = await api.stallChats();
+    final buyerId = widget.order.buyerId;
+    for (final chat in chats) {
+      final sameBuyer = buyerId != null && chat.buyerId == buyerId;
+      final sameSeller = sellerId == null || chat.sellerId == sellerId;
+      if (sameBuyer && sameSeller) {
+        return chat;
+      }
+    }
+
+    return null;
+  }
+
+  Future<void> _listen(StallChat chat) async {
+    if (_realtime != null) {
+      return;
+    }
+    final realtime = StallChatRealtime(
+      api: context.read<AuthController>().api,
+      conversationId: chat.id,
+    );
+    _realtime = realtime;
+    _liveSub = realtime.messages.listen(_appendIfNew);
+    await realtime.connect();
   }
 
   Future<void> _reload() async {
@@ -49,21 +86,43 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
       _loading = _messages.isEmpty;
       _error = null;
     });
-    try {
-      final items = await context.read<AuthController>().api.orderMessages(
-        widget.order.id,
-      );
+
+    if (widget.order.isWalkIn) {
       if (!mounted) {
         return;
       }
       setState(() {
+        _messages.clear();
+        _loading = false;
+        _error = null;
+      });
+      return;
+    }
+
+    try {
+      final api = context.read<AuthController>().api;
+      final chat = _chat ?? await _findChat();
+      final items = chat == null
+          ? const <OrderMessage>[]
+          : await api.stallMessages(chat.id);
+      if (!mounted) {
+        return;
+      }
+      if (chat != null) {
+        await _listen(chat);
+      }
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _chat = chat;
         _messages
           ..clear()
           ..addAll(items);
         _loading = false;
         _error = null;
       });
-      _scrollToEnd();
+      _scrollToOrder();
     } on ApiException catch (error) {
       if (!mounted) {
         return;
@@ -75,21 +134,35 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
     }
   }
 
-  Future<void> _startRealtime() async {
-    final api = context.read<AuthController>().api;
-    final realtime = OrderChatRealtime(api: api, orderId: widget.order.id);
-    _realtime = realtime;
-    _liveSub = realtime.messages.listen(_appendIfNew);
-    await realtime.connect();
-  }
-
   Future<void> _pollNewer() async {
-    if (!mounted) {
+    if (!mounted || widget.order.isWalkIn) {
       return;
     }
     try {
-      final newer = await context.read<AuthController>().api.orderMessages(
-        widget.order.id,
+      final api = context.read<AuthController>().api;
+      var chat = _chat;
+      if (chat == null) {
+        chat = await _findChat();
+        if (chat == null || !mounted) {
+          return;
+        }
+        _chat = chat;
+        await _listen(chat);
+        final items = await api.stallMessages(chat.id);
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _messages
+            ..clear()
+            ..addAll(items);
+        });
+        _scrollToOrder();
+        return;
+      }
+
+      final newer = await api.stallMessages(
+        chat.id,
         afterId: _messages.isEmpty ? null : _messages.last.id,
       );
       for (final message in newer) {
@@ -108,6 +181,10 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
       return;
     }
     setState(() => _messages.add(message));
+    if (message.orderId == widget.order.id) {
+      _scrollToOrder();
+      return;
+    }
     _scrollToEnd();
   }
 
@@ -116,12 +193,43 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
       if (!_scroll.hasClients) {
         return;
       }
-      _scroll.animateTo(
-        _scroll.position.maxScrollExtent + 80,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-      );
+      _scroll.jumpTo(_scroll.position.maxScrollExtent);
     });
+  }
+
+  void _scrollToOrder() {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _stepTowardAnchor(0));
+  }
+
+  void _stepTowardAnchor(int step) {
+    if (!mounted || !_scroll.hasClients) {
+      return;
+    }
+    final index = _messages.indexWhere(
+      (message) => message.orderId == widget.order.id,
+    );
+    if (index < 0) {
+      _scroll.jumpTo(_scroll.position.maxScrollExtent);
+      return;
+    }
+    final anchorContext = _anchor.currentContext;
+    if (anchorContext != null) {
+      Scrollable.ensureVisible(anchorContext, alignment: 0.2);
+      return;
+    }
+    if (step > 40) {
+      return;
+    }
+    final max = _scroll.position.maxScrollExtent;
+    final next = (_scroll.offset + _scroll.position.viewportDimension * 0.8)
+        .clamp(0.0, max);
+    if (next <= _scroll.offset) {
+      return;
+    }
+    _scroll.jumpTo(next);
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _stepTowardAnchor(step + 1),
+    );
   }
 
   Future<void> _send() async {
@@ -131,9 +239,22 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
     }
     setState(() => _sending = true);
     try {
-      final message = await context.read<AuthController>().api.sendOrderMessage(
-        widget.order.id,
+      final api = context.read<AuthController>().api;
+      final chat = _chat;
+      if (chat == null) {
+        await api.sendOrderMessage(widget.order.id, body: body);
+        if (!mounted) {
+          return;
+        }
+        _input.clear();
+        _chat = null;
+        await _reload();
+        return;
+      }
+      final message = await api.sendStallMessage(
+        chat.id,
         body: body,
+        orderId: widget.order.id,
       );
       if (!mounted) {
         return;
@@ -259,6 +380,8 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
         ),
       );
     }
+
+    var anchored = false;
     return ListView.builder(
       controller: _scroll,
       padding: AniHowSpace.screenPadding,
@@ -266,39 +389,14 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
       itemBuilder: (context, index) {
         final message = _messages[index];
         final mine = userId != null && message.authorId == userId;
-        return Align(
-          alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            margin: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
-            padding: AniHowSpace.cardPadding,
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.sizeOf(context).width * 0.8,
-            ),
-            decoration: BoxDecoration(
-              color: mine
-                  ? Theme.of(context).colorScheme.primaryContainer
-                  : Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(AniHowSpace.radius),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  mine ? AppStrings.of(context).you : message.authorName,
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-                const SizedBox(height: 4),
-                Text(message.body),
-                if (message.createdAt != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    relativeTime(message.createdAt),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ],
-            ),
-          ),
+        final isAnchor = !anchored && message.orderId == widget.order.id;
+        if (isAnchor) {
+          anchored = true;
+        }
+        return ChatMessageBubble(
+          key: isAnchor ? _anchor : ValueKey('stall-message-${message.id}'),
+          message: message,
+          mine: mine,
         );
       },
     );

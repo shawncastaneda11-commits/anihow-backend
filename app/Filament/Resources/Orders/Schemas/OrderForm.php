@@ -65,15 +65,15 @@ class OrderForm
             );
         }
 
-        $record->loadMissing('messages.author');
+        $record->loadMissing('stallMessages.author');
 
-        if ($record->messages->isEmpty()) {
+        if ($record->stallMessages->isEmpty()) {
             return new HtmlString(
                 '<span class="text-sm text-gray-500">No messages yet.</span>',
             );
         }
 
-        $lines = $record->messages->map(function ($message): string {
+        $lines = $record->stallMessages->map(function ($message): string {
             $author = e($message->author?->name ?? 'Unknown');
             $when = e(optional($message->created_at)?->timezone(config('app.timezone'))->format('Y-m-d H:i') ?? '');
             $body = nl2br(e($message->body));

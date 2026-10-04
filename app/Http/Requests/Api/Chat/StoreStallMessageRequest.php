@@ -18,6 +18,8 @@ class StoreStallMessageRequest extends FormRequest
     {
         return [
             'body' => ['required', 'string', 'min:1', 'max:1000'],
+            'order_id' => ['sometimes', 'nullable', 'integer'],
+            'listing_id' => ['sometimes', 'nullable', 'integer'],
         ];
     }
 

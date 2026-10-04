@@ -357,6 +357,8 @@ class AppStrings {
   );
   String get openOrders => t('Open orders', 'Buksan ang mga order');
   String get chatWithStall => t('Chat with stall', 'Makipag-chat sa tindahan');
+  String get messageSeller => t('Message seller', 'Magmensahe sa tindero');
+  String orderTag(int id) => t('Order #$id', 'Order #$id');
   String get chatWithBuyer => t('Chat with buyer', 'Makipag-chat sa buyer');
   String get order => t('Order', 'Order');
   String get you => t('You', 'Ikaw');

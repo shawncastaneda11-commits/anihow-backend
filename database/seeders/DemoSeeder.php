@@ -24,8 +24,9 @@ use App\Models\FarmAnnouncement;
 use App\Models\FarmPhoto;
 use App\Models\Listing;
 use App\Models\Order;
-use App\Models\OrderMessage;
 use App\Models\Review;
+use App\Models\StallConversation;
+use App\Models\StallMessage;
 use App\Models\TawadRule;
 use App\Models\User;
 use App\Services\AnalyticsService;
@@ -727,12 +728,10 @@ class DemoSeeder extends Seeder
         );
 
         if ($ready instanceof Order) {
-            OrderMessage::query()->firstOrCreate(
-                ['order_id' => $ready->id, 'user_id' => $ready->buyer_id, 'body' => 'Po, aalis ako ng 8am. Kita tayo sa hall.'],
-            );
-            OrderMessage::query()->firstOrCreate(
-                ['order_id' => $ready->id, 'user_id' => $ready->farmer_seller_id, 'body' => 'Sige, naka-pack na. Hanapin mo ang crate na may sticker ni Ka Rosa.'],
-            );
+            $this->seedStallLines($ready, [
+                [$ready->buyer_id, 'Po, aalis ako ng 8am. Kita tayo sa hall.'],
+                [$ready->farmer_seller_id, 'Sige, naka-pack na. Hanapin mo ang crate na may sticker ni Ka Rosa.'],
+            ]);
         }
 
         $firstCompleted = collect($orders)->first(
@@ -740,8 +739,36 @@ class DemoSeeder extends Seeder
         );
 
         if ($firstCompleted instanceof Order) {
-            OrderMessage::query()->firstOrCreate(
-                ['order_id' => $firstCompleted->id, 'user_id' => $firstCompleted->buyer_id, 'body' => 'Salamat! Sariwa talaga.'],
+            $this->seedStallLines($firstCompleted, [
+                [$firstCompleted->buyer_id, 'Salamat! Sariwa talaga.'],
+            ]);
+        }
+    }
+
+    /**
+     * @param  list<array{0: int|null, 1: string}>  $lines
+     */
+    private function seedStallLines(Order $order, array $lines): void
+    {
+        if ($order->buyer_id === null || $order->isWalkIn()) {
+            return;
+        }
+
+        $conversation = StallConversation::query()->firstOrCreate([
+            'buyer_id' => $order->buyer_id,
+            'farmer_seller_id' => $order->farmer_seller_id,
+        ]);
+
+        foreach ($lines as [$userId, $body]) {
+            StallMessage::query()->firstOrCreate(
+                [
+                    'stall_conversation_id' => $conversation->id,
+                    'body' => $body,
+                ],
+                [
+                    'user_id' => $userId,
+                    'order_id' => $order->id,
+                ],
             );
         }
     }

@@ -6,6 +6,8 @@ use App\Enums\NotificationType;
 use App\Enums\OrderStatus;
 use App\Enums\Role;
 use App\Events\OrderMessageCreated;
+use App\Models\StallConversation;
+use App\Models\StallMessage;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -199,5 +201,83 @@ class OrderChatApiTest extends TestCase
             ->postJson("/api/orders/{$order->id}/messages", ['body' => '   '])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('body');
+    }
+
+    public function test_order_message_response_keeps_the_original_keys(): void
+    {
+        $farmer = $this->farmer();
+        $listing = $this->listingFor($farmer, ['quantity_available' => 10, 'price_per_unit' => 30]);
+        $buyer = $this->buyer();
+        $order = $this->placeOrder($buyer, $listing, 1);
+
+        $created = $this->asUser($buyer)
+            ->postJson("/api/orders/{$order->id}/messages", ['body' => 'Same keys as before.'])
+            ->assertCreated()
+            ->json('data');
+
+        $this->assertSame(['id', 'body', 'created_at', 'author'], array_keys($created));
+        $this->assertSame(['id', 'name', 'role', 'avatar_url'], array_keys($created['author']));
+
+        $listed = $this->asUser($farmer)
+            ->getJson("/api/orders/{$order->id}/messages")
+            ->assertOk()
+            ->json('data.0');
+
+        $this->assertSame(['id', 'body', 'created_at', 'author'], array_keys($listed));
+        $this->assertSame(['id', 'name', 'role', 'avatar_url'], array_keys($listed['author']));
+        $this->assertSame($created, $listed);
+        $this->assertDatabaseCount('order_messages', 0);
+        $this->assertDatabaseHas('stall_messages', [
+            'order_id' => $order->id,
+            'body' => 'Same keys as before.',
+            'user_id' => $buyer->id,
+        ]);
+    }
+
+    public function test_super_admin_does_not_read_untagged_stall_chatter(): void
+    {
+        $farmer = $this->farmer();
+        $listing = $this->listingFor($farmer, ['quantity_available' => 10, 'price_per_unit' => 30]);
+        $buyer = $this->buyer();
+        $order = $this->placeOrder($buyer, $listing, 1);
+
+        $this->asUser($buyer)
+            ->postJson("/api/orders/{$order->id}/messages", ['body' => 'About the order'])
+            ->assertCreated();
+
+        $conversationId = StallConversation::query()
+            ->where('buyer_id', $buyer->id)
+            ->where('farmer_seller_id', $farmer->id)
+            ->value('id');
+
+        $this->asUser($buyer)
+            ->postJson("/api/stall-chats/{$conversationId}/messages", ['body' => 'Off the order'])
+            ->assertCreated();
+
+        $admin = User::factory()->create();
+        $admin->syncRoles(Role::SuperAdmin);
+
+        $this->asUser($admin)
+            ->getJson("/api/orders/{$order->id}/messages")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.body', 'About the order');
+
+        $this->asUser($admin)
+            ->getJson("/api/stall-chats/{$conversationId}/messages")
+            ->assertForbidden();
+
+        $editor = User::factory()->create(['farm_id' => $farmer->farm_id]);
+        $editor->syncRoles(Role::ContentEditor);
+
+        $this->asUser($editor)
+            ->getJson("/api/orders/{$order->id}/messages")
+            ->assertForbidden();
+
+        $this->asUser($editor)
+            ->getJson("/api/stall-chats/{$conversationId}/messages")
+            ->assertForbidden();
+
+        $this->assertSame(1, StallMessage::query()->where('order_id', $order->id)->count());
     }
 }

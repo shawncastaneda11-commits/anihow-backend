@@ -2,11 +2,11 @@
 
 namespace App\Http\Resources\Api;
 
-use App\Models\OrderMessage;
+use App\Models\StallMessage;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin OrderMessage */
+/** @mixin StallMessage */
 class OrderMessageResource extends JsonResource
 {
     /**

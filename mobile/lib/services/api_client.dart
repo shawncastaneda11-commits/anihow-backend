@@ -490,9 +490,13 @@ class ApiClient {
   Future<OrderMessage> sendStallMessage(
     int conversationId, {
     required String body,
+    int? orderId,
+    int? listingId,
   }) async {
     final response = await _post('/stall-chats/$conversationId/messages', {
       'body': body,
+      'order_id': ?orderId,
+      'listing_id': ?listingId,
     });
     return OrderMessage.fromJson(_asMap(response['data'] ?? response));
   }

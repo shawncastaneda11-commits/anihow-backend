@@ -4,6 +4,7 @@ namespace App\Http\Resources\Api;
 
 use App\Enums\Permission;
 use App\Models\ShopFavorite;
+use App\Support\GeoDistance;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -22,6 +23,14 @@ class ShopProfileResource extends JsonResource
             'location' => $this->location,
             'avatar_url' => $this->avatarUrl(),
             'cover_url' => $this->coverUrl(),
+            'distance_km' => $this->when(
+                $this->relationLoaded('farm') && GeoDistance::requested($request),
+                fn (): ?float => GeoDistance::kilometers(
+                    $this->farm?->latitude !== null ? (float) $this->farm->latitude : null,
+                    $this->farm?->longitude !== null ? (float) $this->farm->longitude : null,
+                    $request,
+                ),
+            ),
             'contact' => $this->when(
                 $request->user() !== null && (int) $request->user()->id === (int) $this->id,
                 fn (): ?string => $this->shopContact(),

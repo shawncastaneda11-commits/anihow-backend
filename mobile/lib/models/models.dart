@@ -276,6 +276,7 @@ class ListingItem {
     this.growingMethod,
     this.organicBadge,
     this.organicCertifier,
+    this.distanceKm,
   });
 
   final int id;
@@ -305,6 +306,7 @@ class ListingItem {
   final String? growingMethod;
   final String? organicBadge;
   final String? organicCertifier;
+  final double? distanceKm;
 
   String get name => title;
 
@@ -364,6 +366,7 @@ class ListingItem {
       growingMethod: growingMethod,
       organicBadge: organicBadge,
       organicCertifier: organicCertifier,
+      distanceKm: distanceKm,
     );
   }
 
@@ -418,7 +421,18 @@ class ListingItem {
       growingMethod: json['growing_method'] as String?,
       organicBadge: json['organic_badge'] as String?,
       organicCertifier: json['organic_certifier'] as String?,
+      distanceKm: _asDouble(json['distance_km']),
     );
+  }
+
+  static double? _asDouble(Object? value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is num) {
+      return value.toDouble();
+    }
+    return double.tryParse(value.toString());
   }
 
   static DateTime? _asDate(Object? value) {
@@ -1045,6 +1059,7 @@ class ShopProfile {
     this.farmMunicipality,
     this.farmIsActive = false,
     this.isFavorited = false,
+    this.distanceKm,
   });
 
   final int id;
@@ -1064,6 +1079,7 @@ class ShopProfile {
   final String? farmMunicipality;
   final bool farmIsActive;
   final bool isFavorited;
+  final double? distanceKm;
 
   bool get hasRating =>
       reviewsCount > 0 && averageRating != null && averageRating!.isNotEmpty;
@@ -1098,6 +1114,7 @@ class ShopProfile {
               farmMap['is_active'] == 1 ||
               farmMap['is_active'] == '1'),
       isFavorited: json['is_favorited'] == true || json['is_favorited'] == 1,
+      distanceKm: ListingItem._asDouble(json['distance_km']),
     );
   }
 
@@ -1120,6 +1137,7 @@ class ShopProfile {
       farmMunicipality: farmMunicipality,
       farmIsActive: farmIsActive,
       isFavorited: isFavorited ?? this.isFavorited,
+      distanceKm: distanceKm,
     );
   }
 }
@@ -1287,6 +1305,8 @@ class FarmProfile {
     this.farmerSellersCount = 0,
     this.storefronts = const [],
     this.announcements = const [],
+    this.latitude,
+    this.longitude,
   });
 
   final int id;
@@ -1304,8 +1324,12 @@ class FarmProfile {
   final int farmerSellersCount;
   final List<FarmStorefront> storefronts;
   final List<FarmAnnouncement> announcements;
+  final double? latitude;
+  final double? longitude;
 
   bool get hasCoverPhoto => coverPhotoUrl != null && coverPhotoUrl!.isNotEmpty;
+
+  bool get hasPin => latitude != null && longitude != null;
 
   String get placeLabel {
     final parts = [barangay, municipality]
@@ -1353,6 +1377,8 @@ class FarmProfile {
                 FarmAnnouncement.fromJson(Map<String, dynamic>.from(item)),
           )
           .toList(),
+      latitude: ListingItem._asDouble(json['latitude']),
+      longitude: ListingItem._asDouble(json['longitude']),
     );
   }
 }

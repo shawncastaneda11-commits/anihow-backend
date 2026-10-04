@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Marketplace\MarketplaceIndexRequest;
 use App\Http\Resources\Api\ListingResource;
 use App\Models\Listing;
+use App\Support\FarmProximity;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -69,7 +70,12 @@ class MarketplaceController extends Controller
                 }),
             );
 
-        $listings = $this->sorted($listings, $request->validated('sort') ?? 'freshest');
+        $listings = $this->sorted(
+            $listings,
+            $request->validated('sort') ?? 'freshest',
+            $this->near($request->validated('near_lat')),
+            $this->near($request->validated('near_lng')),
+        );
 
         return ListingResource::collection($listings->paginate());
     }
@@ -106,13 +112,22 @@ class MarketplaceController extends Controller
      * @param  Builder<Listing>  $query
      * @return Builder<Listing>
      */
-    private function sorted(Builder $query, string $sort): Builder
+    private function sorted(Builder $query, string $sort, ?float $nearLat, ?float $nearLng): Builder
     {
+        if ($sort === 'nearest') {
+            return FarmProximity::apply($query, 'listings.farm_id', $nearLat, $nearLng);
+        }
+
         return match ($sort) {
-            'price_asc' => $query->orderBy('price_per_unit')->orderBy('id'),
-            'price_desc' => $query->orderByDesc('price_per_unit')->orderBy('id'),
-            'availability' => $query->orderByDesc('quantity_available')->orderBy('id'),
-            default => $query->orderByDesc('created_at')->orderByDesc('id'),
+            'price_asc' => $query->orderBy('price_per_unit')->orderBy('listings.id'),
+            'price_desc' => $query->orderByDesc('price_per_unit')->orderBy('listings.id'),
+            'availability' => $query->orderByDesc('quantity_available')->orderBy('listings.id'),
+            default => $query->orderByDesc('listings.created_at')->orderByDesc('listings.id'),
         };
+    }
+
+    private function near(mixed $value): ?float
+    {
+        return is_numeric($value) ? (float) $value : null;
     }
 }

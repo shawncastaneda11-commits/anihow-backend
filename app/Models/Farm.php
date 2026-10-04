@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Role;
+use App\Support\FarmPin;
 use App\Support\ImageVariants;
 use Database\Factories\FarmFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Validator;
 
 #[Fillable([
     'name',
@@ -28,6 +30,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'organic_certifier',
     'organic_certificate_no',
     'organic_certified_until',
+    'latitude',
+    'longitude',
 ])]
 class Farm extends Model
 {
@@ -39,7 +43,25 @@ class Farm extends Model
         return [
             'is_active' => 'boolean',
             'organic_certified_until' => 'date',
+            'latitude' => 'decimal:7',
+            'longitude' => 'decimal:7',
         ];
+    }
+
+    public function hasPin(): bool
+    {
+        return $this->latitude !== null && $this->longitude !== null;
+    }
+
+    public function mapsUrl(): ?string
+    {
+        if (! $this->hasPin()) {
+            return null;
+        }
+
+        return 'https://www.google.com/maps/search/?api=1&query='
+            .rawurlencode((string) $this->latitude).','
+            .rawurlencode((string) $this->longitude);
     }
 
     /**
@@ -136,6 +158,22 @@ class Farm extends Model
 
     protected static function booted(): void
     {
+        static::saving(function (Farm $farm): void {
+            foreach (['latitude', 'longitude'] as $column) {
+                if ($farm->{$column} === '') {
+                    $farm->{$column} = null;
+                }
+            }
+
+            Validator::make(
+                [
+                    'latitude' => $farm->latitude,
+                    'longitude' => $farm->longitude,
+                ],
+                FarmPin::rules(),
+            )->validate();
+        });
+
         static::updating(function (Farm $farm): void {
             if ($farm->isDirty('cover_photo_path')) {
                 $previous = $farm->getOriginal('cover_photo_path');

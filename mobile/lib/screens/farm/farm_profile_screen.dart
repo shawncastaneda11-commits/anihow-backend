@@ -8,6 +8,7 @@ import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/async_view.dart';
+import '../../widgets/farm_map_card.dart';
 import '../../widgets/hint_card.dart';
 import '../../widgets/profile_avatar_button.dart';
 import '../buyer/shop_profile_screen.dart';
@@ -167,6 +168,13 @@ class FarmProfileView extends StatelessWidget {
                   title: s.pickupPoint,
                   body: pickup,
                   tone: AniHowHintTone.brand,
+                ),
+              ],
+              if (farm.hasPin) ...[
+                const SizedBox(height: AniHowSpace.section),
+                FarmMapCard(
+                  latitude: farm.latitude!,
+                  longitude: farm.longitude!,
                 ),
               ],
               if (farm.announcements.isNotEmpty) ...[

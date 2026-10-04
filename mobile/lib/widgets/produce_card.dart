@@ -135,11 +135,23 @@ class ProduceCard extends StatelessWidget {
   }
 
   List<Widget> _buyerNotes(BuildContext context) {
+    final notes = <Widget>[];
+    final distance = listing.distanceKm;
+    if (distance != null) {
+      notes.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            AppStrings.of(context).kilometersAway(distance),
+            key: ValueKey('distance-${listing.id}'),
+          ),
+        ),
+      );
+    }
     if (!showSeller) {
-      return const [];
+      return notes;
     }
     final s = AppStrings.of(context);
-    final notes = <Widget>[];
     if (listing.isUpcoming && listing.availableFrom != null) {
       notes.add(
         Padding(

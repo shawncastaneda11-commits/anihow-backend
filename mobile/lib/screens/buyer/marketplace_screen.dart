@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
+import '../../services/buyer_location.dart';
 import '../../state/auth_controller.dart';
 import '../../state/preferences_controller.dart';
 import '../../theme/anihow_space.dart';
@@ -31,6 +32,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   int? _cropTypeId;
   String? _category;
   String _sort = 'freshest';
+  double? _nearLat;
+  double? _nearLng;
+  bool _locationUnavailable = false;
   late Future<List<ListingItem>> _listings;
   late Future<List<CategoryItem>> _cropTypes;
   late Future<List<BuyerFarmAnnouncement>> _updates;
@@ -62,6 +66,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       cropTypeId: _cropTypeId,
       sort: _sort,
       category: _category,
+      nearLat: _sort == 'nearest' ? _nearLat : null,
+      nearLng: _sort == 'nearest' ? _nearLng : null,
     );
     final updates = api.buyerAnnouncements().then(
       (page) => page.items.take(3).toList(),
@@ -71,6 +77,31 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       _updates = updates;
     });
     await future;
+  }
+
+  Future<void> _applySort(String value) async {
+    double? latitude;
+    double? longitude;
+    var unavailable = false;
+    if (value == 'nearest') {
+      final point = await BuyerLocation.read();
+      if (!mounted) {
+        return;
+      }
+      if (point == null) {
+        unavailable = true;
+      } else {
+        latitude = point.latitude;
+        longitude = point.longitude;
+      }
+    }
+    setState(() {
+      _sort = value;
+      _nearLat = latitude;
+      _nearLng = longitude;
+      _locationUnavailable = unavailable;
+    });
+    await _reload();
   }
 
   @override
@@ -179,16 +210,29 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                 value: 'availability',
                 child: Text(s.inStockFirst),
               ),
+              DropdownMenuItem(value: 'nearest', child: Text(s.nearest)),
             ],
             onChanged: (value) {
               if (value == null) {
                 return;
               }
-              setState(() => _sort = value);
-              _reload();
+              _applySort(value);
             },
           ),
         ),
+        if (_locationUnavailable)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AniHowSpace.screen,
+              0,
+              AniHowSpace.screen,
+              AniHowSpace.cardGap,
+            ),
+            child: Text(
+              s.locationUnavailable,
+              key: const Key('location-unavailable'),
+            ),
+          ),
         SizedBox(
           height: 48,
           child: ListView(

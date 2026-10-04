@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api;
 
 use App\Models\Listing;
+use App\Support\GeoDistance;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -40,6 +41,14 @@ class ListingResource extends JsonResource
             'organic_certifier' => $this->organicBadge() === 'certified'
                 ? $this->farm?->organic_certifier
                 : null,
+            'distance_km' => $this->when(
+                $this->relationLoaded('farm') && GeoDistance::requested($request),
+                fn (): ?float => GeoDistance::kilometers(
+                    $this->farm?->latitude !== null ? (float) $this->farm->latitude : null,
+                    $this->farm?->longitude !== null ? (float) $this->farm->longitude : null,
+                    $request,
+                ),
+            ),
             'image_url' => $this->imageUrl(),
             'thumbnail_url' => $this->thumbnailUrl(),
             'crop_type' => new CropTypeResource($this->whenLoaded('cropType')),

@@ -310,6 +310,20 @@ class AppStrings {
       t('Certified by $name', 'Sertipikado ng $name');
   String get searchProduce => t('Search produce', 'Maghanap ng ani');
   String get freshest => t('Freshest', 'Pinakabago');
+  String get nearest => t('Nearest', 'Pinakamalapit');
+  String get locationUnavailable => t(
+    'Location is off. Showing the usual order.',
+    'Naka-off ang lokasyon. Ipinapakita ang karaniwang ayos.',
+  );
+  String get openInGoogleMaps =>
+      t('Open in Google Maps', 'Buksan sa Google Maps');
+  String get openStreetMapCredit =>
+      t('© OpenStreetMap contributors', '© OpenStreetMap contributors');
+  String kilometersAway(double kilometers) {
+    final label = kilometers.toStringAsFixed(1);
+    return t('$label km away', '$label km ang layo');
+  }
+
   String get priceLowHigh =>
       t('Price: low to high', 'Presyo: mababa hanggang mataas');
   String get priceHighLow =>

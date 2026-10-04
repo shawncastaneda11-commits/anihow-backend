@@ -253,6 +253,8 @@ class ApiClient {
     int? cropTypeId,
     String? sort,
     String? category,
+    double? nearLat,
+    double? nearLng,
   }) async {
     return _list(
       '/buyer/marketplace',
@@ -261,6 +263,8 @@ class ApiClient {
         'crop_type_id': ?cropTypeId,
         if (sort != null && sort.isNotEmpty) 'sort': sort,
         if (category != null && category.isNotEmpty) 'category': category,
+        if (nearLat != null && nearLng != null) 'near_lat': nearLat,
+        if (nearLat != null && nearLng != null) 'near_lng': nearLng,
       },
       parse: ListingItem.fromJson,
     );
@@ -618,8 +622,20 @@ class ApiClient {
     return OrderRecord.fromJson(_asMap(response['data'] ?? response));
   }
 
-  Future<List<ShopProfile>> buyerShops() {
-    return _list('/buyer/shops', parse: ShopProfile.fromJson);
+  Future<List<ShopProfile>> buyerShops({
+    String? sort,
+    double? nearLat,
+    double? nearLng,
+  }) {
+    return _list(
+      '/buyer/shops',
+      query: {
+        if (sort != null && sort.isNotEmpty) 'sort': sort,
+        if (nearLat != null && nearLng != null) 'near_lat': nearLat,
+        if (nearLat != null && nearLng != null) 'near_lng': nearLng,
+      },
+      parse: ShopProfile.fromJson,
+    );
   }
 
   Future<ShopProfile> buyerShop(int sellerId) async {

@@ -23,6 +23,8 @@ class _RecordingApi extends ApiClient {
     int? cropTypeId,
     String? sort,
     String? category,
+    double? nearLat,
+    double? nearLng,
   }) async {
     this.category = category;
     return const [];
@@ -60,7 +62,10 @@ Widget _app(Widget home, {AuthController? auth}) {
       ChangeNotifierProvider.value(value: controller),
       ChangeNotifierProvider(create: (_) => CartController(controller)),
     ],
-    child: MaterialApp(theme: AniHowTheme.light(), home: Scaffold(body: home)),
+    child: MaterialApp(
+      theme: AniHowTheme.light(),
+      home: Scaffold(body: home),
+    ),
   );
 }
 
@@ -178,10 +183,7 @@ void main() {
       ..user = _seller(certified: false);
 
     await tester.pumpWidget(
-      _app(
-        ListingFormScreen(cropTypes: Future.value(const [])),
-        auth: auth,
-      ),
+      _app(ListingFormScreen(cropTypes: Future.value(const [])), auth: auth),
     );
     await tester.pumpAndSettle();
 
@@ -205,10 +207,7 @@ void main() {
       ..user = _seller(certified: true);
 
     await tester.pumpWidget(
-      _app(
-        ListingFormScreen(cropTypes: Future.value(const [])),
-        auth: auth,
-      ),
+      _app(ListingFormScreen(cropTypes: Future.value(const [])), auth: auth),
     );
     await tester.pumpAndSettle();
 

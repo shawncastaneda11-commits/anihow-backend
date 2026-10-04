@@ -5,15 +5,17 @@ namespace App\Http\Controllers\Api\Shop;
 use App\Enums\Role;
 use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\Shop\BuyerShopIndexRequest;
 use App\Http\Resources\Api\ShopProfileResource;
 use App\Models\User;
+use App\Support\FarmProximity;
 use App\Support\ShopReviews;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class BuyerShopController extends Controller
 {
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(BuyerShopIndexRequest $request): AnonymousResourceCollection
     {
         $shops = User::query()
             ->role(Role::FarmerSeller->value)
@@ -27,9 +29,22 @@ class BuyerShopController extends Controller
                     'shopFans as is_favorited' => fn ($favorites) => $favorites
                         ->where('buyer_id', $request->user()->id),
                 ]),
-            )
-            ->orderByRaw('coalesce(shop_name, name)')
-            ->paginate();
+            );
+
+        if ($request->validated('sort') === 'nearest') {
+            $lat = $request->validated('near_lat');
+            $lng = $request->validated('near_lng');
+            FarmProximity::apply(
+                $shops,
+                'users.farm_id',
+                is_numeric($lat) ? (float) $lat : null,
+                is_numeric($lng) ? (float) $lng : null,
+            );
+        } else {
+            $shops->orderByRaw('coalesce(shop_name, name)');
+        }
+
+        $shops = $shops->paginate();
 
         return ShopProfileResource::collection($shops);
     }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
+import '../../services/buyer_location.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
@@ -27,16 +28,22 @@ class _FarmRow {
     required this.name,
     required this.place,
     required this.sellers,
+    this.distanceKm,
   });
 
   final int id;
   final String name;
   final String place;
   final List<ShopProfile> sellers;
+  final double? distanceKm;
 }
 
 class _ShopsScreenState extends State<ShopsScreen> {
   final _search = TextEditingController();
+  String _sort = 'name';
+  double? _nearLat;
+  double? _nearLng;
+  bool _locationUnavailable = false;
   late Future<List<ShopProfile>> _future;
 
   @override
@@ -52,11 +59,40 @@ class _ShopsScreenState extends State<ShopsScreen> {
   }
 
   Future<void> _reload() async {
-    final future = context.read<AuthController>().api.buyerShops();
+    final future = context.read<AuthController>().api.buyerShops(
+      sort: _sort == 'nearest' ? 'nearest' : null,
+      nearLat: _sort == 'nearest' ? _nearLat : null,
+      nearLng: _sort == 'nearest' ? _nearLng : null,
+    );
     setState(() {
       _future = future;
     });
     await future;
+  }
+
+  Future<void> _applySort(String value) async {
+    double? latitude;
+    double? longitude;
+    var unavailable = false;
+    if (value == 'nearest') {
+      final point = await BuyerLocation.read();
+      if (!mounted) {
+        return;
+      }
+      if (point == null) {
+        unavailable = true;
+      } else {
+        latitude = point.latitude;
+        longitude = point.longitude;
+      }
+    }
+    setState(() {
+      _sort = value;
+      _nearLat = latitude;
+      _nearLng = longitude;
+      _locationUnavailable = unavailable;
+    });
+    await _reload();
   }
 
   List<_FarmRow> _farms(List<ShopProfile> shops) {
@@ -82,6 +118,10 @@ class _ShopsScreenState extends State<ShopsScreen> {
         name: name,
         place: place,
         sellers: sellers,
+        distanceKm: sellers
+            .map((shop) => shop.distanceKm)
+            .whereType<double>()
+            .firstOrNull,
       );
     }).toList();
 
@@ -92,9 +132,11 @@ class _ShopsScreenState extends State<ShopsScreen> {
             return '${farm.name} ${farm.place}'.toLowerCase().contains(query);
           }).toList();
 
-    visible.sort(
-      (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-    );
+    if (_sort != 'nearest') {
+      visible.sort(
+        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+      );
+    }
     return visible;
   }
 
@@ -153,6 +195,40 @@ class _ShopsScreenState extends State<ShopsScreen> {
                 onChanged: (_) => setState(() {}),
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AniHowSpace.screen,
+                0,
+                AniHowSpace.screen,
+                AniHowSpace.cardGap,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: SizedBox(
+                  height: 48,
+                  child: FilterChip(
+                    label: Text(s.nearest),
+                    selected: _sort == 'nearest',
+                    onSelected: (selected) {
+                      _applySort(selected ? 'nearest' : 'name');
+                    },
+                  ),
+                ),
+              ),
+            ),
+            if (_locationUnavailable)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AniHowSpace.screen,
+                  0,
+                  AniHowSpace.screen,
+                  AniHowSpace.cardGap,
+                ),
+                child: Text(
+                  s.locationUnavailable,
+                  key: const Key('location-unavailable'),
+                ),
+              ),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _reload,
@@ -261,6 +337,10 @@ class _FarmCard extends StatelessWidget {
                           ),
                         ],
                       ),
+                    ],
+                    if (farm.distanceKm != null) ...[
+                      const SizedBox(height: 4),
+                      Text(s.kilometersAway(farm.distanceKm!)),
                     ],
                   ],
                 ),
@@ -498,6 +578,12 @@ class _SellerCard extends StatelessWidget {
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: AniHowColors.sage,
                         ),
+                      ),
+                    ],
+                    if (shop.distanceKm != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        AppStrings.of(context).kilometersAway(shop.distanceKm!),
                       ),
                     ],
                     if (location != null && location.isNotEmpty) ...[

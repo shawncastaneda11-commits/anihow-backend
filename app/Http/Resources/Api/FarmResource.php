@@ -5,6 +5,7 @@ namespace App\Http\Resources\Api;
 use App\Enums\Permission;
 use App\Models\Farm;
 use App\Models\User;
+use App\Support\GeoDistance;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -29,6 +30,16 @@ class FarmResource extends JsonResource
             'barangay' => $this->barangay,
             'municipality' => $this->municipality,
             'pickup_point' => $this->pickup_point,
+            'latitude' => $this->latitude !== null ? (float) $this->latitude : null,
+            'longitude' => $this->longitude !== null ? (float) $this->longitude : null,
+            'distance_km' => $this->when(
+                GeoDistance::requested($request),
+                fn (): ?float => GeoDistance::kilometers(
+                    $this->latitude !== null ? (float) $this->latitude : null,
+                    $this->longitude !== null ? (float) $this->longitude : null,
+                    $request,
+                ),
+            ),
             'is_active' => $this->is_active,
             'cover_photo_url' => $this->coverPhotoUrl(),
             'thumbnail_url' => $this->coverThumbnailUrl(),

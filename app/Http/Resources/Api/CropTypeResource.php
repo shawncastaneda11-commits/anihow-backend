@@ -6,6 +6,7 @@ use App\Models\CropType;
 use App\Models\Farm;
 use App\Support\Pricing\PriceGuard;
 use App\Support\Pricing\PriceGuardResolver;
+use App\Support\Pricing\UnitConverter;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -42,6 +43,10 @@ class CropTypeResource extends JsonResource
             'label_fil' => $this->label_fil,
             'unit_of_measure' => $this->unit_of_measure->value,
             'unit_label' => $this->unit_of_measure->label(),
+            'allowed_units' => app(UnitConverter::class)->allowedUnits(
+                $this->resource,
+                $request->user()?->farm_id,
+            ),
             'floor_price' => (float) $this->floor_price,
             'max_discount' => (float) $this->max_discount,
             'effective_floor_price' => $guard->floor,

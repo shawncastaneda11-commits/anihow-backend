@@ -122,12 +122,14 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
     setState(() => _busy = true);
     try {
       final order = await api.recordWalkInSale(
-            listingId: listingId,
-            quantity: _quantity.text.trim(),
-            amountReceived: _amountReceived.text.trim(),
-            buyerName: _buyerName.text.trim().isEmpty ? null : _buyerName.text.trim(),
-            note: _note.text.trim().isEmpty ? null : _note.text.trim(),
-          );
+        listingId: listingId,
+        quantity: _quantity.text.trim(),
+        amountReceived: _amountReceived.text.trim(),
+        buyerName: _buyerName.text.trim().isEmpty
+            ? null
+            : _buyerName.text.trim(),
+        note: _note.text.trim().isEmpty ? null : _note.text.trim(),
+      );
       if (!mounted) {
         return;
       }
@@ -147,7 +149,9 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
                   total: order.total,
                 ),
                 const SizedBox(height: AniHowSpace.cardGap),
-                Text(s.amountReceivedLine(AniHowMoney.peso(order.amountReceived))),
+                Text(
+                  s.amountReceivedLine(AniHowMoney.peso(order.amountReceived)),
+                ),
               ],
             ),
             actions: [
@@ -195,7 +199,7 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
       return Center(child: Text(s.noWalkInListings));
     }
     final selected = _selected;
-    final unit = selected?.unitLabel ?? selected?.unit;
+    final unit = selected?.unit ?? selected?.unitLabel;
     final language = context.watch<PreferencesController>().language;
     return Column(
       children: [
@@ -231,7 +235,7 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
                       const SizedBox(height: AniHowSpace.cardGap),
                       if (selected.category != null)
                         Text(selected.category!.labelFor(language)),
-                      Text(s.pricePerUnit(AniHowMoney.peso(selected.pricePerUnit))),
+                      Text(selected.priceLabel),
                       Text(s.availableQty(selected.quantityAvailable, unit)),
                     ],
                   ],
@@ -245,7 +249,9 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
                       label: s.quantity,
                       child: TextField(
                         controller: _quantity,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
                         inputFormatters: [_decimal],
                         decoration: InputDecoration(
                           hintText: '0',
@@ -258,7 +264,9 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
                       label: s.amountReceived,
                       child: TextField(
                         controller: _amountReceived,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
                         inputFormatters: [_decimal],
                         decoration: const InputDecoration(
                           prefixText: '₱ ',
@@ -312,7 +320,11 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
                   ),
                   const SizedBox(height: AniHowSpace.cardGap),
                 ],
-                PrimaryButton(label: s.recordSale, busy: _busy, onPressed: _save),
+                PrimaryButton(
+                  label: s.recordSale,
+                  busy: _busy,
+                  onPressed: _save,
+                ),
               ],
             ),
           ),

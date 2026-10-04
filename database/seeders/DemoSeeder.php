@@ -357,6 +357,7 @@ class DemoSeeder extends Seeder
                 'farm_id' => $farm->id,
                 'title' => $title,
                 'description' => $description,
+                'unit' => $crop->unit_of_measure,
                 'price_per_unit' => $price,
                 'is_active' => true,
                 'status' => ListingStatus::Published,

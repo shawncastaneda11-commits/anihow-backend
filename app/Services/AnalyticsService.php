@@ -8,6 +8,7 @@ use App\Enums\Permission;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\User;
+use App\Support\Pricing\UnitConverter;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -30,22 +31,29 @@ use Illuminate\Support\Facades\DB;
 class AnalyticsService
 {
     /**
-     * Units sold per crop type, in each crop's own unit of measure.
+     * Units sold per crop type, converted into each line's family base unit
+     * and grouped by that base. Grams and kilograms add up as kilograms.
+     * A tray stays a tray, separate from kilograms of the same crop.
+     *
+     * The selected unit is aliased as unit_of_measure, not unit: OrderItem
+     * casts `unit` to ListingUnit, and Eloquent applies the cast to the alias too.
      *
      * @return Collection<int, object>
      */
     public function unitsSoldPerCropType(?User $viewer = null, ?int $days = null, ?CarbonInterface $since = null, ?CarbonInterface $until = null): Collection
     {
+        $baseUnit = UnitConverter::sqlBaseUnit('order_items.unit');
+        $factor = UnitConverter::sqlFactor('order_items.unit');
+
         return $this->itemQuery($viewer, $days, $since, $until)
             ->join('crop_types', 'crop_types.id', '=', 'order_items.crop_type_id')
-            ->groupBy('crop_types.id', 'crop_types.name', 'crop_types.unit_of_measure')
+            ->groupBy('crop_types.id', 'crop_types.name')
+            ->groupByRaw($baseUnit)
             ->orderByDesc('units')
             ->get([
                 'crop_types.name as crop',
-                // Aliased as unit_of_measure, not unit: OrderItem casts `unit` to
-                // ListingUnit, and Eloquent applies the cast to the alias too.
-                'crop_types.unit_of_measure as unit_of_measure',
-                DB::raw('sum(order_items.quantity) as units'),
+                DB::raw($baseUnit.' as unit_of_measure'),
+                DB::raw('sum(order_items.quantity * ('.$factor.')) as units'),
                 DB::raw('sum(order_items.line_total) as revenue'),
             ]);
     }

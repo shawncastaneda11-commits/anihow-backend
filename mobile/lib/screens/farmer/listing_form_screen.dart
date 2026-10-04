@@ -16,9 +16,12 @@ import 'tawad_form_screen.dart';
 import 'walk_in_sale_screen.dart';
 
 class ListingFormScreen extends StatefulWidget {
-  const ListingFormScreen({super.key, this.listing});
+  const ListingFormScreen({super.key, this.listing, this.cropTypes});
 
   final ListingItem? listing;
+
+  /// When set, the form does not call the network for crop types.
+  final Future<List<CategoryItem>>? cropTypes;
 
   @override
   State<ListingFormScreen> createState() => _ListingFormScreenState();
@@ -30,6 +33,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   final _quantity = TextEditingController();
   final _description = TextEditingController();
   int? _cropTypeId;
+  String? _unit;
   String? _imagePath;
   bool _busy = false;
   late Future<List<CategoryItem>> _cropTypes;
@@ -46,8 +50,10 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       _quantity.text = listing.quantityAvailable;
       _description.text = listing.description ?? '';
       _cropTypeId = listing.category?.id;
+      _unit = listing.unit;
     }
-    _cropTypes = context.read<AuthController>().api.cropTypes();
+    _cropTypes =
+        widget.cropTypes ?? context.read<AuthController>().api.cropTypes();
   }
 
   @override
@@ -60,7 +66,10 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   }
 
   Future<void> _pickPhoto() async {
-    final file = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
+    final file = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
     if (file != null && mounted) {
       setState(() => _imagePath = file.path);
     }
@@ -78,6 +87,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     final body = {
       'title': _name.text.trim(),
       'crop_type_id': _cropTypeId,
+      'unit': _unit,
       'price_per_unit': _price.text.trim(),
       'quantity_available': _quantity.text.trim(),
       'description': _description.text.trim(),
@@ -86,14 +96,19 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       if (widget.listing == null) {
         await api.createListing(body, imagePath: _imagePath);
       } else {
-        await api.updateListing(widget.listing!.id, body, imagePath: _imagePath);
+        await api.updateListing(
+          widget.listing!.id,
+          body,
+          imagePath: _imagePath,
+        );
       }
       if (mounted) {
         Navigator.of(context).pop(true);
       }
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) {
@@ -115,8 +130,14 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
           title: Text(s.deleteListingAsk),
           content: Text(listing.title),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: Text(s.cancel)),
-            TextButton(onPressed: () => Navigator.pop(context, true), child: Text(s.delete)),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(s.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(s.delete),
+            ),
           ],
         );
       },
@@ -132,7 +153,8 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       }
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) {
@@ -148,6 +170,62 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       }
     }
     return null;
+  }
+
+  String? _resolvedUnit(CategoryItem? crop) {
+    if (crop == null) {
+      return null;
+    }
+    final allowed = crop.allowedUnits.map((unit) => unit.value).toList();
+    if (_unit != null && (allowed.isEmpty || allowed.contains(_unit))) {
+      return _unit;
+    }
+    if (crop.unit != null && (allowed.isEmpty || allowed.contains(crop.unit))) {
+      return crop.unit;
+    }
+    return allowed.isEmpty ? crop.unit : allowed.first;
+  }
+
+  List<DropdownMenuItem<String>> _unitItems(CategoryItem crop, AppStrings s) {
+    final allowed = crop.allowedUnits.isEmpty
+        ? [AllowedListingUnit(value: crop.unit ?? 'kg', family: '')]
+        : crop.allowedUnits;
+    final families = <String>[];
+    for (final unit in allowed) {
+      if (!families.contains(unit.family)) {
+        families.add(unit.family);
+      }
+    }
+    final items = <DropdownMenuItem<String>>[];
+    for (final family in families) {
+      if (family.isNotEmpty) {
+        items.add(
+          DropdownMenuItem(
+            enabled: false,
+            value: '#$family',
+            child: Text(
+              s.unitFamily(family),
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        );
+      }
+      for (final unit in allowed.where((row) => row.family == family)) {
+        items.add(
+          DropdownMenuItem(
+            value: unit.value,
+            child: SizedBox(
+              height: 48,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(s.unitName(unit.value)),
+              ),
+            ),
+          ),
+        );
+      }
+    }
+    return items;
   }
 
   Future<void> _openTawad() async {
@@ -177,8 +255,14 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
           title: Text(s.endTawadAsk),
           content: Text(s.tawadKeepPrice),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: Text(s.back)),
-            TextButton(onPressed: () => Navigator.pop(context, true), child: Text(s.endTawad)),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(s.back),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(s.endTawad),
+            ),
           ],
         );
       },
@@ -189,15 +273,16 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     setState(() => _busy = true);
     try {
       await context.read<AuthController>().api.endTawad(
-            listingId: listing.id,
-            tawadRuleId: rule.id,
-          );
+        listingId: listing.id,
+        tawadRuleId: rule.id,
+      );
       if (mounted) {
         await _reloadListing();
       }
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) {
@@ -212,13 +297,16 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       return;
     }
     try {
-      final fresh = await context.read<AuthController>().api.farmerListing(listing.id);
+      final fresh = await context.read<AuthController>().api.farmerListing(
+        listing.id,
+      );
       if (mounted) {
         setState(() => _listing = fresh);
       }
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
       }
     }
   }
@@ -229,7 +317,9 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       return;
     }
     await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => WalkInSaleScreen(listingId: listing.id)),
+      MaterialPageRoute(
+        builder: (_) => WalkInSaleScreen(listingId: listing.id),
+      ),
     );
   }
 
@@ -279,7 +369,8 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                       AniHowHintCard(
                         icon: Icons.visibility_off_outlined,
                         title: s.takenDown,
-                        body: _listing!.takedownReason ?? s.listingTakenDownHint,
+                        body:
+                            _listing!.takedownReason ?? s.listingTakenDownHint,
                         tone: AniHowHintTone.cash,
                       ),
                     ],
@@ -300,7 +391,9 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                             child: TextField(
                               controller: _name,
                               textCapitalization: TextCapitalization.words,
-                              decoration: InputDecoration(hintText: s.nameProduce),
+                              decoration: InputDecoration(
+                                hintText: s.nameProduce,
+                              ),
                             ),
                           ),
                           const SizedBox(height: AniHowSpace.fieldGap),
@@ -313,14 +406,41 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                                     (cropType) => DropdownMenuItem(
                                       value: cropType.id,
                                       child: Text(
-                                        cropType.labelFor(context.watch<PreferencesController>().language),
+                                        cropType.labelFor(
+                                          context
+                                              .watch<PreferencesController>()
+                                              .language,
+                                        ),
                                       ),
                                     ),
                                   )
                                   .toList(),
-                              onChanged: (value) => setState(() => _cropTypeId = value),
+                              onChanged: (value) => setState(() {
+                                _cropTypeId = value;
+                                _unit = _resolvedUnit(_selectedCrop(cropTypes));
+                              }),
                             ),
                           ),
+                          if (selectedCrop != null) ...[
+                            const SizedBox(height: AniHowSpace.fieldGap),
+                            AniHowField(
+                              label: s.unit,
+                              child: DropdownButtonFormField<String>(
+                                key: ValueKey(
+                                  'listing-unit-${selectedCrop.id}-${_unit ?? ''}',
+                                ),
+                                initialValue: _resolvedUnit(selectedCrop),
+                                isExpanded: true,
+                                items: _unitItems(selectedCrop, s),
+                                onChanged: (value) {
+                                  if (value == null || value.startsWith('#')) {
+                                    return;
+                                  }
+                                  setState(() => _unit = value);
+                                },
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: AniHowSpace.fieldGap),
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -330,7 +450,10 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                                   label: s.price,
                                   child: TextField(
                                     controller: _price,
-                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                          decimal: true,
+                                        ),
                                     decoration: const InputDecoration(
                                       prefixText: '₱ ',
                                       hintText: '0.00',
@@ -344,7 +467,10 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                                   label: s.quantity,
                                   child: TextField(
                                     controller: _quantity,
-                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                          decimal: true,
+                                        ),
                                   ),
                                 ),
                               ),
@@ -354,11 +480,19 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                             const SizedBox(height: AniHowSpace.cardGap),
                             Text(
                               s.floorPriceFor(
-                                selectedCrop!.labelFor(context.watch<PreferencesController>().language),
+                                selectedCrop!.labelFor(
+                                  context
+                                      .watch<PreferencesController>()
+                                      .language,
+                                ),
                                 AniHowMoney.peso(floor),
                               ),
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.7),
                                   ),
                             ),
                           ],
@@ -369,7 +503,9 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                               controller: _description,
                               maxLines: 4,
                               textCapitalization: TextCapitalization.sentences,
-                              decoration: InputDecoration(hintText: s.shortNote),
+                              decoration: InputDecoration(
+                                hintText: s.shortNote,
+                              ),
                             ),
                           ),
                         ],
@@ -389,7 +525,8 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                                   offAtMin: s.tawadOffAtMin,
                                 ),
                               ),
-                              if (_listing!.tawad!.typeLabel != null) Text(_listing!.tawad!.typeLabel!),
+                              if (_listing!.tawad!.typeLabel != null)
+                                Text(_listing!.tawad!.typeLabel!),
                               const SizedBox(height: AniHowSpace.cardGap),
                               PrimaryButton(
                                 label: s.replaceTawad,
@@ -403,13 +540,20 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                             ] else ...[
                               Text(s.noTawad),
                               const SizedBox(height: AniHowSpace.cardGap),
-                              PrimaryButton(label: s.setTawad, onPressed: _busy ? null : _openTawad),
+                              PrimaryButton(
+                                label: s.setTawad,
+                                onPressed: _busy ? null : _openTawad,
+                              ),
                             ],
                           ],
                         ),
                       ),
                       if (!_listing!.isTakenDown &&
-                          (context.watch<AuthController>().user?.canRecordWalkInSales ?? false)) ...[
+                          (context
+                                  .watch<AuthController>()
+                                  .user
+                                  ?.canRecordWalkInSales ??
+                              false)) ...[
                         const SizedBox(height: AniHowSpace.cardGap),
                         OutlinedButton.icon(
                           onPressed: _busy ? null : _openWalkIn,
@@ -430,7 +574,11 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                     AniHowSpace.screen,
                     AniHowSpace.screen,
                   ),
-                  child: PrimaryButton(label: s.saveListing, busy: _busy, onPressed: _save),
+                  child: PrimaryButton(
+                    label: s.saveListing,
+                    busy: _busy,
+                    onPressed: _save,
+                  ),
                 ),
               ),
             ],

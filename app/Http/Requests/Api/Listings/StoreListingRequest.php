@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests\Api\Listings;
 
+use App\Enums\ListingUnit;
 use App\Models\CropType;
 use App\Models\Listing;
 use App\Support\Pricing\PriceGuardResolver;
+use App\Support\Pricing\UnitConverter;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreListingRequest extends FormRequest
 {
@@ -16,8 +19,10 @@ class StoreListingRequest extends FormRequest
     }
 
     /**
-     * No unit field. Unit of measure belongs to the crop type, or two sellers
-     * list the same crop in different units and units-sold means nothing.
+     * The seller chooses the unit. A crop with a floor price or a maximum
+     * discount only accepts a unit that converts into the crop type's unit.
+     * Analytics sum each family in its base unit, so grams and kilograms
+     * still add up.
      *
      * @return array<string, mixed>
      */
@@ -25,6 +30,7 @@ class StoreListingRequest extends FormRequest
     {
         return [
             'crop_type_id' => ['required', 'integer', 'exists:crop_types,id'],
+            'unit' => ['required', Rule::enum(ListingUnit::class)],
             'title' => ['required', 'string', 'max:150'],
             'description' => ['nullable', 'string', 'max:5000'],
             'price_per_unit' => ['required', 'numeric', 'gt:0', 'max:99999.99'],
@@ -66,9 +72,22 @@ class StoreListingRequest extends FormRequest
                     return;
                 }
 
-                $guard = app(PriceGuardResolver::class)->forFarmId($seller?->farm_id, $cropType);
+                $converter = app(UnitConverter::class);
+                $unit = ListingUnit::from($this->validated('unit'));
 
-                if (! $guard->allowsPrice((float) $this->validated('price_per_unit'))) {
+                if (! $converter->accepts($cropType, $unit, $seller?->farm_id)) {
+                    $validator->errors()->add(
+                        'unit',
+                        $converter->refusalMessage($cropType, $seller?->farm_id),
+                    );
+
+                    return;
+                }
+
+                $guard = app(PriceGuardResolver::class)->forFarmId($seller?->farm_id, $cropType);
+                $price = $converter->priceIn($unit, $cropType->unit_of_measure, $this->validated('price_per_unit'));
+
+                if (! $guard->allowsPrice($price)) {
                     $floor = number_format($guard->floor, 2, '.', '');
                     $validator->errors()->add(
                         'price_per_unit',
@@ -86,6 +105,7 @@ class StoreListingRequest extends FormRequest
     {
         return [
             'crop_type_id' => $this->validated('crop_type_id'),
+            'unit' => $this->validated('unit'),
             'title' => $this->validated('title'),
             'description' => $this->validated('description'),
             'price_per_unit' => $this->validated('price_per_unit'),

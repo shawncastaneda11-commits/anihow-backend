@@ -6,6 +6,7 @@ use App\Actions\Listings\TakeDownListingAction;
 use App\Enums\ListingStatus;
 use App\Models\Listing;
 use App\Support\InAppNotifier;
+use App\Support\Pricing\UnitConverter;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Textarea;
@@ -42,6 +43,11 @@ class ListingsTable
             ELSE crop_types.floor_price
         END
         SQL;
+
+    public static function belowFloorSql(): string
+    {
+        return UnitConverter::belowFloorComparison(self::EFFECTIVE_FLOOR_SQL);
+    }
 
     public static function configure(Table $table): Table
     {
@@ -108,14 +114,13 @@ class ListingsTable
                     ->label('Seller active'),
                 // Same answer as the red price badge, computed in SQL so it can
                 // filter. Compares against the farm's effective floor, not the
-                // system floor alone.
+                // system floor alone. The listing price is converted into the
+                // crop type's unit first, using the same factors as UnitConverter.
                 Filter::make('below_floor')
                     ->label('Priced below floor')
                     ->query(fn (Builder $query): Builder => $query->whereHas(
                         'cropType',
-                        fn (Builder $cropType): Builder => $cropType->whereRaw(
-                            '('.self::EFFECTIVE_FLOOR_SQL.') > listings.price_per_unit',
-                        ),
+                        fn (Builder $cropType): Builder => $cropType->whereRaw(self::belowFloorSql()),
                     )),
             ])
             ->recordActions([

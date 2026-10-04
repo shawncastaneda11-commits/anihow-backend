@@ -89,6 +89,18 @@ class AccountDeletionRequest {
   }
 }
 
+class AllowedListingUnit {
+  const AllowedListingUnit({
+    required this.value,
+    required this.family,
+    this.label,
+  });
+
+  final String value;
+  final String family;
+  final String? label;
+}
+
 class CategoryItem {
   const CategoryItem({
     required this.id,
@@ -102,6 +114,7 @@ class CategoryItem {
     this.maxDiscount,
     this.effectiveFloorPrice,
     this.effectiveMaxDiscount,
+    this.allowedUnits = const [],
   });
 
   final int id;
@@ -115,6 +128,7 @@ class CategoryItem {
   final String? maxDiscount;
   final String? effectiveFloorPrice;
   final String? effectiveMaxDiscount;
+  final List<AllowedListingUnit> allowedUnits;
 
   factory CategoryItem.fromJson(Map<String, dynamic> json) {
     return CategoryItem(
@@ -129,6 +143,18 @@ class CategoryItem {
       maxDiscount: json['max_discount']?.toString(),
       effectiveFloorPrice: json['effective_floor_price']?.toString(),
       effectiveMaxDiscount: json['effective_max_discount']?.toString(),
+      allowedUnits: ((json['allowed_units'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((row) {
+            final unit = Map<String, dynamic>.from(row);
+            return AllowedListingUnit(
+              value: unit['value']?.toString() ?? '',
+              family: unit['family']?.toString() ?? '',
+              label: unit['label']?.toString(),
+            );
+          })
+          .where((unit) => unit.value.isNotEmpty)
+          .toList(),
     );
   }
 
@@ -275,6 +301,16 @@ class ListingItem {
 
   bool get isTakenDown => status == 'taken_down';
 
+  /// Short unit code, for example ₱60.00 / kg.
+  String get priceLabel {
+    final peso = AniHowMoney.peso(pricePerUnit);
+    final code = unit;
+    if (code == null || code.isEmpty) {
+      return peso;
+    }
+    return '$peso / $code';
+  }
+
   bool get isSellerActive => isActive && !isTakenDown;
 
   ListingItem copyWith({bool? isActive}) {
@@ -314,8 +350,11 @@ class ListingItem {
     return ListingItem(
       id: ListingItem._asCount(json['id']) ?? 0,
       title: json['title'] as String? ?? '',
-      unit: cropTypeMap?['unit_of_measure'] as String?,
-      unitLabel: cropTypeMap?['unit_label'] as String?,
+      unit:
+          json['unit'] as String? ?? cropTypeMap?['unit_of_measure'] as String?,
+      unitLabel:
+          json['unit_label'] as String? ??
+          cropTypeMap?['unit_label'] as String?,
       pricePerUnit: '${json['price_per_unit'] ?? '0'}',
       quantityAvailable: '${json['quantity_available'] ?? '0'}',
       description: json['description'] as String?,
@@ -670,7 +709,7 @@ class CartLine {
     return label;
   }
 
-  String get unitLabel => listing?.unitLabel ?? listing?.unit ?? '';
+  String get unitLabel => listing?.unit ?? listing?.unitLabel ?? '';
 
   bool get isPurchasable => listing != null && listing!.isSellerActive;
 

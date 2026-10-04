@@ -42,7 +42,10 @@ class ProduceCard extends StatelessWidget {
   Widget _poster(BuildContext context) {
     final theme = Theme.of(context);
     final language = context.watch<PreferencesController>().language;
-    final sellerLabel = listing.sellerName ?? listing.category?.labelFor(language) ?? AppStrings.maybeOf(context).farmStall;
+    final sellerLabel =
+        listing.sellerName ??
+        listing.category?.labelFor(language) ??
+        AppStrings.maybeOf(context).farmStall;
     final cropLabel = listing.category?.labelFor(language);
     final muted = theme.textTheme.bodyMedium?.copyWith(
       color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
@@ -91,7 +94,7 @@ class ProduceCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '${AniHowMoney.peso(listing.pricePerUnit)} / ${listing.unit ?? ''}',
+            listing.priceLabel,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.labelLarge?.copyWith(
@@ -132,7 +135,10 @@ class ProduceCard extends StatelessWidget {
   Widget _row(BuildContext context) {
     final theme = Theme.of(context);
     final language = context.watch<PreferencesController>().language;
-    final sellerLabel = listing.sellerName ?? listing.category?.labelFor(language) ?? AppStrings.maybeOf(context).farmStall;
+    final sellerLabel =
+        listing.sellerName ??
+        listing.category?.labelFor(language) ??
+        AppStrings.maybeOf(context).farmStall;
     final cropLabel = listing.category?.labelFor(language);
 
     return Card(
@@ -160,13 +166,18 @@ class ProduceCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(listing.name, style: theme.textTheme.titleMedium),
+                          Text(
+                            listing.name,
+                            style: theme.textTheme.titleMedium,
+                          ),
                           if (cropLabel != null && cropLabel.isNotEmpty) ...[
                             const SizedBox(height: 2),
                             Text(
                               cropLabel,
                               style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                                color: theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.7,
+                                ),
                               ),
                             ),
                           ],
@@ -176,14 +187,19 @@ class ProduceCard extends StatelessWidget {
                               onTap: onSellerTap,
                               behavior: HitTestBehavior.opaque,
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                ),
                                 child: Text(
                                   sellerLabel,
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     color: onSellerTap == null
-                                        ? theme.colorScheme.onSurface.withValues(alpha: 0.7)
+                                        ? theme.colorScheme.onSurface
+                                              .withValues(alpha: 0.7)
                                         : AniHowColors.deepGreen,
-                                    fontWeight: onSellerTap == null ? FontWeight.w500 : FontWeight.w700,
+                                    fontWeight: onSellerTap == null
+                                        ? FontWeight.w500
+                                        : FontWeight.w700,
                                   ),
                                 ),
                               ),
@@ -191,17 +207,19 @@ class ProduceCard extends StatelessWidget {
                           ],
                           const SizedBox(height: AniHowSpace.labelGap),
                           Text(
-                            '${AniHowMoney.peso(listing.pricePerUnit)} / ${listing.unit ?? ''}',
+                            listing.priceLabel,
                             style: theme.textTheme.labelLarge?.copyWith(
                               color: AniHowColors.brand,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          if (listing.tawad != null && listing.tawad!.isActive) ...[
+                          if (listing.tawad != null &&
+                              listing.tawad!.isActive) ...[
                             const SizedBox(height: AniHowSpace.labelGap),
                             Text(
                               listing.tawad!.displaySummary(
-                                offThisOrder: AppStrings.of(context).tawadOffThisOrder,
+                                offThisOrder: AppStrings.of(context)
+                                    .tawadOffThisOrder,
                                 offAtMin: AppStrings.of(context).tawadOffAtMin,
                               ),
                               style: theme.textTheme.bodyMedium,
@@ -213,7 +231,10 @@ class ProduceCard extends StatelessWidget {
                           ],
                           if (showStock) ...[
                             const SizedBox(height: AniHowSpace.labelGap),
-                            StatusPill.forListing(listing, strings: AppStrings.of(context)),
+                            StatusPill.forListing(
+                              listing,
+                              strings: AppStrings.of(context),
+                            ),
                           ],
                         ],
                       ),

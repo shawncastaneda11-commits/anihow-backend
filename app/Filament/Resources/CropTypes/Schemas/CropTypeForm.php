@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\CropTypes\Schemas;
 
+use App\Enums\ListingUnit;
 use App\Enums\Permission;
 use App\Models\CropType;
 use App\Policies\CropTypePolicy;
@@ -67,6 +68,14 @@ class CropTypeForm
                     ->required()
                     ->maxLength(100)
                     ->placeholder('Kamatis'),
+
+                Select::make('unit_of_measure')
+                    ->label('Unit of the floor price')
+                    ->options(ListingUnit::options())
+                    ->required()
+                    ->native(false)
+                    ->default(ListingUnit::Kilogram->value)
+                    ->helperText('This is the unit the floor price is quoted in. It decides which units a seller may use on a listing.'),
 
                 TextInput::make('floor_price')
                     ->label('Floor price (PHP)')

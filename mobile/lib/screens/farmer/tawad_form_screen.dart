@@ -71,18 +71,21 @@ class _TawadFormScreenState extends State<TawadFormScreen> {
     });
     try {
       await context.read<AuthController>().api.saveTawad(
-            listingId: widget.listing.id,
-            type: _type,
-            discountAmount: amount,
-            minQuantity: _type == TawadRequests.minQuantity ? _minQuantity.text.trim() : null,
-          );
+        listingId: widget.listing.id,
+        type: _type,
+        discountAmount: amount,
+        minQuantity: _type == TawadRequests.minQuantity
+            ? _minQuantity.text.trim()
+            : null,
+      );
       if (mounted) {
         Navigator.of(context).pop(true);
       }
     } on ApiException catch (error) {
       if (mounted) {
         setState(() => _error = error.message);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) {
@@ -97,7 +100,9 @@ class _TawadFormScreenState extends State<TawadFormScreen> {
     final s = AppStrings.of(context);
     final language = context.watch<PreferencesController>().language;
     return Scaffold(
-      appBar: AppBar(title: Text(widget.listing.tawad == null ? s.setTawad : s.replaceTawad)),
+      appBar: AppBar(
+        title: Text(widget.listing.tawad == null ? s.setTawad : s.replaceTawad),
+      ),
       body: ListView(
         padding: AniHowSpace.screenPadding,
         children: [
@@ -112,13 +117,23 @@ class _TawadFormScreenState extends State<TawadFormScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.listing.title, style: Theme.of(context).textTheme.titleMedium),
-                Text('${s.listed} ${AniHowMoney.peso(widget.listing.pricePerUnit)}'),
+                Text(
+                  widget.listing.title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                Text(
+                  '${s.listed} ${AniHowMoney.peso(widget.listing.pricePerUnit)}',
+                ),
                 if ((crop?.sellerMaxDiscount?.isNotEmpty ?? false) ||
                     (crop?.sellerFloorPrice?.isNotEmpty ?? false)) ...[
                   const SizedBox(height: AniHowSpace.cardGap),
                   if (crop?.sellerMaxDiscount?.isNotEmpty ?? false)
-                    Text(s.maxTawadFor(crop!.labelFor(language), AniHowMoney.peso(crop.sellerMaxDiscount))),
+                    Text(
+                      s.maxTawadFor(
+                        crop!.labelFor(language),
+                        AniHowMoney.peso(crop.sellerMaxDiscount),
+                      ),
+                    ),
                   if (crop?.sellerFloorPrice?.isNotEmpty ?? false)
                     Text(s.unitFloor(AniHowMoney.peso(crop!.sellerFloorPrice))),
                 ],
@@ -144,7 +159,8 @@ class _TawadFormScreenState extends State<TawadFormScreen> {
                   icon: Icons.stacked_bar_chart,
                   label: s.tawadMinQty,
                   selected: _type == TawadRequests.minQuantity,
-                  onTap: () => setState(() => _type = TawadRequests.minQuantity),
+                  onTap: () =>
+                      setState(() => _type = TawadRequests.minQuantity),
                 ),
               ),
             ],
@@ -157,9 +173,14 @@ class _TawadFormScreenState extends State<TawadFormScreen> {
                   label: s.pesoOff,
                   child: TextField(
                     controller: _amount,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     inputFormatters: [_peso],
-                    decoration: const InputDecoration(prefixText: '₱ ', hintText: '0.00'),
+                    decoration: const InputDecoration(
+                      prefixText: '₱ ',
+                      hintText: '0.00',
+                    ),
                   ),
                 ),
                 if (_type == TawadRequests.minQuantity) ...[
@@ -168,11 +189,14 @@ class _TawadFormScreenState extends State<TawadFormScreen> {
                     label: s.minQuantity,
                     child: TextField(
                       controller: _minQuantity,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       inputFormatters: [_peso],
                       decoration: InputDecoration(
                         hintText: 'e.g. 5',
-                        suffixText: widget.listing.unitLabel ?? widget.listing.unit,
+                        suffixText:
+                            widget.listing.unit ?? widget.listing.unitLabel,
                       ),
                     ),
                   ),
@@ -191,10 +215,7 @@ class _TawadFormScreenState extends State<TawadFormScreen> {
             ),
           ],
           const SizedBox(height: AniHowSpace.section),
-          AniHowHintCard(
-            icon: Icons.info_outline,
-            title: s.tawadReplaceNote,
-          ),
+          AniHowHintCard(icon: Icons.info_outline, title: s.tawadReplaceNote),
           const SizedBox(height: AniHowSpace.section),
           PrimaryButton(label: s.saveTawad, onPressed: _save, busy: _busy),
         ],

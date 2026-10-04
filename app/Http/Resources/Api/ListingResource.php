@@ -18,6 +18,8 @@ class ListingResource extends JsonResource
             'id' => $this->id,
             'title' => $this->title,
             'description' => $this->description,
+            'unit' => $this->unit?->value,
+            'unit_label' => $this->unit?->label(),
             'price_per_unit' => (float) $this->price_per_unit,
             'quantity_available' => (float) $this->quantity_available,
             'sellable_quantity' => $this->sellableQuantity(),

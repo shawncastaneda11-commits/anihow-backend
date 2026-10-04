@@ -497,6 +497,7 @@ class FarmPriceGuardTest extends TestCase
         return [
             'title' => 'Fresh kamatis, hand picked',
             'crop_type_id' => $cropType->id,
+            'unit' => 'kg',
             'price_per_unit' => $price,
             'quantity_available' => 20,
         ];

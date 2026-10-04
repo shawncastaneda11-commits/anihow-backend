@@ -52,6 +52,7 @@ class FarmerListingApiTest extends TestCase
             ->postJson('/api/farmer/listings', [
                 'title' => 'Fresh kamatis, hand picked',
                 'crop_type_id' => $cropType->id,
+                'unit' => 'kg',
                 'price_per_unit' => 30,
                 'quantity_available' => 20,
             ])
@@ -67,6 +68,7 @@ class FarmerListingApiTest extends TestCase
         $create = $this->asUser($farmer)->postJson('/api/farmer/listings', [
             'title' => 'Fresh kamatis, hand picked',
             'crop_type_id' => $cropType->id,
+            'unit' => 'kg',
             'price_per_unit' => 30,
             'quantity_available' => 20,
             'description' => 'Morning harvest.',
@@ -103,6 +105,7 @@ class FarmerListingApiTest extends TestCase
         $create = $this->asUser($farmer)->post('/api/farmer/listings', [
             'title' => 'Fresh kamatis, hand picked',
             'crop_type_id' => $cropType->id,
+            'unit' => 'kg',
             'price_per_unit' => 30,
             'quantity_available' => 20,
             'image' => UploadedFile::fake()->image('produce.jpg'),

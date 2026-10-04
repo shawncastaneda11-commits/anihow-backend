@@ -435,6 +435,28 @@ class AppStrings {
   String get saveListing => t('Save listing', 'I-save ang listing');
   String get titleLabel => t('Title', 'Pamagat');
   String get cropType => t('Crop type', 'Uri ng pananim');
+  String get unit => t('Unit', 'Yunit');
+  String unitName(String code) => switch (code) {
+    'kg' => t('Kilogram (kg)', 'Kilo (kg)'),
+    'g' => t('Gram (g)', 'Gramo (g)'),
+    'ml' => t('Millilitre (mL)', 'Mililitro (mL)'),
+    'liter' => t('Litre (L)', 'Litro (L)'),
+    'piece' => t('Piece', 'Piraso'),
+    'dozen' => t('Dozen', 'Dosena'),
+    'bundle' => t('Bundle', 'Tali'),
+    'sack' => t('Sack', 'Sako'),
+    'tray' => t('Tray', 'Bandeha'),
+    'pack' => t('Pack', 'Pakete'),
+    'bottle' => t('Bottle', 'Bote'),
+    _ => code,
+  };
+  String unitFamily(String family) => switch (family) {
+    'weight' => t('Weight', 'Timbang'),
+    'volume' => t('Volume', 'Volume'),
+    'count' => t('Count', 'Bilang'),
+    'package' => t('Package', 'Pakete'),
+    _ => family,
+  };
   String get price => t('Price', 'Presyo');
   String get description => t('Description', 'Deskripsyon');
   String get setTawad => t('Set tawad', 'Magtakda ng tawad');

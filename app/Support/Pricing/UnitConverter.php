@@ -1,0 +1,203 @@
+<?php
+
+namespace App\Support\Pricing;
+
+use App\Enums\ListingUnit;
+use App\Models\CropType;
+use App\Models\FarmCropTypeOverride;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Converts a price or a quantity inside one unit family, and decides which
+ * units a seller may choose for a crop type.
+ *
+ * Price guards stay in the crop type's unit. Callers convert first:
+ * ₱0.06 per g is ₱60 per kg. Quantity analytics convert the other way,
+ * into the family's base unit, so 500 g and 1 kg add up as 1.5 kg.
+ */
+class UnitConverter
+{
+    /**
+     * @var list<string>
+     */
+    private const DISPLAY = [
+        'g',
+        'kg',
+        'ml',
+        'liter',
+        'piece',
+        'dozen',
+        'tray',
+        'bundle',
+        'sack',
+        'pack',
+        'bottle',
+    ];
+
+    public function priceIn(?ListingUnit $from, ListingUnit $to, float|string $amount): float
+    {
+        $value = (float) $amount;
+
+        if ($from === null || $from === $to || ! $from->convertsTo($to)) {
+            return $value;
+        }
+
+        return round($value * ($to->baseFactor() / $from->baseFactor()), 4);
+    }
+
+    public function accepts(CropType $cropType, ListingUnit $unit, ?int $farmId): bool
+    {
+        if (! $this->isGuarded($cropType, $farmId)) {
+            return true;
+        }
+
+        return $cropType->unit_of_measure->convertsTo($unit);
+    }
+
+    public function refusalMessage(CropType $cropType, ?int $farmId): string
+    {
+        $cropUnit = $cropType->unit_of_measure;
+        $allowed = collect($this->unitsInDisplayOrder())
+            ->filter(fn (ListingUnit $unit): bool => $cropUnit->convertsTo($unit))
+            ->map(fn (ListingUnit $unit): string => $unit->value)
+            ->implode(' or ');
+        $kind = $this->hasFloor($cropType, $farmId) ? 'floor price' : 'maximum discount';
+
+        return "This crop's {$kind} is per {$cropUnit->value}, so it can be sold per {$allowed}.";
+    }
+
+    /**
+     * @return list<array{value: string, label: string, family: string}>
+     */
+    public function allowedUnits(CropType $cropType, ?int $farmId): array
+    {
+        $cropUnit = $cropType->unit_of_measure;
+        $guarded = $this->isGuarded($cropType, $farmId);
+
+        return array_values(array_map(
+            fn (ListingUnit $unit): array => [
+                'value' => $unit->value,
+                'label' => $unit->label(),
+                'family' => $unit->family()->value,
+            ],
+            array_filter(
+                $this->unitsInDisplayOrder(),
+                fn (ListingUnit $unit): bool => ! $guarded || $cropUnit->convertsTo($unit),
+            ),
+        ));
+    }
+
+    /**
+     * CASE expression. Multiply a quantity or divide a price by this factor
+     * to move between a stored unit and its family base. Same numbers as baseFactor().
+     */
+    public static function sqlFactor(string $column): string
+    {
+        $cases = [];
+
+        foreach (ListingUnit::cases() as $unit) {
+            $cases[] = "WHEN {$column} = '{$unit->value}' THEN {$unit->baseFactorSql()}";
+        }
+
+        return 'CASE '.implode(' ', $cases).' ELSE 1 END';
+    }
+
+    /**
+     * CASE expression for the family's base unit. Package units stay themselves.
+     */
+    public static function sqlBaseUnit(string $column): string
+    {
+        $cases = [];
+
+        foreach (ListingUnit::cases() as $unit) {
+            $cases[] = "WHEN {$column} = '{$unit->value}' THEN '{$unit->baseUnit()->value}'";
+        }
+
+        return 'CASE '.implode(' ', $cases)." ELSE {$column} END";
+    }
+
+    /**
+     * True when the effective floor (already resolved in SQL) is above the
+     * listing price after both are expressed in the crop type's unit.
+     * Cross-multiplies so the comparison does not divide.
+     */
+    public static function belowFloorComparison(string $floorSql): string
+    {
+        $listingFactor = self::sqlFactor('listings.unit');
+        $cropFactor = self::sqlFactor('crop_types.unit_of_measure');
+
+        return '('.$floorSql.') * ('.$listingFactor.') > listings.price_per_unit * ('.$cropFactor.')';
+    }
+
+    public function backfillListingUnits(): void
+    {
+        $units = DB::table('crop_types')->pluck('unit_of_measure', 'id');
+
+        foreach ($units as $cropTypeId => $unit) {
+            DB::table('listings')
+                ->where('crop_type_id', $cropTypeId)
+                ->update(['unit' => $unit]);
+        }
+    }
+
+    public function isGuarded(CropType $cropType, ?int $farmId): bool
+    {
+        return $this->hasFloor($cropType, $farmId) || $this->hasMaximumDiscount($cropType, $farmId);
+    }
+
+    /**
+     * @return list<ListingUnit>
+     */
+    private function unitsInDisplayOrder(): array
+    {
+        $byValue = [];
+
+        foreach (ListingUnit::cases() as $unit) {
+            $byValue[$unit->value] = $unit;
+        }
+
+        $ordered = [];
+
+        foreach (self::DISPLAY as $value) {
+            if (isset($byValue[$value])) {
+                $ordered[] = $byValue[$value];
+            }
+        }
+
+        return $ordered;
+    }
+
+    private function hasFloor(CropType $cropType, ?int $farmId): bool
+    {
+        if ((float) $cropType->floor_price > 0) {
+            return true;
+        }
+
+        $override = $this->override($cropType, $farmId);
+
+        return $override !== null && (float) ($override->floor_price ?? 0) > 0;
+    }
+
+    private function hasMaximumDiscount(CropType $cropType, ?int $farmId): bool
+    {
+        if ((float) $cropType->max_discount > 0) {
+            return true;
+        }
+
+        $override = $this->override($cropType, $farmId);
+
+        return $override !== null && (float) ($override->max_discount ?? 0) > 0;
+    }
+
+    private function override(CropType $cropType, ?int $farmId): ?FarmCropTypeOverride
+    {
+        if ($farmId === null) {
+            return null;
+        }
+
+        return FarmCropTypeOverride::query()
+            ->where('farm_id', $farmId)
+            ->where('crop_type_id', $cropType->getKey())
+            ->first();
+    }
+}

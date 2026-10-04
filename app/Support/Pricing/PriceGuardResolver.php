@@ -19,7 +19,9 @@ use App\Models\Listing;
  * loosen a guard.
  *
  * The same max() exists once more in SQL, in the "Priced below floor" filter on
- * ListingsTable. If this formula changes, change that one too.
+ * ListingsTable. If this formula changes, change that one too. That filter
+ * converts the listing price into the crop type's unit before comparing, via
+ * UnitConverter, so a per-gram price is judged against a per-kilogram floor.
  *
  * Eager loading. This runs per line at checkout and per row in the Filament
  * listing table. When farm.cropTypeOverrides is already loaded the resolver

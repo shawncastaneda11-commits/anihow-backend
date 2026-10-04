@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use App\Enums\ListingStatus;
+use App\Enums\ListingUnit;
 use App\Enums\UserStatus;
 use App\Support\ImageVariants;
 use App\Support\Pricing\PriceGuard;
 use App\Support\Pricing\PriceGuardResolver;
+use App\Support\Pricing\UnitConverter;
 use Database\Factories\ListingFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,6 +28,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'farmer_seller_id',
     'farm_id',
     'crop_type_id',
+    'unit',
     'title',
     'description',
     'price_per_unit',
@@ -43,6 +46,7 @@ class Listing extends Model
     protected function casts(): array
     {
         return [
+            'unit' => ListingUnit::class,
             'price_per_unit' => 'decimal:2',
             'quantity_available' => 'decimal:2',
             'quantity_held' => 'decimal:2',
@@ -160,7 +164,13 @@ class Listing extends Model
      */
     public function isBelowFloor(): bool
     {
-        return ! $this->priceGuard()->allowsPrice($this->price_per_unit);
+        $price = app(UnitConverter::class)->priceIn(
+            $this->unit,
+            $this->cropType->unit_of_measure,
+            $this->price_per_unit,
+        );
+
+        return ! $this->priceGuard()->allowsPrice($price);
     }
 
     /**

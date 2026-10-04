@@ -47,8 +47,8 @@ class CropType extends Model
     use HasFactory;
 
     /**
-     * The CMS no longer asks for a unit. Kilograms stay the stored unit so
-     * prices and past orders keep a unit.
+     * Kilograms when a crop type is created without a unit. The CMS asks for
+     * the unit of the floor price, which decides which units a seller may use.
      *
      * @var array<string, mixed>
      */

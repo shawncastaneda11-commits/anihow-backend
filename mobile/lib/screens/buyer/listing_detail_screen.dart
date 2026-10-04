@@ -248,7 +248,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          '${AniHowMoney.peso(listing.pricePerUnit)} / ${listing.unitLabel ?? listing.unit ?? ''}',
+                          listing.priceLabel,
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(
                                 color: AniHowColors.brand,

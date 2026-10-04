@@ -48,6 +48,7 @@ class ImageVariantsTest extends TestCase
         $create = $this->asUser($farmer)->post('/api/farmer/listings', [
             'title' => 'Fresh kamatis, hand picked',
             'crop_type_id' => $cropType->id,
+            'unit' => 'kg',
             'price_per_unit' => 30,
             'quantity_available' => 20,
             'image' => UploadedFile::fake()->image('produce.jpg', 2000, 800),
@@ -77,6 +78,7 @@ class ImageVariantsTest extends TestCase
         $create = $this->asUser($farmer)->post('/api/farmer/listings', [
             'title' => 'Fresh kamatis, hand picked',
             'crop_type_id' => $cropType->id,
+            'unit' => 'kg',
             'price_per_unit' => 30,
             'quantity_available' => 20,
             'image' => UploadedFile::fake()->image('first.jpg', 640, 480),
@@ -115,6 +117,7 @@ class ImageVariantsTest extends TestCase
         $create = $this->asUser($farmer)->post('/api/farmer/listings', [
             'title' => 'Fresh kamatis, hand picked',
             'crop_type_id' => $cropType->id,
+            'unit' => 'kg',
             'price_per_unit' => 30,
             'quantity_available' => 20,
             'image' => UploadedFile::fake()->image('produce.jpg', 400, 300),

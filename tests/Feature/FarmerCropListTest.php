@@ -41,6 +41,7 @@ class FarmerCropListTest extends TestCase
             ->postJson('/api/farmer/listings', [
                 'title' => 'Sweet potato',
                 'crop_type_id' => $blocked->id,
+                'unit' => 'kg',
                 'price_per_unit' => 30,
                 'quantity_available' => 10,
             ])
@@ -51,6 +52,7 @@ class FarmerCropListTest extends TestCase
             ->postJson('/api/farmer/listings', [
                 'title' => 'Ripe tomatoes',
                 'crop_type_id' => $allowed->id,
+                'unit' => 'kg',
                 'price_per_unit' => 30,
                 'quantity_available' => 10,
             ])
@@ -124,6 +126,7 @@ class FarmerCropListTest extends TestCase
             ->postJson('/api/farmer/listings', [
                 'title' => 'String beans',
                 'crop_type_id' => $other->id,
+                'unit' => 'kg',
                 'price_per_unit' => 30,
                 'quantity_available' => 10,
             ])

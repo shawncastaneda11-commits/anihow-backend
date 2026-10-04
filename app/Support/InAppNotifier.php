@@ -101,7 +101,7 @@ class InAppNotifier
 
     public function listingLowStock(User $farmer, Listing $listing): InAppNotification
     {
-        $unit = $listing->cropType?->unit_of_measure?->value ?? '';
+        $unit = $listing->unit?->value ?? $listing->cropType?->unit_of_measure?->value ?? '';
         $quantity = number_format($listing->sellableQuantity(), 2, '.', '');
 
         return $this->send(

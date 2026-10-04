@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests\Api\Listings;
 
+use App\Enums\ListingUnit;
 use App\Models\CropType;
 use App\Models\Listing;
 use App\Support\Pricing\PriceGuardResolver;
+use App\Support\Pricing\UnitConverter;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateListingRequest extends FormRequest
 {
@@ -22,6 +25,7 @@ class UpdateListingRequest extends FormRequest
     {
         return [
             'crop_type_id' => ['sometimes', 'integer', 'exists:crop_types,id'],
+            'unit' => ['sometimes', 'required', Rule::enum(ListingUnit::class)],
             'title' => ['sometimes', 'string', 'max:150'],
             'description' => ['sometimes', 'nullable', 'string', 'max:5000'],
             'price_per_unit' => ['sometimes', 'numeric', 'gt:0', 'max:99999.99'],
@@ -71,11 +75,27 @@ class UpdateListingRequest extends FormRequest
                     return;
                 }
 
+                $unit = $this->has('unit')
+                    ? ListingUnit::from($this->validated('unit'))
+                    : ($listing->unit ?? $cropType->unit_of_measure);
+
+                $converter = app(UnitConverter::class);
+
+                if (! $converter->accepts($cropType, $unit, $listing->farm_id)) {
+                    $validator->errors()->add(
+                        'unit',
+                        $converter->refusalMessage($cropType, $listing->farm_id),
+                    );
+
+                    return;
+                }
+
                 $price = $this->has('price_per_unit')
                     ? (float) $this->validated('price_per_unit')
                     : (float) $listing->price_per_unit;
 
                 $guard = app(PriceGuardResolver::class)->forFarmId($listing->farm_id, $cropType);
+                $price = $converter->priceIn($unit, $cropType->unit_of_measure, $price);
 
                 if ($guard->allowsPrice($price)) {
                     return;
@@ -98,6 +118,7 @@ class UpdateListingRequest extends FormRequest
         return collect($this->validated())
             ->only([
                 'crop_type_id',
+                'unit',
                 'title',
                 'description',
                 'price_per_unit',

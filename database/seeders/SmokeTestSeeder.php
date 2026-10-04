@@ -256,6 +256,7 @@ class SmokeTestSeeder extends Seeder
                 'farm_id' => $seller->farm_id,
                 'title' => $title,
                 'description' => 'Created by SmokeTestSeeder.',
+                'unit' => $cropType->unit_of_measure,
                 'price_per_unit' => $price,
                 'quantity_available' => $qty,
                 'quantity_held' => 0,

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Listing;
+use App\Support\Pricing\UnitConverter;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -41,11 +42,14 @@ class OrderLinePricer
         }
 
         $guard = $listing->priceGuard();
+        $listingUnit = $listing->unit ?? $cropType->unit_of_measure;
         $unitPrice = (float) $listing->price_per_unit;
+        $converter = app(UnitConverter::class);
+        $guardPrice = $converter->priceIn($listingUnit, $cropType->unit_of_measure, $unitPrice);
 
         // A floor may have risen since the listing was priced, the system one
-        // or the farm's.
-        if (! $guard->allowsPrice($unitPrice)) {
+        // or the farm's. The check is in the crop type's unit.
+        if (! $guard->allowsPrice($guardPrice)) {
             throw ValidationException::withMessages([
                 $errorKey => $belowFloorMessage,
             ]);
@@ -62,10 +66,14 @@ class OrderLinePricer
             // when the rule was created; the floor or the ceiling may have
             // moved since. A rule that fails is skipped, not rejected: the
             // line goes through at the listed price. Decision 15.
+            // The recorded tawad stays in the listing's unit. Only the check
+            // is converted into the crop type's unit.
             $discountedUnitPrice = ($lineSubtotal - $candidate) / $quantity;
+            $guardCandidate = $converter->priceIn($listingUnit, $cropType->unit_of_measure, $candidate);
+            $guardDiscounted = $converter->priceIn($listingUnit, $cropType->unit_of_measure, $discountedUnitPrice);
 
-            if ($candidate <= $guard->ceiling
-                && $discountedUnitPrice >= $guard->floor) {
+            if ($guardCandidate <= $guard->ceiling
+                && $guardDiscounted >= $guard->floor) {
                 $tawadAmount = $candidate;
             }
         }
@@ -74,7 +82,7 @@ class OrderLinePricer
             'listing_id' => $listing->id,
             'crop_type_id' => $cropType->id,
             'listing_name' => $listing->title,
-            'unit' => $cropType->unit_of_measure,
+            'unit' => $listingUnit,
             'quantity' => $quantity,
             'unit_price' => $unitPrice,
             'line_subtotal' => $lineSubtotal,

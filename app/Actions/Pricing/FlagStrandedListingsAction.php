@@ -7,6 +7,7 @@ use App\Models\Farm;
 use App\Models\Listing;
 use App\Support\InAppNotifier;
 use App\Support\Pricing\PriceGuard;
+use App\Support\Pricing\UnitConverter;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -42,6 +43,7 @@ class FlagStrandedListingsAction
 {
     public function __construct(
         private readonly InAppNotifier $notifier,
+        private readonly UnitConverter $units,
     ) {}
 
     /**
@@ -62,7 +64,11 @@ class FlagStrandedListingsAction
                 continue;
             }
 
-            $price = PriceGuard::centavos($listing->price_per_unit);
+            $price = PriceGuard::centavos($this->units->priceIn(
+                $listing->unit,
+                $cropType->unit_of_measure,
+                $listing->price_per_unit,
+            ));
 
             if ($price >= PriceGuard::centavos($previousFloor) && $price < PriceGuard::centavos($newFloor)) {
                 $this->notifier->floorPriceRaised($seller, $listing, $newFloor);
@@ -114,7 +120,11 @@ class FlagStrandedListingsAction
                 continue;
             }
 
-            $amount = PriceGuard::centavos($rule->discount_amount);
+            $amount = PriceGuard::centavos($this->units->priceIn(
+                $listing->unit,
+                $cropType->unit_of_measure,
+                $rule->discount_amount,
+            ));
 
             if ($amount <= PriceGuard::centavos($previousCeiling) && $amount > PriceGuard::centavos($newCeiling)) {
                 $this->notifier->tawadCeilingLowered($seller, $listing, $newCeiling);
@@ -138,7 +148,7 @@ class FlagStrandedListingsAction
             ->forFarm($farm->getKey())
             ->where('listings.crop_type_id', $cropType->getKey())
             ->whereNull('listings.taken_down_at')
-            ->with(['farmerSeller', 'activeTawadRule'])
+            ->with(['farmerSeller', 'activeTawadRule', 'cropType'])
             ->get();
     }
 }

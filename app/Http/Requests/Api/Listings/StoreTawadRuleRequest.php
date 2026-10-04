@@ -6,6 +6,7 @@ use App\Enums\TawadType;
 use App\Models\Listing;
 use App\Models\TawadRule;
 use App\Support\Pricing\PriceGuardResolver;
+use App\Support\Pricing\UnitConverter;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -56,8 +57,14 @@ class StoreTawadRuleRequest extends FormRequest
                 $cropType = $listing->cropType;
                 $guard = app(PriceGuardResolver::class)->forFarmId($listing->farm_id, $cropType);
                 $amount = (float) $this->validated('discount_amount');
+                $listingUnit = $listing->unit ?? $cropType->unit_of_measure;
+                $convertedAmount = app(UnitConverter::class)->priceIn(
+                    $listingUnit,
+                    $cropType->unit_of_measure,
+                    $amount,
+                );
 
-                if (! $guard->allowsDiscount($amount)) {
+                if (! $guard->allowsDiscount($convertedAmount)) {
                     $max = number_format($guard->ceiling, 2, '.', '');
                     $validator->errors()->add(
                         'discount_amount',

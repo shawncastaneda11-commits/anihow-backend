@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\ListingStatus;
+use App\Enums\ListingUnit;
 use App\Models\CropType;
 use App\Models\Farm;
 use App\Models\Listing;
@@ -23,6 +24,7 @@ class ListingFactory extends Factory
             'farmer_seller_id' => User::factory(),
             'farm_id' => Farm::factory(),
             'crop_type_id' => CropType::factory(),
+            'unit' => ListingUnit::Kilogram,
             'title' => fake()->randomElement([
                 'Fresh kamatis, hand picked',
                 'Kamatis, bagong ani',

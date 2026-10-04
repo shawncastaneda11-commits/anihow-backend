@@ -14,6 +14,7 @@ use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Log\Events\MessageLogged;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
@@ -439,6 +440,138 @@ class VerificationAndPasswordResetTest extends TestCase
         $this->assertNull(Cache::get(SendPasswordResetCodeAction::CACHE_PREFIX.$user->getKey()));
     }
 
+    public function test_a_second_reset_request_within_sixty_seconds_sends_no_email(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create(['email' => 'cooldown@example.com']);
+        $user->syncRoles(Role::Buyer);
+
+        $first = $this->postJson('/api/auth/forgot-password', [
+            'email' => 'cooldown@example.com',
+        ])->assertOk();
+
+        $second = $this->postJson('/api/auth/forgot-password', [
+            'email' => 'cooldown@example.com',
+        ])->assertOk();
+
+        $this->assertSame($first->json(), $second->json());
+        Notification::assertSentToTimes($user, ResetPasswordCodeNotification::class, 1);
+    }
+
+    public function test_ten_wrong_codes_block_the_next_guess_and_any_new_email(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create(['email' => 'locked@example.com']);
+        $user->syncRoles(Role::Buyer);
+
+        $first = $this->postJson('/api/auth/forgot-password', [
+            'email' => 'locked@example.com',
+        ])->assertOk();
+
+        $this->guessWrong($user, times: SendPasswordResetCodeAction::MAX_ATTEMPTS);
+
+        Carbon::setTestNow(now()->addSeconds(SendPasswordResetCodeAction::COOLDOWN_SECONDS));
+
+        try {
+            $second = $this->postJson('/api/auth/forgot-password', [
+                'email' => 'locked@example.com',
+            ])->assertOk();
+
+            $this->assertSame($first->json(), $second->json());
+            Notification::assertSentToTimes($user, ResetPasswordCodeNotification::class, 2);
+
+            $this->guessWrong($user, times: SendPasswordResetCodeAction::MAX_ATTEMPTS);
+
+            Carbon::setTestNow(now()->addSeconds(SendPasswordResetCodeAction::COOLDOWN_SECONDS));
+
+            $this->postJson('/api/auth/reset-password', [
+                'email' => 'locked@example.com',
+                'code' => '111111',
+                'password' => 'new-password-123',
+                'password_confirmation' => 'new-password-123',
+            ])
+                ->assertUnprocessable()
+                ->assertJsonPath('errors.code.0', 'The reset code is invalid or has expired.');
+
+            $blocked = $this->postJson('/api/auth/forgot-password', [
+                'email' => 'locked@example.com',
+            ])->assertOk();
+
+            $this->assertSame($first->json(), $blocked->json());
+            Notification::assertSentToTimes($user, ResetPasswordCodeNotification::class, 2);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_a_correct_code_works_after_the_send_cooldown(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create(['email' => 'aftercooldown@example.com']);
+        $user->syncRoles(Role::Buyer);
+        $code = $this->requestResetCode($user);
+
+        Carbon::setTestNow(now()->addSeconds(SendPasswordResetCodeAction::COOLDOWN_SECONDS));
+
+        try {
+            $this->postJson('/api/auth/reset-password', [
+                'email' => 'aftercooldown@example.com',
+                'code' => $code,
+                'password' => 'new-password-123',
+                'password_confirmation' => 'new-password-123',
+            ])
+                ->assertOk()
+                ->assertJsonPath('message', 'Password reset. Sign in with your new password.');
+        } finally {
+            Carbon::setTestNow();
+        }
+
+        $this->postJson('/api/auth/login', [
+            'email' => 'aftercooldown@example.com',
+            'password' => 'new-password-123',
+        ])->assertOk();
+    }
+
+    public function test_a_successful_reset_clears_the_account_counters(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create(['email' => 'cleared@example.com']);
+        $user->syncRoles(Role::Buyer);
+        $code = $this->requestResetCode($user);
+        $wrongCode = $code === '000000' ? '111111' : '000000';
+
+        $this->postJson('/api/auth/reset-password', [
+            'email' => 'cleared@example.com',
+            'code' => $wrongCode,
+            'password' => 'new-password-123',
+            'password_confirmation' => 'new-password-123',
+        ])->assertUnprocessable();
+
+        $this->assertNotNull(Cache::get(SendPasswordResetCodeAction::FAILURES_PREFIX.$user->getKey()));
+
+        $this->postJson('/api/auth/reset-password', [
+            'email' => 'cleared@example.com',
+            'code' => $code,
+            'password' => 'new-password-123',
+            'password_confirmation' => 'new-password-123',
+        ])->assertOk();
+
+        $this->assertNull(Cache::get(SendPasswordResetCodeAction::CACHE_PREFIX.$user->getKey()));
+        $this->assertNull(Cache::get(SendPasswordResetCodeAction::ATTEMPTS_PREFIX.$user->getKey()));
+        $this->assertNull(Cache::get(SendPasswordResetCodeAction::FAILURES_PREFIX.$user->getKey()));
+        $this->assertNull(Cache::get(SendPasswordResetCodeAction::COOLDOWN_PREFIX.$user->getKey()));
+
+        $this->postJson('/api/auth/forgot-password', [
+            'email' => 'cleared@example.com',
+        ])->assertOk();
+
+        Notification::assertSentToTimes($user, ResetPasswordCodeNotification::class, 2);
+    }
+
     public function test_production_with_log_mailer_never_includes_verification_code(): void
     {
         $this->becomeEnvironment('production');
@@ -559,5 +692,22 @@ class VerificationAndPasswordResetTest extends TestCase
         });
 
         return $code;
+    }
+
+    private function guessWrong(User $user, int $times): void
+    {
+        $code = Notification::sent($user, ResetPasswordCodeNotification::class)->last()->code;
+        $wrongCode = $code === '000000' ? '111111' : '000000';
+
+        for ($attempt = 0; $attempt < $times; $attempt++) {
+            $this->postJson('/api/auth/reset-password', [
+                'email' => $user->email,
+                'code' => $wrongCode,
+                'password' => 'new-password-123',
+                'password_confirmation' => 'new-password-123',
+            ])
+                ->assertUnprocessable()
+                ->assertJsonPath('errors.code.0', 'The reset code is invalid or has expired.');
+        }
     }
 }

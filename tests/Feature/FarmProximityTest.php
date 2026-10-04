@@ -3,11 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Farm;
+use App\Models\Review;
+use App\Models\ShopFavorite;
 use App\Models\User;
 use App\Support\GeoDistance;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Testing\TestResponse;
 use Illuminate\Validation\ValidationException;
 use Tests\Concerns\CreatesMarketplaceActors;
 use Tests\TestCase;
@@ -172,6 +175,44 @@ class FarmProximityTest extends TestCase
         $shops->assertJsonMissingPath('data.0.distance_km');
     }
 
+    public function test_nearest_shop_sort_keeps_review_counts_and_favorites(): void
+    {
+        $rated = $this->pinnedFarmer('Rated Stall', 'Rated Farm', 'Cavite', 14.21, 120.91);
+        $this->pinnedFarmer('Other Stall', 'Other Farm', 'Laguna', 14.8, 121.2);
+        $buyer = $this->buyer();
+
+        $this->reviewOnShop($rated, $this->buyer(), 5);
+        $this->reviewOnShop($rated, $this->buyer(), 3);
+        ShopFavorite::factory()->create([
+            'buyer_id' => $buyer->id,
+            'farmer_seller_id' => $rated->id,
+        ]);
+
+        $default = $this->shopNamed(
+            $this->asUser($buyer)->getJson('/api/buyer/shops')->assertOk(),
+            'Rated Stall',
+        );
+
+        $nearest = $this->shopNamed(
+            $this->asUser($buyer)
+                ->getJson('/api/buyer/shops?sort=nearest&near_lat=14.20&near_lng=120.90')
+                ->assertOk(),
+            'Rated Stall',
+        );
+        $this->assertTrue($nearest['is_favorited']);
+        $this->assertSame(2, $nearest['reviews_count']);
+        $this->assertSame('4.0', $nearest['average_rating']);
+        $this->assertSame($default['average_rating'], $nearest['average_rating']);
+
+        $fallback = $this->shopNamed(
+            $this->asUser($buyer)->getJson('/api/buyer/shops?sort=nearest')->assertOk(),
+            'Rated Stall',
+        );
+        $this->assertTrue($fallback['is_favorited']);
+        $this->assertSame(2, $fallback['reviews_count']);
+        $this->assertSame($default['average_rating'], $fallback['average_rating']);
+    }
+
     public function test_a_near_me_request_does_not_store_the_buyer_point(): void
     {
         $buyer = $this->buyer(['location' => null]);
@@ -205,5 +246,34 @@ class FarmProximityTest extends TestCase
         ]);
 
         return $this->farmer(['shop_name' => $shopName], $farm);
+    }
+
+    private function reviewOnShop(User $farmer, User $buyer, int $rating): Review
+    {
+        $listing = $this->listingFor($farmer, [
+            'price_per_unit' => 30,
+            'quantity_available' => 20,
+        ]);
+        $order = $this->completeOrder($farmer, $this->placeOrder($buyer, $listing, 1), 30);
+
+        return Review::query()->create([
+            'order_id' => $order->id,
+            'buyer_id' => $buyer->id,
+            'farmer_seller_id' => $farmer->id,
+            'rating' => $rating,
+            'comment' => 'Ok.',
+            'is_removed' => false,
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function shopNamed(TestResponse $response, string $shopName): array
+    {
+        $shop = collect($response->json('data'))->firstWhere('shop_name', $shopName);
+        $this->assertIsArray($shop);
+
+        return $shop;
     }
 }

@@ -3,13 +3,15 @@
 namespace Tests\Feature\Api;
 
 use App\Actions\Auth\SendEmailVerificationCodeAction;
+use App\Actions\Auth\SendPasswordResetCodeAction;
 use App\Enums\Role;
 use App\Models\Farm;
 use App\Models\Listing;
 use App\Models\User;
-use App\Notifications\ResetPasswordNotification;
+use App\Notifications\ResetPasswordCodeNotification;
 use App\Notifications\VerifyEmailNotification;
 use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Cache;
@@ -246,32 +248,69 @@ class VerificationAndPasswordResetTest extends TestCase
             ->assertJsonPath('message', 'Your email address is not verified.');
     }
 
-    public function test_user_can_reset_password_with_emailed_token(): void
+    public function test_forgot_password_sends_a_code_for_an_existing_account_and_nothing_for_an_unknown_email(): void
     {
         Notification::fake();
 
         $user = User::factory()->create(['email' => 'resetme@example.com']);
-        $user->assignRole(Role::Buyer);
+        $user->syncRoles(Role::Buyer);
 
-        $this->postJson('/api/auth/forgot-password', [
+        $known = $this->postJson('/api/auth/forgot-password', [
             'email' => 'resetme@example.com',
         ])->assertOk();
 
-        $token = null;
-        Notification::assertSentTo($user, ResetPasswordNotification::class, function ($notification) use (&$token): bool {
-            $token = $notification->token;
+        $unknown = $this->postJson('/api/auth/forgot-password', [
+            'email' => 'nobody@example.com',
+        ])->assertOk();
 
-            return true;
+        $this->assertSame($known->json(), $unknown->json());
+        $this->assertSame(
+            'If that email is registered, a password reset link was sent.',
+            $known->json('message'),
+        );
+        $this->assertTrue(SendEmailVerificationCodeAction::shouldExposeCode());
+        $known->assertJsonMissingPath('reset_code');
+        $known->assertJsonMissingPath('verification_code');
+
+        Notification::assertSentTo($user, ResetPasswordCodeNotification::class, function (ResetPasswordCodeNotification $notification): bool {
+            $mail = $notification->toMail($notification);
+            $line = "Your AniHow password reset code is {$notification->code}. It expires in 10 minutes.";
+
+            return (bool) preg_match('/^\d{6}$/', $notification->code)
+                && in_array($line, $mail->introLines, true);
         });
+        Notification::assertCount(1);
+    }
+
+    public function test_correct_reset_code_changes_the_password_and_revokes_old_tokens(): void
+    {
+        Notification::fake();
+        Event::fake([PasswordReset::class]);
+
+        $user = User::factory()->create(['email' => 'resetme@example.com']);
+        $user->syncRoles(Role::Buyer);
+        $previousRememberToken = $user->remember_token;
+        $oldToken = $user->createToken('mobile')->plainTextToken;
+
+        $code = $this->requestResetCode($user);
 
         $this->postJson('/api/auth/reset-password', [
             'email' => 'resetme@example.com',
-            'token' => $token,
+            'code' => $code,
             'password' => 'new-password-123',
             'password_confirmation' => 'new-password-123',
         ])
             ->assertOk()
             ->assertJsonPath('message', 'Password reset. Sign in with your new password.');
+
+        $this->assertNotSame($previousRememberToken, $user->fresh()->remember_token);
+        $this->assertSame(0, $user->tokens()->count());
+        $this->assertNull(Cache::get(SendPasswordResetCodeAction::CACHE_PREFIX.$user->getKey()));
+        Event::assertDispatched(PasswordReset::class);
+
+        $this->withToken($oldToken)
+            ->getJson('/api/auth/user')
+            ->assertUnauthorized();
 
         $this->postJson('/api/auth/login', [
             'email' => 'resetme@example.com',
@@ -279,13 +318,125 @@ class VerificationAndPasswordResetTest extends TestCase
         ])->assertOk()->assertJsonStructure(['token']);
     }
 
-    public function test_unknown_email_does_not_reveal_accounts_on_forgot_password(): void
+    public function test_wrong_reset_code_is_rejected(): void
     {
+        Notification::fake();
+
+        $user = User::factory()->create(['email' => 'wrongcode@example.com']);
+        $user->syncRoles(Role::Buyer);
+        $code = $this->requestResetCode($user);
+        $wrongCode = $code === '000000' ? '111111' : '000000';
+
+        $this->postJson('/api/auth/reset-password', [
+            'email' => 'wrongcode@example.com',
+            'code' => $wrongCode,
+            'password' => 'new-password-123',
+            'password_confirmation' => 'new-password-123',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.code.0', 'The reset code is invalid or has expired.');
+
+        $this->postJson('/api/auth/login', [
+            'email' => 'wrongcode@example.com',
+            'password' => 'password',
+        ])->assertOk();
+    }
+
+    public function test_expired_reset_code_is_rejected(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create(['email' => 'expiredcode@example.com']);
+        $user->syncRoles(Role::Buyer);
+        $code = $this->requestResetCode($user);
+
+        $this->travel(11)->minutes();
+
+        $this->postJson('/api/auth/reset-password', [
+            'email' => 'expiredcode@example.com',
+            'code' => $code,
+            'password' => 'new-password-123',
+            'password_confirmation' => 'new-password-123',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.code.0', 'The reset code is invalid or has expired.');
+    }
+
+    public function test_sixth_reset_attempt_fails_after_five_wrong_codes(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create(['email' => 'attempts@example.com']);
+        $user->syncRoles(Role::Buyer);
+        $code = $this->requestResetCode($user);
+        $wrongCode = $code === '000000' ? '111111' : '000000';
+
+        for ($attempt = 0; $attempt < SendPasswordResetCodeAction::MAX_ATTEMPTS; $attempt++) {
+            $this->postJson('/api/auth/reset-password', [
+                'email' => 'attempts@example.com',
+                'code' => $wrongCode,
+                'password' => 'new-password-123',
+                'password_confirmation' => 'new-password-123',
+            ])->assertUnprocessable();
+        }
+
+        $this->postJson('/api/auth/reset-password', [
+            'email' => 'attempts@example.com',
+            'code' => $code,
+            'password' => 'new-password-123',
+            'password_confirmation' => 'new-password-123',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.code.0', 'The reset code is invalid or has expired.');
+
+        $this->assertNull(Cache::get(SendPasswordResetCodeAction::CACHE_PREFIX.$user->getKey()));
+    }
+
+    public function test_a_used_reset_code_cannot_be_reused(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create(['email' => 'usedcode@example.com']);
+        $user->syncRoles(Role::Buyer);
+        $code = $this->requestResetCode($user);
+
+        $this->postJson('/api/auth/reset-password', [
+            'email' => 'usedcode@example.com',
+            'code' => $code,
+            'password' => 'new-password-123',
+            'password_confirmation' => 'new-password-123',
+        ])->assertOk();
+
+        $this->postJson('/api/auth/reset-password', [
+            'email' => 'usedcode@example.com',
+            'code' => $code,
+            'password' => 'another-password-123',
+            'password_confirmation' => 'another-password-123',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.code.0', 'The reset code is invalid or has expired.');
+
+        $this->postJson('/api/auth/login', [
+            'email' => 'usedcode@example.com',
+            'password' => 'new-password-123',
+        ])->assertOk();
+    }
+
+    public function test_suspended_account_gets_no_reset_code(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->inactive()->create(['email' => 'suspended@example.com']);
+        $user->syncRoles(Role::Buyer);
+
         $this->postJson('/api/auth/forgot-password', [
-            'email' => 'nobody@example.com',
+            'email' => 'suspended@example.com',
         ])
             ->assertOk()
             ->assertJsonPath('message', 'If that email is registered, a password reset link was sent.');
+
+        Notification::assertNothingSent();
+        $this->assertNull(Cache::get(SendPasswordResetCodeAction::CACHE_PREFIX.$user->getKey()));
     }
 
     public function test_production_with_log_mailer_never_includes_verification_code(): void
@@ -392,5 +543,21 @@ class VerificationAndPasswordResetTest extends TestCase
     {
         app()->detectEnvironment(fn (): string => $environment);
         config(['app.env' => $environment]);
+    }
+
+    private function requestResetCode(User $user): string
+    {
+        $this->postJson('/api/auth/forgot-password', [
+            'email' => $user->email,
+        ])->assertOk();
+
+        $code = null;
+        Notification::assertSentTo($user, ResetPasswordCodeNotification::class, function (ResetPasswordCodeNotification $notification) use (&$code): bool {
+            $code = $notification->code;
+
+            return (bool) preg_match('/^\d{6}$/', $notification->code);
+        });
+
+        return $code;
     }
 }

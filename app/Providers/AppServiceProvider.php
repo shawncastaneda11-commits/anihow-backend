@@ -2,8 +2,6 @@
 
 namespace App\Providers;
 
-use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
@@ -32,7 +30,6 @@ class AppServiceProvider extends ServiceProvider
         }
 
         $this->configureRateLimiting();
-        $this->configureAuthUrls();
         $this->configureBroadcasting();
     }
 
@@ -77,18 +74,6 @@ class AppServiceProvider extends ServiceProvider
             }
 
             return Limit::perHour(10)->by($request->user()?->id ?: $request->ip());
-        });
-    }
-
-    private function configureAuthUrls(): void
-    {
-        ResetPassword::createUrlUsing(function (User $notifiable, string $token): string {
-            $base = rtrim((string) config('anihow.frontend_url'), '/');
-
-            return $base.'/reset-password?'.http_build_query([
-                'token' => $token,
-                'email' => $notifiable->getEmailForPasswordReset(),
-            ]);
         });
     }
 }

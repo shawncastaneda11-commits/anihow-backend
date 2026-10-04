@@ -54,7 +54,10 @@ class ApiClient {
         onError: (error, handler) {
           final path = error.requestOptions.path;
           final isCredentialAttempt =
-              path.contains('/auth/login') || path.contains('/auth/register');
+              path.contains('/auth/login') ||
+              path.contains('/auth/register') ||
+              path.contains('/auth/forgot-password') ||
+              path.contains('/auth/reset-password');
           if (error.response?.statusCode == 401 && !isCredentialAttempt) {
             onUnauthorized();
           }
@@ -111,6 +114,24 @@ class ApiClient {
       _sessionToken = token;
     }
     return (user: UserAccount.fromJson(_asMap(response['data'])), token: token);
+  }
+
+  Future<void> forgotPassword(String email) async {
+    await _post('/auth/forgot-password', {'email': email});
+  }
+
+  Future<void> resetPassword(
+    String email,
+    String code,
+    String password,
+    String passwordConfirmation,
+  ) async {
+    await _post('/auth/reset-password', {
+      'email': email,
+      'code': code,
+      'password': password,
+      'password_confirmation': passwordConfirmation,
+    });
   }
 
   Future<({UserAccount user, String token, String? verificationCode})>

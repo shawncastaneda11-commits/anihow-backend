@@ -76,6 +76,24 @@ class AppStrings {
 
   String get signIn => t('Sign in', 'Mag-sign in');
   String get rememberMe => t('Remember me', 'Tandaan ako');
+  String get forgotPassword =>
+      t('Forgot password?', 'Nakalimutan ang password?');
+  String get sendCode => t('Send code', 'Ipadala ang code');
+  String get resetPassword => t('Reset password', 'I-reset ang password');
+  String get passwordResetDone => t(
+    'Password reset. Log in with your new password.',
+    'Na-reset na ang password. Mag-log in gamit ang bagong password.',
+  );
+  String get forgotPasswordHint => t(
+    'Enter the email on your account. We will send a 6-digit code. It lasts 10 minutes.',
+    'Ilagay ang email ng account mo. Magpapadala kami ng 6 na digit. May bisa ito ng 10 minuto.',
+  );
+  String get resetPasswordHint => t(
+    'Enter the 6-digit code and choose a new password.',
+    'Ilagay ang 6 na digit na code at pumili ng bagong password.',
+  );
+  String get passwordsDoNotMatch =>
+      t('Passwords do not match.', 'Hindi magkatugma ang mga password.');
   String get sessionEnded => t(
     'Your session has ended. Please log in again.',
     'Natapos na ang iyong session. Mag-log in muli.',
@@ -186,7 +204,8 @@ class AppStrings {
   String get favoriteStores => t('Stores', 'Mga tindahan');
   String get noFavoriteStores =>
       t('No favorite stores yet.', 'Wala pang paboritong tindahan.');
-  String get addStoreToFavorites => t('Favorite store', 'I-favorite ang tindahan');
+  String get addStoreToFavorites =>
+      t('Favorite store', 'I-favorite ang tindahan');
   String get removeStoreFromFavorites =>
       t('Unfavorite store', 'Alisin sa paborito');
   String get storeSavedToFavorites =>

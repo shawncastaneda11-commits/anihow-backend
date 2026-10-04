@@ -85,6 +85,40 @@ class RememberMeTokenTest extends TestCase
             ->assertUnauthorized();
     }
 
+    public function test_a_token_issued_before_expiry_was_stored_dies_after_thirty_days(): void
+    {
+        $buyer = $this->buyer();
+        $token = $buyer->createToken('mobile')->plainTextToken;
+        $buyer->tokens()->firstOrFail()->forceFill([
+            'created_at' => now()->subDays(31),
+            'expires_at' => null,
+        ])->save();
+
+        $this->withToken($token)
+            ->getJson('/api/auth/user')
+            ->assertUnauthorized();
+    }
+
+    public function test_a_twelve_hour_token_is_still_bounded_by_its_own_expires_at(): void
+    {
+        $buyer = $this->buyer();
+        $token = $buyer->createToken('mobile', ['*'], now()->addHours(12))->plainTextToken;
+
+        $this->withToken($token)
+            ->getJson('/api/auth/user')
+            ->assertOk();
+
+        $this->app->make('auth')->forgetGuards();
+
+        $buyer->tokens()->firstOrFail()->forceFill([
+            'expires_at' => now()->subMinute(),
+        ])->save();
+
+        $this->withToken($token)
+            ->getJson('/api/auth/user')
+            ->assertUnauthorized();
+    }
+
     public function test_expired_sanctum_tokens_are_pruned_daily(): void
     {
         $event = collect(app(Schedule::class)->events())

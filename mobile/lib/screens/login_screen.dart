@@ -10,6 +10,7 @@ import '../widgets/auth_layout.dart';
 import '../widgets/form_label.dart';
 import '../widgets/password_field.dart';
 import '../widgets/primary_button.dart';
+import 'auth/forgot_password_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -49,7 +50,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = context.watch<AuthController>();
     final s = AppStrings.of(context);
     final error = auth.sessionEnded ? s.sessionEnded : auth.error;
-    final muted = Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7);
+    final muted = Theme.of(context).textTheme.bodyMedium?.color
+        ?.withValues(alpha: 0.7);
 
     return AuthLayout(
       form: Column(
@@ -57,14 +59,14 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           Text(
             s.signIn,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(context).textTheme.headlineMedium
+                ?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: AniHowSpace.labelGap),
           Text(
             s.welcomeBack,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: muted),
+            style: Theme.of(context).textTheme.bodyMedium
+                ?.copyWith(color: muted),
           ),
           const SizedBox(height: AniHowSpace.section),
           AniHowField(
@@ -82,6 +84,27 @@ class _LoginScreenState extends State<LoginScreen> {
             controller: _password,
             label: s.password,
             showLockIcon: true,
+          ),
+          SizedBox(
+            key: const Key('forgot-password'),
+            height: 48,
+            width: double.infinity,
+            child: TextButton(
+              style: TextButton.styleFrom(
+                minimumSize: const Size(48, 48),
+                alignment: Alignment.centerLeft,
+              ),
+              onPressed: _busy
+                  ? null
+                  : () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const ForgotPasswordScreen(),
+                        ),
+                      );
+                    },
+              child: Text(s.forgotPassword),
+            ),
           ),
           SizedBox(
             height: 48,
@@ -111,20 +134,27 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: AniHowSpace.cardGap),
           TextButton(
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const RegisterScreen()),
-              );
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const RegisterScreen()));
             },
             child: Text(s.createBuyerAccount),
           ),
           const SizedBox(height: AniHowSpace.section),
           SegmentedButton<CropLanguage>(
             segments: [
-              ButtonSegment(value: CropLanguage.english, label: Text(s.english)),
-              ButtonSegment(value: CropLanguage.filipino, label: Text(s.filipinoLabel)),
+              ButtonSegment(
+                value: CropLanguage.english,
+                label: Text(s.english),
+              ),
+              ButtonSegment(
+                value: CropLanguage.filipino,
+                label: Text(s.filipinoLabel),
+              ),
             ],
             selected: {
-              context.watch<PreferencesController>().language == CropLanguage.filipino
+              context.watch<PreferencesController>().language ==
+                      CropLanguage.filipino
                   ? CropLanguage.filipino
                   : CropLanguage.english,
             },

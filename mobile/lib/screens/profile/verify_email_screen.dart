@@ -82,7 +82,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       if (!mounted) {
         return;
       }
-      messenger.showSnackBar(SnackBar(content: Text(AppStrings.read(context).emailVerified)));
+      messenger.showSnackBar(
+        SnackBar(content: Text(AppStrings.read(context).emailVerified)),
+      );
       navigator.pop();
     } on ApiException catch (error) {
       if (!mounted) {
@@ -140,7 +142,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     final s = AppStrings.of(context);
     final user = auth.user;
     final shownCode = auth.pendingVerificationCode;
-    final muted = Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7);
+    final muted = Theme.of(context).textTheme.bodyMedium?.color
+        ?.withValues(alpha: 0.7);
     final canResend = !_busy && _cooldownSeconds == 0;
     final canVerify = !_busy && _code.text.trim().length == 6;
 
@@ -153,11 +156,16 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
             Row(
               children: [
                 Expanded(
-                  child: Text(user.email, style: Theme.of(context).textTheme.titleMedium),
+                  child: Text(
+                    user.email,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ),
                 StatusPill(
                   label: user.isVerified ? s.verified : s.unverified,
-                  color: user.isVerified ? AniHowColors.ready : AniHowColors.pending,
+                  color: user.isVerified
+                      ? AniHowColors.ready
+                      : AniHowColors.pending,
                 ),
               ],
             ),
@@ -165,7 +173,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
           ],
           Text(
             shownCode == null ? s.verifyHintEmail : s.verifyHintLocal,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: muted),
+            style: Theme.of(context).textTheme.bodyMedium
+                ?.copyWith(color: muted),
           ),
           if (shownCode != null) ...[
             const SizedBox(height: AniHowSpace.section),
@@ -173,26 +182,15 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
             const SizedBox(height: AniHowSpace.labelGap),
             Text(
               shownCode,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 4,
-                  ),
+              style: Theme.of(context).textTheme.headlineMedium
+                  ?.copyWith(fontWeight: FontWeight.w700, letterSpacing: 4),
             ),
           ],
           const SizedBox(height: AniHowSpace.section),
-          AniHowField(
+          VerificationCodeField(
+            controller: _code,
             label: s.code,
-            child: TextField(
-              controller: _code,
-              keyboardType: TextInputType.number,
-              maxLength: 6,
-              enabled: !_busy,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                hintText: '000000',
-                counterText: '',
-              ),
-            ),
+            enabled: !_busy,
           ),
           const SizedBox(height: AniHowSpace.section),
           PrimaryButton(
@@ -210,6 +208,34 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class VerificationCodeField extends StatelessWidget {
+  const VerificationCodeField({
+    super.key,
+    required this.controller,
+    required this.label,
+    this.enabled = true,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return AniHowField(
+      label: label,
+      child: TextField(
+        controller: controller,
+        keyboardType: TextInputType.number,
+        maxLength: 6,
+        enabled: enabled,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        decoration: const InputDecoration(hintText: '000000', counterText: ''),
       ),
     );
   }

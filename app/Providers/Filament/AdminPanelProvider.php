@@ -37,6 +37,7 @@ class AdminPanelProvider extends PanelProvider
             ->defaultThemeMode(ThemeMode::Light)
             ->themeSwitcher(true)
             ->login()
+            ->passwordReset()
             ->revealablePasswords()
             ->colors([
                 'primary' => Color::Green,

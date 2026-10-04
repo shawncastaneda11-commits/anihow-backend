@@ -8,9 +8,7 @@ use App\Http\Requests\Api\Cart\UpdateCartItemRequest;
 use App\Http\Resources\Api\CartItemResource;
 use App\Models\CartItem;
 use App\Models\Listing;
-use App\Models\User;
 use App\Support\ShopReviews;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -37,7 +35,7 @@ class CartController extends Controller
     {
         $this->authorize('viewAny', CartItem::class);
 
-        $this->pruneUnavailableCartItems($request->user());
+        CartItem::pruneUnavailable($request->user());
 
         $items = $request->user()
             ->cartItems()
@@ -140,15 +138,5 @@ class CartController extends Controller
         throw ValidationException::withMessages([
             'quantity' => "Only {$available} available.",
         ]);
-    }
-
-    private function pruneUnavailableCartItems(User $buyer): void
-    {
-        $buyer->cartItems()
-            ->whereDoesntHave(
-                'listing',
-                fn (Builder $listing): Builder => $listing->marketplaceVisible(),
-            )
-            ->delete();
     }
 }

@@ -129,7 +129,75 @@ class ListingAvailabilityTest extends TestCase
 
         $this->checkout($buyer)
             ->assertUnprocessable()
-            ->assertJsonValidationErrors('cart');
+            ->assertJsonValidationErrors([
+                'cart' => 'The items in your cart are no longer available and were removed.',
+            ]);
+
+        $this->assertDatabaseMissing('cart_items', [
+            'buyer_id' => $buyer->id,
+            'listing_id' => $listing->id,
+        ]);
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_checkout_keeps_an_upcoming_line_and_drops_an_expired_one(): void
+    {
+        $farmer = $this->farmer();
+        $buyer = $this->buyer();
+        $upcoming = $this->listingFor($farmer, [
+            'title' => 'Next week okra',
+            'quantity_available' => 10,
+        ]);
+        $expired = $this->listingFor($farmer, [
+            'title' => 'Morning pechay',
+            'quantity_available' => 10,
+        ]);
+
+        $this->addToCart($buyer, $upcoming, 1);
+        $this->addToCart($buyer, $expired, 1);
+        $upcoming->update(['available_from' => now()->addDays(4)]);
+        $expired->update(['available_until' => now()->subHour()]);
+
+        $this->checkout($buyer)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'cart' => 'Next week okra is not available yet. Remove it from your cart to check out.',
+            ]);
+
+        $this->assertDatabaseHas('cart_items', [
+            'buyer_id' => $buyer->id,
+            'listing_id' => $upcoming->id,
+        ]);
+        $this->assertDatabaseMissing('cart_items', [
+            'buyer_id' => $buyer->id,
+            'listing_id' => $expired->id,
+        ]);
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_checkout_removes_a_taken_down_line_and_says_so(): void
+    {
+        $farmer = $this->farmer();
+        $buyer = $this->buyer();
+        $listing = $this->listingFor($farmer, [
+            'title' => 'Taken down talong',
+            'quantity_available' => 10,
+        ]);
+
+        $this->addToCart($buyer, $listing, 1);
+        $listing->update(['status' => ListingStatus::TakenDown]);
+
+        $this->checkout($buyer)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'cart' => 'The items in your cart are no longer available and were removed.',
+            ]);
+
+        $this->assertDatabaseMissing('cart_items', [
+            'buyer_id' => $buyer->id,
+            'listing_id' => $listing->id,
+        ]);
+        $this->assertDatabaseCount('orders', 0);
     }
 
     public function test_checkout_refuses_a_line_that_became_upcoming_and_keeps_it(): void

@@ -9,7 +9,6 @@ use App\Models\Listing;
 use App\Models\Order;
 use App\Models\User;
 use App\Support\InAppNotifier;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -47,15 +46,9 @@ class CheckoutService
         FulfillmentPreference $preference,
         ?string $fulfillmentNote = null,
     ): Collection {
-        return DB::transaction(function () use ($buyer, $preference, $fulfillmentNote): Collection {
-            CartItem::query()
-                ->where('buyer_id', $buyer->id)
-                ->whereDoesntHave(
-                    'listing',
-                    fn (Builder $listing): Builder => $listing->marketplaceVisible(),
-                )
-                ->delete();
+        $removed = CartItem::pruneUnavailable($buyer);
 
+        return DB::transaction(function () use ($buyer, $preference, $fulfillmentNote, $removed): Collection {
             $cartItems = CartItem::query()
                 ->where('buyer_id', $buyer->id)
                 ->with(['listing.cropType', 'listing.farmerSeller', 'listing.activeTawadRule'])
@@ -75,7 +68,9 @@ class CheckoutService
 
             if ($cartItems->isEmpty()) {
                 throw ValidationException::withMessages([
-                    'cart' => 'Your cart is empty.',
+                    'cart' => $removed > 0
+                        ? 'The items in your cart are no longer available and were removed.'
+                        : 'Your cart is empty.',
                 ]);
             }
 

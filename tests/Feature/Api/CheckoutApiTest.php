@@ -142,6 +142,17 @@ class CheckoutApiTest extends TestCase
         ]);
     }
 
+    public function test_an_empty_cart_is_refused_without_claiming_items_were_removed(): void
+    {
+        $buyer = $this->buyer();
+
+        $this->checkout($buyer)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'cart' => 'Your cart is empty.',
+            ]);
+    }
+
     public function test_checkout_drops_unavailable_cart_lines_instead_of_failing(): void
     {
         $farmer = $this->farmer();

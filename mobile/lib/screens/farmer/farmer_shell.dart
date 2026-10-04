@@ -7,6 +7,7 @@ import '../../state/auth_controller.dart';
 import '../../widgets/notification_bell.dart';
 import '../../widgets/order_chat_head.dart';
 import '../../widgets/profile_avatar_button.dart';
+import '../chat/order_chats_screen.dart';
 import '../faq/faq_bot_screen.dart';
 import '../profile/profile_screen.dart';
 import 'crop_care_screen.dart';
@@ -14,8 +15,18 @@ import 'farmer_orders_screen.dart';
 import 'farmer_sales_screen.dart';
 import 'listings_screen.dart';
 
+/// Test hook so the seller bar can be pumped without live API pages.
+class FarmerShellPreview {
+  const FarmerShellPreview({this.index = 0, this.pages});
+
+  final int index;
+  final List<Widget>? pages;
+}
+
 class FarmerShell extends StatefulWidget {
-  const FarmerShell({super.key});
+  const FarmerShell({super.key, this.preview});
+
+  final FarmerShellPreview? preview;
 
   @override
   State<FarmerShell> createState() => _FarmerShellState();
@@ -25,16 +36,35 @@ class _FarmerShellState extends State<FarmerShell> {
   int _index = 0;
 
   @override
+  void initState() {
+    super.initState();
+    _index = widget.preview?.index ?? 0;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthController>().user;
     final s = AppStrings.of(context);
-    final pages = const [
-      FarmerListingsScreen(),
-      FarmerOrdersScreen(),
-      FarmerSalesScreen(),
-      CropCareScreen(),
+    final pages =
+        widget.preview?.pages ??
+        [
+          const FarmerListingsScreen(),
+          const FarmerOrdersScreen(),
+          const FarmerSalesScreen(),
+          const CropCareScreen(),
+          OrderChatsScreen(
+            forSeller: true,
+            embedded: true,
+            active: _index == 4,
+          ),
+        ];
+    final titles = [
+      s.myListings,
+      s.incomingOrders,
+      s.mySales,
+      s.cropCare,
+      s.chats,
     ];
-    final titles = [s.myListings, s.incomingOrders, s.mySales, s.cropCare];
 
     return Scaffold(
       appBar: AppBar(
@@ -66,8 +96,6 @@ class _FarmerShellState extends State<FarmerShell> {
         ],
       ),
       body: IndexedStack(index: _index, children: pages),
-      floatingActionButton: const OrderChatHead(forSeller: true),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
           border: Border(
@@ -96,6 +124,11 @@ class _FarmerShellState extends State<FarmerShell> {
             NavigationDestination(
               icon: const Icon(Icons.menu_book_outlined),
               label: s.cropCare,
+            ),
+            NavigationDestination(
+              icon: const ChatBubbleMark(size: 24),
+              selectedIcon: const ChatBubbleMark(size: 24),
+              label: s.chats,
             ),
           ],
         ),

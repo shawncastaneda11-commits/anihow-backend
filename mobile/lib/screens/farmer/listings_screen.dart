@@ -83,10 +83,10 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
     _replace(listing.copyWith(isActive: isActive));
 
     try {
-      final updated = await context.read<AuthController>().api.toggleListingActive(
-            listing.id,
-            isActive: isActive,
-          );
+      final updated = await context
+          .read<AuthController>()
+          .api
+          .toggleListingActive(listing.id, isActive: isActive);
       if (mounted) {
         _replace(updated);
       }
@@ -95,7 +95,8 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
         return;
       }
       _replace(listing);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
     } finally {
       _toggling.remove(listing.id);
     }
@@ -128,9 +129,12 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
       length: 3,
       child: Scaffold(
         floatingActionButton: FloatingActionButton(
+          heroTag: 'farmer-add-listing',
+          tooltip: s.newListing,
           onPressed: () => _openForm(),
           child: const Icon(Icons.add),
         ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         body: Column(
           children: [
             if (userId != null && _announcements.isNotEmpty)
@@ -233,7 +237,9 @@ class _List extends StatelessWidget {
             onTap: () => onOpen(listing),
             trailing: ListingActiveBadge(
               isActive: listing.isSellerActive,
-              onTap: listing.isTakenDown ? null : () => onToggle(listing, !listing.isActive),
+              onTap: listing.isTakenDown
+                  ? null
+                  : () => onToggle(listing, !listing.isActive),
             ),
           );
         },

@@ -18,9 +18,20 @@ import 'stall_chat_screen.dart';
 
 /// Chats for app orders, including finished ones. Walk-ins have no buyer chat.
 class OrderChatsScreen extends StatefulWidget {
-  const OrderChatsScreen({super.key, this.forSeller = false});
+  const OrderChatsScreen({
+    super.key,
+    this.forSeller = false,
+    this.embedded = false,
+    this.active = true,
+  });
 
   final bool forSeller;
+
+  /// The seller shell already shows the title, so this page skips its app bar.
+  final bool embedded;
+
+  /// Reloads when a kept-alive tab becomes visible.
+  final bool active;
 
   @override
   State<OrderChatsScreen> createState() => _OrderChatsScreenState();
@@ -54,6 +65,14 @@ class _OrderChatsScreenState extends State<OrderChatsScreen> {
     return _ChatInbox(orders: orders, stalls: stalls);
   }
 
+  @override
+  void didUpdateWidget(OrderChatsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) {
+      _future = _load();
+    }
+  }
+
   Future<void> _reload() async {
     final future = _load();
     setState(() {
@@ -65,60 +84,63 @@ class _OrderChatsScreenState extends State<OrderChatsScreen> {
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
-
-    return Scaffold(
-      appBar: AppBar(title: Text(s.chats)),
-      body: AsyncView<_ChatInbox>(
-        future: _future,
-        onRetry: _reload,
-        isEmpty: (inbox) => inbox.isEmpty,
-        emptyBuilder: (context) => _EmptyChats(forSeller: widget.forSeller),
-        builder: (context, inbox) {
-          final entries = inbox.orders.length + inbox.stalls.length;
-          return RefreshIndicator(
-            onRefresh: _reload,
-            child: ListView.separated(
-              padding: AniHowSpace.screenPadding,
-              itemCount: entries,
-              separatorBuilder: (_, _) =>
-                  const SizedBox(height: AniHowSpace.cardGap),
-              itemBuilder: (context, index) {
-                if (index < inbox.orders.length) {
-                  final order = inbox.orders[index];
-                  return _ChatCard(
-                    order: order,
-                    title: order.chatPeerTitle(
-                      viewingAsSeller: widget.forSeller,
-                    ),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => OrderChatScreen(order: order),
-                        ),
-                      );
-                    },
-                  );
-                }
-                final chat = inbox.stalls[index - inbox.orders.length];
-                return _StallChatCard(
-                  chat: chat,
-                  title: chat.title(viewingAsSeller: widget.forSeller),
+    final inbox = AsyncView<_ChatInbox>(
+      future: _future,
+      onRetry: _reload,
+      isEmpty: (inbox) => inbox.isEmpty,
+      emptyBuilder: (context) => _EmptyChats(forSeller: widget.forSeller),
+      builder: (context, inbox) {
+        final entries = inbox.orders.length + inbox.stalls.length;
+        return RefreshIndicator(
+          onRefresh: _reload,
+          child: ListView.separated(
+            padding: AniHowSpace.screenPadding,
+            itemCount: entries,
+            separatorBuilder: (_, _) =>
+                const SizedBox(height: AniHowSpace.cardGap),
+            itemBuilder: (context, index) {
+              if (index < inbox.orders.length) {
+                final order = inbox.orders[index];
+                return _ChatCard(
+                  order: order,
+                  title: order.chatPeerTitle(viewingAsSeller: widget.forSeller),
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute<void>(
-                        builder: (_) => StallChatScreen(
-                          chat: chat,
-                          viewingAsSeller: widget.forSeller,
-                        ),
+                        builder: (_) => OrderChatScreen(order: order),
                       ),
                     );
                   },
                 );
-              },
-            ),
-          );
-        },
-      ),
+              }
+              final chat = inbox.stalls[index - inbox.orders.length];
+              return _StallChatCard(
+                chat: chat,
+                title: chat.title(viewingAsSeller: widget.forSeller),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => StallChatScreen(
+                        chat: chat,
+                        viewingAsSeller: widget.forSeller,
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
+
+    if (widget.embedded) {
+      return inbox;
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: Text(s.chats)),
+      body: inbox,
     );
   }
 }
@@ -147,7 +169,7 @@ class _EmptyChats extends StatelessWidget {
               ),
               child: const Padding(
                 padding: EdgeInsets.all(22),
-                child: ChatBubbleMark(size: 36),
+                child: ChatBubbleMark(size: 36, color: Colors.white),
               ),
             ),
             const SizedBox(height: AniHowSpace.section),

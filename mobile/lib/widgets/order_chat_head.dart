@@ -32,16 +32,18 @@ class OrderChatHead extends StatelessWidget {
 }
 
 class ChatBubbleMark extends StatelessWidget {
-  const ChatBubbleMark({super.key, this.size = 26, this.color = Colors.white});
+  const ChatBubbleMark({super.key, this.size = 26, this.color});
 
   final double size;
-  final Color color;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
+    final paintColor = color ?? IconTheme.of(context).color ?? Colors.white;
+
     return CustomPaint(
       size: Size.square(size),
-      painter: _ChatBubblePainter(color),
+      painter: _ChatBubblePainter(paintColor),
     );
   }
 }
@@ -69,5 +71,7 @@ class _ChatBubblePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _ChatBubblePainter oldDelegate) {
+    return oldDelegate.color != color;
+  }
 }

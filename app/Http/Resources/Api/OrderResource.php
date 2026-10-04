@@ -46,6 +46,8 @@ class OrderResource extends JsonResource
             'cancellation_note' => $this->cancellation_note,
             'cancelled_by' => $this->cancelled_by?->value,
             'can_be_reviewed' => $this->canBeReviewed(),
+            'reservation_id' => $this->reservation_id,
+            'from_reservation' => $this->reservation_id !== null,
             'placed_at' => $this->created_at?->toIso8601String(),
             'confirmed_at' => $this->confirmed_at?->toIso8601String(),
             'ready_at' => $this->ready_at?->toIso8601String(),

@@ -439,6 +439,51 @@ class ApiClient {
     return _list('/crop-types', parse: CategoryItem.fromJson);
   }
 
+  Future<ReservationRecord> reserveListing({
+    required int listingId,
+    required String quantity,
+    required String fulfillmentPreference,
+    String? fulfillmentNote,
+  }) async {
+    final response = await _post('/buyer/reservations', {
+      'listing_id': listingId,
+      'quantity': quantity,
+      'fulfillment_preference': fulfillmentPreference,
+      if (fulfillmentNote != null && fulfillmentNote.isNotEmpty)
+        'fulfillment_note': fulfillmentNote,
+    });
+    return ReservationRecord.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<List<ReservationRecord>> buyerReservations() {
+    return _list('/buyer/reservations', parse: ReservationRecord.fromJson);
+  }
+
+  Future<void> cancelBuyerReservation(int id) {
+    return _patch('/buyer/reservations/$id');
+  }
+
+  Future<List<ReservationRecord>> farmerListingReservations(int listingId) {
+    return _list(
+      '/farmer/listings/$listingId/reservations',
+      parse: ReservationRecord.fromJson,
+    );
+  }
+
+  Future<void> cancelFarmerReservation(
+    int listingId,
+    int reservationId, {
+    String? note,
+  }) {
+    return _patch('/farmer/listings/$listingId/reservations/$reservationId', {
+      if (note != null && note.isNotEmpty) 'note': note,
+    });
+  }
+
+  Future<void> openListingNow(int listingId) async {
+    await _post('/farmer/listings/$listingId/open', {});
+  }
+
   Future<List<OrderRecord>> buyerOrders() async {
     final pages = await _listPages(
       '/buyer/orders',

@@ -68,10 +68,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Available from Oct 20'), findsOneWidget);
-    final button = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Add to cart'),
-    );
-    expect(button.onPressed, isNull);
+    expect(find.text('Reserve'), findsOneWidget);
+
+    await tester.tap(find.text('Reserve'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pay cash on handover after harvest'), findsOneWidget);
+    expect(find.text('I pick up'), findsOneWidget);
   });
 
   test('a cleared date is an empty multipart field', () {

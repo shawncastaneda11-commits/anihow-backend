@@ -19,6 +19,10 @@ class OrderForm
         return $schema
             ->components([
                 TextInput::make('order_number')->disabled(),
+                Placeholder::make('from_reservation')
+                    ->label('From reservation')
+                    ->content('Yes')
+                    ->visible(fn (?Order $record): bool => $record?->reservation_id !== null),
                 TextInput::make('status')
                     ->formatStateUsing(fn ($state): string => $state?->label() ?? '')
                     ->disabled(),

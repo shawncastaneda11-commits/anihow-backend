@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\Users\Tables;
 
+use App\Actions\Reservations\CancelReservation;
 use App\Enums\Permission;
+use App\Enums\ReservationCancellationReason;
 use App\Enums\Role;
 use App\Enums\UserStatus;
 use App\Models\User;
@@ -94,11 +96,18 @@ class UsersTable
                             ->required()
                             ->maxLength(255),
                     ])
-                    ->action(fn (User $record, array $data): bool => $record->update([
-                        'status' => UserStatus::Suspended,
-                        'suspended_at' => now(),
-                        'suspension_reason' => $data['suspension_reason'],
-                    ])),
+                    ->action(function (User $record, array $data): void {
+                        $record->update([
+                            'status' => UserStatus::Suspended,
+                            'suspended_at' => now(),
+                            'suspension_reason' => $data['suspension_reason'],
+                        ]);
+
+                        app(CancelReservation::class)->forSeller(
+                            $record,
+                            ReservationCancellationReason::ListingRemoved,
+                        );
+                    }),
                 ViewAction::make()
                     ->visible(fn (User $record): bool => ! (auth()->user()?->can('update', $record) ?? false)),
                 EditAction::make(),

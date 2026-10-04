@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\GrowingMethod;
 use App\Enums\ListingStatus;
 use App\Enums\ListingUnit;
+use App\Enums\ReservationStatus;
 use App\Enums\UserStatus;
 use App\Support\ImageVariants;
 use App\Support\Pricing\PriceGuard;
@@ -125,6 +126,30 @@ class Listing extends Model
     public function favorites(): HasMany
     {
         return $this->hasMany(Favorite::class);
+    }
+
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class);
+    }
+
+    /**
+     * Farmer listing payloads only. Buyer catalogue queries must not call this,
+     * or reserved totals leak onto the marketplace.
+     *
+     * @param  Builder<Listing>  $query
+     * @return Builder<Listing>
+     */
+    public function scopeWithActiveReservationTotals(Builder $query): Builder
+    {
+        return $query
+            ->withSum(
+                ['reservations as reserved_quantity' => fn (Builder $reservations): Builder => $reservations->where('status', ReservationStatus::Active)],
+                'quantity',
+            )
+            ->withCount(
+                ['reservations as active_reservations_count' => fn (Builder $reservations): Builder => $reservations->where('status', ReservationStatus::Active)],
+            );
     }
 
     public function takenDownBy(): BelongsTo

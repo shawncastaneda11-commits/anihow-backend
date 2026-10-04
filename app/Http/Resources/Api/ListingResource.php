@@ -24,6 +24,14 @@ class ListingResource extends JsonResource
             'price_per_unit' => (float) $this->price_per_unit,
             'quantity_available' => (float) $this->quantity_available,
             'sellable_quantity' => $this->sellableQuantity(),
+            'reserved_quantity' => $this->when(
+                $this->resource instanceof Listing && array_key_exists('reserved_quantity', $this->resource->getAttributes()),
+                fn (): float => (float) ($this->reserved_quantity ?? 0),
+            ),
+            'active_reservations_count' => $this->when(
+                $this->resource instanceof Listing && array_key_exists('active_reservations_count', $this->resource->getAttributes()),
+                fn (): int => (int) ($this->active_reservations_count ?? 0),
+            ),
             'is_active' => $this->is_active,
             'status' => $this->status->value,
             'available_from' => $this->available_from?->toIso8601String(),

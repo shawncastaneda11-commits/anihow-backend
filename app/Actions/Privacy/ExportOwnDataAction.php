@@ -4,6 +4,7 @@ namespace App\Actions\Privacy;
 
 use App\Models\Listing;
 use App\Models\Order;
+use App\Models\Reservation;
 use App\Models\Review;
 use App\Models\StallMessage;
 use App\Models\TawadRule;
@@ -59,6 +60,31 @@ class ExportOwnDataAction
                     'id' => $favorite->id,
                     'shop_name' => $favorite->farmerSeller?->shop_name ?: $favorite->farmerSeller?->name,
                     'created_at' => $favorite->created_at?->toIso8601String(),
+                ])->all(),
+            'reservations' => Reservation::query()
+                ->where(function ($query) use ($user): void {
+                    $query->where('buyer_id', $user->id)
+                        ->orWhere('farmer_seller_id', $user->id);
+                })
+                ->orderBy('id')
+                ->get()
+                ->map(fn (Reservation $reservation): array => [
+                    'id' => $reservation->id,
+                    'listing_id' => $reservation->listing_id,
+                    'listing_name' => $reservation->listing_name,
+                    'quantity' => $reservation->quantity,
+                    'unit' => $reservation->unit?->value,
+                    'unit_price' => $reservation->unit_price,
+                    'line_subtotal' => $reservation->line_subtotal,
+                    'tawad_amount' => $reservation->tawad_amount,
+                    'line_total' => $reservation->line_total,
+                    'status' => $reservation->status->value,
+                    'cancellation_reason' => $reservation->cancellation_reason?->value,
+                    'fulfillment_preference' => $reservation->fulfillment_preference?->value,
+                    'order_id' => $reservation->order_id,
+                    'created_at' => $reservation->created_at?->toIso8601String(),
+                    'converted_at' => $reservation->converted_at?->toIso8601String(),
+                    'cancelled_at' => $reservation->cancelled_at?->toIso8601String(),
                 ])->all(),
             'cart' => $user->cartItems()->with('listing:id,title')->get()
                 ->map(fn ($item): array => [

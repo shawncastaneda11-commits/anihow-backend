@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Actions\Reservations\OpenDueReservations;
 use App\Enums\FulfillmentPreference;
 use App\Enums\OrderStatus;
 use App\Models\CartItem;
@@ -46,6 +47,18 @@ class CheckoutService
         FulfillmentPreference $preference,
         ?string $fulfillmentNote = null,
     ): Collection {
+        $listingIds = CartItem::query()
+            ->where('buyer_id', $buyer->id)
+            ->pluck('listing_id')
+            ->unique()
+            ->filter();
+
+        $openDue = app(OpenDueReservations::class);
+
+        foreach ($listingIds as $listingId) {
+            $openDue->forListing((int) $listingId);
+        }
+
         $removed = CartItem::pruneUnavailable($buyer);
 
         return DB::transaction(function () use ($buyer, $preference, $fulfillmentNote, $removed): Collection {
@@ -109,9 +122,6 @@ class CheckoutService
 
         $lines = $items->map(fn (CartItem $item): array => $this->buildLine($item))->all();
 
-        $subtotal = array_sum(array_column($lines, 'line_subtotal'));
-        $tawadTotal = array_sum(array_column($lines, 'tawad_amount'));
-
         $farmId = $items->first()->listing->farm_id;
 
         if ($farmId === null) {
@@ -120,10 +130,41 @@ class CheckoutService
             ]);
         }
 
+        return $this->placeAppOrder(
+            $buyer,
+            $seller->id,
+            $farmId,
+            $lines,
+            $preference,
+            $fulfillmentNote,
+        );
+    }
+
+    /**
+     * Inserts one Placed app order and holds stock for its lines.
+     *
+     * Checkout builds fresh prices. A reservation conversion passes the line
+     * it stored when the buyer reserved, and the order's created_at is this
+     * moment so the 12-hour and 48-hour timers start at conversion.
+     *
+     * @param  array<int, array<string, mixed>>  $lines
+     */
+    public function placeAppOrder(
+        User $buyer,
+        int $sellerId,
+        int $farmId,
+        array $lines,
+        FulfillmentPreference $preference,
+        ?string $fulfillmentNote,
+        ?int $reservationId = null,
+    ): Order {
+        $subtotal = array_sum(array_column($lines, 'line_subtotal'));
+        $tawadTotal = array_sum(array_column($lines, 'tawad_amount'));
+
         $order = Order::create([
             'order_number' => $this->orderNumbers->generate(),
             'buyer_id' => $buyer->id,
-            'farmer_seller_id' => $seller->id,
+            'farmer_seller_id' => $sellerId,
             'farm_id' => $farmId,
             'status' => OrderStatus::Placed,
             'fulfillment_preference' => $preference,
@@ -132,12 +173,18 @@ class CheckoutService
             'subtotal' => $subtotal,
             'tawad_total' => $tawadTotal,
             'total' => $subtotal - $tawadTotal,
+            'reservation_id' => $reservationId,
         ]);
 
         $order->items()->createMany($lines);
 
-        $this->holdStock($items);
-        $this->notifier->orderPlaced($seller, $order);
+        $this->holdLines($lines);
+
+        $seller = User::query()->find($sellerId);
+
+        if ($seller !== null) {
+            $this->notifier->orderPlaced($seller, $order);
+        }
 
         return $order;
     }
@@ -189,13 +236,19 @@ class CheckoutService
     /**
      * Held, not deducted. Cancelling before Confirmed releases this.
      *
-     * @param  Collection<int, CartItem>  $items
+     * @param  array<int, array<string, mixed>>  $lines
      */
-    private function holdStock(Collection $items): void
+    private function holdLines(array $lines): void
     {
-        foreach ($items as $item) {
+        foreach ($lines as $line) {
+            $listingId = $line['listing_id'] ?? null;
+
+            if ($listingId === null) {
+                continue;
+            }
+
             $listing = Listing::query()
-                ->whereKey($item->listing_id)
+                ->whereKey($listingId)
                 ->lockForUpdate()
                 ->first();
 
@@ -203,7 +256,7 @@ class CheckoutService
                 continue;
             }
 
-            $listing->quantity_held = (float) $listing->quantity_held + (float) $item->quantity;
+            $listing->quantity_held = (float) $listing->quantity_held + (float) $line['quantity'];
             $listing->save();
         }
     }

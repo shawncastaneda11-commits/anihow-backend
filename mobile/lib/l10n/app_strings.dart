@@ -419,6 +419,45 @@ class AppStrings {
   ];
 
   String get addToCart => t('Add to cart', 'Idagdag sa cart');
+
+  String get reserve => t('Reserve', 'Ireserba');
+
+  String get lockedPrice => t('Locked price', 'Naka-lock na presyo');
+
+  String get estimatedTotal => t('Estimated total', 'Tantyang kabuuan');
+
+  String get payCashOnHandover => t(
+    'Pay cash on handover after harvest',
+    'Magbayad ng cash sa pagkuha pagkatapos ng ani',
+  );
+
+  String reservedHarvest(String quantity, String unit, int count) => t(
+    '$quantity $unit reserved ($count)',
+    '$quantity $unit ang naka-reserba ($count)',
+  );
+
+  String get ordersTab => t('Orders', 'Mga order');
+
+  String get reservationsTab => t('Reservations', 'Mga reserbasyon');
+
+  String get noReservations =>
+      t('No reservations yet', 'Wala pang reserbasyon');
+
+  String get activeReservations => t('Active', 'Aktibo');
+
+  String get pastReservations => t('History', 'Nakaraan');
+
+  String get cancelReservation =>
+      t('Cancel reservation', 'Kanselahin ang reserbasyon');
+
+  String get openNow => t('Open now', 'Buksan ngayon');
+
+  String get openNowBody => t(
+    'Opening this listing turns its reservations into orders now.',
+    'Bubuksan nito ang listing at gagawing order ang mga reserbasyon ngayon.',
+  );
+
+  String get reservationReason => t('Reason', 'Dahilan');
   String get addedToCart => t('Added to cart.', 'Nadagdag sa cart.');
   String get viewCart => t('View cart', 'Tingnan ang cart');
   String get enterQuantity => t('Enter a quantity.', 'Maglagay ng dami.');
@@ -866,6 +905,15 @@ class AppStrings {
     'report_submitted' => t('New report submitted', 'May bagong ulat'),
     'report_resolved' => t('Report resolved', 'Naaksyunan ang ulat'),
     'report_dismissed' => t('Report dismissed', 'Tinanggihan ang ulat'),
+    'reservation_made' => t('Reservation made', 'May reserbasyon'),
+    'reservation_converted' => t(
+      'Reservation converted',
+      'Naging order ang reserbasyon',
+    ),
+    'reservation_cancelled' => t(
+      'Reservation cancelled',
+      'Kinansela ang reserbasyon',
+    ),
     _ => fallback,
   };
 

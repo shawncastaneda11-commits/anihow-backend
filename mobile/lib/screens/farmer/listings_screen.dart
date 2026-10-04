@@ -11,6 +11,7 @@ import '../../widgets/listing_active_badge.dart';
 import '../../widgets/produce_card.dart';
 import 'farm_announcements_screen.dart';
 import 'listing_form_screen.dart';
+import 'listing_reservations_screen.dart';
 
 class FarmerListingsScreen extends StatefulWidget {
   const FarmerListingsScreen({super.key});
@@ -241,6 +242,22 @@ class _List extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 AvailabilityChip(state: listing.availabilityState),
+                ReservedHarvestLabel(listing: listing),
+                if (listing.isUpcoming)
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(48, 48),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              ListingReservationsScreen(listing: listing),
+                        ),
+                      );
+                    },
+                    child: Text(AppStrings.of(context).reservationsTab),
+                  ),
                 ListingActiveBadge(
                   isActive: listing.isSellerActive,
                   onTap: listing.isTakenDown

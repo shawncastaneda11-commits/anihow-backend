@@ -39,6 +39,7 @@ class ListingController extends Controller
         $listings = $request->user()
             ->listings()
             ->with(self::relations())
+            ->withActiveReservationTotals()
             ->latest()
             ->paginate();
 
@@ -53,7 +54,12 @@ class ListingController extends Controller
             $request->file('image'),
         );
 
-        return (new ListingResource($listing->load(self::relations())))
+        $listing = Listing::query()
+            ->with(self::relations())
+            ->withActiveReservationTotals()
+            ->findOrFail($listing->id);
+
+        return (new ListingResource($listing))
             ->additional(['message' => 'Listing created.'])
             ->response()
             ->setStatusCode(201);
@@ -63,7 +69,10 @@ class ListingController extends Controller
     {
         $this->authorize('view', $listing);
 
-        $listing->load(self::relations());
+        $listing = Listing::query()
+            ->with(self::relations())
+            ->withActiveReservationTotals()
+            ->findOrFail($listing->id);
 
         return new ListingResource($listing);
     }
@@ -79,8 +88,19 @@ class ListingController extends Controller
             $request->file('image'),
         );
 
-        return (new ListingResource($listing->load(self::relations())))
-            ->additional(['message' => 'Listing updated.']);
+        $listing = Listing::query()
+            ->with(self::relations())
+            ->withActiveReservationTotals()
+            ->findOrFail($listing->id);
+
+        $additional = ['message' => 'Listing updated.'];
+
+        if ((float) $listing->quantity_available < (float) ($listing->reserved_quantity ?? 0)) {
+            $additional['warning'] = 'The available quantity is now below what buyers have reserved.';
+        }
+
+        return (new ListingResource($listing))
+            ->additional($additional);
     }
 
     public function destroy(Listing $listing, DeleteListingAction $deleteListing): JsonResponse

@@ -41,6 +41,8 @@ use App\Http\Controllers\Api\Orders\FarmerOrderController;
 use App\Http\Controllers\Api\Orders\OrderHistoryController;
 use App\Http\Controllers\Api\Orders\WalkInSaleController;
 use App\Http\Controllers\Api\Reports\SubmitReportController;
+use App\Http\Controllers\Api\Reservations\BuyerReservationController;
+use App\Http\Controllers\Api\Reservations\FarmerReservationController;
 use App\Http\Controllers\Api\Reviews\ReviewController;
 use App\Http\Controllers\Api\Shop\BuyerShopController;
 use App\Http\Controllers\Api\Shop\DeleteShopCoverController;
@@ -158,6 +160,12 @@ Route::middleware([
     Route::delete('listings/{listing}', [ListingController::class, 'destroy'])->name('farmer.listings.destroy');
     Route::patch('listings/{listing}/active', ToggleListingActiveController::class)
         ->name('farmer.listings.toggle-active');
+    Route::get('listings/{listing}/reservations', [FarmerReservationController::class, 'index'])
+        ->name('farmer.listings.reservations.index');
+    Route::patch('listings/{listing}/reservations/{reservation}', [FarmerReservationController::class, 'cancel'])
+        ->name('farmer.listings.reservations.cancel');
+    Route::post('listings/{listing}/open', [FarmerReservationController::class, 'open'])
+        ->name('farmer.listings.open');
 
     // Tawad: a seller-published peso discount rule, one active rule per listing.
     Route::post('listings/{listing}/tawad', [TawadRuleController::class, 'store'])
@@ -200,6 +208,7 @@ Route::middleware([
     Route::get('marketplace/{listing}', [MarketplaceController::class, 'show'])->name('buyer.marketplace.show');
 
     Route::get('cart', [CartController::class, 'index'])->name('buyer.cart.index');
+    Route::get('reservations', [BuyerReservationController::class, 'index'])->name('buyer.reservations.index');
 
     Route::get('orders', [BuyerOrderController::class, 'index'])->name('buyer.orders.index');
     Route::get('orders/history', [OrderHistoryController::class, 'index'])->name('buyer.orders.history');
@@ -216,6 +225,9 @@ Route::middleware([
 
     Route::middleware('verified')->group(function (): void {
         Route::post('cart', [CartController::class, 'store'])->name('buyer.cart.store');
+        Route::post('reservations', [BuyerReservationController::class, 'store'])->name('buyer.reservations.store');
+        Route::patch('reservations/{reservation}', [BuyerReservationController::class, 'cancel'])
+            ->name('buyer.reservations.cancel');
         Route::patch('cart/{cartItem}', [CartController::class, 'update'])->name('buyer.cart.update');
         Route::delete('cart/{cartItem}', [CartController::class, 'destroy'])->name('buyer.cart.destroy');
 

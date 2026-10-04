@@ -20,7 +20,12 @@ class ToggleListingActiveController extends Controller
             $request->has('is_active') ? $request->boolean('is_active') : null,
         );
 
-        return (new ListingResource($listing->load(ListingController::relations())))
+        $listing = Listing::query()
+            ->with(ListingController::relations())
+            ->withActiveReservationTotals()
+            ->findOrFail($listing->id);
+
+        return (new ListingResource($listing))
             ->additional(['message' => 'Listing visibility updated.']);
     }
 }

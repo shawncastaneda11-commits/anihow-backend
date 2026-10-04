@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
+import '../../services/cart_requests.dart';
 import '../../state/auth_controller.dart';
 import '../../state/cart_controller.dart';
 import '../../state/preferences_controller.dart';
@@ -49,6 +50,33 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   void dispose() {
     _quantity.dispose();
     super.dispose();
+  }
+
+  Future<void> _openReserve(ListingItem listing) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return ReserveHarvestSheet(
+          listing: listing,
+          onReserve: (quantity, preference) async {
+            await sheetContext.read<AuthController>().api.reserveListing(
+              listingId: listing.id,
+              quantity: quantity,
+              fulfillmentPreference: preference,
+            );
+            if (sheetContext.mounted) {
+              Navigator.of(sheetContext).pop();
+            }
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(AppStrings.read(context).reserve)),
+              );
+            }
+          },
+        );
+      },
+    );
   }
 
   Future<void> _addToCart() async {
@@ -311,6 +339,119 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 Text(listing.description!),
               ],
               const SizedBox(height: AniHowSpace.section),
+              if (listing.isUpcoming)
+                FilledButton(
+                  key: const ValueKey('reserve-harvest'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                  onPressed: () => _openReserve(listing),
+                  child: Text(s.reserve),
+                )
+              else ...[
+                AniHowField(
+                  label: s.quantity,
+                  child: TextField(
+                    controller: _quantity,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AniHowSpace.fieldGap),
+                PrimaryButton(
+                  label: s.addToCart,
+                  onPressed: _addToCart,
+                  busy: _adding,
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class ReserveHarvestSheet extends StatefulWidget {
+  const ReserveHarvestSheet({
+    super.key,
+    required this.listing,
+    required this.onReserve,
+  });
+
+  final ListingItem listing;
+  final Future<void> Function(String quantity, String preference) onReserve;
+
+  @override
+  State<ReserveHarvestSheet> createState() => _ReserveHarvestSheetState();
+}
+
+class _ReserveHarvestSheetState extends State<ReserveHarvestSheet> {
+  final _quantity = TextEditingController(text: '1');
+  String _preference = CartRequests.buyerPickup;
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _quantity.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final quantity = _quantity.text.trim();
+    if (quantity.isEmpty || (double.tryParse(quantity) ?? 0) <= 0) {
+      setState(() => _error = AppStrings.read(context).enterQuantity);
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await widget.onReserve(quantity, _preference);
+    } on ApiException catch (error) {
+      if (mounted) {
+        setState(() => _error = error.message);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final listing = widget.listing;
+    final price = double.tryParse(listing.pricePerUnit) ?? 0;
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + bottom),
+      child: ListenableBuilder(
+        listenable: _quantity,
+        builder: (context, _) {
+          final quantity = double.tryParse(_quantity.text.trim()) ?? 0;
+          final estimate = price * quantity;
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(s.reserve, style: Theme.of(context).textTheme.titleLarge),
+              if (listing.availableFrom != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  s.availableFromBadge(
+                    s.shortDate(listing.availableFrom!.toLocal()),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Text('${s.lockedPrice}: ${listing.priceLabel}'),
+              const SizedBox(height: 12),
               AniHowField(
                 label: s.quantity,
                 child: TextField(
@@ -320,15 +461,81 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: AniHowSpace.fieldGap),
-              PrimaryButton(
-                label: s.addToCart,
-                onPressed: listing.isUpcoming ? null : _addToCart,
-                busy: _adding,
+              const SizedBox(height: 8),
+              Text(
+                '${s.estimatedTotal}: ${AniHowMoney.peso(estimate)}',
+                key: const ValueKey('reserve-estimate'),
+              ),
+              const SizedBox(height: 8),
+              Text(s.payCashOnHandover),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _ReserveChoice(
+                      label: s.pickupShort,
+                      selected: _preference == CartRequests.buyerPickup,
+                      onTap: () =>
+                          setState(() => _preference = CartRequests.buyerPickup),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ReserveChoice(
+                      label: s.deliverShort,
+                      selected: _preference == CartRequests.sellerDelivers,
+                      onTap: () => setState(
+                        () => _preference = CartRequests.sellerDelivers,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  _error!,
+                  key: const ValueKey('reserve-error'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
+              const SizedBox(height: 16),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                ),
+                onPressed: _busy ? null : _submit,
+                child: Text(s.reserve),
               ),
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _ReserveChoice extends StatelessWidget {
+  const _ReserveChoice({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+      onPressed: onTap,
+      child: Text(
+        label,
+        style: TextStyle(
+          fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+        ),
       ),
     );
   }

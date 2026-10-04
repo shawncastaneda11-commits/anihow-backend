@@ -2,6 +2,8 @@
 
 namespace App\Actions\Privacy;
 
+use App\Actions\Reservations\CancelReservation;
+use App\Enums\ReservationCancellationReason;
 use App\Enums\UserStatus;
 use App\Models\StallMessage;
 use App\Models\TawadRule;
@@ -22,6 +24,10 @@ class AnonymizeUserAction
                 'status' => 'This account still has open orders and cannot be anonymised.',
             ]);
         }
+
+        $cancelReservation = app(CancelReservation::class);
+        $cancelReservation->forBuyer($user, ReservationCancellationReason::AccountClosed);
+        $cancelReservation->forSeller($user, ReservationCancellationReason::AccountClosed);
 
         $user->listings()->update(['is_active' => false]);
 

@@ -12,6 +12,7 @@ use App\Models\InAppNotification;
 use App\Models\Listing;
 use App\Models\Order;
 use App\Models\Report;
+use App\Models\Reservation;
 use App\Models\User;
 use App\Support\Pricing\UnitConverter;
 use Illuminate\Database\Eloquent\Model;
@@ -345,6 +346,43 @@ class InAppNotifier
             NotificationType::AccountDeletionRejected->label(),
             "Your account deletion request was rejected.{$suffix}",
             $request,
+        );
+    }
+
+    public function reservationMade(User $seller, Reservation $reservation): InAppNotification
+    {
+        $buyerName = $reservation->buyer?->name ?? 'A buyer';
+        $quantity = number_format((float) $reservation->quantity, 2, '.', '');
+        $unit = $reservation->unit?->value ?? '';
+
+        return $this->send(
+            $seller,
+            NotificationType::ReservationMade,
+            NotificationType::ReservationMade->label(),
+            "{$buyerName} reserved {$quantity} {$unit} of {$reservation->listing_name}.",
+            $reservation,
+        );
+    }
+
+    public function reservationConverted(User $buyer, Order $order): InAppNotification
+    {
+        return $this->send(
+            $buyer,
+            NotificationType::ReservationConverted,
+            NotificationType::ReservationConverted->label(),
+            'Your reservation is now an order.',
+            $order,
+        );
+    }
+
+    public function reservationCancelled(User $buyer, Reservation $reservation): InAppNotification
+    {
+        return $this->send(
+            $buyer,
+            NotificationType::ReservationCancelled,
+            NotificationType::ReservationCancelled->label(),
+            "Your reservation for {$reservation->listing_name} was cancelled.",
+            $reservation,
         );
     }
 

@@ -17,7 +17,7 @@ class UpdateCartItemRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'quantity' => ['required', 'numeric', 'gt:0', 'max:99999.99'],
+            'quantity' => StoreCartItemRequest::quantityRules(),
         ];
     }
 }

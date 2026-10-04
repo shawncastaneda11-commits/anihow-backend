@@ -13,6 +13,31 @@ import 'status_pill.dart';
 
 enum ProduceCardStyle { row, poster }
 
+class ReservedHarvestLabel extends StatelessWidget {
+  const ReservedHarvestLabel({super.key, required this.listing});
+
+  final ListingItem listing;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!listing.isUpcoming || listing.reservedQuantity == null) {
+      return const SizedBox.shrink();
+    }
+    final quantity = listing.reservedQuantity ?? 0;
+    final count = listing.activeReservationsCount ?? 0;
+    if (quantity <= 0 && count <= 0) {
+      return const SizedBox.shrink();
+    }
+    final shown = quantity == quantity.roundToDouble()
+        ? quantity.toStringAsFixed(0)
+        : quantity.toString();
+    return Text(
+      AppStrings.of(context).reservedHarvest(shown, listing.unit ?? '', count),
+      key: const ValueKey('reserved-harvest'),
+    );
+  }
+}
+
 class ProduceCard extends StatelessWidget {
   const ProduceCard({
     super.key,

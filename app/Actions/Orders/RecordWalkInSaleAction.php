@@ -2,6 +2,7 @@
 
 namespace App\Actions\Orders;
 
+use App\Actions\Reservations\OpenDueReservations;
 use App\Enums\FulfillmentPreference;
 use App\Enums\ListingStatus;
 use App\Enums\OrderSource;
@@ -59,6 +60,8 @@ class RecordWalkInSaleAction
         ?string $buyerName = null,
         ?string $note = null,
     ): Order {
+        app(OpenDueReservations::class)->forListing((int) $listing->getKey());
+
         return DB::transaction(function () use ($seller, $listing, $quantity, $amountReceived, $buyerName, $note): Order {
             $listing = Listing::query()
                 ->whereKey($listing->getKey())

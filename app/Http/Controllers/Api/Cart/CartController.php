@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Cart;
 
+use App\Actions\Reservations\OpenDueReservations;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Cart\StoreCartItemRequest;
 use App\Http\Requests\Api\Cart\UpdateCartItemRequest;
@@ -48,6 +49,8 @@ class CartController extends Controller
 
     public function store(StoreCartItemRequest $request): JsonResponse
     {
+        app(OpenDueReservations::class)->forListing((int) $request->validated('listing_id'));
+
         $listing = Listing::query()
             ->with('cropType')
             ->findOrFail($request->validated('listing_id'));
@@ -88,6 +91,9 @@ class CartController extends Controller
 
     public function update(UpdateCartItemRequest $request, CartItem $cartItem): CartItemResource
     {
+        app(OpenDueReservations::class)->forListing((int) $cartItem->listing_id);
+        $cartItem->unsetRelation('listing');
+
         $listing = $cartItem->listing;
         if ($listing !== null && $listing->isUpcoming()) {
             throw ValidationException::withMessages([

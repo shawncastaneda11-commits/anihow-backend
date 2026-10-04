@@ -57,6 +57,7 @@ use Illuminate\Validation\ValidationException;
     'completed_at',
     'cancelled_at',
     'reminder_sent_at',
+    'reservation_id',
 ])]
 class Order extends Model
 {
@@ -116,6 +117,11 @@ class Order extends Model
     public function review(): HasOne
     {
         return $this->hasOne(Review::class);
+    }
+
+    public function reservation(): BelongsTo
+    {
+        return $this->belongsTo(Reservation::class);
     }
 
     public function statusHistories(): HasMany

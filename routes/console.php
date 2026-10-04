@@ -12,6 +12,10 @@ Schedule::command('announcements:notify-due')
     ->everyFiveMinutes()
     ->withoutOverlapping();
 
+Schedule::command('reservations:open-due')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();
+
 Schedule::command('orders:sweep-stale')
     ->hourly()
     ->withoutOverlapping();

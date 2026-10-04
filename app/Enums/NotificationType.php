@@ -27,6 +27,9 @@ enum NotificationType: string
     case ReportSubmitted = 'report_submitted';
     case ReportResolved = 'report_resolved';
     case ReportDismissed = 'report_dismissed';
+    case ReservationMade = 'reservation_made';
+    case ReservationConverted = 'reservation_converted';
+    case ReservationCancelled = 'reservation_cancelled';
 
     public function label(): string
     {
@@ -51,6 +54,9 @@ enum NotificationType: string
             self::ReportSubmitted => 'New report submitted',
             self::ReportResolved => 'Report resolved',
             self::ReportDismissed => 'Report dismissed',
+            self::ReservationMade => 'Reservation made',
+            self::ReservationConverted => 'Reservation converted',
+            self::ReservationCancelled => 'Reservation cancelled',
         };
     }
 

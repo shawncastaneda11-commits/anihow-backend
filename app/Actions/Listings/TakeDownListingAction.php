@@ -2,7 +2,9 @@
 
 namespace App\Actions\Listings;
 
+use App\Actions\Reservations\CancelReservation;
 use App\Enums\ListingStatus;
+use App\Enums\ReservationCancellationReason;
 use App\Models\CartItem;
 use App\Models\Listing;
 use App\Models\User;
@@ -10,7 +12,10 @@ use App\Support\InAppNotifier;
 
 class TakeDownListingAction
 {
-    public function __construct(private InAppNotifier $notifier) {}
+    public function __construct(
+        private InAppNotifier $notifier,
+        private CancelReservation $cancelReservation,
+    ) {}
 
     public function handle(Listing $listing, User $moderator, string $reason): Listing
     {
@@ -23,6 +28,8 @@ class TakeDownListingAction
         ])->save();
 
         CartItem::query()->where('listing_id', $listing->id)->delete();
+
+        $this->cancelReservation->forListing($listing, ReservationCancellationReason::ListingRemoved);
 
         $listing->loadMissing('farmerSeller');
 

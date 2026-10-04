@@ -25,11 +25,14 @@ class OrderHistoryScreen extends StatefulWidget {
 
 class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   late Future<List<OrderRecord>> _future;
+  late Future<List<ReservationRecord>> _reservations;
 
   @override
   void initState() {
     super.initState();
-    _future = context.read<AuthController>().api.buyerOrders();
+    final api = context.read<AuthController>().api;
+    _future = api.buyerOrders();
+    _reservations = api.buyerReservations();
   }
 
   Future<void> _reload() async {
@@ -40,14 +43,42 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     await future;
   }
 
+  Future<void> _reloadReservations() async {
+    final future = context.read<AuthController>().api.buyerReservations();
+    setState(() {
+      _reservations = future;
+    });
+    await future;
+  }
+
+  Future<void> _cancelReservation(ReservationRecord reservation) async {
+    await context.read<AuthController>().api.cancelBuyerReservation(
+      reservation.id,
+    );
+    if (mounted) {
+      await _reloadReservations();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final s = AppStrings.of(context);
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
       appBar: AppBar(
-        title: Text(AppStrings.of(context).orderHistory),
+        title: Text(s.orderHistory),
         actions: const [NotificationBellButton()],
+        bottom: TabBar(
+          tabs: [
+            Tab(text: s.ordersTab),
+            Tab(text: s.reservationsTab),
+          ],
+        ),
       ),
-      body: Column(
+      body: TabBarView(
+        children: [
+          Column(
         children: [
           const UnverifiedEmailBanner(),
           Expanded(
@@ -84,6 +115,39 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
           ),
         ],
       ),
+          Column(
+            children: [
+              const UnverifiedEmailBanner(),
+              Expanded(
+                child: AsyncView<List<ReservationRecord>>(
+                  future: _reservations,
+                  onRetry: _reloadReservations,
+                  emptyMessage: s.noReservations,
+                  builder: (context, items) {
+                    return BuyerReservationsList(
+                      reservations: items,
+                      onCancel: _cancelReservation,
+                      onOpenOrder: (reservation) {
+                        final orderId = reservation.orderId;
+                        if (orderId == null) {
+                          return;
+                        }
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) =>
+                                BuyerOrderDetailScreen(orderId: orderId),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
     );
   }
 }
@@ -196,6 +260,96 @@ class BuyerOrderCard extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class BuyerReservationsList extends StatelessWidget {
+  const BuyerReservationsList({
+    super.key,
+    required this.reservations,
+    this.onCancel,
+    this.onOpenOrder,
+  });
+
+  final List<ReservationRecord> reservations;
+  final Future<void> Function(ReservationRecord reservation)? onCancel;
+  final void Function(ReservationRecord reservation)? onOpenOrder;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final active = reservations.where((item) => item.isActive).toList();
+    final history = reservations.where((item) => !item.isActive).toList();
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AniHowSpace.screen,
+        AniHowSpace.screen,
+        AniHowSpace.screen,
+        AniHowSpace.screen + AniHowSpace.section,
+      ),
+      children: [
+        if (active.isNotEmpty) Text(s.activeReservations),
+        for (final reservation in active)
+          _ReservationTile(
+            reservation: reservation,
+            onCancel: onCancel == null
+                ? null
+                : () => onCancel!(reservation),
+          ),
+        if (history.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(s.pastReservations),
+        ],
+        for (final reservation in history)
+          _ReservationTile(
+            reservation: reservation,
+            onOpen: reservation.isConverted
+                ? () => onOpenOrder?.call(reservation)
+                : null,
+          ),
+      ],
+    );
+  }
+}
+
+class _ReservationTile extends StatelessWidget {
+  const _ReservationTile({
+    required this.reservation,
+    this.onCancel,
+    this.onOpen,
+  });
+
+  final ReservationRecord reservation;
+  final VoidCallback? onCancel;
+  final VoidCallback? onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final unit = reservation.unit ?? '';
+    final quantity = reservation.quantity == reservation.quantity.roundToDouble()
+        ? reservation.quantity.toStringAsFixed(0)
+        : reservation.quantity.toString();
+
+    return Card(
+      child: ListTile(
+        onTap: onOpen,
+        title: Text(reservation.listingName),
+        subtitle: Text(
+          '$quantity $unit · ${AniHowMoney.peso(reservation.lineTotal)}',
+        ),
+        trailing: onCancel == null
+            ? null
+            : TextButton(
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                ),
+                onPressed: onCancel,
+                child: Text(s.cancelReservation),
+              ),
       ),
     );
   }

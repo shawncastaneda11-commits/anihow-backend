@@ -191,6 +191,11 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         return $this->hasMany(CartItem::class, 'buyer_id');
     }
 
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class, 'buyer_id');
+    }
+
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class, 'buyer_id');

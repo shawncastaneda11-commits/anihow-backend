@@ -277,6 +277,8 @@ class ListingItem {
     this.organicBadge,
     this.organicCertifier,
     this.distanceKm,
+    this.reservedQuantity,
+    this.activeReservationsCount,
   });
 
   final int id;
@@ -307,6 +309,8 @@ class ListingItem {
   final String? organicBadge;
   final String? organicCertifier;
   final double? distanceKm;
+  final double? reservedQuantity;
+  final int? activeReservationsCount;
 
   String get name => title;
 
@@ -367,6 +371,8 @@ class ListingItem {
       organicBadge: organicBadge,
       organicCertifier: organicCertifier,
       distanceKm: distanceKm,
+      reservedQuantity: reservedQuantity,
+      activeReservationsCount: activeReservationsCount,
     );
   }
 
@@ -422,6 +428,12 @@ class ListingItem {
       organicBadge: json['organic_badge'] as String?,
       organicCertifier: json['organic_certifier'] as String?,
       distanceKm: _asDouble(json['distance_km']),
+      reservedQuantity: json.containsKey('reserved_quantity')
+          ? _asDouble(json['reserved_quantity']) ?? 0
+          : null,
+      activeReservationsCount: json.containsKey('active_reservations_count')
+          ? _asCount(json['active_reservations_count']) ?? 0
+          : null,
     );
   }
 
@@ -1434,6 +1446,62 @@ class PagedShopReviews {
   bool get hasMore => currentPage < lastPage;
 }
 
+class ReservationRecord {
+  const ReservationRecord({
+    required this.id,
+    required this.listingName,
+    required this.quantity,
+    required this.lineTotal,
+    required this.status,
+    this.listingId,
+    this.unit,
+    this.unitPrice,
+    this.orderId,
+    this.fulfillmentPreference,
+    this.cancellationReason,
+    this.buyerName,
+    this.createdAt,
+  });
+
+  final int id;
+  final int? listingId;
+  final String listingName;
+  final double quantity;
+  final String? unit;
+  final double? unitPrice;
+  final double lineTotal;
+  final String status;
+  final int? orderId;
+  final String? fulfillmentPreference;
+  final String? cancellationReason;
+  final String? buyerName;
+  final DateTime? createdAt;
+
+  bool get isActive => status == 'active';
+
+  bool get isConverted => status == 'converted' && orderId != null;
+
+  factory ReservationRecord.fromJson(Map<String, dynamic> json) {
+    final buyer = json['buyer'];
+    final buyerMap = buyer is Map ? Map<String, dynamic>.from(buyer) : null;
+    return ReservationRecord(
+      id: ListingItem._asCount(json['id']) ?? 0,
+      listingId: ListingItem._asCount(json['listing_id']),
+      listingName: json['listing_name'] as String? ?? '',
+      quantity: ListingItem._asDouble(json['quantity']) ?? 0,
+      unit: json['unit'] as String?,
+      unitPrice: ListingItem._asDouble(json['unit_price']),
+      lineTotal: ListingItem._asDouble(json['line_total']) ?? 0,
+      status: json['status'] as String? ?? '',
+      orderId: ListingItem._asCount(json['order_id']),
+      fulfillmentPreference: json['fulfillment_preference'] as String?,
+      cancellationReason: json['cancellation_reason'] as String?,
+      buyerName: buyerMap?['name'] as String?,
+      createdAt: ListingItem._asDate(json['created_at']),
+    );
+  }
+}
+
 class AppNotification {
   const AppNotification({
     required this.id,
@@ -1499,6 +1567,7 @@ class AppNotification {
         type == 'order_cancelled' ||
         type == 'order_message' ||
         related == 'order' ||
+        type == 'reservation_converted' ||
         related.endsWith('Order');
   }
 

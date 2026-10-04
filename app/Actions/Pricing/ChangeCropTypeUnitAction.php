@@ -15,7 +15,8 @@ use Illuminate\Validation\ValidationException;
  * stored peso amounts stay as typed. Once either exists, the unit may move
  * only inside the same family, and the floor, the maximum discount, and every
  * farm override are converted so the real price does not change: ₱50/kg
- * saved as grams becomes ₱0.05/g.
+ * saved as grams becomes ₱0.0500/g, and ₱45/kg becomes ₱0.0450/g. Amounts
+ * are stored to 4 decimal places.
  */
 class ChangeCropTypeUnitAction
 {
@@ -94,7 +95,7 @@ class ChangeCropTypeUnitAction
             return null;
         }
 
-        return number_format($this->units->priceIn($from, $to, $amount), 2, '.', '');
+        return number_format($this->units->priceIn($from, $to, $amount), 4, '.', '');
     }
 
     private function convertOverrides(CropType $cropType, ListingUnit $from, ListingUnit $to): void

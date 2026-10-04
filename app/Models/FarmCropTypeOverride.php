@@ -30,8 +30,8 @@ class FarmCropTypeOverride extends Model
     protected function casts(): array
     {
         return [
-            'floor_price' => 'decimal:2',
-            'max_discount' => 'decimal:2',
+            'floor_price' => 'decimal:4',
+            'max_discount' => 'decimal:4',
         ];
     }
 

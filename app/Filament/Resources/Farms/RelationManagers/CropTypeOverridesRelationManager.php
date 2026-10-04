@@ -57,23 +57,27 @@ class CropTypeOverridesRelationManager extends RelationManager
                 TextInput::make('floor_price')
                     ->label('Farm floor price (PHP)')
                     ->numeric()
+                    ->step(0.0001)
+                    ->rules(['nullable', 'decimal:0,4'])
                     ->prefix('PHP')
                     ->nullable()
                     ->requiredWithout('max_discount')
                     ->helperText(fn (Get $get, ?Model $record): string => self::systemFloor($get, $record) === null
                         ? 'Choose a crop type first.'
-                        : 'The system floor is PHP '.number_format(self::systemFloor($get, $record), 2)
+                        : 'The system floor is PHP '.number_format(self::systemFloor($get, $record), 4)
                             .'. The farm may raise it, never lower it. Leave blank to use the system floor.'),
 
                 TextInput::make('max_discount')
                     ->label('Farm maximum tawad (PHP)')
                     ->numeric()
+                    ->step(0.0001)
+                    ->rules(['nullable', 'decimal:0,4'])
                     ->prefix('PHP')
                     ->nullable()
                     ->requiredWithout('floor_price')
                     ->helperText(fn (Get $get, ?Model $record): string => self::systemMaximum($get, $record) === null
                         ? 'Choose a crop type first.'
-                        : 'The system maximum is PHP '.number_format(self::systemMaximum($get, $record), 2)
+                        : 'The system maximum is PHP '.number_format(self::systemMaximum($get, $record), 4)
                             .'. The farm may lower it, never raise it. Leave blank to use the system maximum.'),
             ]);
     }

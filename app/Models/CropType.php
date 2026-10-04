@@ -60,8 +60,8 @@ class CropType extends Model
     {
         return [
             'unit_of_measure' => ListingUnit::class,
-            'floor_price' => 'decimal:2',
-            'max_discount' => 'decimal:2',
+            'floor_price' => 'decimal:4',
+            'max_discount' => 'decimal:4',
             'is_active' => 'boolean',
         ];
     }

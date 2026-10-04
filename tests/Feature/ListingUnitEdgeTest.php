@@ -71,6 +71,74 @@ class ListingUnitEdgeTest extends TestCase
             ->assertOk();
     }
 
+    public function test_converting_kilograms_to_grams_keeps_a_forty_five_peso_floor_exact(): void
+    {
+        $farmer = $this->farmer();
+        $cropType = $this->cropType([
+            'name' => 'Kamatis',
+            'unit_of_measure' => ListingUnit::Kilogram,
+            'floor_price' => 45,
+            'max_discount' => 3,
+        ]);
+        $this->listingFor($farmer, [
+            'crop_type_id' => $cropType->id,
+            'unit' => ListingUnit::Kilogram,
+            'price_per_unit' => 50,
+        ]);
+        FarmCropTypeOverride::query()->create([
+            'farm_id' => $farmer->farm_id,
+            'crop_type_id' => $cropType->id,
+            'floor_price' => 45,
+            'max_discount' => 3,
+        ]);
+
+        $action = app(ChangeCropTypeUnitAction::class);
+        $action->update($cropType, [
+            'unit_of_measure' => ListingUnit::Gram->value,
+        ]);
+
+        $cropType->refresh();
+        $override = FarmCropTypeOverride::query()->where('crop_type_id', $cropType->id)->first();
+
+        $this->assertSame('0.0450', $cropType->floor_price);
+        $this->assertSame('0.0030', $cropType->max_discount);
+        $this->assertSame('0.0450', $override->floor_price);
+        $this->assertSame('0.0030', $override->max_discount);
+
+        $this->asUser($farmer)
+            ->postJson('/api/farmer/listings', [
+                'title' => 'Kamatis at the floor',
+                'crop_type_id' => $cropType->id,
+                'unit' => 'g',
+                'price_per_unit' => 0.045,
+                'quantity_available' => 100,
+            ])
+            ->assertCreated();
+
+        $this->asUser($farmer)
+            ->postJson('/api/farmer/listings', [
+                'title' => 'Kamatis under the floor',
+                'crop_type_id' => $cropType->id,
+                'unit' => 'g',
+                'price_per_unit' => 0.0449,
+                'quantity_available' => 100,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['price_per_unit']);
+
+        $action->update($cropType, [
+            'unit_of_measure' => ListingUnit::Kilogram->value,
+        ]);
+
+        $cropType->refresh();
+        $override->refresh();
+
+        $this->assertSame('45.0000', $cropType->floor_price);
+        $this->assertSame('3.0000', $cropType->max_discount);
+        $this->assertSame('45.0000', $override->floor_price);
+        $this->assertSame('3.0000', $override->max_discount);
+    }
+
     public function test_a_cross_family_unit_change_is_refused_when_listings_exist(): void
     {
         $farmer = $this->farmer();

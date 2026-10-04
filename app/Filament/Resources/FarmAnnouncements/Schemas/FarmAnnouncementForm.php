@@ -4,7 +4,9 @@ namespace App\Filament\Resources\FarmAnnouncements\Schemas;
 
 use App\Enums\AnnouncementAudience;
 use App\Enums\Permission;
+use App\Support\ImageVariants;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -35,6 +37,19 @@ class FarmAnnouncementForm
                     ->rows(6)
                     ->maxLength(1000)
                     ->columnSpanFull(),
+
+                ImageVariants::bindUpload(
+                    FileUpload::make('image_path')
+                        ->label('Image')
+                        ->image()
+                        ->disk(config('anihow.listing_disk', 'public'))
+                        ->directory('farm-announcements')
+                        ->visibility('public')
+                        ->maxSize(2048)
+                        ->columnSpanFull()
+                        ->helperText('Optional. Shown with a public announcement.'),
+                    'farm-announcements',
+                ),
 
                 Select::make('audience')
                     ->options(AnnouncementAudience::options())

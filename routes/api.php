@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\Auth\ResendVerificationController;
 use App\Http\Controllers\Api\Auth\ResetPasswordController;
 use App\Http\Controllers\Api\Auth\UpdateProfileController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
+use App\Http\Controllers\Api\Buyer\BuyerAnnouncementController;
 use App\Http\Controllers\Api\Cart\CartController;
 use App\Http\Controllers\Api\Chat\OrderMessageController;
 use App\Http\Controllers\Api\Chat\StallConversationController;
@@ -200,6 +201,7 @@ Route::middleware([
     Route::get('favorites', [FavoriteController::class, 'index'])->name('buyer.favorites.index');
     Route::get('shop-favorites', [ShopFavoriteController::class, 'index'])->name('buyer.shop-favorites.index');
     Route::get('farm-favorites', [FarmFavoriteController::class, 'index'])->name('buyer.farm-favorites.index');
+    Route::get('announcements', [BuyerAnnouncementController::class, 'index'])->name('buyer.announcements.index');
 
     Route::middleware('verified')->group(function (): void {
         Route::post('cart', [CartController::class, 'store'])->name('buyer.cart.store');

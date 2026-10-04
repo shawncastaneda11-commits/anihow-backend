@@ -31,6 +31,18 @@ const _datesClearedAsEmpty = {
   'harvested_on',
 };
 
+Map<String, dynamic> buyerAnnouncementQuery({
+  required bool following,
+  int? farmId,
+  required int page,
+}) {
+  return {
+    'page': page,
+    if (following) 'following': 1,
+    'farm_id': ?farmId,
+  };
+}
+
 /// Multipart fields for a listing save. A cleared availability or harvest date
 /// is sent as an empty string so the server can null it. Other null fields
 /// stay out of the body.
@@ -654,6 +666,33 @@ class ApiClient {
 
   Future<List<FarmAnnouncement>> farmerAnnouncements() {
     return _list('/farmer/announcements', parse: FarmAnnouncement.fromJson);
+  }
+
+  Future<PagedBuyerAnnouncements> buyerAnnouncements({
+    bool following = false,
+    int? farmId,
+    int page = 1,
+  }) async {
+    final response = await _get(
+      '/buyer/announcements',
+      query: buyerAnnouncementQuery(
+        following: following,
+        farmId: farmId,
+        page: page,
+      ),
+    );
+    final meta = _asMap(response['meta']);
+    return PagedBuyerAnnouncements(
+      items: ((response['data'] as List?) ?? const [])
+          .whereType<Map>()
+          .map(
+            (item) =>
+                BuyerFarmAnnouncement.fromJson(Map<String, dynamic>.from(item)),
+          )
+          .toList(),
+      currentPage: _asInt(meta['current_page'], page),
+      lastPage: _asInt(meta['last_page'], 1),
+    );
   }
 
   Future<FarmerAnalytics> farmerAnalytics({String period = 'week'}) async {

@@ -11,6 +11,7 @@ import '../../theme/anihow_space.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/cart_icon_button.dart';
+import '../../widgets/farm_updates_strip.dart';
 import '../../widgets/category_color.dart';
 import '../../widgets/notification_bell.dart';
 import '../../widgets/produce_card.dart';
@@ -31,12 +32,14 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   String _sort = 'freshest';
   late Future<List<ListingItem>> _listings;
   late Future<List<CategoryItem>> _cropTypes;
+  late Future<List<BuyerFarmAnnouncement>> _updates;
 
   @override
   void initState() {
     super.initState();
     _cropTypes = context.read<AuthController>().api.cropTypes();
     _listings = Completer<List<ListingItem>>().future;
+    _updates = Completer<List<BuyerFarmAnnouncement>>().future;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
@@ -52,13 +55,18 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   }
 
   Future<void> _reload() async {
-    final future = context.read<AuthController>().api.marketplace(
+    final api = context.read<AuthController>().api;
+    final future = api.marketplace(
       search: _search.text.trim(),
       cropTypeId: _cropTypeId,
       sort: _sort,
     );
+    final updates = api.buyerAnnouncements().then(
+      (page) => page.items.take(3).toList(),
+    );
     setState(() {
       _listings = future;
+      _updates = updates;
     });
     await future;
   }
@@ -178,6 +186,13 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
               _reload();
             },
           ),
+        ),
+        FutureBuilder<List<BuyerFarmAnnouncement>>(
+          future: _updates,
+          builder: (context, snapshot) {
+            final posts = snapshot.data ?? const <BuyerFarmAnnouncement>[];
+            return FarmUpdatesStrip(items: posts);
+          },
         ),
         Expanded(
           child: AsyncView<List<ListingItem>>(

@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /** @mixin FarmAnnouncement */
-class FarmAnnouncementResource extends JsonResource
+class BuyerFarmAnnouncementResource extends JsonResource
 {
     /**
      * @return array<string, mixed>
@@ -18,12 +18,14 @@ class FarmAnnouncementResource extends JsonResource
             'id' => $this->id,
             'title' => $this->title,
             'body' => $this->body,
-            'audience' => $this->audience->value,
-            'starts_at' => $this->starts_at?->toIso8601String(),
-            'ends_at' => $this->ends_at?->toIso8601String(),
             'is_pinned' => $this->is_pinned,
             'image_url' => $this->imageUrl(),
-            'created_at' => $this->created_at?->toIso8601String(),
+            'published_at' => ($this->starts_at ?? $this->created_at)?->toIso8601String(),
+            'farm' => [
+                'id' => $this->farm?->id,
+                'name' => $this->farm?->name,
+                'cover_url' => $this->farm?->coverPhotoUrl(),
+            ],
         ];
     }
 }

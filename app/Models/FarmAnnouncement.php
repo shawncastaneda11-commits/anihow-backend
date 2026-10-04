@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AnnouncementAudience;
+use App\Support\ImageVariants;
 use Database\Factories\FarmAnnouncementFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -20,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'ends_at',
     'is_pinned',
     'notified_at',
+    'image_path',
 ])]
 class FarmAnnouncement extends Model
 {
@@ -35,6 +37,25 @@ class FarmAnnouncement extends Model
             'is_pinned' => 'boolean',
             'notified_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(function (FarmAnnouncement $announcement): void {
+            if ($announcement->isDirty('image_path')) {
+                $previous = $announcement->getOriginal('image_path');
+                app(ImageVariants::class)->delete(is_string($previous) ? $previous : null);
+            }
+        });
+
+        static::deleting(function (FarmAnnouncement $announcement): void {
+            app(ImageVariants::class)->delete($announcement->image_path);
+        });
+    }
+
+    public function imageUrl(): ?string
+    {
+        return app(ImageVariants::class)->url($this->image_path);
     }
 
     public function farm(): BelongsTo

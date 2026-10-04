@@ -1124,6 +1124,65 @@ class FarmAnnouncement {
   }
 }
 
+class BuyerFarmAnnouncement {
+  const BuyerFarmAnnouncement({
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.farmId,
+    required this.farmName,
+    this.isPinned = false,
+    this.imageUrl,
+    this.publishedAt,
+    this.farmCoverUrl,
+  });
+
+  final int id;
+  final String title;
+  final String body;
+  final int farmId;
+  final String farmName;
+  final bool isPinned;
+  final String? imageUrl;
+  final String? publishedAt;
+  final String? farmCoverUrl;
+
+  factory BuyerFarmAnnouncement.fromJson(Map<String, dynamic> json) {
+    final farm = json['farm'];
+    final farmMap = farm is Map
+        ? Map<String, dynamic>.from(farm)
+        : const <String, dynamic>{};
+    return BuyerFarmAnnouncement(
+      id: ListingItem._asCount(json['id']) ?? 0,
+      title: json['title'] as String? ?? '',
+      body: json['body'] as String? ?? '',
+      isPinned:
+          json['is_pinned'] == true ||
+          json['is_pinned'] == 1 ||
+          json['is_pinned'] == '1',
+      imageUrl: ApiConfig.mediaUrl(json['image_url']?.toString()),
+      publishedAt: json['published_at'] as String?,
+      farmId: ListingItem._asCount(farmMap['id']) ?? 0,
+      farmName: farmMap['name'] as String? ?? '',
+      farmCoverUrl: ApiConfig.mediaUrl(farmMap['cover_url']?.toString()),
+    );
+  }
+}
+
+class PagedBuyerAnnouncements {
+  const PagedBuyerAnnouncements({
+    required this.items,
+    required this.currentPage,
+    required this.lastPage,
+  });
+
+  final List<BuyerFarmAnnouncement> items;
+  final int currentPage;
+  final int lastPage;
+
+  bool get hasMore => currentPage < lastPage;
+}
+
 class FarmPhotoItem {
   const FarmPhotoItem({
     required this.id,

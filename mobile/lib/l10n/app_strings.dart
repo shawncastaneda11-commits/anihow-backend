@@ -240,6 +240,14 @@ class AppStrings {
       t('No announcements right now.', 'Walang anunsyo ngayon.');
   String get dismissAnnouncement => t('Dismiss', 'Isara');
   String get announcementPinned => t('Pinned', 'Naka-pin');
+  String get updatesFromFarms =>
+      t('Updates from farms', 'Mga update mula sa mga bukid');
+  String get seeAll => t('See all', 'Tingnan lahat');
+  String get allFarms => t('All farms', 'Lahat ng bukid');
+  String get farmsIFollow => t('Farms I follow', 'Mga bukid na sinusundan ko');
+  String get readMore => t('Read more', 'Basahin pa');
+  String get noFarmUpdates =>
+      t('No updates from farms yet.', 'Wala pang update mula sa mga bukid.');
   String get activeListings => t('Active listings', 'Mga active na listing');
   String get noActiveListings =>
       t('No active listings', 'Walang active na listing');

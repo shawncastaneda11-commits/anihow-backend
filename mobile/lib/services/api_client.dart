@@ -41,7 +41,7 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          final token = await _storage.read(key: _tokenKey);
+          final token = await readToken();
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
@@ -52,7 +52,10 @@ class ApiClient {
           handler.next(options);
         },
         onError: (error, handler) {
-          if (error.response?.statusCode == 401) {
+          final path = error.requestOptions.path;
+          final isCredentialAttempt =
+              path.contains('/auth/login') || path.contains('/auth/register');
+          if (error.response?.statusCode == 401 && !isCredentialAttempt) {
             onUnauthorized();
           }
           handler.next(error);
@@ -68,24 +71,45 @@ class ApiClient {
   final void Function() onUnauthorized;
   String acceptLanguage = 'en';
 
+  /// Set only when the user turns Remember me off. It is never written to disk.
+  String? _sessionToken;
+
   Future<void> saveToken(String token) =>
       _storage.write(key: _tokenKey, value: token);
 
-  Future<String?> readToken() => _storage.read(key: _tokenKey);
+  Future<String?> readToken() async {
+    final sessionToken = _sessionToken;
+    if (sessionToken != null && sessionToken.isNotEmpty) {
+      return sessionToken;
+    }
 
-  Future<void> clearToken() => _storage.delete(key: _tokenKey);
+    return _storage.read(key: _tokenKey);
+  }
+
+  Future<void> clearToken() async {
+    _sessionToken = null;
+    await _storage.delete(key: _tokenKey);
+  }
 
   Future<({UserAccount user, String token})> login({
     required String email,
     required String password,
+    bool remember = true,
   }) async {
     final response = await _post('/auth/login', {
       'email': email,
       'password': password,
       'device_name': 'anihow-mobile',
+      'remember': remember,
     });
     final token = response['token'] as String;
-    await saveToken(token);
+    if (remember) {
+      _sessionToken = null;
+      await saveToken(token);
+    } else {
+      await clearToken();
+      _sessionToken = token;
+    }
     return (user: UserAccount.fromJson(_asMap(response['data'])), token: token);
   }
 

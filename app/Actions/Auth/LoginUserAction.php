@@ -4,6 +4,7 @@ namespace App\Actions\Auth;
 
 use App\Enums\UserStatus;
 use App\Models\User;
+use DateTimeInterface;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -15,7 +16,7 @@ class LoginUserAction
      *
      * @return array{user: User, token: string}
      */
-    public function handle(string $email, string $password, string $deviceName = 'mobile'): array
+    public function handle(string $email, string $password, string $deviceName = 'mobile', bool $remember = true): array
     {
         $user = User::query()->where('email', $email)->first();
 
@@ -34,11 +35,18 @@ class LoginUserAction
             ]);
         }
 
-        $token = $user->createToken($deviceName)->plainTextToken;
+        $token = $user->createToken($deviceName, ['*'], self::expiresAt($remember))->plainTextToken;
 
         return [
             'user' => $user->load('roles'),
             'token' => $token,
         ];
+    }
+
+    public static function expiresAt(bool $remember): DateTimeInterface
+    {
+        return $remember
+            ? now()->addDays((int) config('anihow.auth.remember_days'))
+            : now()->addHours((int) config('anihow.auth.session_hours'));
     }
 }

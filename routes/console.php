@@ -15,3 +15,7 @@ Schedule::command('announcements:notify-due')
 Schedule::command('orders:sweep-stale')
     ->hourly()
     ->withoutOverlapping();
+
+Schedule::command('sanctum:prune-expired --hours=24')
+    ->daily()
+    ->withoutOverlapping();

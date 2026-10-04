@@ -44,4 +44,18 @@ return [
 
     'order_auto_cancel_after_hours' => (int) env('ORDER_AUTO_CANCEL_AFTER_HOURS', 48),
 
+    /*
+    |--------------------------------------------------------------------------
+    | App login tokens
+    |--------------------------------------------------------------------------
+    |
+    | Remembered phones keep a token for remember_days. A login without
+    | remember expires after session_hours. The CMS login is separate.
+    |
+    */
+    'auth' => [
+        'remember_days' => (int) env('AUTH_REMEMBER_DAYS', 30),
+        'session_hours' => (int) env('AUTH_SESSION_HOURS', 12),
+    ],
+
 ];

@@ -75,6 +75,11 @@ class AppStrings {
   String get logOut => t('Log out', 'Mag-log out');
 
   String get signIn => t('Sign in', 'Mag-sign in');
+  String get rememberMe => t('Remember me', 'Tandaan ako');
+  String get sessionEnded => t(
+    'Your session has ended. Please log in again.',
+    'Natapos na ang iyong session. Mag-log in muli.',
+  );
   String get welcomeBack => t('Welcome back', 'Maligayang pagbabalik');
   String get password => t('Password', 'Password');
   String get createBuyerAccount =>

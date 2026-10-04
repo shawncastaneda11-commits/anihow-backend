@@ -23,6 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _busy = false;
+  bool _remember = true;
 
   @override
   void dispose() {
@@ -33,7 +34,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _submit() async {
     setState(() => _busy = true);
-    await context.read<AuthController>().login(_email.text.trim(), _password.text);
+    await context.read<AuthController>().login(
+      _email.text.trim(),
+      _password.text,
+      remember: _remember,
+    );
     if (mounted) {
       setState(() => _busy = false);
     }
@@ -41,8 +46,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final error = context.watch<AuthController>().error;
+    final auth = context.watch<AuthController>();
     final s = AppStrings.of(context);
+    final error = auth.sessionEnded ? s.sessionEnded : auth.error;
     final muted = Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7);
 
     return AuthLayout(
@@ -76,6 +82,19 @@ class _LoginScreenState extends State<LoginScreen> {
             controller: _password,
             label: s.password,
             showLockIcon: true,
+          ),
+          SizedBox(
+            height: 48,
+            child: CheckboxListTile(
+              value: _remember,
+              onChanged: _busy
+                  ? null
+                  : (value) => setState(() => _remember = value ?? false),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: Text(s.rememberMe),
+              dense: true,
+            ),
           ),
           if (error != null) ...[
             const SizedBox(height: AniHowSpace.cardGap),

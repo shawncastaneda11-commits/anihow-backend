@@ -7,6 +7,7 @@ class AuthController extends ChangeNotifier {
   AuthController() {
     api = ApiClient(onUnauthorized: () {
       user = null;
+      sessionEnded = true;
       notifyListeners();
       api.clearToken();
     });
@@ -16,6 +17,7 @@ class AuthController extends ChangeNotifier {
   UserAccount? user;
   bool restoring = true;
   String? error;
+  bool sessionEnded = false;
   bool pendingEmailVerification = false;
   String? pendingVerificationCode;
 
@@ -38,11 +40,16 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  Future<bool> login(String email, String password) async {
+  Future<bool> login(String email, String password, {bool remember = true}) async {
     error = null;
+    sessionEnded = false;
     notifyListeners();
     try {
-      final result = await api.login(email: email, password: password);
+      final result = await api.login(
+        email: email,
+        password: password,
+        remember: remember,
+      );
       user = result.user;
       notifyListeners();
       return true;

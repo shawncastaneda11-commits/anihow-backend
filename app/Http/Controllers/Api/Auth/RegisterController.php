@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Auth;
 
+use App\Actions\Auth\LoginUserAction;
 use App\Actions\Auth\RegisterBuyerAction;
 use App\Actions\Auth\SendEmailVerificationCodeAction;
 use App\Http\Controllers\Controller;
@@ -24,7 +25,11 @@ class RegisterController extends Controller
             ], 503);
         }
 
-        $token = $user->createToken($request->input('device_name', 'mobile'))->plainTextToken;
+        $token = $user->createToken(
+            $request->input('device_name', 'mobile'),
+            ['*'],
+            LoginUserAction::expiresAt(true),
+        )->plainTextToken;
 
         $extra = [
             'token' => $token,

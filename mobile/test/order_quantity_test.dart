@@ -52,7 +52,8 @@ void main() {
     );
 
     expect(controller.text, '1');
-    expect(find.text('Min 1 kg · steps of 0.5 kg'), findsOneWidget);
+    expect(find.text('Min 1 kg (1,000 g) · steps of 0.5 kg (500 g)'), findsOneWidget);
+    expect(find.text('= 1,000 g'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('order-qty-plus')));
     await tester.pump();
@@ -63,6 +64,74 @@ void main() {
     await tester.pump();
 
     expect(controller.text, '1');
+  });
+
+  testWidgets('a kg listing shows live grams and bracketed min and step', (
+    tester,
+  ) async {
+    final controller = TextEditingController(text: '0.1');
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      _app(
+        Scaffold(
+          body: OrderQuantityStepper(
+            controller: controller,
+            min: 0.1,
+            step: 0.1,
+            unit: 'kg',
+            max: 10,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('= 100 g'), findsOneWidget);
+    expect(
+      find.text('Min 0.1 kg (100 g) · steps of 0.1 kg (100 g)'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('order-qty-plus')));
+    await tester.pump();
+
+    expect(controller.text, '0.2');
+    expect(find.text('= 200 g'), findsOneWidget);
+    expect(find.text('= 100 g'), findsNothing);
+  });
+
+  testWidgets('a piece listing has no gram or millilitre hints', (tester) async {
+    final controller = TextEditingController(text: '1');
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      _app(
+        Scaffold(
+          body: OrderQuantityStepper(
+            controller: controller,
+            min: 1,
+            step: 1,
+            unit: 'piece',
+            max: 8,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Min 1 piece · steps of 1 piece'), findsOneWidget);
+    expect(find.byKey(const ValueKey('order-qty-equivalent')), findsNothing);
+    expect(find.textContaining(' g)'), findsNothing);
+    expect(find.textContaining(' mL)'), findsNothing);
+    expect(find.textContaining('= '), findsNothing);
+  });
+
+  test('kg and liter convert to whole grams and millilitres', () {
+    expect(orderQuantitySmallUnit(0.01, 'kg'), '10 g');
+    expect(orderQuantitySmallUnit(0.1, 'kg'), '100 g');
+    expect(orderQuantitySmallUnit(1.5, 'kg'), '1,500 g');
+    expect(orderQuantitySmallUnit(0.25, 'liter'), '250 mL');
+    expect(orderQuantitySmallUnit(1.25, 'kg'), '1,250 g');
+    expect(orderQuantitySmallUnit(1, 'piece'), isNull);
   });
 
   testWidgets('count units have no decimal entry', (tester) async {

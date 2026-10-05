@@ -588,10 +588,27 @@ class AppStrings {
     'Buyers can order $amounts $unit…',
     'Puwedeng umorder ang mga buyer ng $amounts $unit…',
   );
-  String quantityStepHint(String min, String step, String unit) => t(
-    'Min $min $unit · steps of $step $unit',
-    'Min $min $unit · hakbang na $step $unit',
-  );
+  String quantityStepHint(
+    String min,
+    String step,
+    String unit, {
+    String? minEquivalent,
+    String? stepEquivalent,
+  }) {
+    if (minEquivalent == null || stepEquivalent == null) {
+      return t(
+        'Min $min $unit · steps of $step $unit',
+        'Min $min $unit · hakbang na $step $unit',
+      );
+    }
+    return t(
+      'Min $min $unit ($minEquivalent) · steps of $step $unit ($stepEquivalent)',
+      'Min $min $unit ($minEquivalent) · hakbang na $step $unit ($stepEquivalent)',
+    );
+  }
+
+  String quantitySmallUnitHint(String equivalent) =>
+      t('= $equivalent', '= $equivalent');
   String soldWholeStep(String name) => t(
     '$name are sold whole. Use a step of 1 or more.',
     'Buong $name lang ang binebenta. Gumamit ng hakbang na 1 o higit pa.',

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../l10n/app_strings.dart';
 import '../support/order_quantity.dart';
+import '../theme/anihow_theme.dart';
 
 /// Minus and plus move by the seller's step, starting from the minimum
 /// and stopping at what is still available.
@@ -62,6 +63,14 @@ class _OrderQuantityStepperState extends State<OrderQuantityStepper> {
 
   double get _current =>
       double.tryParse(widget.controller.text.trim()) ?? widget.min;
+
+  String? get _liveSmallUnit {
+    final parsed = double.tryParse(widget.controller.text.trim());
+    if (parsed == null) {
+      return null;
+    }
+    return orderQuantitySmallUnit(parsed, widget.unit);
+  }
 
   void _set(double value) {
     final text = formatOrderAmount(value);
@@ -166,12 +175,22 @@ class _OrderQuantityStepperState extends State<OrderQuantityStepper> {
           ],
         ),
         const SizedBox(height: 4),
+        if (_liveSmallUnit != null)
+          Text(
+            key: const ValueKey('order-qty-equivalent'),
+            s.quantitySmallUnitHint(_liveSmallUnit!),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AniHowColors.muted,
+            ),
+          ),
         Text(
           key: const ValueKey('order-qty-hint'),
           s.quantityStepHint(
             formatOrderAmount(widget.min),
             formatOrderAmount(widget.step),
             widget.unit,
+            minEquivalent: orderQuantitySmallUnit(widget.min, widget.unit),
+            stepEquivalent: orderQuantitySmallUnit(widget.step, widget.unit),
           ),
         ),
       ],

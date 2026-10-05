@@ -91,6 +91,29 @@ String previewAmounts(double min, double step) {
   ].join(', ');
 }
 
+/// Whole grams or millilitres for kg and liter amounts. Null for other units.
+String? orderQuantitySmallUnit(double amount, String unit) {
+  if (unit != 'kg' && unit != 'liter') {
+    return null;
+  }
+  final small = orderHundredths(amount) * 10;
+  final suffix = unit == 'liter' ? 'mL' : 'g';
+  return '${_thousands(small)} $suffix';
+}
+
+String _thousands(int value) {
+  final digits = value.abs().toString();
+  final grouped = StringBuffer();
+  for (var i = 0; i < digits.length; i++) {
+    final fromEnd = digits.length - i;
+    if (i > 0 && fromEnd % 3 == 0) {
+      grouped.write(',');
+    }
+    grouped.write(digits[i]);
+  }
+  return value < 0 ? '-$grouped' : '$grouped';
+}
+
 bool atMostTwoDecimals(String text) {
   final parts = text.trim().split('.');
   return parts.length < 2 || parts[1].length <= 2;

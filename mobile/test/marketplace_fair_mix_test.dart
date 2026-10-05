@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:anihow/models/models.dart';
 import 'package:anihow/screens/buyer/marketplace_screen.dart';
 import 'package:anihow/services/api_client.dart';
@@ -8,7 +6,6 @@ import 'package:anihow/state/cart_controller.dart';
 import 'package:anihow/state/preferences_controller.dart';
 import 'package:anihow/theme/anihow_theme.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -79,39 +76,9 @@ Widget _app(_FairApi api) {
   );
 }
 
-Future<void> _loadRoboto() async {
-  final loader = FontLoader('Roboto');
-  final roots = [
-    'C:/flutter/bin/cache/artifacts/material_fonts',
-    'C:/Users/joshua/flutter/bin/cache/artifacts/material_fonts',
-  ];
-  var loaded = false;
-  for (final root in roots) {
-    if (!File('$root/roboto-regular.ttf').existsSync()) {
-      continue;
-    }
-    for (final name in [
-      'roboto-regular.ttf',
-      'roboto-medium.ttf',
-      'roboto-bold.ttf',
-    ]) {
-      final bytes = await File('$root/$name').readAsBytes();
-      loader.addFont(Future.value(ByteData.sublistView(bytes)));
-    }
-    loaded = true;
-    break;
-  }
-  if (!loaded) {
-    final bytes = await File(r'C:\Windows\Fonts\arial.ttf').readAsBytes();
-    loader.addFont(Future.value(ByteData.sublistView(bytes)));
-  }
-  await loader.load();
-}
-
 void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
-    await _loadRoboto();
   });
 
   testWidgets('the default request is fair and the next page keeps mix day', (

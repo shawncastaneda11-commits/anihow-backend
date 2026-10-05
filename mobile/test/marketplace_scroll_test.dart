@@ -115,13 +115,15 @@ Widget _app(_MarketApi api) {
 
 Future<void> _loadRoboto() async {
   final loader = FontLoader('Roboto');
-  final roots = [
+  final roots = <String>[
+    if (Platform.environment['FLUTTER_ROOT'] case final root?)
+      '$root/bin/cache/artifacts/material_fonts',
     'C:/flutter/bin/cache/artifacts/material_fonts',
     'C:/Users/joshua/flutter/bin/cache/artifacts/material_fonts',
   ];
-  var loaded = false;
   for (final root in roots) {
-    if (!File('$root/roboto-regular.ttf').existsSync()) {
+    final regular = File('$root/roboto-regular.ttf');
+    if (!regular.existsSync()) {
       continue;
     }
     for (final name in [
@@ -132,14 +134,25 @@ Future<void> _loadRoboto() async {
       final bytes = await File('$root/$name').readAsBytes();
       loader.addFont(Future.value(ByteData.sublistView(bytes)));
     }
-    loaded = true;
-    break;
+    await loader.load();
+    return;
   }
-  if (!loaded) {
-    final bytes = await File(r'C:\Windows\Fonts\arial.ttf').readAsBytes();
+
+  const fallbacks = [
+    r'C:\Windows\Fonts\arial.ttf',
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+    '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+  ];
+  for (final path in fallbacks) {
+    final file = File(path);
+    if (!file.existsSync()) {
+      continue;
+    }
+    final bytes = await file.readAsBytes();
     loader.addFont(Future.value(ByteData.sublistView(bytes)));
+    await loader.load();
+    return;
   }
-  await loader.load();
 }
 
 void main() {

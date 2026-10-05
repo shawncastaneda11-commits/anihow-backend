@@ -405,7 +405,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       separatorBuilder: (context, index) =>
           const SizedBox(height: AniHowSpace.cardGap),
       itemBuilder: (context, index) =>
-          _produceCard(_items[index], ProduceCardStyle.row),
+          _produceCard(_items[index], ProduceCardStyle.feed),
     );
   }
 

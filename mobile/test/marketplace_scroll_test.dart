@@ -259,7 +259,7 @@ void main() {
   ListingItem upcomingListing() {
     return ListingItem(
       id: 12,
-      title: 'Kalabasa',
+      title: 'Kalabasa from the morning harvest at Manggahan',
       pricePerUnit: '40',
       quantityAvailable: '8',
       unit: 'kg',
@@ -285,14 +285,18 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('phones show one full-width row card per line', (tester) async {
+  testWidgets('phones show one full-width feed card per line', (tester) async {
+    const shopName = 'Aling Nena Produce of Manggahan General Trias';
     for (final width in [360.0, 411.0]) {
       await pumpMarket(tester, Size(width, 800));
 
       expect(tester.takeException(), isNull);
       final cards = tester.widgetList<ProduceCard>(find.byType(ProduceCard));
       expect(cards.length, 2);
-      expect(cards.every((card) => card.style == ProduceCardStyle.row), isTrue);
+      expect(
+        cards.every((card) => card.style == ProduceCardStyle.feed),
+        isTrue,
+      );
       expect(cards.every((card) => card.showSeller), isTrue);
 
       final first = tester.getRect(find.byType(ProduceCard).at(0));
@@ -301,23 +305,68 @@ void main() {
       expect(second.left, closeTo(first.left, 1));
       expect((second.top - first.bottom).round(), AniHowSpace.cardGap.round());
 
+      final photo = tester.getRect(find.byType(AspectRatio).first);
+      expect(photo.height, greaterThanOrEqualTo(180));
+
+      final name = tester.getRect(
+        find.text('Kalabasa from the morning harvest at Manggahan'),
+      );
+      final priceBox = tester.getRect(find.text('₱40.00 / kg'));
+      expect((name.center.dy - priceBox.center.dy).abs(), lessThan(4));
+      expect(priceBox.left, greaterThan(name.left));
+      expect(photo.bottom, lessThanOrEqualTo(name.top));
+
+      final pill = tester.getRect(
+        find.byKey(const ValueKey('availability-pill-12')),
+      );
+      final promo = tester.getRect(find.byKey(const ValueKey('promo-badge')));
+      expect(pill.center.dy, lessThan(photo.bottom));
+      expect(pill.top, greaterThanOrEqualTo(photo.top));
+      expect(promo.center.dy, lessThan(photo.bottom));
+      expect(promo.bottom, lessThanOrEqualTo(photo.bottom + 1));
+
       final reserve = tester.renderObject<RenderParagraph>(
         find.text('Reserve · from Oct 12'),
       );
       expect(reserve.didExceedMaxLines, isFalse);
-      expect(find.text('Naturally grown (self-declared)'), findsOneWidget);
+      expect(find.byTooltip('Naturally grown (self-declared)'), findsOneWidget);
       expect(find.text('Harvested Oct 3'), findsOneWidget);
       expect(find.text('₱5.00 off'), findsOneWidget);
-      expect(find.text('Squash'), findsOneWidget);
+      expect(find.text('Squash · '), findsOneWidget);
       final price = tester.widget<Text>(find.text('₱40.00 / kg'));
       expect(price.style?.color, AniHowColors.brand);
       expect(find.textContaining('4.5'), findsWidgets);
 
-      final shop = tester.widget<Text>(
-        find.text('Aling Nena Produce of Manggahan General Trias'),
-      );
+      final shop = tester.widget<Text>(find.text(shopName));
       expect(shop.maxLines, 1);
       expect(shop.overflow, TextOverflow.ellipsis);
+
+      var sellerTaps = 0;
+      await tester.pumpWidget(
+        ChangeNotifierProvider(
+          create: (_) => PreferencesController()..notificationsEnabled = false,
+          child: MaterialApp(
+            theme: AniHowTheme.dark(),
+            home: Scaffold(
+              body: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ProduceCard(
+                  listing: upcomingListing(),
+                  style: ProduceCardStyle.feed,
+                  onSellerTap: () => sellerTaps++,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      final darkPrice = tester.widget<Text>(find.text('₱40.00 / kg'));
+      expect(darkPrice.style?.color, AniHowColors.sage);
+      await tester.tap(find.text(shopName));
+      await tester.pump();
+      expect(sellerTaps, 1);
     }
   });
 

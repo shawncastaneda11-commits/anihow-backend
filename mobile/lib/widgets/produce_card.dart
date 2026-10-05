@@ -14,7 +14,7 @@ import 'produce_photo.dart';
 import 'promo_badge.dart';
 import 'status_pill.dart';
 
-enum ProduceCardStyle { row, poster }
+enum ProduceCardStyle { row, poster, feed }
 
 class ReservedHarvestLabel extends StatelessWidget {
   const ReservedHarvestLabel({super.key, required this.listing});
@@ -67,7 +67,11 @@ class ProduceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return style == ProduceCardStyle.poster ? _poster(context) : _row(context);
+    return switch (style) {
+      ProduceCardStyle.poster => _poster(context),
+      ProduceCardStyle.feed => _feed(context),
+      ProduceCardStyle.row => _row(context),
+    };
   }
 
   Widget _poster(BuildContext context) {
@@ -203,9 +207,23 @@ class ProduceCard extends StatelessWidget {
   }
 
   List<Widget> _availabilityPill(BuildContext context) {
+    final pill = _availabilityStatusPill(context);
+    if (pill == null) {
+      return const [];
+    }
+    return [
+      const SizedBox(height: 4),
+      Align(alignment: Alignment.centerLeft, child: pill),
+    ];
+  }
+
+  Widget? _availabilityStatusPill(
+    BuildContext context, {
+    bool onPhoto = false,
+  }) {
     final quantity = double.tryParse(listing.quantityAvailable) ?? 0;
     if (listing.isTakenDown || quantity <= 0) {
-      return const [];
+      return null;
     }
     final s = AppStrings.of(context);
     final upcoming = listing.isUpcoming;
@@ -215,20 +233,266 @@ class ProduceCard extends StatelessWidget {
               ? s.reserveOnly
               : s.reserveFrom(s.shortDate(from.toLocal())))
         : s.availableNow;
-    return [
-      const SizedBox(height: 4),
-      Align(
-        alignment: Alignment.centerLeft,
-        child: StatusPill(
-          key: ValueKey('availability-pill-${listing.id}'),
-          label: label,
-          color: upcoming ? AniHowColors.pending : AniHowColors.inStock,
-          background: upcoming ? null : AniHowColors.inStockBg,
-          icon: upcoming ? Icons.event : Icons.shopping_basket_outlined,
-          maxLines: 1,
+    return StatusPill(
+      key: ValueKey('availability-pill-${listing.id}'),
+      label: label,
+      color: upcoming ? AniHowColors.pending : AniHowColors.inStock,
+      background: upcoming
+          ? (onPhoto ? const Color(0xFFFFF6E8) : null)
+          : AniHowColors.inStockBg,
+      icon: upcoming ? Icons.event : Icons.shopping_basket_outlined,
+      maxLines: 1,
+    );
+  }
+
+  Widget _feed(BuildContext context) {
+    final theme = Theme.of(context);
+    final language = context.watch<PreferencesController>().language;
+    final sellerLabel =
+        listing.sellerName ??
+        listing.category?.labelFor(language) ??
+        AppStrings.maybeOf(context).farmStall;
+    final cropLabel = listing.category?.labelFor(language);
+    final muted = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+    );
+    final promo = promoBadgeLabel(
+      AppStrings.of(context),
+      listing.tawad,
+      unit: listing.unit,
+    );
+    final pill = _availabilityStatusPill(context, onPhoto: true);
+    final meta = _feedMeta(context);
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ProducePhoto(listing: listing, iconSize: 48),
+                  if (pill != null)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      right: trailing == null ? 8 : 56,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: _photoChip(pill),
+                      ),
+                    ),
+                  if (showPromo && promo != null)
+                    Positioned(
+                      left: 8,
+                      right: 8,
+                      bottom: 8,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: _photoChip(
+                          PromoBadge(rule: listing.tawad, unit: listing.unit),
+                        ),
+                      ),
+                    ),
+                  if (trailing != null)
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: Material(
+                        color: Colors.black.withValues(alpha: 0.35),
+                        shape: const CircleBorder(),
+                        child: trailing,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          listing.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        listing.priceLabel,
+                        maxLines: 1,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: _priceColor(theme),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if ((cropLabel != null && cropLabel.isNotEmpty) || showSeller)
+                    _feedSellerLine(cropLabel, sellerLabel, muted),
+                  ?meta,
+                  ReservedHarvestLabel(listing: listing),
+                  if (showStock) ...[
+                    const SizedBox(height: AniHowSpace.labelGap),
+                    StatusPill.forListing(
+                      listing,
+                      strings: AppStrings.of(context),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ),
       ),
-    ];
+    );
+  }
+
+  Widget _photoChip(Widget child) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x59000000),
+            blurRadius: 8,
+            offset: Offset(0, 1),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  Widget _feedSellerLine(
+    String? cropLabel,
+    String sellerLabel,
+    TextStyle? muted,
+  ) {
+    final crop = cropLabel ?? '';
+    return Row(
+      children: [
+        if (crop.isNotEmpty)
+          Text(
+            showSeller ? '$crop · ' : crop,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: muted,
+          ),
+        if (showSeller)
+          Expanded(
+            child: GestureDetector(
+              onTap: onSellerTap,
+              behavior: HitTestBehavior.opaque,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    sellerLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: muted,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  String? _organicLabel(AppStrings strings) {
+    return switch (listing.organicBadge) {
+      'certified' => strings.certifiedOrganic,
+      'naturally_grown' => strings.naturallyGrownDeclared,
+      _ => null,
+    };
+  }
+
+  Widget? _feedMeta(BuildContext context) {
+    final theme = Theme.of(context);
+    final strings = AppStrings.of(context);
+    final muted = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+    );
+    final parts = <Widget>[];
+
+    void addSeparator() {
+      if (parts.isNotEmpty) {
+        parts.add(Text(' · ', style: muted));
+      }
+    }
+
+    if (listing.hasRating) {
+      parts.add(
+        Icon(Icons.star_rounded, size: 14, color: AniHowColors.pending),
+      );
+      parts.add(
+        Text(' ${AniHowMoney.rating(listing.averageRating!)}', style: muted),
+      );
+    }
+    if (listing.harvestedOn != null) {
+      addSeparator();
+      parts.add(
+        Flexible(
+          child: Text(
+            strings.harvestedLine(
+              strings.shortDate(listing.harvestedOn!.toLocal()),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: muted,
+          ),
+        ),
+      );
+    }
+    if (listing.distanceKm != null) {
+      addSeparator();
+      parts.add(
+        Flexible(
+          child: Text(
+            strings.kilometersAway(listing.distanceKm!),
+            key: ValueKey('distance-${listing.id}'),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: muted,
+          ),
+        ),
+      );
+    }
+    final organic = _organicLabel(strings);
+    if (organic != null) {
+      addSeparator();
+      parts.add(
+        Tooltip(
+          message: organic,
+          child: Icon(
+            Icons.eco_outlined,
+            size: 16,
+            semanticLabel: organic,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
+        ),
+      );
+    }
+    if (parts.isEmpty) {
+      return null;
+    }
+    return Row(children: parts);
   }
 
   List<Widget> _buyerNotes(BuildContext context) {

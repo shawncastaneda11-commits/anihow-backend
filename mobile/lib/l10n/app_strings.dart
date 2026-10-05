@@ -242,6 +242,21 @@ class AppStrings {
   String get announcementPinned => t('Pinned', 'Naka-pin');
   String get updatesFromFarms =>
       t('Updates from farms', 'Mga update mula sa mga bukid');
+  String updatesFromFarmsCount(int count) => t(
+    '$count updates from farms',
+    '$count update mula sa mga bukid',
+  );
+  String listingsCount(int count) =>
+      t('$count listings', '$count na produkto');
+  String get filter => t('Filter', 'Salain');
+  String get apply => t('Apply', 'Ilapat');
+  String get clear => t('Clear', 'I-clear');
+  String get sort => t('Sort', 'Ayos');
+  String get growingMethod => t('Growing method', 'Paraan ng pagtatanim');
+  String get any => t('Any', 'Kahit ano');
+  String get certifiedOrganicFilter =>
+      t('Certified organic', 'Sertipikadong organiko');
+  String get hideUpdates => t('Hide updates', 'Itago ang mga update');
   String get seeAll => t('See all', 'Tingnan lahat');
   String get allFarms => t('All farms', 'Lahat ng bukid');
   String get farmsIFollow => t('Farms I follow', 'Mga bukid na sinusundan ko');
@@ -329,10 +344,10 @@ class AppStrings {
   }
 
   String get priceLowHigh =>
-      t('Price: low to high', 'Presyo: mababa hanggang mataas');
+      t('Price low-high', 'Presyo: mababa hanggang mataas');
   String get priceHighLow =>
-      t('Price: high to low', 'Presyo: mataas hanggang mababa');
-  String get inStockFirst => t('In stock first', 'May stock muna');
+      t('Price high-low', 'Presyo: mataas hanggang mababa');
+  String get inStockFirst => t('Availability', 'May stock');
   String get emptyCart => t('Your cart is empty.', 'Walang laman ang cart mo.');
   String get orderSummary => t('Order Summary', 'Buod ng order');
   String get listed => t('Listed', 'Nakalista');

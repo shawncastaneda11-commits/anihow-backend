@@ -30,6 +30,8 @@ class _MarketplaceApi extends ApiClient {
     String? category,
     double? nearLat,
     double? nearLng,
+    String? growingMethod,
+    int? page,
   }) async {
     calls++;
     this.sort = sort;
@@ -138,9 +140,10 @@ void main() {
     await tester.pumpWidget(_app(const MarketplaceScreen(), auth: auth));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Freshest'));
+    await tester.tap(find.byKey(const Key('marketplace-filter')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Nearest').last);
+    await tester.tap(find.text('Nearest'));
+    await tester.tap(find.text('Apply'));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('location-unavailable')), findsOneWidget);

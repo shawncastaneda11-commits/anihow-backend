@@ -25,6 +25,8 @@ class _RecordingApi extends ApiClient {
     String? category,
     double? nearLat,
     double? nearLng,
+    String? growingMethod,
+    int? page,
   }) async {
     this.category = category;
     return const [];

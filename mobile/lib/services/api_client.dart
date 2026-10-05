@@ -257,6 +257,8 @@ class ApiClient {
     String? category,
     double? nearLat,
     double? nearLng,
+    String? growingMethod,
+    int? page,
   }) async {
     return _list(
       '/buyer/marketplace',
@@ -267,6 +269,9 @@ class ApiClient {
         if (category != null && category.isNotEmpty) 'category': category,
         if (nearLat != null && nearLng != null) 'near_lat': nearLat,
         if (nearLat != null && nearLng != null) 'near_lng': nearLng,
+        if (growingMethod != null && growingMethod.isNotEmpty)
+          'growing_method': growingMethod,
+        if (page != null && page > 1) 'page': page,
       },
       parse: ListingItem.fromJson,
     );

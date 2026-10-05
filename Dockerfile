@@ -33,3 +33,6 @@ RUN mkdir -p \
     && chmod -R ug+rwx storage bootstrap/cache \
     && composer dump-autoload --optimize \
     && php artisan package:discover --ansi --no-interaction
+
+ENTRYPOINT ["sh", "-c"]
+CMD ["php artisan storage:link --force || true; php artisan migrate --force && php artisan serve --host 0.0.0.0 --port ${PORT:-8000}"]

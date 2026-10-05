@@ -231,7 +231,9 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen>
                       OrderTotalHero(
                         total: order.total,
                         tawadLine: tawadIsActive(order.tawadDisplay)
-                            ? s.tawadMinus(AniHowMoney.peso(order.tawadDisplay))
+                            ? s.discountTawadMinus(
+                                AniHowMoney.peso(order.tawadDisplay),
+                              )
                             : null,
                       ),
                       if (order.fulfillmentLabel != null)

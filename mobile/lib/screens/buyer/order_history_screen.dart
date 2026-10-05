@@ -243,7 +243,9 @@ class BuyerOrderCard extends StatelessWidget {
                               Padding(
                                 padding: const EdgeInsets.only(top: 2),
                                 child: Text(
-                                  s.tawadMinus(AniHowMoney.peso(order.tawadDisplay)),
+                                  s.discountTawadMinus(
+                                    AniHowMoney.peso(order.tawadDisplay),
+                                  ),
                                   style: muted?.copyWith(
                                     color: AniHowColors.sage,
                                     fontWeight: FontWeight.w600,

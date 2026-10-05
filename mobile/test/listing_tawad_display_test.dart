@@ -62,8 +62,9 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byKey(const ValueKey('produce-tawad-badge')), findsOneWidget);
-    expect(find.text(s.tawadMinus(AniHowMoney.peso('5'))), findsOneWidget);
+    expect(find.byKey(const ValueKey('promo-badge')), findsOneWidget);
+    expect(find.text(s.promoFlatOff(AniHowMoney.peso('5'))), findsOneWidget);
+    expect(find.text(s.tawadMinus(AniHowMoney.peso('5'))), findsNothing);
   });
 
   testWidgets('listing detail shows tawad on the photo and under the price', (tester) async {
@@ -77,8 +78,9 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byKey(const ValueKey('produce-tawad-badge')), findsOneWidget);
-    expect(find.byKey(const ValueKey('listing-tawad-summary')), findsOneWidget);
-    expect(find.text(s.tawadOffThisOrder(AniHowMoney.peso('5'))), findsOneWidget);
+    expect(find.byKey(const ValueKey('promo-badge')), findsOneWidget);
+    expect(find.text(s.promoFlatOff(AniHowMoney.peso('5'))), findsOneWidget);
+    expect(find.byKey(const ValueKey('listing-tawad-summary')), findsNothing);
+    expect(find.text(s.tawadOffThisOrder(AniHowMoney.peso('5'))), findsNothing);
   });
 }

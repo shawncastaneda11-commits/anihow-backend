@@ -10,6 +10,7 @@ import '../../widgets/dashed_photo_box.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/hint_card.dart';
 import '../../widgets/primary_button.dart';
+import '../../widgets/promo_badge.dart';
 import '../../state/auth_controller.dart';
 import '../../state/preferences_controller.dart';
 import '../../support/order_quantity.dart';
@@ -44,6 +45,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   DateTime? _harvestedOn;
   String _growingMethod = '';
   bool _isActive = true;
+  bool _discountOpen = false;
   bool _busy = false;
   late Future<List<CategoryItem>> _cropTypes;
   ListingItem? _listing;
@@ -67,6 +69,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       _harvestedOn = listing.harvestedOn?.toLocal();
       _growingMethod = listing.growingMethod ?? '';
       _isActive = listing.isActive;
+      _discountOpen = listing.tawad?.isActive == true;
     }
     _cropTypes =
         widget.cropTypes ?? context.read<AuthController>().api.cropTypes();
@@ -874,39 +877,81 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                     ),
                     if (_listing != null) ...[
                       const SizedBox(height: AniHowSpace.section),
-                      AniHowFormCard(
-                        title: s.tawad,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (_listing!.tawad != null) ...[
-                              Text(
-                                _listing!.tawad!.displaySummary(
-                                  offThisOrder: s.tawadOffThisOrder,
-                                  offAtMin: s.tawadOffAtMin,
+                      Card(
+                        child: Theme(
+                          data: Theme.of(context).copyWith(
+                            dividerColor: Colors.transparent,
+                          ),
+                          child: ExpansionTile(
+                            key: const ValueKey('discount-section'),
+                            initiallyExpanded: _discountOpen,
+                            onExpansionChanged: (open) =>
+                                setState(() => _discountOpen = open),
+                            tilePadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                            ),
+                            childrenPadding: const EdgeInsets.fromLTRB(
+                              16,
+                              0,
+                              16,
+                              16,
+                            ),
+                            title: Text(s.discountOptionalTitle),
+                            subtitle: Text(s.discountOptionalHelp),
+                            children: [
+                              if (_discountOpen &&
+                                  sellerDiscountSummary(
+                                        s,
+                                        _listing!.tawad,
+                                        unit: _listing!.unit,
+                                      ) !=
+                                      null) ...[
+                                Text(
+                                  sellerDiscountSummary(
+                                    s,
+                                    _listing!.tawad,
+                                    unit: _listing!.unit,
+                                  )!,
+                                  key: const ValueKey('discount-summary'),
                                 ),
-                              ),
-                              if (_listing!.tawad!.typeLabel != null)
-                                Text(_listing!.tawad!.typeLabel!),
-                              const SizedBox(height: AniHowSpace.cardGap),
-                              PrimaryButton(
-                                label: s.replaceTawad,
-                                onPressed: _busy ? null : _openTawad,
-                              ),
-                              const SizedBox(height: AniHowSpace.cardGap),
-                              OutlinedButton(
-                                onPressed: _busy ? null : _endTawad,
-                                child: Text(s.endTawad),
-                              ),
-                            ] else ...[
-                              Text(s.noTawad),
-                              const SizedBox(height: AniHowSpace.cardGap),
-                              PrimaryButton(
-                                label: s.setTawad,
-                                onPressed: _busy ? null : _openTawad,
-                              ),
+                                const SizedBox(height: AniHowSpace.cardGap),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        style: OutlinedButton.styleFrom(
+                                          minimumSize: const Size(48, 48),
+                                        ),
+                                        onPressed: _busy ? null : _openTawad,
+                                        child: Text(s.editDiscount),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        style: OutlinedButton.styleFrom(
+                                          minimumSize: const Size(48, 48),
+                                        ),
+                                        onPressed: _busy ? null : _endTawad,
+                                        child: Text(s.endDiscount),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ] else if (_discountOpen) ...[
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: TextButton(
+                                    style: TextButton.styleFrom(
+                                      minimumSize: const Size(48, 48),
+                                    ),
+                                    onPressed: _busy ? null : _openTawad,
+                                    child: Text(s.setTawad),
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
                       ),
                       if (!_listing!.isTakenDown &&

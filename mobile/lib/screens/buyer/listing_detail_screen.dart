@@ -19,6 +19,7 @@ import '../../widgets/order_quantity_stepper.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/produce_card.dart';
 import '../../widgets/produce_photo.dart';
+import '../../widgets/promo_badge.dart';
 import '../../widgets/report_sheet.dart';
 import '../../widgets/status_pill.dart';
 import 'cart_screen.dart';
@@ -341,19 +342,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   ),
                 ),
               ),
-              if (listing.tawad != null && listing.tawad!.isActive) ...[
+              if (promoBadgeLabel(s, listing.tawad, unit: listing.unit) !=
+                  null) ...[
                 const SizedBox(height: AniHowSpace.labelGap),
-                Text(
-                  key: const ValueKey('listing-tawad-summary'),
-                  listing.tawad!.displaySummary(
-                    offThisOrder: s.tawadOffThisOrder,
-                    offAtMin: s.tawadOffAtMin,
-                  ),
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AniHowColors.brand,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                PromoBadge(rule: listing.tawad, unit: listing.unit),
               ],
               if (listing.description != null &&
                   listing.description!.isNotEmpty) ...[

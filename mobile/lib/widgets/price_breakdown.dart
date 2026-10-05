@@ -33,7 +33,7 @@ class PriceBreakdown extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('${s.listed} ${AniHowMoney.peso(listed)}', style: style),
-            Text('${s.tawad} ${AniHowMoney.peso(tawad)}', style: style),
+            Text('${s.discountTawad} ${AniHowMoney.peso(tawad)}', style: style),
             Text(
               '${s.total} ${AniHowMoney.peso(total)}',
               style: style?.copyWith(fontWeight: FontWeight.w700),

@@ -62,7 +62,8 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('Fresh kamatis, hand picked'), findsOneWidget);
-      expect(find.byKey(const ValueKey('produce-tawad-badge')), findsOneWidget);
+      expect(find.byKey(const ValueKey('promo-badge')), findsOneWidget);
+      expect(find.text('₱5.00 off'), findsOneWidget);
     });
   }
 }

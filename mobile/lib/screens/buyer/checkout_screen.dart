@@ -265,7 +265,7 @@ class _SellerOrderCard extends StatelessWidget {
             OrderTotalHero(
               total: group.total,
               tawadLine: tawadIsActive(group.tawadTotal)
-                  ? s.tawadMinus(AniHowMoney.peso(group.tawadTotal))
+                  ? s.discountTawadMinus(AniHowMoney.peso(group.tawadTotal))
                   : null,
             ),
             const SizedBox(height: AniHowSpace.cardGap),
@@ -439,7 +439,9 @@ class _PlacedView extends StatelessWidget {
                     OrderTotalHero(
                       total: order.total,
                       tawadLine: tawadIsActive(order.tawadDisplay)
-                          ? s.tawadMinus(AniHowMoney.peso(order.tawadDisplay))
+                          ? s.discountTawadMinus(
+                              AniHowMoney.peso(order.tawadDisplay),
+                            )
                           : null,
                     ),
                     if (order.fulfillmentLabel != null)

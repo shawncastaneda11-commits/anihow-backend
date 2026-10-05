@@ -83,6 +83,36 @@ List<double> stepChoices(String? unit) {
   return const [1];
 }
 
+/// How much more to add, on the listing step, before [ruleMin] is reached.
+/// Null when [quantity] already qualifies. The result lands on an allowed
+/// quantity (listing minimum plus whole steps).
+double? quantityUntilDiscount({
+  required double quantity,
+  required double orderMin,
+  required double step,
+  required double ruleMin,
+}) {
+  final current = orderHundredths(quantity);
+  final need = orderHundredths(ruleMin);
+  if (current >= need) {
+    return null;
+  }
+  final increment = orderHundredths(step);
+  final base = orderHundredths(orderMin);
+  if (increment < 1) {
+    return null;
+  }
+  var target = base;
+  if (need > base) {
+    final steps = ((need - base) + increment - 1) ~/ increment;
+    target = base + steps * increment;
+  }
+  if (target <= current) {
+    return null;
+  }
+  return (target - current) / 100;
+}
+
 String previewAmounts(double min, double step) {
   return [
     formatOrderAmount(min),

@@ -9,6 +9,7 @@ import '../theme/anihow_space.dart';
 import '../theme/anihow_theme.dart';
 import 'growing_badge.dart';
 import 'produce_photo.dart';
+import 'promo_badge.dart';
 import 'status_pill.dart';
 
 enum ProduceCardStyle { row, poster }
@@ -47,6 +48,7 @@ class ProduceCard extends StatelessWidget {
     this.trailing,
     this.showSeller = true,
     this.showStock = false,
+    this.showPromo = true,
     this.placeholderColor,
     this.style = ProduceCardStyle.row,
   });
@@ -57,6 +59,7 @@ class ProduceCard extends StatelessWidget {
   final Widget? trailing;
   final bool showSeller;
   final bool showStock;
+  final bool showPromo;
   final Color? placeholderColor;
   final ProduceCardStyle style;
 
@@ -77,12 +80,24 @@ class ProduceCard extends StatelessWidget {
       color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
     );
 
+    final promo = promoBadgeLabel(
+      AppStrings.of(context),
+      listing.tawad,
+      unit: listing.unit,
+    );
     final photo = AspectRatio(
       aspectRatio: 4 / 3,
       child: Stack(
         fit: StackFit.expand,
         children: [
           ProducePhoto(listing: listing, iconSize: 40),
+          if (showPromo && promo != null)
+            Positioned(
+              left: 8,
+              right: 8,
+              bottom: 8,
+              child: PromoBadge(rule: listing.tawad, unit: listing.unit),
+            ),
           if (trailing != null)
             Positioned(
               top: 4,
@@ -291,17 +306,15 @@ class ProduceCard extends StatelessWidget {
                             ),
                           ),
                           ..._buyerNotes(context),
-                          if (listing.tawad != null &&
-                              listing.tawad!.isActive) ...[
+                          if (showPromo &&
+                              promoBadgeLabel(
+                                    AppStrings.of(context),
+                                    listing.tawad,
+                                    unit: listing.unit,
+                                  ) !=
+                                  null) ...[
                             const SizedBox(height: AniHowSpace.labelGap),
-                            Text(
-                              listing.tawad!.displaySummary(
-                                offThisOrder: AppStrings.of(context)
-                                    .tawadOffThisOrder,
-                                offAtMin: AppStrings.of(context).tawadOffAtMin,
-                              ),
-                              style: theme.textTheme.bodyMedium,
-                            ),
+                            PromoBadge(rule: listing.tawad, unit: listing.unit),
                           ],
                           if (listing.hasRating) ...[
                             const SizedBox(height: AniHowSpace.labelGap),

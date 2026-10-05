@@ -388,7 +388,7 @@ class _OrderCard extends StatelessWidget {
                               Padding(
                                 padding: const EdgeInsets.only(top: 2),
                                 child: Text(
-                                  s.tawadMinus(
+                                  s.discountTawadMinus(
                                     AniHowMoney.peso(order.tawadDisplay),
                                   ),
                                   style: muted?.copyWith(
@@ -697,7 +697,9 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
                 OrderTotalHero(
                   total: order.total,
                   tawadLine: tawadIsActive(order.tawadDisplay)
-                      ? s.tawadMinus(AniHowMoney.peso(order.tawadDisplay))
+                      ? s.discountTawadMinus(
+                          AniHowMoney.peso(order.tawadDisplay),
+                        )
                       : null,
                 ),
                 if (order.fulfillmentLabel != null)

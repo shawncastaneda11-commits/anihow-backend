@@ -245,7 +245,9 @@ class _CartScreenState extends State<CartScreen> {
                       total: group.total,
                       tawadLine: tawadIsActive(group.tawadTotal)
                           ? AppStrings.of(context)
-                                .tawadMinus(AniHowMoney.peso(group.tawadTotal))
+                                .discountTawadMinus(
+                                  AniHowMoney.peso(group.tawadTotal),
+                                )
                           : null,
                     ),
                   ],
@@ -364,7 +366,91 @@ class _CartLineState extends State<_CartLine> {
               ),
             ],
           ),
+          if (listing != null)
+            _CartDiscountNudge(
+              controller: _controller,
+              listing: listing,
+            ),
         ],
+      ),
+    );
+  }
+}
+
+class _CartDiscountNudge extends StatefulWidget {
+  const _CartDiscountNudge({
+    required this.controller,
+    required this.listing,
+  });
+
+  final TextEditingController controller;
+  final ListingItem listing;
+
+  @override
+  State<_CartDiscountNudge> createState() => _CartDiscountNudgeState();
+}
+
+class _CartDiscountNudgeState extends State<_CartDiscountNudge> {
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_rebuild);
+  }
+
+  @override
+  void didUpdateWidget(_CartDiscountNudge oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_rebuild);
+      widget.controller.addListener(_rebuild);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_rebuild);
+    super.dispose();
+  }
+
+  void _rebuild() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rule = widget.listing.tawad;
+    if (rule == null || !rule.isActive || !rule.isMinQuantity) {
+      return const SizedBox.shrink();
+    }
+    final quantity = double.tryParse(widget.controller.text.trim());
+    final minimum = double.tryParse(rule.minQuantity ?? '');
+    if (quantity == null || minimum == null) {
+      return const SizedBox.shrink();
+    }
+    final missing = quantityUntilDiscount(
+      quantity: quantity,
+      orderMin: widget.listing.minOrderQuantity,
+      step: widget.listing.orderStep,
+      ruleMin: minimum,
+    );
+    if (missing == null) {
+      return const SizedBox.shrink();
+    }
+    final s = AppStrings.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Text(
+        s.cartDiscountNudge(
+          formatOrderAmount(missing),
+          widget.listing.unit ?? '',
+          AniHowMoney.peso(rule.discountAmount),
+        ),
+        key: const ValueKey('cart-discount-nudge'),
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+        ),
       ),
     );
   }
@@ -480,7 +566,9 @@ class _CartOrderSummary extends StatelessWidget {
             OrderTotalHero(
               total: total,
               tawadLine: tawadIsActive(tawad)
-                  ? AppStrings.of(context).tawadMinus(AniHowMoney.peso(tawad))
+                  ? AppStrings.of(context).discountTawadMinus(
+                      AniHowMoney.peso(tawad),
+                    )
                   : null,
             ),
           ],

@@ -290,11 +290,23 @@ class _List extends StatelessWidget {
             listing: listing,
             showSeller: false,
             showStock: true,
+            showPromo: false,
             onTap: () => onOpen(listing),
             trailing: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
+                if (listing.tawad?.isActive == true)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Chip(
+                      key: ValueKey('listing-discount-${listing.id}'),
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      label: Text(AppStrings.of(context).discountChip),
+                      labelStyle: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ),
                 AvailabilityChip(state: listing.availabilityState),
                 ReservedHarvestLabel(listing: listing),
                 if (listing.isUpcoming)

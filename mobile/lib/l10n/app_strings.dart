@@ -761,6 +761,45 @@ class AppStrings {
     'Halagang natanggap (online)',
   );
   String tawadMinus(String peso) => t('Tawad −$peso', 'Tawad −$peso');
+  String get discountTawad => t('Discount (tawad)', 'Diskwento (tawad)');
+  String discountTawadMinus(String peso) =>
+      t('Discount (tawad) −$peso', 'Diskwento (tawad) −$peso');
+  String get discountOptionalTitle =>
+      t('Discount (optional)', 'Diskwento (opsyonal)');
+  String get discountOptionalHelp => t(
+    'Give buyers a fixed peso discount (tawad).',
+    'Bigyan ang mga buyer ng takdang bawas na piso (tawad).',
+  );
+  String get discountChip => t('Discount', 'Diskwento');
+  String get editDiscount => t('Edit', 'I-edit');
+  String get endDiscount => t('End', 'Tapusin');
+  String promoFlatOff(String peso) => t('$peso off', '$peso bawas');
+  String promoMinOff(String peso, String quantity, String unit) {
+    final amount = unit.trim().isEmpty ? quantity : '$quantity $unit';
+    return t(
+      '$peso off when you buy $amount or more',
+      '$peso bawas kapag bumili ka ng $amount o higit',
+    );
+  }
+
+  String sellerDiscountFlat(String peso) =>
+      t('$peso off every order', '$peso bawas bawat order');
+  String sellerDiscountMin(String peso, String quantity, String unit) {
+    final amount = unit.trim().isEmpty ? quantity : '$quantity $unit';
+    return t(
+      '$peso off when buyers order $amount or more',
+      '$peso bawas kapag umorder ang buyer ng $amount o higit',
+    );
+  }
+
+  String cartDiscountNudge(String missing, String unit, String peso) {
+    final amount = unit.trim().isEmpty ? missing : '$missing $unit';
+    return t(
+      'Add $amount more to get $peso off',
+      'Magdagdag ng $amount pa para makakuha ng $peso bawas',
+    );
+  }
+
   String tawadOffThisOrder(String peso) =>
       t('$peso off this order', '$peso bawas sa order na ito');
   String tawadOffAtMin(String peso, String quantity) =>

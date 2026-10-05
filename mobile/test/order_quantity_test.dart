@@ -125,6 +125,36 @@ void main() {
     expect(find.textContaining('= '), findsNothing);
   });
 
+  test('discount nudge uses the listing step', () {
+    expect(
+      quantityUntilDiscount(
+        quantity: 2,
+        orderMin: 1,
+        step: 1,
+        ruleMin: 3,
+      ),
+      1,
+    );
+    expect(
+      quantityUntilDiscount(
+        quantity: 0.5,
+        orderMin: 0.25,
+        step: 0.25,
+        ruleMin: 1,
+      ),
+      0.5,
+    );
+    expect(
+      quantityUntilDiscount(
+        quantity: 3,
+        orderMin: 1,
+        step: 1,
+        ruleMin: 3,
+      ),
+      isNull,
+    );
+  });
+
   test('kg and liter convert to whole grams and millilitres', () {
     expect(orderQuantitySmallUnit(0.01, 'kg'), '10 g');
     expect(orderQuantitySmallUnit(0.1, 'kg'), '100 g');

@@ -65,7 +65,7 @@ class _BuyerShellState extends State<BuyerShell> {
         [
           const ShopsScreen(),
           const MarketplaceScreen(),
-          const OrderHistoryScreen(),
+          OrderHistoryScreen(active: _index == 2),
           FavoritesScreen(active: _index == 3),
           const ProfileScreen(),
         ];

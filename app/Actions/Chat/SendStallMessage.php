@@ -44,7 +44,7 @@ class SendStallMessage
             ...$stored,
         ]);
 
-        $message->load('author.roles');
+        $message->load(['author.roles', 'order:id,order_number']);
         $this->presentStallMessages->links([$message]);
 
         if ($order !== null) {

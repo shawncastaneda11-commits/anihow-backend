@@ -119,18 +119,27 @@ void main() {
 
     const statuses = {
       'placed': AniHowColors.pending,
-      'confirmed': AniHowColors.sage,
-      'ready': AniHowColors.ready,
-      'completed': AniHowColors.completed,
-      'cancelled': AniHowColors.cancelled,
+      'confirmed': AniHowColors.confirmedBlue,
+      'ready': AniHowColors.readyTeal,
+      'completed': AniHowColors.completeGreen,
+      'cancelled': AniHowColors.cancelledRed,
     };
     for (final entry in statuses.entries) {
       final pill = StatusPill.order(entry.key);
-      expect(pill.color, entry.value, reason: '${entry.key} must not fall through to the default branch');
-      expect(pill.label.toLowerCase(), isNot('pending'));
+      expect(
+        pill.color,
+        entry.value,
+        reason: '${entry.key} must not fall through to the default branch',
+      );
     }
-    expect(StatusPill.order('placed').label, 'Placed');
+    expect(StatusPill.order('placed').label, 'Pending');
     expect(StatusPill.order('confirmed').label, 'Confirmed');
+    expect(StatusPill.order('ready').label, 'Ready for pickup');
+    expect(
+      StatusPill.order('ready', fulfillmentPreference: 'seller_delivers').label,
+      'Out for delivery',
+    );
+    expect(StatusPill.order('completed').label, 'Order complete');
   });
 
   test('farmer order parses allowed_next, buyer, and seller cancel reasons', () {

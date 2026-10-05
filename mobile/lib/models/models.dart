@@ -553,6 +553,9 @@ class OrderRecord {
     this.sellerId,
     this.buyerId,
     this.placedAt,
+    this.confirmedAt,
+    this.readyAt,
+    this.completedAt,
     this.canBeReviewed = false,
     this.reviewRating,
     this.cancellationReason,
@@ -590,6 +593,9 @@ class OrderRecord {
   final int? sellerId;
   final int? buyerId;
   final String? placedAt;
+  final String? confirmedAt;
+  final String? readyAt;
+  final String? completedAt;
   final bool canBeReviewed;
   final int? reviewRating;
   final String? cancellationReason;
@@ -644,6 +650,9 @@ class OrderRecord {
       sellerId: ListingItem._asCount(sellerMap?['id']),
       buyerId: ListingItem._asCount(buyerMap?['id']),
       placedAt: json['placed_at'] as String?,
+      confirmedAt: json['confirmed_at'] as String?,
+      readyAt: json['ready_at'] as String?,
+      completedAt: json['completed_at'] as String?,
       canBeReviewed: json['can_be_reviewed'] == true,
       reviewRating: reviewMap == null
           ? null
@@ -778,6 +787,9 @@ class OrderRecord {
       sellerId: sellerId,
       buyerId: buyerId,
       placedAt: placedAt,
+      confirmedAt: confirmedAt,
+      readyAt: readyAt,
+      completedAt: completedAt,
       canBeReviewed: canBeReviewed ?? this.canBeReviewed,
       reviewRating: reviewRating ?? this.reviewRating,
       cancellationReason: cancellationReason ?? this.cancellationReason,
@@ -1698,6 +1710,7 @@ class OrderMessage {
     this.authorAvatarUrl,
     this.createdAt,
     this.orderId,
+    this.orderNumber,
     this.listingId,
     this.listingTitle,
     this.listingPrice,
@@ -1714,6 +1727,7 @@ class OrderMessage {
   final String? authorAvatarUrl;
   final String? createdAt;
   final int? orderId;
+  final String? orderNumber;
   final int? listingId;
   final String? listingTitle;
   final String? listingPrice;
@@ -1736,6 +1750,7 @@ class OrderMessage {
       authorAvatarUrl: ApiConfig.mediaUrl(authorMap?['avatar_url'] as String?),
       createdAt: json['created_at'] as String?,
       orderId: ListingItem._asCount(json['order_id']),
+      orderNumber: json['order_number'] as String?,
       listingId: ListingItem._asCount(json['listing_id']),
       listingTitle: json['listing_title'] as String?,
       listingPrice: json['listing_price_per_unit']?.toString(),

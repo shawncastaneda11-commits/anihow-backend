@@ -22,6 +22,7 @@ class StallMessageResource extends JsonResource
             'body' => $this->body,
             'created_at' => $this->created_at?->toIso8601String(),
             'order_id' => $this->order_id,
+            'order_number' => $this->relationLoaded('order') ? $this->order?->order_number : null,
             'listing_id' => $this->getAttribute('listing_link_id'),
             'listing_title' => $this->listing_title,
             'listing_price_per_unit' => $this->listing_price_per_unit === null

@@ -49,7 +49,7 @@ class _FarmerShellState extends State<FarmerShell> {
         widget.preview?.pages ??
         [
           const FarmerListingsScreen(),
-          const FarmerOrdersScreen(),
+          FarmerOrdersScreen(active: _index == 1),
           const FarmerSalesScreen(),
           const CropCareScreen(),
           OrderChatsScreen(

@@ -7,20 +7,35 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/app_strings.dart';
 import '../models/models.dart';
+import '../screens/buyer/buyer_order_detail_screen.dart';
 import '../screens/buyer/listing_detail_screen.dart';
+import '../screens/farmer/farmer_orders_screen.dart';
 import '../state/auth_controller.dart';
 import '../support/relative_time.dart';
 import '../theme/anihow_space.dart';
+
+bool showsOrderTag(List<OrderMessage> messages, int index) {
+  final current = messages[index].orderId;
+  if (current == null) {
+    return false;
+  }
+  if (index == 0) {
+    return true;
+  }
+  return messages[index - 1].orderId != current;
+}
 
 class ChatMessageBubble extends StatelessWidget {
   const ChatMessageBubble({
     super.key,
     required this.message,
     required this.mine,
+    this.showOrderTag = true,
   });
 
   final OrderMessage message;
   final bool mine;
+  final bool showOrderTag;
 
   @override
   Widget build(BuildContext context) {
@@ -47,11 +62,18 @@ class ChatMessageBubble extends StatelessWidget {
               mine ? s.you : message.authorName,
               style: Theme.of(context).textTheme.labelMedium,
             ),
-            if (message.orderId != null) ...[
+            if (showOrderTag && message.orderId != null) ...[
               const SizedBox(height: 4),
-              Text(
-                s.orderTag(message.orderId!),
-                style: Theme.of(context).textTheme.labelMedium,
+              TextButton(
+                key: ValueKey('order-tag-${message.id}'),
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                  padding: EdgeInsets.zero,
+                  tapTargetSize: MaterialTapTargetSize.padded,
+                  alignment: Alignment.centerLeft,
+                ),
+                onPressed: () => _openTaggedOrder(context, message.orderId!),
+                child: Text(s.orderTag(message.orderNumber)),
               ),
             ],
             if (message.hasProductCard) ...[
@@ -303,6 +325,17 @@ class _PdfAttachment extends StatelessWidget {
       ),
     );
   }
+}
+
+void _openTaggedOrder(BuildContext context, int orderId) {
+  final seller = context.read<AuthController>().user?.isFarmerSeller ?? false;
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => seller
+          ? FarmerOrderDetailScreen(orderId: orderId)
+          : BuyerOrderDetailScreen(orderId: orderId),
+    ),
+  );
 }
 
 String formatChatAttachmentSize(int bytes) {

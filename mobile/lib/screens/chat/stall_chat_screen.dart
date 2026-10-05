@@ -235,7 +235,11 @@ class _StallChatScreenState extends State<StallChatScreen> {
       itemBuilder: (context, index) {
         final message = _messages[index];
         final mine = userId != null && message.authorId == userId;
-        return ChatMessageBubble(message: message, mine: mine);
+        return ChatMessageBubble(
+          message: message,
+          mine: mine,
+          showOrderTag: showsOrderTag(_messages, index),
+        );
       },
     );
   }

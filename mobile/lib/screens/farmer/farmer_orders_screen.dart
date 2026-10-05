@@ -12,6 +12,7 @@ import '../../theme/anihow_theme.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/hint_card.dart';
 import '../../widgets/order_look.dart';
+import '../../widgets/order_status_poll.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
 import '../../widgets/status_pill.dart';
@@ -30,23 +31,56 @@ List<({String status, String label, String empty})> _orderTabs(AppStrings s) =>
 const _sellerCancelReasons = ['seller_declined', 'no_show', 'other'];
 
 class FarmerOrdersScreen extends StatefulWidget {
-  const FarmerOrdersScreen({super.key});
+  const FarmerOrdersScreen({super.key, this.active = true});
+
+  final bool active;
 
   @override
   State<FarmerOrdersScreen> createState() => _FarmerOrdersScreenState();
 }
 
-class _FarmerOrdersScreenState extends State<FarmerOrdersScreen> {
+class _FarmerOrdersScreenState extends State<FarmerOrdersScreen>
+    with WidgetsBindingObserver, RouteAware, OrderStatusPoll {
   List<OrderRecord> _items = const [];
   bool _loading = true;
   Object? _error;
   final Set<int> _acting = {};
 
   @override
+  bool get orderPollEnabled => widget.active;
+
+  @override
+  bool get orderPollBlocked => _acting.isNotEmpty;
+
+  @override
   void initState() {
     super.initState();
     _reload();
+    startOrderStatusPoll();
   }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    bindOrderStatusRoute();
+  }
+
+  @override
+  void didUpdateWidget(FarmerOrdersScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) {
+      pollOrderStatus(force: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    stopOrderStatusPoll();
+    super.dispose();
+  }
+
+  @override
+  Future<void> refreshPolledOrders() => _reload();
 
   Future<void> _reload() async {
     setState(() {
@@ -367,7 +401,13 @@ class _OrderCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      StatusPill.order(order.status, strings: s),
+                      Flexible(
+                        child: StatusPill.order(
+                          order.status,
+                          strings: s,
+                          fulfillmentPreference: order.fulfillmentPreference,
+                        ),
+                      ),
                     ],
                   ),
                   if (order.isWalkIn)
@@ -601,7 +641,13 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
                         style: theme.textTheme.titleMedium,
                       ),
                     ),
-                    StatusPill.order(order.status, strings: s),
+                    Flexible(
+                      child: StatusPill.order(
+                        order.status,
+                        strings: s,
+                        fulfillmentPreference: order.fulfillmentPreference,
+                      ),
+                    ),
                   ],
                 ),
                 if (order.isWalkIn)

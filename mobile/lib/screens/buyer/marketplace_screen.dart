@@ -11,7 +11,6 @@ import '../../theme/anihow_space.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/cart_icon_button.dart';
-import '../../widgets/category_color.dart';
 import '../../widgets/notification_bell.dart';
 import '../../widgets/produce_card.dart';
 import '../../widgets/unverified_email_banner.dart';
@@ -71,7 +70,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     super.dispose();
   }
 
-  bool get _filtersActive => _sort != 'freshest' || _growingMethod != null;
+  bool get _filtersActive =>
+      _sort != 'freshest' || _growingMethod != null || _cropTypeId != null;
 
   String _today() {
     final now = DateTime.now();
@@ -193,12 +193,18 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   }
 
   Future<void> _openFilters() async {
+    final cropTypes = await _cropTypes;
+    if (!mounted) {
+      return;
+    }
     final choice = await showModalBottomSheet<_MarketFilters>(
       context: context,
       isScrollControlled: true,
       builder: (context) => _FilterSheet(
         sort: _sort,
         growingMethod: _growingMethod,
+        cropTypeId: _cropTypeId,
+        cropTypes: cropTypes,
       ),
     );
     if (!mounted || choice == null) {
@@ -226,6 +232,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     setState(() {
       _sort = choice.sort;
       _growingMethod = choice.growingMethod;
+      _cropTypeId = choice.cropTypeId;
       _nearLat = latitude;
       _nearLng = longitude;
       _locationUnavailable = unavailable;
@@ -235,11 +242,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
   void _selectCategory(String? category) {
     setState(() => _category = category);
-    _reload();
-  }
-
-  void _selectCrop(int? cropTypeId) {
-    setState(() => _cropTypeId = cropTypeId);
     _reload();
   }
 
@@ -332,47 +334,29 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     return SizedBox(
       key: const Key('marketplace-chips'),
       height: 48,
-      child: FutureBuilder<List<CategoryItem>>(
-        future: _cropTypes,
-        builder: (context, snapshot) {
-          final cropTypes = snapshot.data ?? const <CategoryItem>[];
-          final language = context.watch<PreferencesController>().language;
-          return ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: AniHowSpace.screen),
-            children: [
-              _chip(
-                key: const ValueKey('category-all'),
-                label: s.all,
-                selected: _category == null && _cropTypeId == null,
-                onSelected: _selectAll,
-              ),
-              _chip(
-                key: const ValueKey('category-fresh_produce'),
-                label: s.freshProduce,
-                selected: _category == 'fresh_produce',
-                onSelected: () => _selectCategory('fresh_produce'),
-              ),
-              _chip(
-                key: const ValueKey('category-value_added'),
-                label: s.valueAdded,
-                selected: _category == 'value_added',
-                onSelected: () => _selectCategory('value_added'),
-              ),
-              for (final cropType in cropTypes)
-                _chip(
-                  key: ValueKey('crop-${cropType.id}'),
-                  label: cropType.labelFor(language),
-                  avatar: CircleAvatar(
-                    backgroundColor: CategoryColor.of(cropType),
-                    radius: 8,
-                  ),
-                  selected: _cropTypeId == cropType.id,
-                  onSelected: () => _selectCrop(cropType.id),
-                ),
-            ],
-          );
-        },
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AniHowSpace.screen),
+        children: [
+          _chip(
+            key: const ValueKey('category-all'),
+            label: s.all,
+            selected: _category == null && _cropTypeId == null,
+            onSelected: _selectAll,
+          ),
+          _chip(
+            key: const ValueKey('category-fresh_produce'),
+            label: s.freshProduce,
+            selected: _category == 'fresh_produce',
+            onSelected: () => _selectCategory('fresh_produce'),
+          ),
+          _chip(
+            key: const ValueKey('category-value_added'),
+            label: s.valueAdded,
+            selected: _category == 'value_added',
+            onSelected: () => _selectCategory('value_added'),
+          ),
+        ],
       ),
     );
   }
@@ -650,17 +634,29 @@ class _UpdatesBanner extends StatelessWidget {
 }
 
 class _MarketFilters {
-  const _MarketFilters({required this.sort, required this.growingMethod});
+  const _MarketFilters({
+    required this.sort,
+    required this.growingMethod,
+    required this.cropTypeId,
+  });
 
   final String sort;
   final String? growingMethod;
+  final int? cropTypeId;
 }
 
 class _FilterSheet extends StatefulWidget {
-  const _FilterSheet({required this.sort, required this.growingMethod});
+  const _FilterSheet({
+    required this.sort,
+    required this.growingMethod,
+    required this.cropTypeId,
+    required this.cropTypes,
+  });
 
   final String sort;
   final String? growingMethod;
+  final int? cropTypeId;
+  final List<CategoryItem> cropTypes;
 
   @override
   State<_FilterSheet> createState() => _FilterSheetState();
@@ -669,18 +665,21 @@ class _FilterSheet extends StatefulWidget {
 class _FilterSheetState extends State<_FilterSheet> {
   late String _sort;
   String? _growingMethod;
+  int? _cropTypeId;
 
   @override
   void initState() {
     super.initState();
     _sort = widget.sort;
     _growingMethod = widget.growingMethod;
+    _cropTypeId = widget.cropTypeId;
   }
 
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     final theme = Theme.of(context);
+    final language = context.watch<PreferencesController>().language;
     return SafeArea(
       child: SingleChildScrollView(
         padding: AniHowSpace.screenPadding,
@@ -723,6 +722,16 @@ class _FilterSheetState extends State<_FilterSheet> {
               _growingMethod == 'naturally_grown',
               () => _growingMethod = 'naturally_grown',
             ),
+            const SizedBox(height: AniHowSpace.cardGap),
+            Text(s.cropFilter, style: theme.textTheme.titleMedium),
+            _option(s.any, _cropTypeId == null, () => _cropTypeId = null),
+            for (final cropType in widget.cropTypes)
+              _option(
+                cropType.labelFor(language),
+                _cropTypeId == cropType.id,
+                () => _cropTypeId = cropType.id,
+                key: ValueKey('crop-${cropType.id}'),
+              ),
             const SizedBox(height: AniHowSpace.section),
             Row(
               children: [
@@ -735,6 +744,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                       setState(() {
                         _sort = 'freshest';
                         _growingMethod = null;
+                        _cropTypeId = null;
                       });
                     },
                     child: Text(s.clear),
@@ -751,6 +761,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                         _MarketFilters(
                           sort: _sort,
                           growingMethod: _growingMethod,
+                          cropTypeId: _cropTypeId,
                         ),
                       );
                     },
@@ -765,8 +776,14 @@ class _FilterSheetState extends State<_FilterSheet> {
     );
   }
 
-  Widget _option(String label, bool selected, VoidCallback select) {
+  Widget _option(
+    String label,
+    bool selected,
+    VoidCallback select, {
+    Key? key,
+  }) {
     return InkWell(
+      key: key,
       onTap: () => setState(select),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 48),

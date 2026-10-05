@@ -281,7 +281,13 @@ class _ChatCard extends StatelessWidget {
                       style: theme.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 8),
-                    StatusPill.order(order.status, strings: s),
+                    Flexible(
+                      child: StatusPill.order(
+                        order.status,
+                        strings: s,
+                        fulfillmentPreference: order.fulfillmentPreference,
+                      ),
+                    ),
                   ],
                 ),
               ),

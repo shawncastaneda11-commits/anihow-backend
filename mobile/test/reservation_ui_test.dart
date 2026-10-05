@@ -87,10 +87,18 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
 
     expect(find.text('Orders'), findsOneWidget);
     expect(find.text('Reservations'), findsOneWidget);
+    final bar = tester.widget<TabBar>(find.byType(TabBar));
+    expect(bar.labelColor, Colors.white);
+    expect(bar.unselectedLabelColor, Colors.white.withValues(alpha: 0.75));
+    expect(bar.labelStyle?.fontWeight, FontWeight.w700);
+    final indicator = bar.indicator! as UnderlineTabIndicator;
+    expect(indicator.borderSide.color, Colors.white);
+    expect(indicator.borderSide.width, 3);
 
     await tester.pumpWidget(
       _app(

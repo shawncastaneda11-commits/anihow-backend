@@ -394,6 +394,7 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
           key: isAnchor ? _anchor : ValueKey('stall-message-${message.id}'),
           message: message,
           mine: mine,
+          showOrderTag: showsOrderTag(_messages, index),
         );
       },
     );

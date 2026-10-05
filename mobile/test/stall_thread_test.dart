@@ -13,6 +13,7 @@ OrderMessage _message({
   required int id,
   String body = 'Hello',
   int? orderId,
+  String? orderNumber,
   int? listingId,
   String? listingTitle,
   String? listingPrice,
@@ -25,6 +26,7 @@ OrderMessage _message({
     authorId: 8,
     authorName: 'Nena',
     orderId: orderId,
+    orderNumber: orderNumber,
     listingId: listingId,
     listingTitle: listingTitle,
     listingPrice: listingPrice,
@@ -43,11 +45,69 @@ Widget _bubble(OrderMessage message) {
 void main() {
   testWidgets('a tagged message shows the order number', (tester) async {
     await tester.pumpWidget(
-      _bubble(_message(id: 1, orderId: 12, body: 'On my way')),
+      _bubble(
+        _message(
+          id: 1,
+          orderId: 12,
+          orderNumber: 'AH-261005-QWTJN',
+          body: 'On my way',
+        ),
+      ),
     );
 
-    expect(find.text('Order #12'), findsOneWidget);
+    expect(find.text('Order AH-261005-QWTJN'), findsOneWidget);
     expect(find.text('On my way'), findsOneWidget);
+  });
+
+  testWidgets('the order tag is only on the first message of a run', (
+    tester,
+  ) async {
+    final messages = [
+      _message(
+        id: 1,
+        orderId: 12,
+        orderNumber: 'AH-261005-QWTJN',
+        body: 'One',
+      ),
+      _message(
+        id: 2,
+        orderId: 12,
+        orderNumber: 'AH-261005-QWTJN',
+        body: 'Two',
+      ),
+      _message(
+        id: 3,
+        orderId: 13,
+        orderNumber: 'AH-261005-OTHER',
+        body: 'Three',
+      ),
+    ];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AniHowTheme.light(),
+        home: Scaffold(
+          body: Column(
+            children: [
+              for (var index = 0; index < messages.length; index++)
+                ChatMessageBubble(
+                  message: messages[index],
+                  mine: false,
+                  showOrderTag: showsOrderTag(messages, index),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Order AH-261005-QWTJN'), findsOneWidget);
+    expect(find.text('Order AH-261005-OTHER'), findsOneWidget);
+  });
+
+  testWidgets('a tagged message without a number says Order', (tester) async {
+    await tester.pumpWidget(_bubble(_message(id: 4, orderId: 9, body: 'Soon')));
+
+    expect(find.text('Order'), findsOneWidget);
   });
 
   testWidgets('a product card shows the snapshot and stays tappable', (
@@ -157,8 +217,8 @@ void main() {
       await tester.pump();
     }
 
-    expect(find.text('Order #7'), findsOneWidget);
-    final top = tester.getTopLeft(find.text('Order #7')).dy;
+    expect(find.text('Order'), findsOneWidget);
+    final top = tester.getTopLeft(find.text('Order')).dy;
     expect(top, greaterThan(0));
     expect(top, lessThan(640));
 

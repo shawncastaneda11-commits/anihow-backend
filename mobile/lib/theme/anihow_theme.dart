@@ -34,6 +34,10 @@ class AniHowColors {
   static const Color ready = Color(0xFF2E8B57);
   static const Color completed = Color(0xFF378ADD);
   static const Color cancelled = Color(0xFF888780);
+  static const Color confirmedBlue = Color(0xFF1D4ED8);
+  static const Color readyTeal = Color(0xFF0F766E);
+  static const Color completeGreen = Color(0xFF166534);
+  static const Color cancelledRed = Color(0xFFB91C1C);
 
   static const Color darkBackground = Color(0xFF121A17);
   static const Color darkCard = Color(0xFF1C2622);

@@ -10,6 +10,8 @@ import '../../theme/anihow_theme.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/notification_bell.dart';
 import '../../widgets/order_look.dart';
+import '../../widgets/order_progress.dart';
+import '../../widgets/order_status_poll.dart';
 import '../../widgets/profile_avatar_button.dart';
 import '../../widgets/status_pill.dart';
 import '../../widgets/unverified_email_banner.dart';
@@ -17,15 +19,21 @@ import '../chat/order_chat_screen.dart';
 import 'buyer_order_detail_screen.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
-  const OrderHistoryScreen({super.key});
+  const OrderHistoryScreen({super.key, this.active = true});
+
+  final bool active;
 
   @override
   State<OrderHistoryScreen> createState() => _OrderHistoryScreenState();
 }
 
-class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
+class _OrderHistoryScreenState extends State<OrderHistoryScreen>
+    with WidgetsBindingObserver, RouteAware, OrderStatusPoll {
   late Future<List<OrderRecord>> _future;
   late Future<List<ReservationRecord>> _reservations;
+
+  @override
+  bool get orderPollEnabled => widget.active;
 
   @override
   void initState() {
@@ -33,7 +41,31 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
     final api = context.read<AuthController>().api;
     _future = api.buyerOrders();
     _reservations = api.buyerReservations();
+    startOrderStatusPoll();
   }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    bindOrderStatusRoute();
+  }
+
+  @override
+  void didUpdateWidget(OrderHistoryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) {
+      pollOrderStatus(force: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    stopOrderStatusPoll();
+    super.dispose();
+  }
+
+  @override
+  Future<void> refreshPolledOrders() => _reload();
 
   Future<void> _reload() async {
     final future = context.read<AuthController>().api.buyerOrders();
@@ -70,6 +102,13 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
         title: Text(s.orderHistory),
         actions: const [NotificationBellButton()],
         bottom: TabBar(
+          labelColor: Colors.white,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w700),
+          unselectedLabelColor: Colors.white.withValues(alpha: 0.75),
+          indicator: const UnderlineTabIndicator(
+            borderSide: BorderSide(color: Colors.white, width: 3),
+          ),
+          dividerColor: Colors.transparent,
           tabs: [
             Tab(text: s.ordersTab),
             Tab(text: s.reservationsTab),
@@ -87,7 +126,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
         onRetry: _reload,
         emptyMessage: AppStrings.of(context).noOrders,
         builder: (context, items) {
-          return ListView.separated(
+          return RefreshIndicator(
+            onRefresh: _reload,
+            child: ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(
               AniHowSpace.screen,
               AniHowSpace.screen,
@@ -109,6 +151,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                 }
               },
             ),
+          ),
           );
         },
             ),
@@ -211,19 +254,19 @@ class BuyerOrderCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      StatusPill.order(order.status, strings: s),
+                      Flexible(
+                        child: StatusPill.order(
+                          order.status,
+                          strings: s,
+                          fulfillmentPreference: order.fulfillmentPreference,
+                        ),
+                      ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  OrderProgress(order: order),
                   if (location != null && location.isNotEmpty)
                     OrderMetaRow(icon: Icons.place_outlined, text: location),
-                  if (order.hasCancellationReason)
-                    OrderMetaRow(
-                      icon: Icons.info_outline,
-                      text: s.cancellationReasonText(
-                        order.cancellationReason,
-                        fallback: order.cancellationLabel,
-                      ),
-                    ),
                   if (order.hasCancellationNote)
                     OrderMetaRow(
                       icon: Icons.notes_outlined,
@@ -315,6 +358,25 @@ class BuyerReservationsList extends StatelessWidget {
   }
 }
 
+StatusPill _reservationStatus(AppStrings strings, ReservationRecord reservation) {
+  if (reservation.isActive) {
+    return StatusPill(
+      label: strings.activeReservations,
+      color: AniHowColors.pending,
+    );
+  }
+  if (reservation.status == 'cancelled') {
+    return StatusPill.order('cancelled', strings: strings);
+  }
+  return StatusPill(
+    label: strings.notificationTitle(
+      'reservation_converted',
+      strings.orderComplete,
+    ),
+    color: AniHowColors.completeGreen,
+  );
+}
+
 class _ReservationTile extends StatelessWidget {
   const _ReservationTile({
     required this.reservation,
@@ -337,7 +399,13 @@ class _ReservationTile extends StatelessWidget {
     return Card(
       child: ListTile(
         onTap: onOpen,
-        title: Text(reservation.listingName),
+        title: Row(
+          children: [
+            Expanded(child: Text(reservation.listingName)),
+            const SizedBox(width: 8),
+            _reservationStatus(s, reservation),
+          ],
+        ),
         subtitle: Text(
           '$quantity $unit · ${AniHowMoney.peso(reservation.lineTotal)}',
         ),

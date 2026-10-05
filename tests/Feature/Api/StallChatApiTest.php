@@ -308,7 +308,14 @@ class StallChatApiTest extends TestCase
                 'order_id' => $order->id,
             ])
             ->assertCreated()
-            ->assertJsonPath('data.order_id', $order->id);
+            ->assertJsonPath('data.order_id', $order->id)
+            ->assertJsonPath('data.order_number', $order->order_number);
+
+        $this->asUser($buyer)
+            ->getJson("/api/stall-chats/{$conversationId}/messages")
+            ->assertOk()
+            ->assertJsonPath('data.0.order_id', $order->id)
+            ->assertJsonPath('data.0.order_number', $order->order_number);
 
         $this->assertDatabaseHas('in_app_notifications', [
             'user_id' => $farmer->id,

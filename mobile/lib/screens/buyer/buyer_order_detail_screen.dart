@@ -12,6 +12,8 @@ import '../../widgets/async_view.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/hint_card.dart';
 import '../../widgets/order_look.dart';
+import '../../widgets/order_progress.dart';
+import '../../widgets/order_status_poll.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
 import '../../widgets/status_pill.dart';
@@ -33,7 +35,8 @@ class BuyerOrderDetailScreen extends StatefulWidget {
   State<BuyerOrderDetailScreen> createState() => _BuyerOrderDetailScreenState();
 }
 
-class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen> {
+class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen>
+    with WidgetsBindingObserver, RouteAware, OrderStatusPoll {
   late Future<OrderRecord> _future;
   final _comment = TextEditingController();
   int _rating = 0;
@@ -42,16 +45,39 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen> {
   int get _id => widget.orderId ?? widget.order!.id;
 
   @override
+  bool get orderPollEnabled => !widget.preview;
+
+  @override
+  bool get orderPollBlocked => _submitting;
+
+  @override
   void initState() {
     super.initState();
     _future = _load();
+    if (!widget.preview) {
+      startOrderStatusPoll();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!widget.preview) {
+      bindOrderStatusRoute();
+    }
   }
 
   @override
   void dispose() {
+    if (!widget.preview) {
+      stopOrderStatusPoll();
+    }
     _comment.dispose();
     super.dispose();
   }
+
+  @override
+  Future<void> refreshPolledOrders() => _reload();
 
   Future<OrderRecord> _load() {
     if (widget.preview) {
@@ -130,9 +156,14 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen> {
         onRetry: _reload,
         builder: (context, order) {
           final theme = Theme.of(context);
-          return ListView(
+          return RefreshIndicator(
+            onRefresh: _reload,
+            child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: AniHowSpace.screenPadding,
             children: [
+              OrderProgress(order: order),
+              const SizedBox(height: AniHowSpace.cardGap),
               Card(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
@@ -153,7 +184,13 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen> {
                               style: theme.textTheme.titleMedium,
                             ),
                           ),
-                          StatusPill.order(order.status, strings: s),
+                          Flexible(
+                            child: StatusPill.order(
+                              order.status,
+                              strings: s,
+                              fulfillmentPreference: order.fulfillmentPreference,
+                            ),
+                          ),
                         ],
                       ),
                       if (!order.isWalkIn)
@@ -313,6 +350,7 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen> {
                 ),
               ],
             ],
+            ),
           );
         },
       ),

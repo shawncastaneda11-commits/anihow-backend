@@ -387,7 +387,32 @@ class AppStrings {
   String get openOrders => t('Open orders', 'Buksan ang mga order');
   String get chatWithStall => t('Chat with stall', 'Makipag-chat sa tindahan');
   String get messageSeller => t('Message seller', 'Magmensahe sa tindero');
-  String orderTag(int id) => t('Order #$id', 'Order #$id');
+  String orderTag(String? number) {
+    final value = number?.trim() ?? '';
+    if (value.isEmpty) {
+      return t('Order', 'Order');
+    }
+    return t('Order $value', 'Order $value');
+  }
+
+  String get stepPending => t('Pending', 'Nakabinbin');
+  String get stepPendingHint => t(
+    "Waiting for the farmer's approval",
+    'Hinihintay ang apruba ng magsasaka',
+  );
+  String get stepConfirmed => t('Confirmed', 'Kumpirmado');
+  String get stepConfirmedHint => t(
+    'The farmer approved your order',
+    'Inaprubahan ng magsasaka ang iyong order',
+  );
+  String get readyForPickup => t('Ready for pickup', 'Handa nang kunin');
+  String get outForDelivery => t('Out for delivery', 'Inihahatid na');
+  String get orderComplete => t('Order complete', 'Tapos na ang order');
+  String get orderCompleteHint => t(
+    'Your order is fulfilled',
+    'Natupad na ang iyong order',
+  );
+  String get cropFilter => t('Crop', 'Ani');
   String get chatWithBuyer => t('Chat with buyer', 'Makipag-chat sa buyer');
   String get order => t('Order', 'Order');
   String get you => t('You', 'Ikaw');

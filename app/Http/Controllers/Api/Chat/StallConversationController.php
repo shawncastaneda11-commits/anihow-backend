@@ -62,7 +62,7 @@ class StallConversationController extends Controller
         $this->authorize('view', $stallConversation);
 
         $messages = $stallConversation->messages()
-            ->with('author.roles')
+            ->with(['author.roles', 'order:id,order_number'])
             ->when(
                 $request->filled('after_id'),
                 fn ($query) => $query->where('id', '>', $request->integer('after_id')),

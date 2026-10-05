@@ -17,15 +17,32 @@ class StatusPill extends StatelessWidget {
   final Color color;
   final Color? background;
 
-  factory StatusPill.order(String status, {String? label, AppStrings? strings}) {
+  factory StatusPill.order(
+    String status, {
+    String? label,
+    AppStrings? strings,
+    String? fulfillmentPreference,
+  }) {
     final normalized = status.toLowerCase();
+    final readyLabel = fulfillmentPreference == 'seller_delivers'
+        ? strings?.outForDelivery ?? 'Out for delivery'
+        : strings?.readyForPickup ?? 'Ready for pickup';
     final mapped = switch (normalized) {
-      'placed' => (AniHowColors.pending, label ?? strings?.placed ?? 'Placed'),
-      'confirmed' => (AniHowColors.sage, label ?? strings?.confirmed ?? 'Confirmed'),
-      'ready' => (AniHowColors.ready, label ?? strings?.ready ?? 'Ready'),
-      'completed' => (AniHowColors.completed, label ?? strings?.completed ?? 'Completed'),
-      'cancelled' => (AniHowColors.cancelled, label ?? strings?.cancelled ?? 'Cancelled'),
-      _ => (AniHowColors.cancelled, label ?? status),
+      'placed' => (AniHowColors.pending, label ?? strings?.stepPending ?? 'Pending'),
+      'confirmed' => (
+        AniHowColors.confirmedBlue,
+        label ?? strings?.stepConfirmed ?? 'Confirmed',
+      ),
+      'ready' => (AniHowColors.readyTeal, label ?? readyLabel),
+      'completed' => (
+        AniHowColors.completeGreen,
+        label ?? strings?.orderComplete ?? 'Order complete',
+      ),
+      'cancelled' => (
+        AniHowColors.cancelledRed,
+        label ?? strings?.cancelled ?? 'Cancelled',
+      ),
+      _ => (AniHowColors.cancelledRed, label ?? status),
     };
     return StatusPill(label: mapped.$2, color: mapped.$1);
   }
@@ -74,6 +91,9 @@ class StatusPill extends StatelessWidget {
       ),
       child: Text(
         label,
+        maxLines: 2,
+        softWrap: true,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           color: _labelColor(context),
           fontWeight: FontWeight.w700,
@@ -99,11 +119,15 @@ class StatusPill extends StatelessWidget {
     // Lightness chosen so text on the 16% tint over card (≥4.5:1 light,
     // readable dark). Same hue; only lightness changes.
     final lightness = switch (color) {
-      AniHowColors.pending => dark ? 0.480 : 0.325,
+      AniHowColors.pending => dark ? 0.780 : 0.325,
       AniHowColors.sage => dark ? 0.540 : 0.355,
       AniHowColors.ready => dark ? 0.455 : 0.305,
       AniHowColors.completed => dark ? 0.630 : 0.415,
       AniHowColors.cancelled => dark ? 0.610 : 0.405,
+      AniHowColors.confirmedBlue => dark ? 0.800 : 0.280,
+      AniHowColors.readyTeal => dark ? 0.800 : 0.220,
+      AniHowColors.completeGreen => dark ? 0.800 : 0.220,
+      AniHowColors.cancelledRed => dark ? 0.820 : 0.300,
       _ => dark ? (hsl.lightness + 0.12).clamp(0.2, 0.85) : (hsl.lightness - 0.12).clamp(0.2, 0.85),
     };
     return hsl.withLightness(lightness).toColor();

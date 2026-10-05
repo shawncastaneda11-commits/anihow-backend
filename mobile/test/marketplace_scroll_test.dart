@@ -212,12 +212,24 @@ void main() {
     await tester.pumpWidget(_app(api));
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const ValueKey('crop-3')), findsNothing);
+
     await tester.tap(find.byKey(const ValueKey('category-value_added')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('marketplace-filter')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('crop-3')));
+    await tester.tap(find.text('Apply'));
     await tester.pumpAndSettle();
 
     expect(api.category, 'value_added');
     expect(api.cropTypeId, 3);
+    final badge = tester.widget<Badge>(
+      find.descendant(
+        of: find.byKey(const Key('marketplace-filter')),
+        matching: find.byType(Badge),
+      ),
+    );
+    expect(badge.isLabelVisible, isTrue);
   });
 }

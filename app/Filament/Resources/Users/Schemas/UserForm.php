@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use App\Enums\Permission;
 use App\Enums\Role;
 use App\Enums\UserStatus;
 use App\Models\User;
@@ -53,8 +54,9 @@ class UserForm
                     ->native(false)
                     ->preload()
                     ->live()
+                    ->visible(fn (): bool => self::canManageAccounts())
                     ->disabled(fn (?User $record): bool => $record?->isSuperAdmin() ?? false)
-                    ->dehydrated(fn (?User $record): bool => ! ($record?->isSuperAdmin() ?? false))
+                    ->dehydrated(fn (?User $record): bool => self::canManageAccounts() && ! ($record?->isSuperAdmin() ?? false))
                     ->helperText('One account holds one role. Super Admin is seeded and cannot be assigned from this form.'),
 
                 /*
@@ -68,14 +70,17 @@ class UserForm
                     ->searchable()
                     ->preload()
                     ->native(false)
-                    ->visible(fn (Get $get): bool => self::isFarmScoped($get))
-                    ->required(fn (Get $get): bool => self::isFarmScoped($get))
+                    ->visible(fn (Get $get): bool => self::canManageAccounts() && self::isFarmScoped($get))
+                    ->required(fn (Get $get): bool => self::canManageAccounts() && self::isFarmScoped($get))
+                    ->dehydrated(fn (Get $get): bool => self::canManageAccounts() && self::isFarmScoped($get))
                     ->helperText('Content Editors and Farmer-Sellers belong to one farm. One Content Editor per farm.'),
 
                 Select::make('status')
                     ->options(UserStatus::options())
                     ->default(UserStatus::Pending->value)
-                    ->required()
+                    ->visible(fn (): bool => self::canManageAccounts())
+                    ->required(fn (): bool => self::canManageAccounts())
+                    ->dehydrated(fn (): bool => self::canManageAccounts())
                     ->native(false)
                     ->helperText('Only active accounts can sign in. Farmer-seller registrations arrive pending.'),
 
@@ -109,6 +114,11 @@ class UserForm
                     ->required(fn (string $operation): bool => $operation === 'create')
                     ->dehydrated(false),
             ]);
+    }
+
+    private static function canManageAccounts(): bool
+    {
+        return auth()->user()?->can(Permission::ManageAccounts->value) ?? false;
     }
 
     private static function isFarmScoped(Get $get): bool

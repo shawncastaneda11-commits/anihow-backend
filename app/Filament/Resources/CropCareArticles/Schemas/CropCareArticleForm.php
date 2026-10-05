@@ -4,6 +4,7 @@ namespace App\Filament\Resources\CropCareArticles\Schemas;
 
 use App\Enums\ArticleCategory;
 use App\Enums\ArticleStatus;
+use App\Enums\Permission;
 use App\Support\ImageVariants;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
@@ -12,6 +13,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Unique;
 
 class CropCareArticleForm
 {
@@ -28,6 +30,20 @@ class CropCareArticleForm
                 TextInput::make('slug')
                     ->required()
                     ->maxLength(220)
+                    ->unique(
+                        ignoreRecord: true,
+                        modifyRuleUsing: function (Unique $rule, TextInput $component): Unique {
+                            $user = auth()->user();
+                            $farmId = ($user?->can(Permission::ModerateArticles->value) ?? false)
+                                ? $component->getRecord()?->getAttribute('farm_id')
+                                : $user?->farm_id;
+
+                            return $rule->where('farm_id', $farmId);
+                        },
+                    )
+                    ->validationMessages([
+                        'unique' => 'This farm already has an article with this slug.',
+                    ])
                     ->helperText('Unique within this farm. Two farms may both publish a guide with the same title.'),
 
                 Select::make('category')

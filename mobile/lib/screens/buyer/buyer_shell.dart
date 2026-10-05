@@ -108,12 +108,13 @@ class _BuyerShellState extends State<BuyerShell> {
             },
             destinations: [
               NavigationDestination(
-                icon: const Icon(Icons.storefront),
-                selectedIcon: const Icon(Icons.storefront),
+                icon: const Icon(Icons.agriculture_outlined),
+                selectedIcon: const Icon(Icons.agriculture),
                 label: s.shops,
               ),
               NavigationDestination(
                 icon: const Icon(Icons.storefront_outlined),
+                selectedIcon: const Icon(Icons.storefront),
                 label: s.market,
               ),
               NavigationDestination(

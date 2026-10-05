@@ -18,16 +18,8 @@ if ($phpCmd) {
     $Php = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Packages\PHP.PHP.8.4_Microsoft.Winget.Source_8wekyb3d8bbwe\php.exe'
 }
 
-$env:ANDROID_HOME = Join-Path $env:LOCALAPPDATA 'Android\Sdk'
-$env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
-$env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
-$env:Path = @(
-    'C:\flutter\bin'
-    (Join-Path $env:ANDROID_HOME 'platform-tools')
-    (Join-Path $env:ANDROID_HOME 'emulator')
-    (Join-Path $env:JAVA_HOME 'bin')
-    $env:Path
-) -join ';'
+. (Join-Path $PSScriptRoot 'anihow-env.ps1')
+Initialize-AniHowTools
 
 function Test-PortListening([int]$Port) {
     try {

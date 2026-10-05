@@ -385,6 +385,10 @@ class _OrderCard extends StatelessWidget {
                       icon: Icons.handshake_outlined,
                       text: order.fulfillmentLabel!,
                     ),
+                  OrderMetaRow(
+                    icon: Icons.payments_outlined,
+                    text: s.paymentMethodLabel(order.paymentMethod),
+                  ),
                   if (order.hasCancellationReason)
                     OrderMetaRow(
                       icon: Icons.info_outline,
@@ -655,6 +659,10 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
                     icon: Icons.handshake_outlined,
                     text: order.fulfillmentLabel!,
                   ),
+                OrderMetaRow(
+                  icon: Icons.payments_outlined,
+                  text: s.paymentMethodLabel(order.paymentMethod),
+                ),
                 if (order.fulfillmentNote != null &&
                     order.fulfillmentNote!.isNotEmpty)
                   OrderMetaRow(
@@ -867,9 +875,15 @@ class _AmountReceivedDialogState extends State<_AmountReceivedDialog> {
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     return AlertDialog(
-      title: Text(s.cashReceived),
+      title: Text(
+        widget.order.paymentMethod == 'online_transfer'
+            ? s.amountReceivedOnline
+            : s.cashReceived,
+      ),
       content: AniHowField(
-        label: s.amountReceived,
+        label: widget.order.paymentMethod == 'online_transfer'
+            ? s.amountReceivedOnline
+            : s.amountReceived,
         child: TextField(
           controller: _controller,
           autofocus: true,

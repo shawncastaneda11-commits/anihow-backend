@@ -95,10 +95,12 @@ class CartController extends ChangeNotifier {
   Future<List<OrderRecord>> checkout({
     required String fulfillmentPreference,
     String? fulfillmentNote,
+    List<Map<String, dynamic>> payments = const [],
   }) async {
     final orders = await _auth.api.checkout(
       fulfillmentPreference: fulfillmentPreference,
       fulfillmentNote: fulfillmentNote,
+      payments: payments,
     );
     snapshot = const CartSnapshot();
     notifyListeners();

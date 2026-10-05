@@ -2,17 +2,21 @@
 
 namespace App\Services;
 
+use App\Actions\Chat\SendStallMessage;
 use App\Actions\Reservations\OpenDueReservations;
 use App\Enums\FulfillmentPreference;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Models\CartItem;
 use App\Models\Listing;
 use App\Models\Order;
+use App\Models\StallConversation;
 use App\Models\User;
 use App\Support\InAppNotifier;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 /**
  * Turns a cart into orders.
@@ -38,6 +42,7 @@ class CheckoutService
     ) {}
 
     /**
+     * @param  array<int, array{seller_id?: int, method?: string}>  $payments
      * @return Collection<int, Order>
      *
      * @throws ValidationException
@@ -46,6 +51,7 @@ class CheckoutService
         User $buyer,
         FulfillmentPreference $preference,
         ?string $fulfillmentNote = null,
+        array $payments = [],
     ): Collection {
         $listingIds = CartItem::query()
             ->where('buyer_id', $buyer->id)
@@ -61,7 +67,7 @@ class CheckoutService
 
         $removed = CartItem::pruneUnavailable($buyer);
 
-        return DB::transaction(function () use ($buyer, $preference, $fulfillmentNote, $removed): Collection {
+        return DB::transaction(function () use ($buyer, $preference, $fulfillmentNote, $removed, $payments): Collection {
             $cartItems = CartItem::query()
                 ->where('buyer_id', $buyer->id)
                 ->with(['listing.cropType', 'listing.farmerSeller', 'listing.activeTawadRule'])
@@ -87,13 +93,16 @@ class CheckoutService
                 ]);
             }
 
+            $choices = $this->paymentChoices($cartItems, $payments);
+
             $orders = $cartItems
                 ->groupBy(fn (CartItem $item): int => (int) $item->listing->farmer_seller_id)
-                ->map(fn (Collection $items): Order => $this->createOrder(
+                ->map(fn (Collection $items, int|string $sellerId): Order => $this->createOrder(
                     $buyer,
                     $items,
                     $preference,
                     $fulfillmentNote,
+                    $choices[(int) $sellerId] ?? PaymentMethod::CashOnHandover,
                 ))
                 ->values();
 
@@ -111,6 +120,7 @@ class CheckoutService
         Collection $items,
         FulfillmentPreference $preference,
         ?string $fulfillmentNote,
+        PaymentMethod $paymentMethod,
     ): Order {
         $seller = $items->first()->listing->farmerSeller;
 
@@ -137,6 +147,7 @@ class CheckoutService
             $lines,
             $preference,
             $fulfillmentNote,
+            paymentMethod: $paymentMethod,
         );
     }
 
@@ -157,9 +168,14 @@ class CheckoutService
         FulfillmentPreference $preference,
         ?string $fulfillmentNote,
         ?int $reservationId = null,
+        PaymentMethod $paymentMethod = PaymentMethod::CashOnHandover,
     ): Order {
         $subtotal = array_sum(array_column($lines, 'line_subtotal'));
         $tawadTotal = array_sum(array_column($lines, 'tawad_amount'));
+
+        if ($reservationId !== null) {
+            $paymentMethod = PaymentMethod::CashOnHandover;
+        }
 
         $order = Order::create([
             'order_number' => $this->orderNumbers->generate(),
@@ -169,7 +185,7 @@ class CheckoutService
             'status' => OrderStatus::Placed,
             'fulfillment_preference' => $preference,
             'fulfillment_note' => $fulfillmentNote,
-            'payment_method' => 'cash_on_handover',
+            'payment_method' => $paymentMethod->value,
             'subtotal' => $subtotal,
             'tawad_total' => $tawadTotal,
             'total' => $subtotal - $tawadTotal,
@@ -186,7 +202,76 @@ class CheckoutService
             $this->notifier->orderPlaced($seller, $order);
         }
 
+        if ($paymentMethod === PaymentMethod::OnlineTransfer) {
+            $this->askSellerForQr($buyer, $order);
+        }
+
         return $order;
+    }
+
+    /**
+     * Sellers not listed stay on cash. Online payment is refused when the
+     * seller has turned it off. Nothing here moves money.
+     *
+     * @param  Collection<int, CartItem>  $cartItems
+     * @param  array<int, array{seller_id?: int, method?: string}>  $payments
+     * @return array<int, PaymentMethod>
+     */
+    private function paymentChoices(Collection $cartItems, array $payments): array
+    {
+        $requested = [];
+
+        foreach ($payments as $payment) {
+            $sellerId = (int) ($payment['seller_id'] ?? 0);
+            $method = PaymentMethod::tryFrom((string) ($payment['method'] ?? ''));
+
+            if ($sellerId > 0 && $method !== null) {
+                $requested[$sellerId] = $method;
+            }
+        }
+
+        $choices = [];
+
+        foreach ($cartItems->groupBy(fn (CartItem $item): int => (int) $item->listing->farmer_seller_id) as $sellerId => $items) {
+            $sellerId = (int) $sellerId;
+            $method = $requested[$sellerId] ?? PaymentMethod::CashOnHandover;
+            $seller = $items->first()->listing->farmerSeller;
+
+            if ($method === PaymentMethod::OnlineTransfer && $seller?->acceptsOnlinePayment() !== true) {
+                $shop = $seller?->shop_name ?: $seller?->name ?: 'This seller';
+
+                throw ValidationException::withMessages([
+                    'payments' => "{$shop} accepts cash only.",
+                ]);
+            }
+
+            $choices[$sellerId] = $method;
+        }
+
+        return $choices;
+    }
+
+    /**
+     * One note from the buyer, tagged to this order. A chat failure does not
+     * undo the order.
+     */
+    private function askSellerForQr(User $buyer, Order $order): void
+    {
+        try {
+            $conversation = StallConversation::query()->firstOrCreate([
+                'buyer_id' => $buyer->id,
+                'farmer_seller_id' => $order->farmer_seller_id,
+            ]);
+
+            $total = number_format((float) $order->total, 2, '.', '');
+
+            app(SendStallMessage::class)->handle($buyer, $conversation, [
+                'body' => "Hi! I chose online payment for Order #{$order->order_number} (₱{$total}). Please send your GCash/Maya QR here.",
+                'order_id' => $order->id,
+            ]);
+        } catch (Throwable $exception) {
+            report($exception);
+        }
     }
 
     /**

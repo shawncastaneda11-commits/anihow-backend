@@ -202,6 +202,10 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen> {
                           icon: Icons.handshake_outlined,
                           text: order.fulfillmentLabel!,
                         ),
+                      OrderMetaRow(
+                        icon: Icons.payments_outlined,
+                        text: s.paymentMethodLabel(order.paymentMethod),
+                      ),
                       if (order.fulfillmentNote != null &&
                           order.fulfillmentNote!.isNotEmpty)
                         OrderMetaRow(

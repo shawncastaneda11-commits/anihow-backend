@@ -14,6 +14,9 @@ class OrderQuantityStepper extends StatefulWidget {
     required this.step,
     required this.unit,
     this.max,
+    this.lineId,
+    this.onChanged,
+    this.onValueTap,
   });
 
   final TextEditingController controller;
@@ -21,6 +24,9 @@ class OrderQuantityStepper extends StatefulWidget {
   final double step;
   final String unit;
   final double? max;
+  final int? lineId;
+  final ValueChanged<String>? onChanged;
+  final VoidCallback? onValueTap;
 
   @override
   State<OrderQuantityStepper> createState() => _OrderQuantityStepperState();
@@ -58,7 +64,12 @@ class _OrderQuantityStepperState extends State<OrderQuantityStepper> {
       double.tryParse(widget.controller.text.trim()) ?? widget.min;
 
   void _set(double value) {
-    widget.controller.text = formatOrderAmount(value);
+    final text = formatOrderAmount(value);
+    if (widget.controller.text == text) {
+      return;
+    }
+    widget.controller.text = text;
+    widget.onChanged?.call(text);
   }
 
   void _nudge(int direction) {
@@ -101,40 +112,53 @@ class _OrderQuantityStepperState extends State<OrderQuantityStepper> {
     return next <= orderHundredths(ceiling);
   }
 
+  Widget _valueField() {
+    final whole = sellsWhole(widget.unit);
+    final valueKey = ValueKey(
+      'order-qty-field${widget.lineId == null ? '' : '-${widget.lineId}'}',
+    );
+    if (widget.onValueTap != null) {
+      return TextButton(
+        key: valueKey,
+        onPressed: widget.onValueTap,
+        style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+        child: Text(formatOrderAmount(_current)),
+      );
+    }
+    return TextField(
+      key: valueKey,
+      controller: widget.controller,
+      textAlign: TextAlign.center,
+      keyboardType: whole
+          ? TextInputType.number
+          : const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: whole
+          ? [FilteringTextInputFormatter.digitsOnly]
+          : const [],
+      decoration: const InputDecoration(isDense: true),
+      onTapOutside: (_) => _snap(),
+      onEditingComplete: _snap,
+      onSubmitted: (_) => _snap(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
-    final whole = sellsWhole(widget.unit);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
           children: [
             IconButton(
-              key: const ValueKey('order-qty-minus'),
+              key: ValueKey('order-qty-minus${widget.lineId == null ? '' : '-${widget.lineId}'}'),
               onPressed: _canDecrease ? () => _nudge(-1) : null,
               icon: const Icon(Icons.remove),
               style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
             ),
-            Expanded(
-              child: TextField(
-                key: const ValueKey('order-qty-field'),
-                controller: widget.controller,
-                textAlign: TextAlign.center,
-                keyboardType: whole
-                    ? TextInputType.number
-                    : const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: whole
-                    ? [FilteringTextInputFormatter.digitsOnly]
-                    : const [],
-                decoration: const InputDecoration(isDense: true),
-                onTapOutside: (_) => _snap(),
-                onEditingComplete: _snap,
-                onSubmitted: (_) => _snap(),
-              ),
-            ),
+            Expanded(child: _valueField()),
             IconButton(
-              key: const ValueKey('order-qty-plus'),
+              key: ValueKey('order-qty-plus${widget.lineId == null ? '' : '-${widget.lineId}'}'),
               onPressed: _canIncrease ? () => _nudge(1) : null,
               icon: const Icon(Icons.add),
               style: IconButton.styleFrom(minimumSize: const Size(48, 48)),

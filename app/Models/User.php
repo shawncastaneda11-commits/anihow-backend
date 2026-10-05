@@ -38,6 +38,7 @@ use Spatie\Permission\Traits\HasRoles;
     'shop_name',
     'bio',
     'contact',
+    'accepts_online_payment',
     'avatar_path',
     'cover_photo_path',
     'password',
@@ -69,6 +70,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'status' => UserStatus::class,
+            'accepts_online_payment' => 'boolean',
             'approved_at' => 'datetime',
             'suspended_at' => 'datetime',
         ];
@@ -127,6 +129,15 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     public function isActive(): bool
     {
         return $this->status === UserStatus::Active;
+    }
+
+    /**
+     * Online payment only records the buyer's choice. The seller sends their
+     * own QR in chat. Missing means the column default, which is on.
+     */
+    public function acceptsOnlinePayment(): bool
+    {
+        return $this->accepts_online_payment !== false;
     }
 
     public function isPending(): bool

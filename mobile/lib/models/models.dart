@@ -282,6 +282,7 @@ class ListingItem {
     this.minOrderQuantity = 1,
     this.orderStep = 1,
     this.sellableQuantity,
+    this.acceptsOnlinePayment = true,
   });
 
   final int id;
@@ -317,6 +318,7 @@ class ListingItem {
   final double minOrderQuantity;
   final double orderStep;
   final String? sellableQuantity;
+  final bool acceptsOnlinePayment;
 
   String get name => title;
 
@@ -382,6 +384,7 @@ class ListingItem {
       minOrderQuantity: minOrderQuantity,
       orderStep: orderStep,
       sellableQuantity: sellableQuantity,
+      acceptsOnlinePayment: acceptsOnlinePayment,
     );
   }
 
@@ -446,7 +449,22 @@ class ListingItem {
       minOrderQuantity: _asDouble(json['min_order_quantity']) ?? 1,
       orderStep: _asDouble(json['order_step']) ?? 1,
       sellableQuantity: json['sellable_quantity']?.toString(),
+      acceptsOnlinePayment: _acceptsOnline(sellerMap?['accepts_online_payment']),
     );
+  }
+
+  static bool _acceptsOnline(Object? value) {
+    if (value == null) {
+      return true;
+    }
+    if (value is bool) {
+      return value;
+    }
+    if (value is num) {
+      return value != 0;
+    }
+    final text = value.toString().toLowerCase();
+    return text != 'false' && text != '0';
   }
 
   static double? _asDouble(Object? value) {
@@ -707,6 +725,8 @@ class OrderRecord {
   String get paymentLabel =>
       paymentMethod == null || paymentMethod == 'cash_on_handover'
       ? 'Cash on handover'
+      : paymentMethod == 'online_transfer'
+      ? "Online payment (seller's QR)"
       : paymentMethod!;
 
   bool canAdvanceTo(String next) {
@@ -844,6 +864,10 @@ class SellerCartGroup {
   double get tawadTotal => _sum((item) => item.tawadAmount);
 
   double get total => _sum((item) => item.lineTotal);
+
+  bool get acceptsOnlinePayment =>
+      items.isEmpty ||
+      items.every((item) => item.listing?.acceptsOnlinePayment ?? true);
 
   double _sum(String Function(CartLine) read) {
     return items.fold<double>(
@@ -1086,6 +1110,7 @@ class ShopProfile {
     this.farmBarangay,
     this.farmMunicipality,
     this.farmIsActive = false,
+    this.acceptsOnlinePayment = true,
     this.isFavorited = false,
     this.distanceKm,
   });
@@ -1106,6 +1131,7 @@ class ShopProfile {
   final String? farmBarangay;
   final String? farmMunicipality;
   final bool farmIsActive;
+  final bool acceptsOnlinePayment;
   final bool isFavorited;
   final double? distanceKm;
 
@@ -1141,6 +1167,9 @@ class ShopProfile {
           (farmMap['is_active'] == true ||
               farmMap['is_active'] == 1 ||
               farmMap['is_active'] == '1'),
+      acceptsOnlinePayment: ListingItem._acceptsOnline(
+        json['accepts_online_payment'],
+      ),
       isFavorited: json['is_favorited'] == true || json['is_favorited'] == 1,
       distanceKm: ListingItem._asDouble(json['distance_km']),
     );
@@ -1164,6 +1193,7 @@ class ShopProfile {
       farmBarangay: farmBarangay,
       farmMunicipality: farmMunicipality,
       farmIsActive: farmIsActive,
+      acceptsOnlinePayment: acceptsOnlinePayment,
       isFavorited: isFavorited ?? this.isFavorited,
       distanceKm: distanceKm,
     );

@@ -6,6 +6,8 @@ class CartRequests {
 
   static const buyerPickup = 'buyer_pickup';
   static const sellerDelivers = 'seller_delivers';
+  static const cashOnHandover = 'cash_on_handover';
+  static const onlineTransfer = 'online_transfer';
 
   static String cartItemPath(int id) => '/buyer/cart/$id';
 
@@ -28,10 +30,13 @@ class CartRequests {
   static Map<String, dynamic> checkout({
     required String fulfillmentPreference,
     String? fulfillmentNote,
+    List<Map<String, dynamic>> payments = const [],
   }) {
     return {
       'fulfillment_preference': fulfillmentPreference,
-      if (fulfillmentNote != null && fulfillmentNote.isNotEmpty) 'fulfillment_note': fulfillmentNote,
+      if (fulfillmentNote != null && fulfillmentNote.isNotEmpty)
+        'fulfillment_note': fulfillmentNote,
+      if (payments.isNotEmpty) 'payments': payments,
     };
   }
 }

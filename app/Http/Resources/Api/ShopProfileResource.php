@@ -31,6 +31,7 @@ class ShopProfileResource extends JsonResource
                     $request,
                 ),
             ),
+            'accepts_online_payment' => $this->acceptsOnlinePayment(),
             'contact' => $this->when(
                 $request->user() !== null && (int) $request->user()->id === (int) $this->id,
                 fn (): ?string => $this->shopContact(),

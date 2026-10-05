@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -8,6 +10,7 @@ import '../../state/cart_controller.dart';
 import '../../state/preferences_controller.dart';
 import '../../support/crop_language.dart';
 import '../../support/order_quantity.dart';
+import '../../support/walk_in_quote.dart';
 import '../../theme/anihow_space.dart';
 import '../../state/auth_controller.dart';
 import '../../widgets/chat_with_stall_button.dart';
@@ -27,6 +30,9 @@ class CartScreen extends StatefulWidget {
 
 class _CartScreenState extends State<CartScreen> {
   final Set<int> _acting = {};
+  final Map<int, String> _quantities = {};
+  final Map<int, String> _saved = {};
+  final Map<int, Timer> _timers = {};
 
   @override
   void initState() {
@@ -34,6 +40,14 @@ class _CartScreenState extends State<CartScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<CartController>().reload();
     });
+  }
+
+  @override
+  void dispose() {
+    for (final timer in _timers.values) {
+      timer.cancel();
+    }
+    super.dispose();
   }
 
   Future<void> _run(int id, Future<void> Function() action) async {
@@ -63,16 +77,67 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Future<void> _editQuantity(CartLine item) async {
+    final current = _display(item);
     final next = await showDialog<String>(
       context: context,
-      builder: (_) => CartQuantityDialog(item: item),
+      builder: (_) => CartQuantityDialog(item: current),
     );
-    if (!mounted || next == null || next.isEmpty || next == item.quantity) {
+    if (!mounted || next == null || next.isEmpty || next == current.quantity) {
       return;
     }
-    await _run(
-      item.id,
-      () => context.read<CartController>().updateQuantity(item.id, next),
+    _queue(item, next);
+  }
+
+  void _queue(CartLine item, String next) {
+    _saved.putIfAbsent(item.id, () => item.quantity);
+    setState(() => _quantities[item.id] = next);
+    _timers[item.id]?.cancel();
+    _timers[item.id] = Timer(const Duration(milliseconds: 600), () {
+      _commit(item.id, next);
+    });
+  }
+
+  Future<void> _commit(int id, String next) async {
+    final saved = _saved[id];
+    await _run(id, () async {
+      try {
+        await context.read<CartController>().updateQuantity(id, next);
+        if (mounted) {
+          setState(() {
+            _quantities.remove(id);
+            _saved.remove(id);
+          });
+        }
+      } on ApiException catch (error) {
+        if (mounted) {
+          setState(() => _quantities[id] = saved ?? next);
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(error.message)));
+        }
+      }
+    });
+  }
+
+  CartLine _display(CartLine item) {
+    final quantity = _quantities[item.id];
+    if (quantity == null || quantity == item.quantity) {
+      return item;
+    }
+    final listing = item.listing;
+    final quote = listing == null
+        ? null
+        : WalkInQuote.forListing(listing, quantity);
+    if (quote == null) {
+      return item;
+    }
+    return CartLine(
+      id: item.id,
+      quantity: quantity,
+      listedPrice: item.listedPrice,
+      lineSubtotal: quote.listed.toString(),
+      tawadAmount: quote.tawad.toString(),
+      lineTotal: quote.total.toString(),
+      listing: listing,
     );
   }
 
@@ -112,7 +177,15 @@ class _CartScreenState extends State<CartScreen> {
     if (cart.isEmpty) {
       return Center(child: Text(s.emptyCart));
     }
-    final groups = cart.snapshot.groupsBySeller;
+    final groups = cart.snapshot.groupsBySeller
+        .map(
+          (group) => SellerCartGroup(
+            sellerId: group.sellerId,
+            sellerName: group.sellerName,
+            items: [for (final item in group.items) _display(item)],
+          ),
+        )
+        .toList();
     final listed = groups.fold<double>(
       0,
       (sum, group) => sum + group.listedSubtotal,
@@ -159,24 +232,13 @@ class _CartScreenState extends State<CartScreen> {
                       ),
                     const SizedBox(height: AniHowSpace.cardGap),
                     for (final item in group.items)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(item.listingName),
-                        subtitle: Text(
-                          [
-                            if (item.cropLabel(language) != null)
-                              item.cropLabel(language)!,
-                            '${item.quantity}${item.unitLabel.isEmpty ? '' : ' ${item.unitLabel}'}',
-                          ].join(' · '),
-                        ),
-                        trailing: IconButton(
-                          tooltip: s.remove,
-                          onPressed: _acting.contains(item.id)
-                              ? null
-                              : () => _run(item.id, () => cart.remove(item.id)),
-                          icon: const Icon(Icons.delete_outline),
-                        ),
-                        onTap: () => _editQuantity(item),
+                      _CartLine(
+                        item: item,
+                        language: language,
+                        busy: _acting.contains(item.id),
+                        onQuantity: (next) => _queue(item, next),
+                        onEdit: () => _editQuantity(item),
+                        onRemove: () => _run(item.id, () => cart.remove(item.id)),
                       ),
                     const Divider(height: 20),
                     OrderTotalHero(
@@ -193,6 +255,115 @@ class _CartScreenState extends State<CartScreen> {
             const SizedBox(height: AniHowSpace.section),
           ],
           _CartOrderSummary(listed: listed, tawad: tawad, total: total),
+        ],
+      ),
+    );
+  }
+}
+
+class _CartLine extends StatefulWidget {
+  const _CartLine({
+    required this.item,
+    required this.language,
+    required this.busy,
+    required this.onQuantity,
+    required this.onEdit,
+    required this.onRemove,
+  });
+
+  final CartLine item;
+  final CropLanguage language;
+  final bool busy;
+  final ValueChanged<String> onQuantity;
+  final VoidCallback onEdit;
+  final VoidCallback onRemove;
+
+  @override
+  State<_CartLine> createState() => _CartLineState();
+}
+
+class _CartLineState extends State<_CartLine> {
+  late final TextEditingController _controller;
+  bool _applying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.item.quantity);
+  }
+
+  @override
+  void didUpdateWidget(_CartLine oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.item.quantity != _controller.text) {
+      _applying = true;
+      _controller.text = widget.item.quantity;
+      _applying = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _changed(String next) {
+    if (_applying || next == widget.item.quantity) {
+      return;
+    }
+    widget.onQuantity(next);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final item = widget.item;
+    final listing = item.listing;
+    final crop = item.cropLabel(widget.language);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(item.listingName, style: Theme.of(context).textTheme.titleSmall),
+          if (crop != null)
+            Text(crop, style: Theme.of(context).textTheme.bodyMedium),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: listing == null
+                    ? Text(item.quantity)
+                    : OrderQuantityStepper(
+                        controller: _controller,
+                        min: listing.minOrderQuantity,
+                        step: listing.orderStep,
+                        unit: listing.unit ?? item.unitLabel,
+                        max: double.tryParse(
+                          listing.sellableQuantity ?? listing.quantityAvailable,
+                        ),
+                        lineId: item.id,
+                        onChanged: _changed,
+                        onValueTap: widget.onEdit,
+                      ),
+              ),
+              const SizedBox(width: 8),
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  AniHowMoney.peso(item.lineTotal),
+                  key: ValueKey('cart-line-total-${item.id}'),
+                ),
+              ),
+              IconButton(
+                tooltip: s.remove,
+                onPressed: widget.busy ? null : widget.onRemove,
+                icon: const Icon(Icons.delete_outline),
+                style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
+              ),
+            ],
+          ),
         ],
       ),
     );

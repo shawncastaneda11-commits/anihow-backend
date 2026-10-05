@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Orders\Schemas;
 
+use App\Enums\PaymentMethod;
 use App\Models\Order;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
@@ -38,11 +39,25 @@ class OrderForm
                     ->rows(2)
                     ->disabled()
                     ->columnSpanFull(),
+                TextInput::make('payment_method')
+                    ->label('Payment')
+                    ->formatStateUsing(function (mixed $state): string {
+                        $value = $state instanceof PaymentMethod ? $state->value : (string) $state;
+
+                        return PaymentMethod::tryFrom($value)?->label() ?? $value;
+                    })
+                    ->disabled(),
                 TextInput::make('subtotal')->prefix('PHP')->disabled(),
                 TextInput::make('tawad_total')->label('Tawad')->prefix('PHP')->disabled(),
                 TextInput::make('total')->prefix('PHP')->disabled(),
                 TextInput::make('amount_received')
-                    ->label('Cash received at handover')
+                    ->label(function (?Order $record): string {
+                        $value = $record?->paymentMethodValue();
+
+                        return $value === PaymentMethod::OnlineTransfer->value
+                            ? 'Amount received (online)'
+                            : 'Cash received at handover';
+                    })
                     ->prefix('PHP')
                     ->disabled(),
                 Textarea::make('cancellation_note')

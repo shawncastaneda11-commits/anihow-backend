@@ -70,6 +70,7 @@ class ListingResource extends JsonResource
                 'shop_name' => $this->farmerSeller->shop_name,
                 'average_rating' => $this->farmerSeller->averageRating(),
                 'reviews_count' => $this->farmerSeller->reviews_received_count ?? null,
+                'accepts_online_payment' => $this->farmerSeller->acceptsOnlinePayment(),
             ]),
             'takedown_reason' => $this->when(
                 $this->status->value === 'taken_down',

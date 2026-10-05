@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\Orders;
 
 use App\Enums\FulfillmentPreference;
+use App\Enums\PaymentMethod;
 use App\Models\Order;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -28,6 +29,9 @@ class CheckoutRequest extends FormRequest
                 Rule::enum(FulfillmentPreference::class),
             ],
             'fulfillment_note' => ['nullable', 'string', 'max:1000'],
+            'payments' => ['sometimes', 'array'],
+            'payments.*.seller_id' => ['required', 'integer'],
+            'payments.*.method' => ['required', Rule::enum(PaymentMethod::class)],
         ];
     }
 }

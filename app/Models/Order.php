@@ -7,6 +7,7 @@ use App\Enums\FulfillmentPreference;
 use App\Enums\OrderActor;
 use App\Enums\OrderSource;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use Database\Factories\OrderFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -112,6 +113,23 @@ class Order extends Model
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function paymentMethodValue(): string
+    {
+        $method = $this->payment_method;
+
+        if ($method instanceof PaymentMethod) {
+            return $method->value;
+        }
+
+        return (string) $method;
+    }
+
+    public function paymentMethodLabel(): string
+    {
+        return PaymentMethod::tryFrom($this->paymentMethodValue())?->label()
+            ?? $this->paymentMethodValue();
     }
 
     public function review(): HasOne

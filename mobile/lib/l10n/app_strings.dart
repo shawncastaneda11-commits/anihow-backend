@@ -667,6 +667,30 @@ class AppStrings {
       t('You rated $rating', 'Ni-rate mo: $rating');
   String get items => t('Items', 'Mga item');
   String get cashAtMeetup => t('Cash at meetup', 'Cash sa pagkikita');
+  String get payOnHandover => t('Cash on handover', 'Cash sa pag-abot');
+  String get onlinePayment => t(
+    "Online payment (seller's QR)",
+    'Online na bayad (QR ng nagbebenta)',
+  );
+  String paymentMethodLabel(String? method) => method == 'online_transfer'
+      ? onlinePayment
+      : payOnHandover;
+  String get acceptOnlinePayment => t(
+    'Accept online payment (send your GCash/Maya QR in chat)',
+    'Tumanggap ng online na bayad (ipadala ang GCash/Maya QR sa chat)',
+  );
+  String get sellerCashOnly => t(
+    'This seller accepts cash only',
+    'Cash lang ang tinatanggap ng nagbebenta na ito',
+  );
+  String get onlinePaymentHint => t(
+    "After you place the order, we'll message the seller to send their QR. Pay in the app you use (GCash/Maya); AniHow does not process payments.",
+    'Pagkatapos mong mag-order, magme-message kami sa nagbebenta para ipadala ang QR. Magbayad sa app na gamit mo (GCash/Maya); hindi nagpoproseso ng bayad ang AniHow.',
+  );
+  String get amountReceivedOnline => t(
+    'Amount received (online)',
+    'Halagang natanggap (online)',
+  );
   String tawadMinus(String peso) => t('Tawad −$peso', 'Tawad −$peso');
   String tawadOffThisOrder(String peso) =>
       t('$peso off this order', '$peso bawas sa order na ito');

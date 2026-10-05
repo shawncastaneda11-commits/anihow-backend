@@ -614,6 +614,7 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
   late final TextEditingController _contact;
   bool _busy = false;
   late String? _coverUrl;
+  late bool _acceptsOnline;
 
   @override
   void initState() {
@@ -623,6 +624,7 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
     _location = TextEditingController(text: widget.shop.location ?? '');
     _contact = TextEditingController(text: widget.shop.contact ?? '');
     _coverUrl = widget.shop.coverUrl;
+    _acceptsOnline = widget.shop.acceptsOnlinePayment;
   }
 
   @override
@@ -653,6 +655,7 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
       farmId: widget.shop.farmId,
       farmName: widget.shop.farmName,
       farmIsActive: widget.shop.farmIsActive,
+      acceptsOnlinePayment: _acceptsOnline,
       isFavorited: widget.shop.isFavorited,
     );
   }
@@ -725,6 +728,7 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
         'bio': _bio.text.trim(),
         'location': _location.text.trim(),
         'contact': _contact.text.trim(),
+        'accepts_online_payment': _acceptsOnline,
       });
       if (mounted) {
         Navigator.of(context)
@@ -747,9 +751,11 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
     final s = AppStrings.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(s.editShop)),
-      body: ListView(
+      body: SingleChildScrollView(
         padding: AniHowSpace.screenPadding,
-        children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           AniHowFormCard(
             title: s.shopProfile,
             child: Column(
@@ -783,6 +789,15 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
                   child: TextField(controller: _name),
                 ),
                 const SizedBox(height: AniHowSpace.fieldGap),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: _acceptsOnline,
+                  onChanged: _busy
+                      ? null
+                      : (value) => setState(() => _acceptsOnline = value),
+                  title: Text(s.acceptOnlinePayment),
+                ),
+                const SizedBox(height: AniHowSpace.fieldGap),
                 AniHowField(
                   label: s.bio,
                   child: TextField(controller: _bio, maxLines: 4),
@@ -806,7 +821,8 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
             busy: _busy,
             onPressed: _save,
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

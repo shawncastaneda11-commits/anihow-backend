@@ -669,12 +669,14 @@ class ApiClient {
   Future<List<OrderRecord>> checkout({
     required String fulfillmentPreference,
     String? fulfillmentNote,
+    List<Map<String, dynamic>> payments = const [],
   }) async {
     final response = await _post(
       CartRequests.checkoutPath,
       CartRequests.checkout(
         fulfillmentPreference: fulfillmentPreference,
         fulfillmentNote: fulfillmentNote,
+        payments: payments,
       ),
     );
     return _parseList(response, OrderRecord.fromJson);

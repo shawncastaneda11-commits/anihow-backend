@@ -15,7 +15,9 @@ import '../../widgets/hint_card.dart';
 import '../../widgets/order_look.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
+import '../chat/open_stall_chat.dart';
 import '../chat/order_chat_screen.dart';
+import '../chat/order_chats_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -26,6 +28,7 @@ class CheckoutScreen extends StatefulWidget {
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   String _preference = CartRequests.buyerPickup;
+  final Map<int, String> _payments = {};
   final _note = TextEditingController();
   bool _busy = false;
   List<OrderRecord>? _placed;
@@ -36,6 +39,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<CartController>().reload();
     });
+  }
+
+  String _methodFor(SellerCartGroup group) {
+    if (!group.acceptsOnlinePayment) {
+      return CartRequests.cashOnHandover;
+    }
+    return _payments[group.sellerId] ?? CartRequests.cashOnHandover;
   }
 
   @override
@@ -53,14 +63,31 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final orders = await context.read<CartController>().checkout(
             fulfillmentPreference: _preference,
             fulfillmentNote: _note.text.trim(),
+            payments: [
+              for (final group in context.read<CartController>().snapshot.groupsBySeller)
+                {
+                  'seller_id': group.sellerId,
+                  'method': _methodFor(group),
+                },
+            ],
           );
       if (!mounted) {
         return;
       }
+      final online = orders
+          .where((order) => order.paymentMethod == 'online_transfer')
+          .toList();
       setState(() {
         _placed = orders;
         _busy = false;
       });
+      if (online.length == 1 && online.first.sellerId != null) {
+        await openChatWithStall(context, sellerId: online.first.sellerId!);
+      } else if (online.length > 1) {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const OrderChatsScreen()),
+        );
+      }
     } on ApiException catch (error) {
       if (!mounted) {
         return;
@@ -111,7 +138,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ],
                     const SizedBox(height: AniHowSpace.section),
                     for (final group in groups) ...[
-                      _SellerOrderCard(group: group, language: language),
+                      _SellerOrderCard(
+                        group: group,
+                        language: language,
+                        method: _methodFor(group),
+                        onMethod: (method) => setState(
+                          () => _payments[group.sellerId] = method,
+                        ),
+                      ),
                       const SizedBox(height: AniHowSpace.cardGap),
                     ],
                     const SizedBox(height: AniHowSpace.cardGap),
@@ -171,10 +205,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 }
 
 class _SellerOrderCard extends StatelessWidget {
-  const _SellerOrderCard({required this.group, required this.language});
+  const _SellerOrderCard({
+    required this.group,
+    required this.language,
+    required this.method,
+    required this.onMethod,
+  });
 
   final SellerCartGroup group;
   final CropLanguage language;
+  final String method;
+  final ValueChanged<String> onMethod;
 
   @override
   Widget build(BuildContext context) {
@@ -233,7 +274,79 @@ class _SellerOrderCard extends StatelessWidget {
                   ? s.tawadMinus(AniHowMoney.peso(group.tawadTotal))
                   : null,
             ),
+            const SizedBox(height: AniHowSpace.cardGap),
+            _PaymentChoice(
+              label: s.payOnHandover,
+              selected: method == CartRequests.cashOnHandover,
+              onTap: () => onMethod(CartRequests.cashOnHandover),
+            ),
+            if (group.acceptsOnlinePayment) ...[
+              const SizedBox(height: 8),
+              _PaymentChoice(
+                label: s.onlinePayment,
+                selected: method == CartRequests.onlineTransfer,
+                onTap: () => onMethod(CartRequests.onlineTransfer),
+              ),
+              const SizedBox(height: 8),
+              Text(s.onlinePaymentHint, style: theme.textTheme.bodySmall),
+            ] else ...[
+              const SizedBox(height: 8),
+              Text(s.sellerCashOnly, style: theme.textTheme.bodySmall),
+            ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentChoice extends StatelessWidget {
+  const _PaymentChoice({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: selected
+          ? (theme.brightness == Brightness.dark
+              ? const Color(0xFF1A2A22)
+              : const Color(0xFFEDF6F0))
+          : theme.cardTheme.color ?? theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AniHowTheme.cardRadius),
+        side: BorderSide(
+          color: selected ? AniHowColors.brand : theme.dividerColor,
+          width: selected ? 1.6 : 1,
+        ),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AniHowTheme.cardRadius),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Row(
+              children: [
+                Icon(
+                  selected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  color: selected ? AniHowColors.brand : AniHowColors.muted,
+                ),
+                const SizedBox(width: 8),
+                Expanded(child: Text(label)),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -346,6 +459,10 @@ class _PlacedView extends StatelessWidget {
                         icon: Icons.handshake_outlined,
                         text: order.fulfillmentLabel!,
                       ),
+                    OrderMetaRow(
+                      icon: Icons.payments_outlined,
+                      text: s.paymentMethodLabel(order.paymentMethod),
+                    ),
                     if (order.items.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       for (final item in order.items)

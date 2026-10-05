@@ -389,6 +389,14 @@ class AppStrings {
   );
   String get openOrders => t('Open orders', 'Buksan ang mga order');
   String get chatWithStall => t('Chat with stall', 'Makipag-chat sa tindahan');
+  String get removeChat => t('Remove chat', 'Alisin ang chat');
+  String get removeChatTitle =>
+      t('Remove this chat?', 'Alisin ang chat na ito?');
+  String removeChatBody(String name) => t(
+    'This removes the chat for you only. $name can still see it. If either of you sends a new message, the chat comes back. Order messages stay on the order\'s page.',
+    'Sa iyo lang aalisin ang chat na ito. Makikita pa rin ito ni $name. Kapag may nagpadala ng bagong mensahe, babalik ang chat. Nananatili ang mga mensahe ng order sa pahina ng order.',
+  );
+  String get chatRemoved => t('Chat removed', 'Naalis ang chat');
   String get messageSeller => t('Message seller', 'Magmensahe sa tindero');
   String orderTag(String? number) {
     final value = number?.trim() ?? '';

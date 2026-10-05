@@ -120,6 +120,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->name('stall-chats.messages.index');
     Route::post('stall-chats/{stallConversation}/messages', [StallConversationController::class, 'storeMessage'])
         ->name('stall-chats.messages.store');
+    Route::delete('stall-chats/{stallConversation}', [StallConversationController::class, 'destroy'])
+        ->name('stall-chats.destroy');
     Route::get('chat/attachments/{stallMessage}', ChatAttachmentController::class)
         ->name('chat.attachments.show');
 

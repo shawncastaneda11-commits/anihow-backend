@@ -31,6 +31,11 @@ class StallConversationPolicy
         return $this->isParty($user, $stallConversation);
     }
 
+    public function remove(User $user, StallConversation $stallConversation): bool
+    {
+        return $this->isParty($user, $stallConversation);
+    }
+
     private function isParty(User $user, StallConversation $stallConversation): bool
     {
         return $stallConversation->buyer_id === $user->id

@@ -13,6 +13,7 @@ import '../../widgets/async_view.dart';
 import '../../widgets/chat_composer.dart';
 import '../../widgets/chat_message_bubble.dart';
 import '../../widgets/profile_avatar_button.dart';
+import 'remove_chat_dialog.dart';
 
 /// A conversation with a stall that stays after any order is finished.
 class StallChatScreen extends StatefulWidget {
@@ -131,6 +132,29 @@ class _StallChatScreenState extends State<StallChatScreen> {
     });
   }
 
+  Future<void> _removeChat(String name) async {
+    final confirmed = await confirmRemoveStallChat(context, name);
+    if (!confirmed || !mounted) {
+      return;
+    }
+    try {
+      await context.read<AuthController>().api.removeStallChat(widget.chat.id);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppStrings.of(context).chatRemoved)),
+      );
+      Navigator.of(context).pop(true);
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
   Future<void> _send(String body, String? attachmentPath) async {
     final hasFile = attachmentPath != null && attachmentPath.isNotEmpty;
     if (_sending || (body.isEmpty && !hasFile)) {
@@ -194,6 +218,26 @@ class _StallChatScreenState extends State<StallChatScreen> {
             ),
           ],
         ),
+        actions: [
+          PopupMenuButton<String>(
+            key: const Key('open-chat-menu'),
+            tooltip: s.removeChat,
+            icon: const Icon(Icons.more_vert),
+            style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'remove',
+                height: 48,
+                child: Text(s.removeChat),
+              ),
+            ],
+            onSelected: (value) {
+              if (value == 'remove') {
+                unawaited(_removeChat(title));
+              }
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [

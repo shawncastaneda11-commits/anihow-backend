@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
+import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
 import '../../support/relative_time.dart';
 import '../../theme/anihow_space.dart';
@@ -14,6 +17,7 @@ import '../../widgets/status_pill.dart';
 import '../buyer/order_history_screen.dart';
 import '../farmer/farmer_orders_screen.dart';
 import 'order_chat_screen.dart';
+import 'remove_chat_dialog.dart';
 import 'stall_chat_screen.dart';
 
 /// Chats for app orders, including finished ones. Walk-ins have no buyer chat.
@@ -48,11 +52,26 @@ class _ChatInbox {
 
 class _OrderChatsScreenState extends State<OrderChatsScreen> {
   late Future<_ChatInbox> _future;
+  final _hiddenLatestAt = <int, String?>{};
+  Timer? _refresh;
 
   @override
   void initState() {
     super.initState();
     _future = _load();
+    _startRefresh();
+  }
+
+  void _startRefresh() {
+    _refresh?.cancel();
+    if (!widget.active) {
+      return;
+    }
+    _refresh = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (mounted) {
+        unawaited(_reload());
+      }
+    });
   }
 
   Future<_ChatInbox> _load() async {
@@ -62,14 +81,69 @@ class _OrderChatsScreenState extends State<OrderChatsScreen> {
         : await api.buyerOrders();
     final stalls = await api.stallChats();
     final orders = ordersRaw.where((order) => !order.isWalkIn).toList();
+    if (mounted) {
+      setState(() => _releaseChatsWithNewMessages(stalls));
+    }
     return _ChatInbox(orders: orders, stalls: stalls);
+  }
+
+  void _releaseChatsWithNewMessages(List<StallChat> stalls) {
+    for (final chat in stalls) {
+      if (_hiddenLatestAt.containsKey(chat.id) && !_isHidden(chat)) {
+        _hiddenLatestAt.remove(chat.id);
+      }
+    }
+  }
+
+  bool _isHidden(StallChat chat) {
+    if (!_hiddenLatestAt.containsKey(chat.id)) {
+      return false;
+    }
+    final removedAt = _hiddenLatestAt[chat.id];
+    final current = chat.latestAt;
+    if (current == null || current.isEmpty) {
+      return true;
+    }
+    if (removedAt == null || removedAt.isEmpty) {
+      return false;
+    }
+    return current.compareTo(removedAt) <= 0;
   }
 
   @override
   void didUpdateWidget(OrderChatsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.active != oldWidget.active) {
+      _startRefresh();
+    }
     if (widget.active && !oldWidget.active) {
       _future = _load();
+    }
+  }
+
+  @override
+  void dispose() {
+    _refresh?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _hideAndDelete(StallChat chat) async {
+    setState(() => _hiddenLatestAt[chat.id] = chat.latestAt);
+    try {
+      await context.read<AuthController>().api.removeStallChat(chat.id);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppStrings.of(context).chatRemoved)),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _hiddenLatestAt.remove(chat.id));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 
@@ -90,7 +164,8 @@ class _OrderChatsScreenState extends State<OrderChatsScreen> {
       isEmpty: (inbox) => inbox.isEmpty,
       emptyBuilder: (context) => _EmptyChats(forSeller: widget.forSeller),
       builder: (context, inbox) {
-        final entries = inbox.orders.length + inbox.stalls.length;
+        final stalls = inbox.stalls.where((chat) => !_isHidden(chat)).toList();
+        final entries = inbox.orders.length + stalls.length;
         return RefreshIndicator(
           onRefresh: _reload,
           child: ListView.separated(
@@ -113,20 +188,26 @@ class _OrderChatsScreenState extends State<OrderChatsScreen> {
                   },
                 );
               }
-              final chat = inbox.stalls[index - inbox.orders.length];
+              final chat = stalls[index - inbox.orders.length];
+              final title = chat.title(viewingAsSeller: widget.forSeller);
               return _StallChatCard(
                 chat: chat,
-                title: chat.title(viewingAsSeller: widget.forSeller),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
+                title: title,
+                onTap: () async {
+                  final removed = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute(
                       builder: (_) => StallChatScreen(
                         chat: chat,
                         viewingAsSeller: widget.forSeller,
                       ),
                     ),
                   );
+                  if (removed == true && mounted) {
+                    setState(() => _hiddenLatestAt[chat.id] = chat.latestAt);
+                  }
                 },
+                onAskRemove: () => confirmRemoveStallChat(context, title),
+                onRemove: () => _hideAndDelete(chat),
               );
             },
           ),
@@ -305,72 +386,148 @@ class _StallChatCard extends StatelessWidget {
     required this.chat,
     required this.title,
     required this.onTap,
+    required this.onAskRemove,
+    required this.onRemove,
   });
 
   final StallChat chat;
   final String title;
   final VoidCallback onTap;
+  final Future<bool> Function() onAskRemove;
+  final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurface.withValues(alpha: 0.7);
     final when = relativeTime(chat.latestAt ?? chat.updatedAt);
+    final strings = AppStrings.of(context);
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: AniHowSpace.cardPadding,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AniHowAvatar(name: title, radius: 24),
-              const SizedBox(width: AniHowSpace.cardGap),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: AniHowSpace.title,
-                              fontWeight: FontWeight.w800,
+    return Dismissible(
+      key: ValueKey('stall-chat-${chat.id}'),
+      direction: DismissDirection.endToStart,
+      background: ColoredBox(
+        key: const Key('remove-chat-swipe'),
+        color: theme.colorScheme.error,
+        child: const Align(
+          alignment: Alignment.centerRight,
+          child: Padding(
+            padding: EdgeInsets.only(right: 20),
+            child: Icon(Icons.delete, color: Colors.white),
+          ),
+        ),
+      ),
+      confirmDismiss: (_) async {
+        if (await onAskRemove()) {
+          onRemove();
+        }
+        return false;
+      },
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          onLongPress: () => _openMenu(context),
+          child: Padding(
+            padding: AniHowSpace.cardPadding,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AniHowAvatar(name: title, radius: 24),
+                const SizedBox(width: AniHowSpace.cardGap),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: AniHowSpace.title,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
-                        ),
-                        if (when.isNotEmpty) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            when,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: muted,
+                          if (when.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            Text(
+                              when,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: muted,
+                              ),
                             ),
-                          ),
+                          ],
                         ],
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      chat.latestBody ?? AppStrings.of(context).chatWithStall,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        chat.latestBody ?? strings.chatWithStall,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuButton<String>(
+                  key: ValueKey('stall-chat-menu-${chat.id}'),
+                  tooltip: strings.removeChat,
+                  icon: const Icon(Icons.more_vert),
+                  style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'remove',
+                      height: 48,
+                      child: Text(strings.removeChat),
                     ),
                   ],
+                  onSelected: (value) async {
+                    if (value != 'remove') {
+                      return;
+                    }
+                    if (await onAskRemove()) {
+                      onRemove();
+                    }
+                  },
                 ),
-              ),
-              Icon(Icons.chevron_right, color: muted),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _openMenu(BuildContext context) async {
+    final box = context.findRenderObject() as RenderBox?;
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (box == null || overlay == null || !box.hasSize) {
+      return;
+    }
+    final origin = box.localToGlobal(Offset.zero, ancestor: overlay);
+    final selected = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        origin.dx,
+        origin.dy,
+        overlay.size.width - origin.dx,
+        overlay.size.height - origin.dy,
+      ),
+      items: [
+        PopupMenuItem(
+          value: 'remove',
+          height: 48,
+          child: Text(AppStrings.of(context).removeChat),
+        ),
+      ],
+    );
+    if (selected == 'remove' && await onAskRemove() && context.mounted) {
+      onRemove();
+    }
   }
 }

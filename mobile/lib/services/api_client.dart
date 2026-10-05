@@ -567,6 +567,9 @@ class ApiClient {
     return _list('/stall-chats', parse: StallChat.fromJson);
   }
 
+  Future<void> removeStallChat(int conversationId) =>
+      _delete('/stall-chats/$conversationId');
+
   Future<StallChat> openStallChat(int sellerId) async {
     final response = await _post('/stall-chats', {
       'farmer_seller_id': sellerId,

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Chat;
 
 use App\Actions\Chat\PresentStallMessages;
+use App\Actions\Chat\RemoveStallConversationForUser;
 use App\Actions\Chat\SendStallMessage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Chat\StoreStallConversationRequest;
@@ -15,6 +16,7 @@ use App\Support\ChatAttachmentLimiter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 class StallConversationController extends Controller
 {
@@ -25,6 +27,7 @@ class StallConversationController extends Controller
         $user = $request->user();
         $conversations = StallConversation::query()
             ->whereHas('messages')
+            ->visibleInInbox($user)
             ->with(['buyer', 'farmerSeller', 'latestMessage'])
             ->when(
                 $user->isBuyer(),
@@ -61,8 +64,14 @@ class StallConversationController extends Controller
     ): AnonymousResourceCollection {
         $this->authorize('view', $stallConversation);
 
+        $clearedThrough = $stallConversation->clearedThroughFor($request->user());
+
         $messages = $stallConversation->messages()
             ->with(['author.roles', 'order:id,order_number'])
+            ->when(
+                $clearedThrough !== null,
+                fn ($query) => $query->where('id', '>', $clearedThrough),
+            )
             ->when(
                 $request->filled('after_id'),
                 fn ($query) => $query->where('id', '>', $request->integer('after_id')),
@@ -95,5 +104,17 @@ class StallConversationController extends Controller
             ->additional(['message' => 'Message sent.'])
             ->response()
             ->setStatusCode(201);
+    }
+
+    public function destroy(
+        Request $request,
+        StallConversation $stallConversation,
+        RemoveStallConversationForUser $removeStallConversationForUser,
+    ): Response {
+        $this->authorize('remove', $stallConversation);
+
+        $removeStallConversationForUser->handle($request->user(), $stallConversation);
+
+        return response()->noContent();
     }
 }

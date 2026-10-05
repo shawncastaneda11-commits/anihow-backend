@@ -138,7 +138,7 @@ class ProduceCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.labelLarge?.copyWith(
-              color: AniHowColors.brand,
+              color: _priceColor(theme),
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -193,6 +193,13 @@ class ProduceCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Color _priceColor(ThemeData theme) {
+    if (theme.brightness == Brightness.dark) {
+      return AniHowColors.sage;
+    }
+    return AniHowColors.brand;
   }
 
   List<Widget> _availabilityPill(BuildContext context) {
@@ -321,6 +328,8 @@ class ProduceCard extends StatelessWidget {
                                 ),
                                 child: Text(
                                   sellerLabel,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     color: onSellerTap == null
                                         ? theme.colorScheme.onSurface
@@ -338,7 +347,7 @@ class ProduceCard extends StatelessWidget {
                           Text(
                             listing.priceLabel,
                             style: theme.textTheme.labelLarge?.copyWith(
-                              color: AniHowColors.brand,
+                              color: _priceColor(theme),
                               fontWeight: FontWeight.w700,
                             ),
                           ),

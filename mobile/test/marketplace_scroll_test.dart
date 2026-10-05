@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:anihow/models/models.dart';
 import 'package:anihow/screens/buyer/announcements_feed_screen.dart';
 import 'package:anihow/screens/buyer/marketplace_screen.dart';
@@ -5,8 +7,12 @@ import 'package:anihow/services/api_client.dart';
 import 'package:anihow/state/auth_controller.dart';
 import 'package:anihow/state/cart_controller.dart';
 import 'package:anihow/state/preferences_controller.dart';
+import 'package:anihow/theme/anihow_space.dart';
 import 'package:anihow/theme/anihow_theme.dart';
+import 'package:anihow/widgets/produce_card.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -65,11 +71,7 @@ class _MarketApi extends ApiClient {
     int? farmId,
     int page = 1,
   }) async {
-    return PagedBuyerAnnouncements(
-      items: posts,
-      currentPage: 1,
-      lastPage: 1,
-    );
+    return PagedBuyerAnnouncements(items: posts, currentPage: 1, lastPage: 1);
   }
 }
 
@@ -109,7 +111,27 @@ Widget _app(_MarketApi api) {
   );
 }
 
+Future<void> _loadRoboto() async {
+  final loader = FontLoader('Roboto');
+  for (final name in [
+    'roboto-regular.ttf',
+    'roboto-medium.ttf',
+    'roboto-bold.ttf',
+  ]) {
+    final bytes = await File(
+      'C:/flutter/bin/cache/artifacts/material_fonts/$name',
+    ).readAsBytes();
+    loader.addFont(Future.value(ByteData.sublistView(bytes)));
+  }
+  await loader.load();
+}
+
 void main() {
+  setUpAll(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    await _loadRoboto();
+  });
+
   testWidgets('search stays pinned while chips and the banner scroll away', (
     tester,
   ) async {
@@ -154,31 +176,32 @@ void main() {
     expect(find.byType(AnnouncementsFeedScreen), findsOneWidget);
   });
 
-  testWidgets('the updates banner is hidden with no posts and after dismissal', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(400, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    SharedPreferences.setMockInitialValues({});
+  testWidgets(
+    'the updates banner is hidden with no posts and after dismissal',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      SharedPreferences.setMockInitialValues({});
 
-    await tester.pumpWidget(_app(_MarketApi()));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('marketplace-updates')), findsNothing);
+      await tester.pumpWidget(_app(_MarketApi()));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('marketplace-updates')), findsNothing);
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pumpWidget(_app(_MarketApi(posts: [_post()])));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('marketplace-updates')), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(_app(_MarketApi(posts: [_post()])));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('marketplace-updates')), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('marketplace-updates-close')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('marketplace-updates')), findsNothing);
+      await tester.tap(find.byKey(const Key('marketplace-updates-close')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('marketplace-updates')), findsNothing);
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pumpWidget(_app(_MarketApi(posts: [_post()])));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('marketplace-updates')), findsNothing);
-  });
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(_app(_MarketApi(posts: [_post()])));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('marketplace-updates')), findsNothing);
+    },
+  );
 
   testWidgets('the filter sheet applies sort and growing method', (
     tester,
@@ -231,5 +254,113 @@ void main() {
       ),
     );
     expect(badge.isLabelVisible, isTrue);
+  });
+
+  ListingItem upcomingListing() {
+    return ListingItem(
+      id: 12,
+      title: 'Kalabasa',
+      pricePerUnit: '40',
+      quantityAvailable: '8',
+      unit: 'kg',
+      sellerId: 3,
+      sellerName: 'Aling Nena Produce of Manggahan General Trias',
+      category: const CategoryItem(id: 1, name: 'Squash', labelEn: 'Squash'),
+      isUpcoming: true,
+      availableFrom: DateTime(2026, 10, 12),
+      harvestedOn: DateTime(2026, 10, 3),
+      organicBadge: 'naturally_grown',
+      averageRating: '4.5',
+      reviewsCount: 3,
+      tawad: const TawadRule(id: 1, type: 'flat', discountAmount: '5'),
+    );
+  }
+
+  Future<void> pumpMarket(WidgetTester tester, Size size) async {
+    await tester.binding.setSurfaceSize(size);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    SharedPreferences.setMockInitialValues({});
+    final api = _MarketApi(listings: [upcomingListing(), _listing(2)]);
+    await tester.pumpWidget(_app(api));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('phones show one full-width row card per line', (tester) async {
+    for (final width in [360.0, 411.0]) {
+      await pumpMarket(tester, Size(width, 800));
+
+      expect(tester.takeException(), isNull);
+      final cards = tester.widgetList<ProduceCard>(find.byType(ProduceCard));
+      expect(cards.length, 2);
+      expect(cards.every((card) => card.style == ProduceCardStyle.row), isTrue);
+      expect(cards.every((card) => card.showSeller), isTrue);
+
+      final first = tester.getRect(find.byType(ProduceCard).at(0));
+      final second = tester.getRect(find.byType(ProduceCard).at(1));
+      expect(second.top, greaterThan(first.bottom - 1));
+      expect(second.left, closeTo(first.left, 1));
+      expect((second.top - first.bottom).round(), AniHowSpace.cardGap.round());
+
+      final reserve = tester.renderObject<RenderParagraph>(
+        find.text('Reserve · from Oct 12'),
+      );
+      expect(reserve.didExceedMaxLines, isFalse);
+      expect(find.text('Naturally grown (self-declared)'), findsOneWidget);
+      expect(find.text('Harvested Oct 3'), findsOneWidget);
+      expect(find.text('₱5.00 off'), findsOneWidget);
+      expect(find.text('Squash'), findsOneWidget);
+      final price = tester.widget<Text>(find.text('₱40.00 / kg'));
+      expect(price.style?.color, AniHowColors.brand);
+      expect(find.textContaining('4.5'), findsWidgets);
+
+      final shop = tester.widget<Text>(
+        find.text('Aling Nena Produce of Manggahan General Trias'),
+      );
+      expect(shop.maxLines, 1);
+      expect(shop.overflow, TextOverflow.ellipsis);
+    }
+  });
+
+  testWidgets('wide screens keep the two-column poster grid', (tester) async {
+    await pumpMarket(tester, const Size(800, 1200));
+
+    expect(tester.takeException(), isNull);
+    final cards = tester.widgetList<ProduceCard>(find.byType(ProduceCard));
+    expect(cards.length, 2);
+    expect(
+      cards.every((card) => card.style == ProduceCardStyle.poster),
+      isTrue,
+    );
+
+    final first = tester.getRect(find.byType(ProduceCard).at(0));
+    final second = tester.getRect(find.byType(ProduceCard).at(1));
+    expect(second.top, closeTo(first.top, 1));
+    expect(second.left, greaterThan(first.right - 1));
+  });
+
+  testWidgets('the price uses sage text on a dark card', (tester) async {
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => PreferencesController()..notificationsEnabled = false,
+        child: MaterialApp(
+          theme: AniHowTheme.dark(),
+          home: Scaffold(
+            body: ProduceCard(
+              listing: ListingItem(
+                id: 1,
+                title: 'Kalabasa',
+                pricePerUnit: '40',
+                quantityAvailable: '8',
+                unit: 'kg',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final price = tester.widget<Text>(find.text('₱40.00 / kg'));
+    expect(price.style?.color, AniHowColors.sage);
   });
 }

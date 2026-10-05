@@ -282,11 +282,11 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                     child: SizedBox(
                       height: 80,
                       child: _SearchRow(
-                      controller: _search,
-                      filtersActive: _filtersActive,
-                      onSubmit: _reload,
-                      onFilter: _openFilters,
-                    ),
+                        controller: _search,
+                        filtersActive: _filtersActive,
+                        onSubmit: _reload,
+                        onFilter: _openFilters,
+                      ),
                     ),
                   ),
                 ),
@@ -381,6 +381,50 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     );
   }
 
+  Widget _produceCard(ListingItem listing, ProduceCardStyle style) {
+    return ProduceCard(
+      listing: listing,
+      style: style,
+      showSeller: true,
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ListingDetailScreen(listingId: listing.id),
+          ),
+        );
+      },
+      onSellerTap: listing.sellerId == null
+          ? null
+          : () => openBuyerShop(context, listing.sellerId!),
+    );
+  }
+
+  Widget _phoneList() {
+    return SliverList.separated(
+      itemCount: _items.length,
+      separatorBuilder: (context, index) =>
+          const SizedBox(height: AniHowSpace.cardGap),
+      itemBuilder: (context, index) =>
+          _produceCard(_items[index], ProduceCardStyle.row),
+    );
+  }
+
+  Widget _posterGrid() {
+    return SliverGrid(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisExtent: 328,
+        crossAxisSpacing: AniHowSpace.cardGap,
+        mainAxisSpacing: AniHowSpace.cardGap,
+      ),
+      delegate: SliverChildBuilderDelegate(
+        (context, index) =>
+            _produceCard(_items[index], ProduceCardStyle.poster),
+        childCount: _items.length,
+      ),
+    );
+  }
+
   List<Widget> _listingSlivers(AppStrings s) {
     if (_loading && _items.isEmpty) {
       return const [
@@ -427,38 +471,19 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           ),
         ),
       ),
-      SliverPadding(
-        padding: const EdgeInsets.fromLTRB(
-          AniHowSpace.screen,
-          0,
-          AniHowSpace.screen,
-          AniHowSpace.screen,
-        ),
-        sliver: SliverGrid(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisExtent: 328,
-            crossAxisSpacing: AniHowSpace.cardGap,
-            mainAxisSpacing: AniHowSpace.cardGap,
-          ),
-          delegate: SliverChildBuilderDelegate((context, index) {
-            final listing = _items[index];
-            return ProduceCard(
-              listing: listing,
-              style: ProduceCardStyle.poster,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => ListingDetailScreen(listingId: listing.id),
-                  ),
-                );
-              },
-              onSellerTap: listing.sellerId == null
-                  ? null
-                  : () => openBuyerShop(context, listing.sellerId!),
-            );
-          }, childCount: _items.length),
-        ),
+      SliverLayoutBuilder(
+        builder: (context, constraints) {
+          final wide = constraints.crossAxisExtent >= 600;
+          return SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              AniHowSpace.screen,
+              0,
+              AniHowSpace.screen,
+              AniHowSpace.screen,
+            ),
+            sliver: wide ? _posterGrid() : _phoneList(),
+          );
+        },
       ),
       if (_loadingMore)
         const SliverToBoxAdapter(
@@ -707,11 +732,7 @@ class _FilterSheetState extends State<_FilterSheet> {
             _option(s.nearest, _sort == 'nearest', () => _sort = 'nearest'),
             const SizedBox(height: AniHowSpace.cardGap),
             Text(s.growingMethod, style: theme.textTheme.titleMedium),
-            _option(
-              s.any,
-              _growingMethod == null,
-              () => _growingMethod = null,
-            ),
+            _option(s.any, _growingMethod == null, () => _growingMethod = null),
             _option(
               s.certifiedOrganicFilter,
               _growingMethod == 'certified_organic',
@@ -776,12 +797,7 @@ class _FilterSheetState extends State<_FilterSheet> {
     );
   }
 
-  Widget _option(
-    String label,
-    bool selected,
-    VoidCallback select, {
-    Key? key,
-  }) {
+  Widget _option(String label, bool selected, VoidCallback select, {Key? key}) {
     return InkWell(
       key: key,
       onTap: () => setState(select),

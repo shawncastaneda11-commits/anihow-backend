@@ -279,6 +279,9 @@ class ListingItem {
     this.distanceKm,
     this.reservedQuantity,
     this.activeReservationsCount,
+    this.minOrderQuantity = 1,
+    this.orderStep = 1,
+    this.sellableQuantity,
   });
 
   final int id;
@@ -311,6 +314,9 @@ class ListingItem {
   final double? distanceKm;
   final double? reservedQuantity;
   final int? activeReservationsCount;
+  final double minOrderQuantity;
+  final double orderStep;
+  final String? sellableQuantity;
 
   String get name => title;
 
@@ -373,6 +379,9 @@ class ListingItem {
       distanceKm: distanceKm,
       reservedQuantity: reservedQuantity,
       activeReservationsCount: activeReservationsCount,
+      minOrderQuantity: minOrderQuantity,
+      orderStep: orderStep,
+      sellableQuantity: sellableQuantity,
     );
   }
 
@@ -434,6 +443,9 @@ class ListingItem {
       activeReservationsCount: json.containsKey('active_reservations_count')
           ? _asCount(json['active_reservations_count']) ?? 0
           : null,
+      minOrderQuantity: _asDouble(json['min_order_quantity']) ?? 1,
+      orderStep: _asDouble(json['order_step']) ?? 1,
+      sellableQuantity: json['sellable_quantity']?.toString(),
     );
   }
 

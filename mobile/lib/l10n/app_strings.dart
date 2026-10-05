@@ -283,14 +283,10 @@ class AppStrings {
   String get farmSavedToFavorites =>
       t('Farm saved to favorites.', 'Nasave ang bukid sa mga paborito.');
   String get searchShops => t('Search shops', 'Maghanap ng tindahan');
-  String shopsAtThisFarm(int count) => t(
-    'Shops at this farm ($count)',
-    'Mga tindahan sa bukid na ito ($count)',
-  );
-  String get noShopsAtFarm => t(
-    'No shops at this farm yet.',
-    'Wala pang tindahan sa bukid na ito.',
-  );
+  String shopsAtThisFarm(int count) =>
+      t('Shops at this farm ($count)', 'Mga tindahan sa bukid na ito ($count)');
+  String get noShopsAtFarm =>
+      t('No shops at this farm yet.', 'Wala pang tindahan sa bukid na ito.');
   String get searchFarms => t('Search farms', 'Maghanap ng bukid');
   String get noFarmsYet => t('No farms yet.', 'Wala pang bukid.');
   String get noFarmsMatch =>
@@ -536,6 +532,38 @@ class AppStrings {
   String get titleLabel => t('Title', 'Pamagat');
   String get cropType => t('Crop type', 'Uri ng pananim');
   String get unit => t('Unit', 'Yunit');
+  String get minimumOrder => t('Minimum order', 'Pinakamababang order');
+  String get orderStep => t('Step', 'Hakbang');
+  String buyersCanOrder(String amounts, String unit) => t(
+    'Buyers can order $amounts $unit…',
+    'Puwedeng umorder ang mga buyer ng $amounts $unit…',
+  );
+  String quantityStepHint(String min, String step, String unit) => t(
+    'Min $min $unit · steps of $step $unit',
+    'Min $min $unit · hakbang na $step $unit',
+  );
+  String soldWholeStep(String name) => t(
+    '$name are sold whole. Use a step of 1 or more.',
+    'Buong $name lang ang binebenta. Gumamit ng hakbang na 1 o higit pa.',
+  );
+  String soldWholeMinimum(String name) => t(
+    '$name are sold whole. Use a minimum order of 1 or more.',
+    'Buong $name lang ang binebenta. Gumamit ng pinakamababang order na 1 o higit pa.',
+  );
+  String get minimumAtLeastStep => t(
+    'The minimum order must be at least the step.',
+    'Ang pinakamababang order ay dapat kahit isang hakbang.',
+  );
+  String get orderAmountPositive => t(
+    'Use a minimum and a step greater than 0.',
+    'Gumamit ng pinakamababang order at hakbang na higit sa 0.',
+  );
+  String get orderAmountDecimals =>
+      t('Use at most 2 decimal places.', 'Hanggang 2 decimal places lang.');
+  String get orderAmountMax => t(
+    'The minimum order cannot be more than 99999.99.',
+    'Ang pinakamababang order ay hindi puwedeng higit sa 99999.99.',
+  );
   String unitName(String code) => switch (code) {
     'kg' => t('Kilogram (kg)', 'Kilo (kg)'),
     'g' => t('Gram (g)', 'Gramo (g)'),

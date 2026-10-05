@@ -8,12 +8,14 @@ import '../../services/cart_requests.dart';
 import '../../state/auth_controller.dart';
 import '../../state/cart_controller.dart';
 import '../../state/preferences_controller.dart';
+import '../../support/order_quantity.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/cart_icon_button.dart';
 import '../../widgets/chat_with_stall_button.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/growing_badge.dart';
+import '../../widgets/order_quantity_stepper.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/produce_card.dart';
 import '../../widgets/produce_photo.dart';
@@ -21,6 +23,10 @@ import '../../widgets/report_sheet.dart';
 import '../../widgets/status_pill.dart';
 import 'cart_screen.dart';
 import 'shop_profile_screen.dart';
+
+double? _available(ListingItem listing) {
+  return double.tryParse(listing.sellableQuantity ?? listing.quantityAvailable);
+}
 
 class ListingDetailScreen extends StatefulWidget {
   const ListingDetailScreen({super.key, required this.listingId, this.preview});
@@ -36,11 +42,16 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   final _quantity = TextEditingController(text: '1');
   late Future<ListingItem> _future;
   bool _adding = false;
+  bool _seeded = false;
 
   @override
   void initState() {
     super.initState();
     final preview = widget.preview;
+    if (preview != null) {
+      _quantity.text = formatOrderAmount(preview.minOrderQuantity);
+      _seeded = true;
+    }
     _future = preview != null
         ? Future.value(preview)
         : context.read<AuthController>().api.marketplaceShow(widget.listingId);
@@ -170,6 +181,17 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             return Center(child: Text('${snapshot.error}'));
           }
           final listing = snapshot.data!;
+          if (!_seeded) {
+            _seeded = true;
+            final next = formatOrderAmount(listing.minOrderQuantity);
+            if (_quantity.text != next) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  _quantity.text = next;
+                }
+              });
+            }
+          }
           return ListView(
             padding: AniHowSpace.screenPadding,
             children: [
@@ -351,11 +373,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               else ...[
                 AniHowField(
                   label: s.quantity,
-                  child: TextField(
+                  child: OrderQuantityStepper(
                     controller: _quantity,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
+                    min: listing.minOrderQuantity,
+                    step: listing.orderStep,
+                    unit: listing.unit ?? '',
+                    max: _available(listing),
                   ),
                 ),
                 const SizedBox(height: AniHowSpace.fieldGap),
@@ -388,10 +411,18 @@ class ReserveHarvestSheet extends StatefulWidget {
 }
 
 class _ReserveHarvestSheetState extends State<ReserveHarvestSheet> {
-  final _quantity = TextEditingController(text: '1');
+  late final TextEditingController _quantity;
   String _preference = CartRequests.buyerPickup;
   bool _busy = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _quantity = TextEditingController(
+      text: formatOrderAmount(widget.listing.minOrderQuantity),
+    );
+  }
 
   @override
   void dispose() {
@@ -454,11 +485,12 @@ class _ReserveHarvestSheetState extends State<ReserveHarvestSheet> {
               const SizedBox(height: 12),
               AniHowField(
                 label: s.quantity,
-                child: TextField(
+                child: OrderQuantityStepper(
                   controller: _quantity,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
+                  min: listing.minOrderQuantity,
+                  step: listing.orderStep,
+                  unit: listing.unit ?? '',
+                  max: _available(listing),
                 ),
               ),
               const SizedBox(height: 8),
@@ -475,8 +507,9 @@ class _ReserveHarvestSheetState extends State<ReserveHarvestSheet> {
                     child: _ReserveChoice(
                       label: s.pickupShort,
                       selected: _preference == CartRequests.buyerPickup,
-                      onTap: () =>
-                          setState(() => _preference = CartRequests.buyerPickup),
+                      onTap: () => setState(
+                        () => _preference = CartRequests.buyerPickup,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),

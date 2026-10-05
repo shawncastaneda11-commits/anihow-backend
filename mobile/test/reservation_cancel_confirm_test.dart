@@ -256,7 +256,7 @@ void main() {
   testWidgets(
     'turning the listing switch off confirms, and a 409 uses server numbers',
     (tester) async {
-      await tester.binding.setSurfaceSize(const Size(400, 1400));
+      await tester.binding.setSurfaceSize(const Size(400, 2200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       final api = _ScriptedApi(_listing(count: 1, quantity: 2));
@@ -294,7 +294,7 @@ void main() {
   testWidgets('a 409 from save opens the dialog with the server numbers', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(400, 1400));
+    await tester.binding.setSurfaceSize(const Size(400, 2200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final conflictApi = _ScriptedApi(_listing())..conflictOnUpdate = true;

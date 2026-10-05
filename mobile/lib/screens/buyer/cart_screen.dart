@@ -7,11 +7,13 @@ import '../../services/api_client.dart';
 import '../../state/cart_controller.dart';
 import '../../state/preferences_controller.dart';
 import '../../support/crop_language.dart';
+import '../../support/order_quantity.dart';
 import '../../theme/anihow_space.dart';
 import '../../state/auth_controller.dart';
 import '../../widgets/chat_with_stall_button.dart';
 import '../../widgets/hint_card.dart';
 import '../../widgets/order_look.dart';
+import '../../widgets/order_quantity_stepper.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
 import 'checkout_screen.dart';
@@ -226,18 +228,31 @@ class _CartQuantityDialogState extends State<CartQuantityDialog> {
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.read(context);
+    final listing = widget.item.listing;
     final unit = widget.item.unitLabel;
     return AlertDialog(
       title: Text(widget.item.listingName),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: InputDecoration(
-          labelText: unit.isEmpty ? s.quantity : '${s.quantity} ($unit)',
-        ),
-        onSubmitted: (value) => Navigator.pop(context, value.trim()),
-      ),
+      content: listing == null
+          ? TextField(
+              controller: _controller,
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: InputDecoration(
+                labelText: unit.isEmpty ? s.quantity : '${s.quantity} ($unit)',
+              ),
+              onSubmitted: (value) => Navigator.pop(context, value.trim()),
+            )
+          : OrderQuantityStepper(
+              controller: _controller,
+              min: listing.minOrderQuantity,
+              step: listing.orderStep,
+              unit: listing.unit ?? unit,
+              max: double.tryParse(
+                listing.sellableQuantity ?? listing.quantityAvailable,
+              ),
+            ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
@@ -245,7 +260,21 @@ class _CartQuantityDialogState extends State<CartQuantityDialog> {
         ),
         TextButton(
           key: const ValueKey('cart-quantity-update'),
-          onPressed: () => Navigator.pop(context, _controller.text.trim()),
+          onPressed: () {
+            if (listing != null) {
+              final parsed = double.tryParse(_controller.text.trim());
+              final snapped = snapOrderQuantity(
+                value: parsed ?? listing.minOrderQuantity,
+                min: listing.minOrderQuantity,
+                step: listing.orderStep,
+                max: double.tryParse(
+                  listing.sellableQuantity ?? listing.quantityAvailable,
+                ),
+              );
+              _controller.text = formatOrderAmount(snapped);
+            }
+            Navigator.pop(context, _controller.text.trim());
+          },
           child: Text(s.update),
         ),
       ],

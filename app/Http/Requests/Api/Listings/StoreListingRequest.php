@@ -38,6 +38,8 @@ class StoreListingRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:5000'],
             'price_per_unit' => ['required', 'numeric', 'gt:0', 'decimal:0,4', 'max:99999.9999'],
             'quantity_available' => ['required', 'numeric', 'min:0', 'max:99999.99'],
+            'min_order_quantity' => ['numeric', 'gt:0', 'decimal:0,2', 'max:99999.99'],
+            'order_step' => ['numeric', 'gt:0', 'decimal:0,2', 'max:99999.99'],
             'is_active' => ['sometimes', 'boolean'],
             'available_from' => ['nullable', 'date'],
             'available_until' => ['nullable', 'date'],
@@ -102,6 +104,13 @@ class StoreListingRequest extends FormRequest
                     return;
                 }
 
+                Listing::addOrderRuleErrors(
+                    $validator,
+                    $unit,
+                    (float) $this->validated('min_order_quantity'),
+                    (float) $this->validated('order_step'),
+                );
+
                 $guard = app(PriceGuardResolver::class)->forFarmId($seller?->farm_id, $cropType);
                 $price = $converter->guardPrice($unit, $cropType->unit_of_measure, $this->validated('price_per_unit'));
 
@@ -139,6 +148,8 @@ class StoreListingRequest extends FormRequest
             'description' => $this->validated('description'),
             'price_per_unit' => $this->validated('price_per_unit'),
             'quantity_available' => $this->validated('quantity_available'),
+            'min_order_quantity' => $this->validated('min_order_quantity'),
+            'order_step' => $this->validated('order_step'),
             'is_active' => $this->boolean('is_active', true),
             ...$this->availabilityAttributes(),
             ...($this->exists('growing_method') ? ['growing_method' => $this->validated('growing_method')] : []),
@@ -159,6 +170,23 @@ class StoreListingRequest extends FormRequest
         }
 
         return $attributes;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $defaults = [];
+
+        if (! $this->exists('min_order_quantity')) {
+            $defaults['min_order_quantity'] = 1;
+        }
+
+        if (! $this->exists('order_step')) {
+            $defaults['order_step'] = 1;
+        }
+
+        if ($defaults !== []) {
+            $this->merge($defaults);
+        }
     }
 
     public static function assertAvailabilityWindow(Validator $validator, mixed $from, mixed $until): void

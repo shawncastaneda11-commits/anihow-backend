@@ -74,6 +74,7 @@ class CartController extends Controller
 
         $total = (float) $request->validated('quantity') + (float) ($existing->quantity ?? 0);
 
+        $this->assertOrderQuantity($listing, $total);
         $this->assertStock($listing, $total);
 
         $item = $request->user()->cartItems()->updateOrCreate(
@@ -111,6 +112,7 @@ class CartController extends Controller
 
         $quantity = (float) $request->validated('quantity');
 
+        $this->assertOrderQuantity($listing, $quantity);
         $this->assertStock($listing, $quantity);
 
         $cartItem->update(['quantity' => $quantity]);
@@ -133,6 +135,23 @@ class CartController extends Controller
      * Sellable quantity, not quantity_available: stock held by other buyers'
      * placed orders is not available to this cart.
      */
+    private function assertOrderQuantity(Listing $listing, float $quantity): void
+    {
+        $left = $listing->sellableQuantity();
+
+        if (Listing::orderHundredths($left) < Listing::orderHundredths((float) $listing->min_order_quantity)) {
+            throw ValidationException::withMessages([
+                'quantity' => $listing->belowMinimumStockMessage($left),
+            ]);
+        }
+
+        if (! $listing->allowsOrderQuantity($quantity)) {
+            throw ValidationException::withMessages([
+                'quantity' => $listing->orderQuantityMessage(),
+            ]);
+        }
+    }
+
     private function assertStock(Listing $listing, float $quantity): void
     {
         if ($listing->hasStockFor($quantity)) {

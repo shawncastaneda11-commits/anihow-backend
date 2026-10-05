@@ -24,6 +24,8 @@ class ListingResource extends JsonResource
             'price_per_unit' => (float) $this->price_per_unit,
             'quantity_available' => (float) $this->quantity_available,
             'sellable_quantity' => $this->sellableQuantity(),
+            'min_order_quantity' => (float) $this->min_order_quantity,
+            'order_step' => (float) $this->order_step,
             'reserved_quantity' => $this->when(
                 $this->resource instanceof Listing && array_key_exists('reserved_quantity', $this->resource->getAttributes()),
                 fn (): float => (float) ($this->reserved_quantity ?? 0),

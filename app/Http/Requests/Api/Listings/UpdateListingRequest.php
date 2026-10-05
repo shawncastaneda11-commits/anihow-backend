@@ -31,6 +31,8 @@ class UpdateListingRequest extends FormRequest
             'description' => ['sometimes', 'nullable', 'string', 'max:5000'],
             'price_per_unit' => ['sometimes', 'numeric', 'gt:0', 'decimal:0,4', 'max:99999.9999'],
             'quantity_available' => ['sometimes', 'numeric', 'min:0', 'max:99999.99'],
+            'min_order_quantity' => ['sometimes', 'numeric', 'gt:0', 'decimal:0,2', 'max:99999.99'],
+            'order_step' => ['sometimes', 'numeric', 'gt:0', 'decimal:0,2', 'max:99999.99'],
             'is_active' => ['sometimes', 'boolean'],
             'confirm_cancel_reservations' => ['sometimes', 'boolean'],
             'available_from' => ['sometimes', 'nullable', 'date'],
@@ -110,6 +112,15 @@ class UpdateListingRequest extends FormRequest
                     return;
                 }
 
+                $min = $this->exists('min_order_quantity')
+                    ? (float) $this->input('min_order_quantity')
+                    : (float) $listing->min_order_quantity;
+                $step = $this->exists('order_step')
+                    ? (float) $this->input('order_step')
+                    : (float) $listing->order_step;
+
+                Listing::addOrderRuleErrors($validator, $unit, $min, $step);
+
                 $price = $this->has('price_per_unit')
                     ? (float) $this->validated('price_per_unit')
                     : (float) $listing->price_per_unit;
@@ -152,6 +163,8 @@ class UpdateListingRequest extends FormRequest
                 'description',
                 'price_per_unit',
                 'quantity_available',
+                'min_order_quantity',
+                'order_step',
                 'is_active',
                 'available_from',
                 'available_until',

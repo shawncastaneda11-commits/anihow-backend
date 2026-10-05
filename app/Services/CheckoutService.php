@@ -219,6 +219,12 @@ class CheckoutService
 
         $quantity = (float) $item->quantity;
 
+        if (! $listing->allowsOrderQuantity($quantity)) {
+            throw ValidationException::withMessages([
+                'cart' => "{$listing->title}: {$listing->orderQuantityMessage()}",
+            ]);
+        }
+
         if (! $listing->hasStockFor($quantity)) {
             throw ValidationException::withMessages([
                 'cart' => "{$listing->title} does not have {$quantity} available.",

@@ -87,6 +87,20 @@ class ReserveListing
                 ]);
             }
 
+            $left = min($listing->sellableQuantity(), $remaining);
+
+            if (Listing::orderHundredths($left) < Listing::orderHundredths((float) $listing->min_order_quantity)) {
+                throw ValidationException::withMessages([
+                    'quantity' => $listing->belowMinimumStockMessage($left),
+                ]);
+            }
+
+            if (! $listing->allowsOrderQuantity($quantity)) {
+                throw ValidationException::withMessages([
+                    'quantity' => $listing->orderQuantityMessage(),
+                ]);
+            }
+
             $priced = $this->pricer->price(
                 $listing,
                 $quantity,

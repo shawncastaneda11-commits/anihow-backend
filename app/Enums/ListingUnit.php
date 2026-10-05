@@ -16,6 +16,30 @@ enum ListingUnit: string
     case Pack = 'pack';
     case Bottle = 'bottle';
 
+    /**
+     * Count and package units are sold whole. The name is the plural used
+     * in "Trays are sold whole."
+     */
+    public function wholeSaleName(): string
+    {
+        return match ($this) {
+            self::Piece => 'Pieces',
+            self::Bundle => 'Bundles',
+            self::Sack => 'Sacks',
+            self::Tray => 'Trays',
+            self::Dozen => 'Dozens',
+            self::Pack => 'Packs',
+            self::Bottle => 'Bottles',
+            default => $this->label(),
+        };
+    }
+
+    public function sellsWhole(): bool
+    {
+        return $this->family() === UnitFamily::Count
+            || $this->family() === UnitFamily::Package;
+    }
+
     public function label(): string
     {
         return match ($this) {

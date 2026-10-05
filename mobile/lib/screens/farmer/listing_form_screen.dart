@@ -12,6 +12,7 @@ import '../../widgets/hint_card.dart';
 import '../../widgets/primary_button.dart';
 import '../../state/auth_controller.dart';
 import '../../state/preferences_controller.dart';
+import '../../support/order_quantity.dart';
 import 'cancel_reservations_dialog.dart';
 import 'tawad_form_screen.dart';
 import 'walk_in_sale_screen.dart';
@@ -32,6 +33,8 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   final _name = TextEditingController();
   final _price = TextEditingController();
   final _quantity = TextEditingController();
+  final _minOrder = TextEditingController(text: '1');
+  final _orderStep = TextEditingController(text: '1');
   final _description = TextEditingController();
   int? _cropTypeId;
   String? _unit;
@@ -54,6 +57,8 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       _name.text = listing.title;
       _price.text = listing.pricePerUnit;
       _quantity.text = listing.quantityAvailable;
+      _minOrder.text = formatOrderAmount(listing.minOrderQuantity);
+      _orderStep.text = formatOrderAmount(listing.orderStep);
       _description.text = listing.description ?? '';
       _cropTypeId = listing.category?.id;
       _unit = listing.unit;
@@ -72,6 +77,8 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     _name.dispose();
     _price.dispose();
     _quantity.dispose();
+    _minOrder.dispose();
+    _orderStep.dispose();
     _description.dispose();
     super.dispose();
   }
@@ -139,6 +146,11 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       );
       return;
     }
+    final rule = _orderRuleMessage();
+    if (rule != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(rule)));
+      return;
+    }
     final listing = widget.listing;
     final turningOff = listing != null && listing.isActive && !_isActive;
     if (!confirmed &&
@@ -168,6 +180,8 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       'unit': _unit,
       'price_per_unit': _price.text.trim(),
       'quantity_available': _quantity.text.trim(),
+      'min_order_quantity': _minOrder.text.trim(),
+      'order_step': _orderStep.text.trim(),
       'description': _description.text.trim(),
       'available_from': _dayStart(_availableFrom),
       'available_until': _dayEnd(_availableUntil),
@@ -317,6 +331,97 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       return crop.unit;
     }
     return allowed.isEmpty ? crop.unit : allowed.first;
+  }
+
+  String? _orderRuleMessage() {
+    final s = AppStrings.read(context);
+    final code = orderRuleCode(
+      unit: _unit,
+      minText: _minOrder.text,
+      stepText: _orderStep.text,
+    );
+    if (code == null) {
+      return null;
+    }
+    final name = s.filipino ? s.unitName(_unit ?? '') : wholeSaleName(_unit);
+    return switch (code) {
+      'whole-step' => s.soldWholeStep(name),
+      'whole-min' => s.soldWholeMinimum(name),
+      'min-step' => s.minimumAtLeastStep,
+      'decimals' => s.orderAmountDecimals,
+      'max' => s.orderAmountMax,
+      _ => s.orderAmountPositive,
+    };
+  }
+
+  Widget _orderRuleFields(AppStrings s) {
+    final unit = _unit ?? '';
+    final whole = sellsWhole(unit);
+    final min = double.tryParse(_minOrder.text.trim());
+    final step = double.tryParse(_orderStep.text.trim());
+    final keyboard = whole
+        ? TextInputType.number
+        : const TextInputType.numberWithOptions(decimal: true);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: AniHowField(
+                label: '${s.minimumOrder} ($unit)',
+                child: TextField(
+                  key: const ValueKey('listing-min-order'),
+                  controller: _minOrder,
+                  keyboardType: keyboard,
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+            ),
+            const SizedBox(width: AniHowSpace.cardGap),
+            Expanded(
+              child: AniHowField(
+                label: '${s.orderStep} ($unit)',
+                child: TextField(
+                  key: const ValueKey('listing-order-step'),
+                  controller: _orderStep,
+                  keyboardType: keyboard,
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final choice in stepChoices(unit))
+              SizedBox(
+                height: 48,
+                child: ActionChip(
+                  key: ValueKey('order-step-chip-${formatOrderAmount(choice)}'),
+                  label: Text(formatOrderAmount(choice)),
+                  onPressed: () {
+                    setState(() {
+                      _orderStep.text = formatOrderAmount(choice);
+                    });
+                  },
+                ),
+              ),
+          ],
+        ),
+        if (min != null && step != null && min > 0 && step > 0) ...[
+          const SizedBox(height: 8),
+          Text(
+            key: const ValueKey('listing-order-preview'),
+            s.buyersCanOrder(previewAmounts(min, step), unit),
+          ),
+        ],
+      ],
+    );
   }
 
   List<DropdownMenuItem<String>> _unitItems(CategoryItem crop, AppStrings s) {
@@ -608,10 +713,28 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                                   if (value == null || value.startsWith('#')) {
                                     return;
                                   }
-                                  setState(() => _unit = value);
+                                  setState(() {
+                                    _unit = value;
+                                    if (sellsWhole(value)) {
+                                      final min =
+                                          double.tryParse(_minOrder.text) ?? 1;
+                                      if (orderHundredths(min) % 100 != 0) {
+                                        _minOrder.text = '1';
+                                      }
+                                      final step =
+                                          double.tryParse(_orderStep.text) ?? 1;
+                                      if (orderHundredths(step) % 100 != 0) {
+                                        _orderStep.text = '1';
+                                      }
+                                    }
+                                  });
                                 },
                               ),
                             ),
+                          ],
+                          if (_unit != null) ...[
+                            const SizedBox(height: AniHowSpace.fieldGap),
+                            _orderRuleFields(s),
                           ],
                           const SizedBox(height: AniHowSpace.fieldGap),
                           Row(

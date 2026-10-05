@@ -12,6 +12,7 @@ use App\Support\Pricing\PriceGuard;
 use App\Support\Pricing\PriceGuardResolver;
 use App\Support\Pricing\UnitConverter;
 use Database\Factories\ListingFactory;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -36,6 +37,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'price_per_unit',
     'quantity_available',
     'quantity_held',
+    'min_order_quantity',
+    'order_step',
     'image_path',
     'is_active',
     'status',
@@ -56,6 +59,8 @@ class Listing extends Model
             'price_per_unit' => 'decimal:4',
             'quantity_available' => 'decimal:2',
             'quantity_held' => 'decimal:2',
+            'min_order_quantity' => 'decimal:2',
+            'order_step' => 'decimal:2',
             'is_active' => 'boolean',
             'status' => ListingStatus::class,
             'taken_down_at' => 'datetime',
@@ -184,6 +189,94 @@ class Listing extends Model
     public function hasStockFor(float $quantity): bool
     {
         return $quantity > 0 && $quantity <= $this->sellableQuantity();
+    }
+
+    /**
+     * The seller's minimum and step, compared in hundredths so 1.5 and 0.5
+     * do not drift. Quantity must be at least the minimum, and the distance
+     * from the minimum must be a whole number of steps.
+     */
+    public function allowsOrderQuantity(float $quantity): bool
+    {
+        $amount = self::orderHundredths($quantity);
+        $min = self::orderHundredths((float) $this->min_order_quantity);
+        $step = self::orderHundredths((float) $this->order_step);
+
+        if ($step < 1 || $amount < $min) {
+            return false;
+        }
+
+        return ($amount - $min) % $step === 0;
+    }
+
+    public function orderQuantityMessage(): string
+    {
+        $unit = $this->unit?->value ?? '';
+        $min = self::formatOrderAmount((float) $this->min_order_quantity);
+        $step = self::formatOrderAmount((float) $this->order_step);
+
+        return "Order at least {$min} {$unit}, in steps of {$step} {$unit}.";
+    }
+
+    public function belowMinimumStockMessage(float $left): string
+    {
+        $unit = $this->unit?->value ?? '';
+        $available = self::formatOrderAmount($left);
+        $min = self::formatOrderAmount((float) $this->min_order_quantity);
+
+        return "Only {$available} {$unit} left, below the minimum order of {$min} {$unit}.";
+    }
+
+    public static function orderHundredths(float $amount): int
+    {
+        return (int) round($amount * 100);
+    }
+
+    public static function formatOrderAmount(float $amount): string
+    {
+        $hundredths = self::orderHundredths($amount);
+
+        if ($hundredths % 100 === 0) {
+            return (string) intdiv($hundredths, 100);
+        }
+
+        if ($hundredths % 10 === 0) {
+            return number_format($hundredths / 100, 1, '.', '');
+        }
+
+        return number_format($hundredths / 100, 2, '.', '');
+    }
+
+    /**
+     * Seller-set minimum and step. Count and package units are whole numbers.
+     * The minimum is at least one step.
+     */
+    public static function addOrderRuleErrors(
+        Validator $validator,
+        ListingUnit $unit,
+        float $min,
+        float $step,
+    ): void {
+        if ($unit->sellsWhole() && self::orderHundredths($step) % 100 !== 0) {
+            $validator->errors()->add(
+                'order_step',
+                "{$unit->wholeSaleName()} are sold whole. Use a step of 1 or more.",
+            );
+        }
+
+        if ($unit->sellsWhole() && self::orderHundredths($min) % 100 !== 0) {
+            $validator->errors()->add(
+                'min_order_quantity',
+                "{$unit->wholeSaleName()} are sold whole. Use a minimum order of 1 or more.",
+            );
+        }
+
+        if (self::orderHundredths($min) < self::orderHundredths($step)) {
+            $validator->errors()->add(
+                'min_order_quantity',
+                'The minimum order must be at least the step.',
+            );
+        }
     }
 
     /**

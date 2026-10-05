@@ -370,6 +370,19 @@ class DemoSeeder extends Seeder
                 $values['quantity_held'] = 0;
             }
 
+            // Demo history sells these by the half kilo. The step has to allow it.
+            $halves = [
+                'nena-talong' => [1, 0.5],
+                'tonyo-kalabasa' => [1, 0.5],
+                'tonyo-ampalaya' => [1, 0.5],
+                'rosa-sili' => [0.5, 0.5],
+            ];
+
+            if (isset($halves[$key])) {
+                $values['min_order_quantity'] = $halves[$key][0];
+                $values['order_step'] = $halves[$key][1];
+            }
+
             $listings[$key] = Listing::query()->updateOrCreate(
                 [
                     'farmer_seller_id' => $seller->id,

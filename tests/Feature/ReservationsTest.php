@@ -810,6 +810,8 @@ class ReservationsTest extends TestCase
         return $this->listingFor($farmer, [
             'price_per_unit' => $price,
             'quantity_available' => $quantity,
+            'min_order_quantity' => 1,
+            'order_step' => 0.5,
             'available_from' => $from ?? now()->addDays(3),
             'available_until' => $until ?? now()->addDays(10),
         ]);

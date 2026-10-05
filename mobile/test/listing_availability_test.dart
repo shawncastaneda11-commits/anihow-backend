@@ -111,6 +111,68 @@ void main() {
     expect(field('description'), isNull);
   });
 
+  testWidgets(
+    'an upcoming card shows the reserve pill with and without the seller',
+    (tester) async {
+      final listing = ListingItem(
+        id: 8,
+        title: 'Kalabasa',
+        pricePerUnit: '40',
+        quantityAvailable: '3',
+        isUpcoming: true,
+        availableFrom: DateTime(2026, 10, 20),
+      );
+
+      for (final showSeller in [false, true]) {
+        await tester.pumpWidget(
+          _app(ProduceCard(listing: listing, showSeller: showSeller)),
+        );
+        await tester.pump();
+
+        expect(
+          find.byKey(const ValueKey('availability-pill-8')),
+          findsOneWidget,
+        );
+        expect(find.text('Reserve · from Oct 20'), findsOneWidget);
+        expect(find.byKey(const ValueKey('upcoming-badge')), findsNothing);
+      }
+    },
+  );
+
+  testWidgets('a normal listing shows Available now', (tester) async {
+    final listing = ListingItem(
+      id: 9,
+      title: 'Pechay',
+      pricePerUnit: '30',
+      quantityAvailable: '4',
+    );
+
+    await tester.pumpWidget(_app(ProduceCard(listing: listing)));
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('availability-pill-9')), findsOneWidget);
+    expect(find.text('Available now'), findsOneWidget);
+  });
+
+  testWidgets('a shop card with the seller hidden still shows the pill', (
+    tester,
+  ) async {
+    final listing = ListingItem(
+      id: 10,
+      title: 'Sitaw',
+      pricePerUnit: '25',
+      quantityAvailable: '6',
+    );
+
+    await tester.pumpWidget(
+      _app(ProduceCard(listing: listing, showSeller: false)),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('availability-pill-10')), findsOneWidget);
+    expect(find.text('Available now'), findsOneWidget);
+  });
+
   testWidgets('the farmer list chip names the availability state', (
     tester,
   ) async {

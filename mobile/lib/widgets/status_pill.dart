@@ -11,11 +11,15 @@ class StatusPill extends StatelessWidget {
     required this.label,
     required this.color,
     this.background,
+    this.icon,
+    this.maxLines = 2,
   });
 
   final String label;
   final Color color;
   final Color? background;
+  final IconData? icon;
+  final int maxLines;
 
   factory StatusPill.order(
     String status, {
@@ -28,7 +32,10 @@ class StatusPill extends StatelessWidget {
         ? strings?.outForDelivery ?? 'Out for delivery'
         : strings?.readyForPickup ?? 'Ready for pickup';
     final mapped = switch (normalized) {
-      'placed' => (AniHowColors.pending, label ?? strings?.stepPending ?? 'Pending'),
+      'placed' => (
+        AniHowColors.pending,
+        label ?? strings?.stepPending ?? 'Pending',
+      ),
       'confirmed' => (
         AniHowColors.confirmedBlue,
         label ?? strings?.stepConfirmed ?? 'Confirmed',
@@ -78,28 +85,41 @@ class StatusPill extends StatelessWidget {
     if (quantity <= 0) {
       return const StatusPill(label: 'Out', color: AniHowColors.cancelled);
     }
-    return listing.isLowStock ? StatusPill.lowStock(strings: strings) : StatusPill.inStock(strings: strings);
+    return listing.isLowStock
+        ? StatusPill.lowStock(strings: strings)
+        : StatusPill.inStock(strings: strings);
   }
 
   @override
   Widget build(BuildContext context) {
+    final labelColor = _labelColor(context);
+    final text = Text(
+      label,
+      maxLines: maxLines,
+      softWrap: maxLines > 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        color: labelColor,
+        fontWeight: FontWeight.w700,
+        fontSize: AniHowSpace.meta,
+      ),
+    );
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: background ?? color.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        label,
-        maxLines: 2,
-        softWrap: true,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: _labelColor(context),
-          fontWeight: FontWeight.w700,
-          fontSize: AniHowSpace.meta,
-        ),
-      ),
+      child: icon == null
+          ? text
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 14, color: labelColor),
+                const SizedBox(width: 4),
+                Flexible(child: text),
+              ],
+            ),
     );
   }
 
@@ -128,7 +148,10 @@ class StatusPill extends StatelessWidget {
       AniHowColors.readyTeal => dark ? 0.800 : 0.220,
       AniHowColors.completeGreen => dark ? 0.800 : 0.220,
       AniHowColors.cancelledRed => dark ? 0.820 : 0.300,
-      _ => dark ? (hsl.lightness + 0.12).clamp(0.2, 0.85) : (hsl.lightness - 0.12).clamp(0.2, 0.85),
+      _ =>
+        dark
+            ? (hsl.lightness + 0.12).clamp(0.2, 0.85)
+            : (hsl.lightness - 0.12).clamp(0.2, 0.85),
     };
     return hsl.withLightness(lightness).toColor();
   }

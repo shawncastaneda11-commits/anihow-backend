@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'package:provider/provider.dart';
@@ -85,31 +87,28 @@ class ProduceCard extends StatelessWidget {
       listing.tawad,
       unit: listing.unit,
     );
-    final photo = AspectRatio(
-      aspectRatio: 4 / 3,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          ProducePhoto(listing: listing, iconSize: 40),
-          if (showPromo && promo != null)
-            Positioned(
-              left: 8,
-              right: 8,
-              bottom: 8,
-              child: PromoBadge(rule: listing.tawad, unit: listing.unit),
+    final photo = Stack(
+      fit: StackFit.expand,
+      children: [
+        ProducePhoto(listing: listing, iconSize: 40),
+        if (showPromo && promo != null)
+          Positioned(
+            left: 8,
+            right: 8,
+            bottom: 8,
+            child: PromoBadge(rule: listing.tawad, unit: listing.unit),
+          ),
+        if (trailing != null)
+          Positioned(
+            top: 4,
+            right: 4,
+            child: Material(
+              color: Colors.black.withValues(alpha: 0.35),
+              shape: const CircleBorder(),
+              child: trailing,
             ),
-          if (trailing != null)
-            Positioned(
-              top: 4,
-              right: 4,
-              child: Material(
-                color: Colors.black.withValues(alpha: 0.35),
-                shape: const CircleBorder(),
-                child: trailing,
-              ),
-            ),
-        ],
-      ),
+          ),
+      ],
     );
 
     final details = Padding(
@@ -143,6 +142,7 @@ class ProduceCard extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
+          ..._availabilityPill(context),
           ..._buyerNotes(context),
         ],
       ),
@@ -155,23 +155,73 @@ class ProduceCard extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             if (constraints.maxHeight.isFinite) {
+              final idealPhotoHeight = constraints.maxWidth * 3 / 4;
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  photo,
-                  Expanded(child: details),
+                  Flexible(
+                    fit: FlexFit.loose,
+                    child: LayoutBuilder(
+                      builder: (context, photoConstraints) {
+                        final height = photoConstraints.maxHeight.isFinite
+                            ? math.min(
+                                idealPhotoHeight,
+                                photoConstraints.maxHeight,
+                              )
+                            : idealPhotoHeight;
+                        return SizedBox(
+                          height: height,
+                          width: double.infinity,
+                          child: photo,
+                        );
+                      },
+                    ),
+                  ),
+                  details,
                 ],
               );
             }
             return Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [photo, details],
+              children: [
+                AspectRatio(aspectRatio: 4 / 3, child: photo),
+                details,
+              ],
             );
           },
         ),
       ),
     );
+  }
+
+  List<Widget> _availabilityPill(BuildContext context) {
+    final quantity = double.tryParse(listing.quantityAvailable) ?? 0;
+    if (listing.isTakenDown || quantity <= 0) {
+      return const [];
+    }
+    final s = AppStrings.of(context);
+    final upcoming = listing.isUpcoming;
+    final from = listing.availableFrom;
+    final label = upcoming
+        ? (from == null
+              ? s.reserveOnly
+              : s.reserveFrom(s.shortDate(from.toLocal())))
+        : s.availableNow;
+    return [
+      const SizedBox(height: 4),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: StatusPill(
+          key: ValueKey('availability-pill-${listing.id}'),
+          label: label,
+          color: upcoming ? AniHowColors.pending : AniHowColors.inStock,
+          background: upcoming ? null : AniHowColors.inStockBg,
+          icon: upcoming ? Icons.event : Icons.shopping_basket_outlined,
+          maxLines: 1,
+        ),
+      ),
+    ];
   }
 
   List<Widget> _buyerNotes(BuildContext context) {
@@ -192,19 +242,6 @@ class ProduceCard extends StatelessWidget {
       return notes;
     }
     final s = AppStrings.of(context);
-    if (listing.isUpcoming && listing.availableFrom != null) {
-      notes.add(
-        Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Text(
-            s.availableFromBadge(s.shortDate(listing.availableFrom!.toLocal())),
-            key: const ValueKey('upcoming-badge'),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      );
-    }
     if (listing.organicBadge != null) {
       notes.add(GrowingBadge(badge: listing.organicBadge));
     }
@@ -305,6 +342,7 @@ class ProduceCard extends StatelessWidget {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
+                          ..._availabilityPill(context),
                           ..._buyerNotes(context),
                           if (showPromo &&
                               promoBadgeLabel(

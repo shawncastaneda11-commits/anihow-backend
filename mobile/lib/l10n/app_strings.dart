@@ -252,12 +252,9 @@ class AppStrings {
   String get announcementPinned => t('Pinned', 'Naka-pin');
   String get updatesFromFarms =>
       t('Updates from farms', 'Mga update mula sa mga bukid');
-  String updatesFromFarmsCount(int count) => t(
-    '$count updates from farms',
-    '$count update mula sa mga bukid',
-  );
-  String listingsCount(int count) =>
-      t('$count listings', '$count na produkto');
+  String updatesFromFarmsCount(int count) =>
+      t('$count updates from farms', '$count update mula sa mga bukid');
+  String listingsCount(int count) => t('$count listings', '$count na produkto');
   String get filter => t('Filter', 'Salain');
   String get apply => t('Apply', 'Ilapat');
   String get clear => t('Clear', 'I-clear');
@@ -408,10 +405,8 @@ class AppStrings {
   String get readyForPickup => t('Ready for pickup', 'Handa nang kunin');
   String get outForDelivery => t('Out for delivery', 'Inihahatid na');
   String get orderComplete => t('Order complete', 'Tapos na ang order');
-  String get orderCompleteHint => t(
-    'Your order is fulfilled',
-    'Natupad na ang iyong order',
-  );
+  String get orderCompleteHint =>
+      t('Your order is fulfilled', 'Natupad na ang iyong order');
   String get cropFilter => t('Crop', 'Ani');
   String get chatWithBuyer => t('Chat with buyer', 'Makipag-chat sa buyer');
   String get order => t('Order', 'Order');
@@ -662,6 +657,10 @@ class AppStrings {
       t('Harvested $date', 'Inani noong $date');
   String availableFromBadge(String date) =>
       t('Available from $date', 'Available simula $date');
+  String get availableNow => t('Available now', 'Mabibili na ngayon');
+  String reserveFrom(String date) =>
+      t('Reserve · from $date', 'I-reserve · mula $date');
+  String get reserveOnly => t('Reserve', 'I-reserve');
   String get availabilityAvailable => t('Available', 'Nabibili');
   String get availabilityUpcoming => t('Upcoming', 'Paparating');
   String get availabilityExpired => t('Expired', 'Paso na');
@@ -737,13 +736,10 @@ class AppStrings {
   String get items => t('Items', 'Mga item');
   String get cashAtMeetup => t('Cash at meetup', 'Cash sa pagkikita');
   String get payOnHandover => t('Cash on handover', 'Cash sa pag-abot');
-  String get onlinePayment => t(
-    "Online payment (seller's QR)",
-    'Online na bayad (QR ng nagbebenta)',
-  );
-  String paymentMethodLabel(String? method) => method == 'online_transfer'
-      ? onlinePayment
-      : payOnHandover;
+  String get onlinePayment =>
+      t("Online payment (seller's QR)", 'Online na bayad (QR ng nagbebenta)');
+  String paymentMethodLabel(String? method) =>
+      method == 'online_transfer' ? onlinePayment : payOnHandover;
   String get acceptOnlinePayment => t(
     'Accept online payment (send your GCash/Maya QR in chat)',
     'Tumanggap ng online na bayad (ipadala ang GCash/Maya QR sa chat)',
@@ -756,10 +752,8 @@ class AppStrings {
     "After you place the order, we'll message the seller to send their QR. Pay in the app you use (GCash/Maya); AniHow does not process payments.",
     'Pagkatapos mong mag-order, magme-message kami sa nagbebenta para ipadala ang QR. Magbayad sa app na gamit mo (GCash/Maya); hindi nagpoproseso ng bayad ang AniHow.',
   );
-  String get amountReceivedOnline => t(
-    'Amount received (online)',
-    'Halagang natanggap (online)',
-  );
+  String get amountReceivedOnline =>
+      t('Amount received (online)', 'Halagang natanggap (online)');
   String tawadMinus(String peso) => t('Tawad −$peso', 'Tawad −$peso');
   String get discountTawad => t('Discount (tawad)', 'Diskwento (tawad)');
   String discountTawadMinus(String peso) =>

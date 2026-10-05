@@ -27,6 +27,13 @@ class PagedItems<T> {
   final bool complete;
 }
 
+class MarketplaceFeed {
+  const MarketplaceFeed({required this.items, this.mixDay});
+
+  final List<ListingItem> items;
+  final String? mixDay;
+}
+
 const _datesClearedAsEmpty = {
   'available_from',
   'available_until',
@@ -250,7 +257,7 @@ class ApiClient {
     }
   }
 
-  Future<List<ListingItem>> marketplace({
+  Future<MarketplaceFeed> marketplace({
     String? search,
     int? cropTypeId,
     String? sort,
@@ -259,22 +266,35 @@ class ApiClient {
     double? nearLng,
     String? growingMethod,
     int? page,
+    String? mixDay,
   }) async {
-    return _list(
-      '/buyer/marketplace',
-      query: {
-        if (search != null && search.isNotEmpty) 'search': search,
-        'crop_type_id': ?cropTypeId,
-        if (sort != null && sort.isNotEmpty) 'sort': sort,
-        if (category != null && category.isNotEmpty) 'category': category,
-        if (nearLat != null && nearLng != null) 'near_lat': nearLat,
-        if (nearLat != null && nearLng != null) 'near_lng': nearLng,
-        if (growingMethod != null && growingMethod.isNotEmpty)
-          'growing_method': growingMethod,
-        if (page != null && page > 1) 'page': page,
-      },
-      parse: ListingItem.fromJson,
-    );
+    try {
+      final response = await _dio.get(
+        '/buyer/marketplace',
+        queryParameters: {
+          if (search != null && search.isNotEmpty) 'search': search,
+          'crop_type_id': ?cropTypeId,
+          if (sort != null && sort.isNotEmpty) 'sort': sort,
+          if (category != null && category.isNotEmpty) 'category': category,
+          if (nearLat != null && nearLng != null) 'near_lat': nearLat,
+          if (nearLat != null && nearLng != null) 'near_lng': nearLng,
+          if (growingMethod != null && growingMethod.isNotEmpty)
+            'growing_method': growingMethod,
+          if (page != null && page > 1) 'page': page,
+          if (mixDay != null && mixDay.isNotEmpty) 'mix_day': mixDay,
+        },
+      );
+      final body = _asMap(response.data);
+      final meta = _asMap(body['meta']);
+      final mix = meta['mix_day'];
+
+      return MarketplaceFeed(
+        items: _parseList(response.data, ListingItem.fromJson),
+        mixDay: mix is String && mix.isNotEmpty ? mix : null,
+      );
+    } on DioException catch (error) {
+      throw ApiException(_messageFrom(error));
+    }
   }
 
   Future<ListingItem> marketplaceShow(int id) async {

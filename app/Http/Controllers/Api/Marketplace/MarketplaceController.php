@@ -8,6 +8,7 @@ use App\Http\Requests\Api\Marketplace\MarketplaceIndexRequest;
 use App\Http\Resources\Api\ListingResource;
 use App\Models\Listing;
 use App\Support\FarmProximity;
+use App\Support\Marketplace\FairMixOrdering;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -70,14 +71,29 @@ class MarketplaceController extends Controller
                 }),
             );
 
+        $sort = $request->validated('sort') ?? 'fair';
+        $ordering = app(FairMixOrdering::class);
+        $mixDay = $sort === 'fair'
+            ? $ordering->day($request->validated('mix_day'))
+            : null;
+
         $listings = $this->sorted(
             $listings,
-            $request->validated('sort') ?? 'freshest',
+            $sort,
             $this->near($request->validated('near_lat')),
             $this->near($request->validated('near_lng')),
+            $mixDay,
         );
 
-        return ListingResource::collection($listings->paginate());
+        $page = ListingResource::collection(
+            $listings->paginate($request->integer('per_page', 15)),
+        );
+
+        if ($mixDay !== null) {
+            $page->additional(['meta' => ['mix_day' => $mixDay]]);
+        }
+
+        return $page;
     }
 
     public function show(Listing $listing): ListingResource
@@ -112,16 +128,18 @@ class MarketplaceController extends Controller
      * @param  Builder<Listing>  $query
      * @return Builder<Listing>
      */
-    private function sorted(Builder $query, string $sort, ?float $nearLat, ?float $nearLng): Builder
+    private function sorted(Builder $query, string $sort, ?float $nearLat, ?float $nearLng, ?string $mixDay): Builder
     {
         if ($sort === 'nearest') {
             return FarmProximity::apply($query, 'listings.farm_id', $nearLat, $nearLng);
         }
 
         return match ($sort) {
+            'fair' => app(FairMixOrdering::class)->apply($query, $mixDay),
             'price_asc' => $query->orderBy('price_per_unit')->orderBy('listings.id'),
             'price_desc' => $query->orderByDesc('price_per_unit')->orderBy('listings.id'),
             'availability' => $query->orderByDesc('quantity_available')->orderBy('listings.id'),
+            'freshest' => $query->orderByDesc('listings.created_at')->orderByDesc('listings.id'),
             default => $query->orderByDesc('listings.created_at')->orderByDesc('listings.id'),
         };
     }

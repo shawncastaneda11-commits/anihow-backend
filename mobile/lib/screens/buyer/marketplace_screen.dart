@@ -33,7 +33,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   final _scroll = ScrollController();
   int? _cropTypeId;
   String? _category;
-  String _sort = 'freshest';
+  String _sort = 'fair';
+  String? _mixDay;
   String? _growingMethod;
   double? _nearLat;
   double? _nearLng;
@@ -71,7 +72,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   }
 
   bool get _filtersActive =>
-      _sort != 'freshest' || _growingMethod != null || _cropTypeId != null;
+      _sort != 'fair' || _growingMethod != null || _cropTypeId != null;
 
   String _today() {
     final now = DateTime.now();
@@ -109,9 +110,10 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       _loading = true;
       _error = null;
       _page = 1;
+      _mixDay = null;
     });
     try {
-      final items = await api.marketplace(
+      final feed = await api.marketplace(
         search: _search.text.trim(),
         cropTypeId: _cropTypeId,
         sort: _sort,
@@ -131,9 +133,10 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         return;
       }
       setState(() {
-        _items = items;
+        _items = feed.items;
+        _mixDay = feed.mixDay;
         _updates = updates;
-        _hasMore = items.length >= _pageSize;
+        _hasMore = feed.items.length >= _pageSize;
         _loading = false;
       });
     } catch (error) {
@@ -156,7 +159,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     setState(() => _loadingMore = true);
     final nextPage = _page + 1;
     try {
-      final items = await context.read<AuthController>().api.marketplace(
+      final feed = await context.read<AuthController>().api.marketplace(
         search: _search.text.trim(),
         cropTypeId: _cropTypeId,
         sort: _sort,
@@ -165,14 +168,15 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         nearLng: _sort == 'nearest' ? _nearLng : null,
         growingMethod: _growingMethod,
         page: nextPage,
+        mixDay: _mixDay,
       );
       if (!mounted) {
         return;
       }
       setState(() {
         _page = nextPage;
-        _items = [..._items, ...items];
-        _hasMore = items.length >= _pageSize;
+        _items = [..._items, ...feed.items];
+        _hasMore = feed.items.length >= _pageSize;
         _loadingMore = false;
       });
     } catch (_) {
@@ -713,7 +717,19 @@ class _FilterSheetState extends State<_FilterSheet> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(s.sort, style: theme.textTheme.titleMedium),
-            _option(s.freshest, _sort == 'freshest', () => _sort = 'freshest'),
+            _option(
+              s.sortFairMix,
+              _sort == 'fair',
+              () => _sort = 'fair',
+              subtitle: s.sortFairMixHint,
+              key: const Key('sort-fair'),
+            ),
+            _option(
+              s.sortNewest,
+              _sort == 'freshest',
+              () => _sort = 'freshest',
+              key: const Key('sort-newest'),
+            ),
             _option(
               s.priceLowHigh,
               _sort == 'price_asc',
@@ -763,7 +779,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                     ),
                     onPressed: () {
                       setState(() {
-                        _sort = 'freshest';
+                        _sort = 'fair';
                         _growingMethod = null;
                         _cropTypeId = null;
                       });
@@ -797,7 +813,14 @@ class _FilterSheetState extends State<_FilterSheet> {
     );
   }
 
-  Widget _option(String label, bool selected, VoidCallback select, {Key? key}) {
+  Widget _option(
+    String label,
+    bool selected,
+    VoidCallback select, {
+    Key? key,
+    String? subtitle,
+  }) {
+    final theme = Theme.of(context);
     return InkWell(
       key: key,
       onTap: () => setState(select),
@@ -807,10 +830,22 @@ class _FilterSheetState extends State<_FilterSheet> {
           children: [
             Icon(
               selected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: selected ? Theme.of(context).colorScheme.primary : null,
+              color: selected ? theme.colorScheme.primary : null,
             ),
             const SizedBox(width: 8),
-            Expanded(child: Text(label)),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label),
+                    if (subtitle != null)
+                      Text(subtitle, style: theme.textTheme.bodySmall),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),

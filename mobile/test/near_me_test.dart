@@ -23,7 +23,7 @@ class _MarketplaceApi extends ApiClient {
   int calls = 0;
 
   @override
-  Future<List<ListingItem>> marketplace({
+  Future<MarketplaceFeed> marketplace({
     String? search,
     int? cropTypeId,
     String? sort,
@@ -32,20 +32,23 @@ class _MarketplaceApi extends ApiClient {
     double? nearLng,
     String? growingMethod,
     int? page,
+    String? mixDay,
   }) async {
     calls++;
     this.sort = sort;
     this.nearLat = nearLat;
     this.nearLng = nearLng;
-    return const [
-      ListingItem(
-        id: 7,
-        title: 'Kamatis',
-        pricePerUnit: '40',
-        quantityAvailable: '10',
-        distanceKm: 2.4,
-      ),
-    ];
+    return const MarketplaceFeed(
+      items: [
+        ListingItem(
+          id: 7,
+          title: 'Kamatis',
+          pricePerUnit: '40',
+          quantityAvailable: '10',
+          distanceKm: 2.4,
+        ),
+      ],
+    );
   }
 
   @override

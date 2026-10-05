@@ -336,6 +336,12 @@ class AppStrings {
       t('Certified by $name', 'Sertipikado ng $name');
   String get searchProduce => t('Search produce', 'Maghanap ng ani');
   String get freshest => t('Freshest', 'Pinakabago');
+  String get sortFairMix => t('Fair mix', 'Patas na halo');
+  String get sortFairMixHint => t(
+    'Every farm takes turns at the top. Changes daily.',
+    'Salit-salitan ang bawat bukid sa itaas. Nagbabago araw-araw.',
+  );
+  String get sortNewest => t('Newest', 'Pinakabago');
   String get nearest => t('Nearest', 'Pinakamalapit');
   String get locationUnavailable => t(
     'Location is off. Showing the usual order.',

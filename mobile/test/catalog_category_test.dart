@@ -18,7 +18,7 @@ class _RecordingApi extends ApiClient {
   String? category;
 
   @override
-  Future<List<ListingItem>> marketplace({
+  Future<MarketplaceFeed> marketplace({
     String? search,
     int? cropTypeId,
     String? sort,
@@ -27,9 +27,10 @@ class _RecordingApi extends ApiClient {
     double? nearLng,
     String? growingMethod,
     int? page,
+    String? mixDay,
   }) async {
     this.category = category;
-    return const [];
+    return const MarketplaceFeed(items: []);
   }
 
   @override

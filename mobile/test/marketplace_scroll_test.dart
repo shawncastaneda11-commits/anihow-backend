@@ -32,7 +32,7 @@ class _MarketApi extends ApiClient {
   final calls = <Map<String, Object?>>[];
 
   @override
-  Future<List<ListingItem>> marketplace({
+  Future<MarketplaceFeed> marketplace({
     String? search,
     int? cropTypeId,
     String? sort,
@@ -41,6 +41,7 @@ class _MarketApi extends ApiClient {
     double? nearLng,
     String? growingMethod,
     int? page,
+    String? mixDay,
   }) async {
     this.sort = sort;
     this.category = category;
@@ -56,8 +57,9 @@ class _MarketApi extends ApiClient {
       'nearLat': nearLat,
       'nearLng': nearLng,
       'page': page,
+      'mixDay': mixDay,
     });
-    return listings;
+    return MarketplaceFeed(items: listings);
   }
 
   @override
@@ -113,14 +115,28 @@ Widget _app(_MarketApi api) {
 
 Future<void> _loadRoboto() async {
   final loader = FontLoader('Roboto');
-  for (final name in [
-    'roboto-regular.ttf',
-    'roboto-medium.ttf',
-    'roboto-bold.ttf',
-  ]) {
-    final bytes = await File(
-      'C:/flutter/bin/cache/artifacts/material_fonts/$name',
-    ).readAsBytes();
+  final roots = [
+    'C:/flutter/bin/cache/artifacts/material_fonts',
+    'C:/Users/joshua/flutter/bin/cache/artifacts/material_fonts',
+  ];
+  var loaded = false;
+  for (final root in roots) {
+    if (!File('$root/roboto-regular.ttf').existsSync()) {
+      continue;
+    }
+    for (final name in [
+      'roboto-regular.ttf',
+      'roboto-medium.ttf',
+      'roboto-bold.ttf',
+    ]) {
+      final bytes = await File('$root/$name').readAsBytes();
+      loader.addFont(Future.value(ByteData.sublistView(bytes)));
+    }
+    loaded = true;
+    break;
+  }
+  if (!loaded) {
+    final bytes = await File(r'C:\Windows\Fonts\arial.ttf').readAsBytes();
     loader.addFont(Future.value(ByteData.sublistView(bytes)));
   }
   await loader.load();

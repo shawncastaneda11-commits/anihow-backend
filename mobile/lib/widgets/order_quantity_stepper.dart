@@ -175,14 +175,29 @@ class _OrderQuantityStepperState extends State<OrderQuantityStepper> {
           ],
         ),
         const SizedBox(height: 4),
-        if (_liveSmallUnit != null)
-          Text(
-            key: const ValueKey('order-qty-equivalent'),
-            s.quantitySmallUnitHint(_liveSmallUnit!),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AniHowColors.muted,
+        if (_liveSmallUnit != null) ...[
+          Align(
+            alignment: Alignment.center,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AniHowColors.inStockBg,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                child: Text(
+                  key: const ValueKey('order-qty-equivalent'),
+                  s.quantitySmallUnitHint(_liveSmallUnit!),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AniHowColors.inStock,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ),
           ),
+          const SizedBox(height: 4),
+        ],
         Text(
           key: const ValueKey('order-qty-hint'),
           s.quantityStepHint(

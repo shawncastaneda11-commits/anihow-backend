@@ -100,6 +100,48 @@ void main() {
     expect(find.text('= 100 g'), findsNothing);
   });
 
+  testWidgets('the gram equivalent is a green pill and updates as you type', (
+    tester,
+  ) async {
+    final controller = TextEditingController(text: '1');
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      _app(
+        Scaffold(
+          body: OrderQuantityStepper(
+            controller: controller,
+            min: 0.01,
+            step: 0.01,
+            unit: 'kg',
+            max: 10,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('= 1,000 g'), findsOneWidget);
+    final equivalent = tester.element(find.text('= 1,000 g'));
+    DecoratedBox? pill;
+    equivalent.visitAncestorElements((ancestor) {
+      final widget = ancestor.widget;
+      if (widget is DecoratedBox &&
+          widget.decoration is BoxDecoration &&
+          (widget.decoration as BoxDecoration).color == AniHowColors.inStockBg) {
+        pill = widget;
+        return false;
+      }
+      return true;
+    });
+    expect(pill, isNotNull);
+
+    await tester.enterText(find.byKey(const ValueKey('order-qty-field')), '2.5');
+    await tester.pump();
+
+    expect(find.text('= 2,500 g'), findsOneWidget);
+    expect(find.text('= 1,000 g'), findsNothing);
+  });
+
   testWidgets('a piece listing has no gram or millilitre hints', (tester) async {
     final controller = TextEditingController(text: '1');
     addTearDown(controller.dispose);

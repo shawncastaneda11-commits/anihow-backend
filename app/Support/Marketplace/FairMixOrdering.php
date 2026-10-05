@@ -4,8 +4,6 @@ namespace App\Support\Marketplace;
 
 use App\Models\Listing;
 use Illuminate\Database\Eloquent\Builder;
-use Random\Engine\Mt19937;
-use Random\Randomizer;
 
 class FairMixOrdering
 {
@@ -16,8 +14,8 @@ class FairMixOrdering
      * 1. Group: listings available now, then upcoming ones (available_from > now,
      *    the same rule as Listing::isUpcoming() once expired rows are already gone).
      * 2. Round: within a group, number each seller's listings 1, 2, 3... newest first.
-     * 3. Seller turn: distinct seller ids, sorted, then shuffled with a seed of
-     *    crc32('fair-mix:'.$day) so the turn order is stable for that day.
+     * 3. Seller turn: each seller gets a daily number from a hash of the date and
+     *    seller id. Adding a seller never moves the others.
      * 4. Final order: group, round, seller turn, listing id. Pagination cannot
      *    repeat or skip a row while the day stays the same.
      *
@@ -94,7 +92,17 @@ class FairMixOrdering
      */
     private function sellerTurn(array $sortedSellerIds, string $day): array
     {
-        return (new Randomizer(new Mt19937(crc32('fair-mix:'.$day))))
-            ->shuffleArray($sortedSellerIds);
+        usort($sortedSellerIds, function (int $left, int $right) use ($day): int {
+            $byTurn = $this->dailyTurn($day, $left) <=> $this->dailyTurn($day, $right);
+
+            return $byTurn !== 0 ? $byTurn : $left <=> $right;
+        });
+
+        return array_values($sortedSellerIds);
+    }
+
+    private function dailyTurn(string $day, int $sellerId): int
+    {
+        return crc32('fair-mix:'.$day.':'.$sellerId);
     }
 }

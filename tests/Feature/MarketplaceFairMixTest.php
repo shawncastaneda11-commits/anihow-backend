@@ -146,6 +146,53 @@ class MarketplaceFairMixTest extends TestCase
         $this->assertSame($seen, $held);
     }
 
+    public function test_a_new_seller_does_not_move_sellers_already_in_the_mix(): void
+    {
+        $this->travelTo(Carbon::parse('2026-10-06 10:00:00', 'Asia/Manila'));
+
+        $sellers = collect(range(1, 4))->map(fn (): User => $this->farmer());
+        $buyer = $this->buyer();
+
+        foreach ($sellers as $seller) {
+            $this->listingFor($seller, ['title' => 'Listing '.$seller->id]);
+        }
+
+        $pageOne = $this->asUser($buyer)
+            ->getJson('/api/buyer/marketplace?per_page=2&mix_day=2026-10-06')
+            ->assertOk();
+        $pageOneIds = collect($pageOne->json('data'))->pluck('id')->all();
+        $originalSellers = collect($pageOne->json('data'))->pluck('seller.id')->all();
+
+        $rest = $this->asUser($buyer)
+            ->getJson('/api/buyer/marketplace?per_page=2&page=2&mix_day=2026-10-06')
+            ->assertOk();
+        $originalSellers = [
+            ...$originalSellers,
+            ...collect($rest->json('data'))->pluck('seller.id')->all(),
+        ];
+
+        $newcomer = $this->farmer();
+        $this->listingFor($newcomer, ['title' => 'Newcomer']);
+
+        $pageTwo = $this->asUser($buyer)
+            ->getJson('/api/buyer/marketplace?per_page=2&page=2&mix_day=2026-10-06')
+            ->assertOk();
+        $pageTwoIds = collect($pageTwo->json('data'))->pluck('id')->all();
+
+        $this->assertSame([], array_values(array_intersect($pageOneIds, $pageTwoIds)));
+
+        $after = [
+            ...collect($this->asUser($buyer)->getJson('/api/buyer/marketplace?per_page=2&mix_day=2026-10-06')->json('data'))->pluck('seller.id'),
+            ...collect($this->asUser($buyer)->getJson('/api/buyer/marketplace?per_page=2&page=2&mix_day=2026-10-06')->json('data'))->pluck('seller.id'),
+            ...collect($this->asUser($buyer)->getJson('/api/buyer/marketplace?per_page=2&page=3&mix_day=2026-10-06')->json('data'))->pluck('seller.id'),
+        ];
+
+        $this->assertSame(
+            $originalSellers,
+            array_values(array_filter($after, fn ($id): bool => $id !== $newcomer->id)),
+        );
+    }
+
     public function test_other_sorts_and_filters_still_work_and_a_bad_mix_day_is_rejected(): void
     {
         $this->travelTo(Carbon::parse('2026-10-06 10:00:00', 'Asia/Manila'));

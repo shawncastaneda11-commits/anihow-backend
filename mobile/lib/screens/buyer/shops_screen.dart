@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
+import '../../services/api_client.dart';
 import '../../services/buyer_location.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
@@ -38,6 +39,8 @@ class _FarmRow {
 
 class _ShopsScreenState extends State<ShopsScreen> {
   final _search = TextEditingController();
+  final Map<int, bool> _followed = {};
+  final Set<int> _followBusy = {};
   String _sort = 'name';
   double? _nearLat;
   double? _nearLng;
@@ -173,7 +176,14 @@ class _ShopsScreenState extends State<ShopsScreen> {
       onRetry: _reload,
       emptyMessage: s.noFarmsYet,
       builder: (context, shops) {
+        for (final shop in shops) {
+          final farmId = shop.farmId;
+          if (farmId != null) {
+            _followed.putIfAbsent(farmId, () => shop.farmIsFavorited);
+          }
+        }
         final farms = _farms(shops);
+        final buyer = context.watch<AuthController>().user?.isBuyer ?? false;
 
         return Column(
           children: [
@@ -253,8 +263,15 @@ class _ShopsScreenState extends State<ShopsScreen> {
                         itemCount: farms.length,
                         separatorBuilder: (_, _) =>
                             const SizedBox(height: AniHowSpace.cardGap),
-                        itemBuilder: (context, index) =>
-                            _FarmCard(farm: farms[index]),
+                        itemBuilder: (context, index) {
+                          final farm = farms[index];
+                          return _FarmCard(
+                            farm: farm,
+                            followed: _followed[farm.id] ?? false,
+                            showFollow: buyer,
+                            onFollow: () => _toggleFollow(farm.id),
+                          );
+                        },
                       ),
               ),
             ),
@@ -263,12 +280,50 @@ class _ShopsScreenState extends State<ShopsScreen> {
       },
     );
   }
+
+  Future<void> _toggleFollow(int farmId) async {
+    if (_followBusy.contains(farmId)) {
+      return;
+    }
+    final followed = _followed[farmId] ?? false;
+    setState(() {
+      _followBusy.add(farmId);
+      _followed[farmId] = !followed;
+    });
+    try {
+      final api = context.read<AuthController>().api;
+      if (followed) {
+        await api.removeFarmFavorite(farmId);
+      } else {
+        await api.addFarmFavorite(farmId);
+      }
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _followed[farmId] = followed);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
+    } finally {
+      if (mounted) {
+        setState(() => _followBusy.remove(farmId));
+      }
+    }
+  }
 }
 
 class _FarmCard extends StatelessWidget {
-  const _FarmCard({required this.farm});
+  const _FarmCard({
+    required this.farm,
+    required this.followed,
+    required this.showFollow,
+    required this.onFollow,
+  });
 
   final _FarmRow farm;
+  final bool followed;
+  final bool showFollow;
+  final VoidCallback onFollow;
 
   @override
   Widget build(BuildContext context) {
@@ -336,6 +391,19 @@ class _FarmCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (showFollow)
+                IconButton(
+                  key: Key('farm-follow-${farm.id}'),
+                  tooltip: followed ? s.followingFarm : s.followFarm,
+                  onPressed: onFollow,
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size(48, 48),
+                  ),
+                  icon: Icon(
+                    followed ? Icons.favorite : Icons.favorite_border,
+                  ),
+                  color: followed ? theme.colorScheme.error : muted,
+                ),
               Icon(Icons.chevron_right, color: muted),
             ],
           ),

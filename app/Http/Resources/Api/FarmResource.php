@@ -46,6 +46,11 @@ class FarmResource extends JsonResource
             'photos' => FarmPhotoResource::collection($this->whenLoaded('photos')),
             'announcements' => FarmAnnouncementResource::collection($this->whenLoaded('announcements')),
             'farmer_sellers_count' => $this->whenCounted('farmerSellers'),
+            'favorites_count' => (int) ($this->favorites_count ?? 0),
+            'is_favorited' => $this->when(
+                $request->user()?->can(Permission::BrowseMarketplace->value) ?? false,
+                fn (): bool => (bool) $this->resource->getAttribute('is_favorited'),
+            ),
             'storefronts' => $this->when(
                 $this->relationLoaded('farmerSellers'),
                 fn (): array => $this->farmerSellers

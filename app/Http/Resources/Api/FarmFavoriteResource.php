@@ -24,6 +24,8 @@ class FarmFavoriteResource extends JsonResource
             'farm_id' => $this->farm_id,
             'name' => $farm?->name,
             'place' => $place === '' ? null : $place,
+            'cover_photo_url' => $farm?->coverPhotoUrl(),
+            'thumbnail_url' => $farm?->coverThumbnailUrl(),
             'sellers_count' => (int) ($farm?->farmer_sellers_count ?? 0),
             'created_at' => $this->created_at?->toIso8601String(),
         ];

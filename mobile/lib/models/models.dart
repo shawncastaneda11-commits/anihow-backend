@@ -975,6 +975,7 @@ class FarmFavoriteRecord {
     required this.farmId,
     required this.name,
     this.place,
+    this.coverUrl,
     this.sellersCount = 0,
   });
 
@@ -982,6 +983,7 @@ class FarmFavoriteRecord {
   final int farmId;
   final String name;
   final String? place;
+  final String? coverUrl;
   final int sellersCount;
 
   factory FarmFavoriteRecord.fromJson(Map<String, dynamic> json) {
@@ -990,6 +992,9 @@ class FarmFavoriteRecord {
       farmId: ListingItem._asCount(json['farm_id']) ?? 0,
       name: json['name'] as String? ?? 'Farm',
       place: json['place'] as String?,
+      coverUrl: ApiConfig.mediaUrl(
+        json['thumbnail_url'] as String? ?? json['cover_photo_url'] as String?,
+      ),
       sellersCount: ListingItem._asCount(json['sellers_count']) ?? 0,
     );
   }
@@ -1110,6 +1115,9 @@ class ShopProfile {
     this.farmBarangay,
     this.farmMunicipality,
     this.farmIsActive = false,
+    this.farmIsFavorited = false,
+    this.farmFavoritesCount = 0,
+    this.farmCoverUrl,
     this.acceptsOnlinePayment = true,
     this.isFavorited = false,
     this.distanceKm,
@@ -1131,6 +1139,9 @@ class ShopProfile {
   final String? farmBarangay;
   final String? farmMunicipality;
   final bool farmIsActive;
+  final bool farmIsFavorited;
+  final int farmFavoritesCount;
+  final String? farmCoverUrl;
   final bool acceptsOnlinePayment;
   final bool isFavorited;
   final double? distanceKm;
@@ -1167,6 +1178,10 @@ class ShopProfile {
           (farmMap['is_active'] == true ||
               farmMap['is_active'] == 1 ||
               farmMap['is_active'] == '1'),
+      farmIsFavorited:
+          farmMap?['is_favorited'] == true || farmMap?['is_favorited'] == 1,
+      farmFavoritesCount: ListingItem._asCount(farmMap?['favorites_count']) ?? 0,
+      farmCoverUrl: ApiConfig.mediaUrl(farmMap?['cover_photo_url'] as String?),
       acceptsOnlinePayment: ListingItem._acceptsOnline(
         json['accepts_online_payment'],
       ),
@@ -1193,6 +1208,9 @@ class ShopProfile {
       farmBarangay: farmBarangay,
       farmMunicipality: farmMunicipality,
       farmIsActive: farmIsActive,
+      farmIsFavorited: farmIsFavorited,
+      farmFavoritesCount: farmFavoritesCount,
+      farmCoverUrl: farmCoverUrl,
       acceptsOnlinePayment: acceptsOnlinePayment,
       isFavorited: isFavorited ?? this.isFavorited,
       distanceKm: distanceKm,
@@ -1210,6 +1228,7 @@ class FarmAnnouncement {
     this.endsAt,
     this.isPinned = false,
     this.createdAt,
+    this.imageUrl,
   });
 
   final int id;
@@ -1220,6 +1239,7 @@ class FarmAnnouncement {
   final String? endsAt;
   final bool isPinned;
   final String? createdAt;
+  final String? imageUrl;
 
   factory FarmAnnouncement.fromJson(Map<String, dynamic> json) {
     return FarmAnnouncement(
@@ -1234,6 +1254,7 @@ class FarmAnnouncement {
           json['is_pinned'] == 1 ||
           json['is_pinned'] == '1',
       createdAt: json['created_at'] as String?,
+      imageUrl: ApiConfig.mediaUrl(json['image_url'] as String?),
     );
   }
 }
@@ -1365,6 +1386,8 @@ class FarmProfile {
     this.announcements = const [],
     this.latitude,
     this.longitude,
+    this.isFavorited = false,
+    this.favoritesCount = 0,
   });
 
   final int id;
@@ -1384,6 +1407,8 @@ class FarmProfile {
   final List<FarmAnnouncement> announcements;
   final double? latitude;
   final double? longitude;
+  final bool isFavorited;
+  final int favoritesCount;
 
   bool get hasCoverPhoto => coverPhotoUrl != null && coverPhotoUrl!.isNotEmpty;
 
@@ -1437,6 +1462,9 @@ class FarmProfile {
           .toList(),
       latitude: ListingItem._asDouble(json['latitude']),
       longitude: ListingItem._asDouble(json['longitude']),
+      isFavorited:
+          json['is_favorited'] == true || json['is_favorited'] == 1,
+      favoritesCount: ListingItem._asCount(json['favorites_count']) ?? 0,
     );
   }
 }

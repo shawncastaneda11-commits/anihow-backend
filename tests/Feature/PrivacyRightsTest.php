@@ -196,7 +196,7 @@ class PrivacyRightsTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonPath(
                 'errors.status.0',
-                'You have open orders (placed, confirmed, or ready) that must be completed or cancelled before you can request account deletion.',
+                "You can't request deletion while you have orders in progress (placed, confirmed, or ready). Finished or cancelled orders don't block it.",
             );
 
         $this->asUser($farmer)

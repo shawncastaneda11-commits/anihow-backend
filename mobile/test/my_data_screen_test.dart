@@ -77,7 +77,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     const error =
-        'You have open orders (placed, confirmed, or ready) that must be completed or cancelled before you can request account deletion.';
+        "You can't request deletion while you have orders in progress (placed, confirmed, or ready). Finished or cancelled orders don't block it.";
 
     await tester.pumpWidget(
       _app(

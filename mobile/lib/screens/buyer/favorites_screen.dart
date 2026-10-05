@@ -10,12 +10,14 @@ import '../../theme/anihow_theme.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/produce_card.dart';
 import '../../widgets/profile_avatar_button.dart';
+import 'farm_page_screen.dart';
 import 'shop_profile_screen.dart';
 
 class FavoritesPreview {
-  const FavoritesPreview({this.stores = const []});
+  const FavoritesPreview({this.stores = const [], this.farms = const []});
 
   final List<ShopFavoriteRecord> stores;
+  final List<FarmFavoriteRecord> farms;
 }
 
 class FavoritesScreen extends StatefulWidget {
@@ -30,8 +32,11 @@ class FavoritesScreen extends StatefulWidget {
   State<FavoritesScreen> createState() => _FavoritesScreenState();
 }
 
-class _FavoritesScreenState extends State<FavoritesScreen> {
+class _FavoritesScreenState extends State<FavoritesScreen>
+    with SingleTickerProviderStateMixin {
   late Future<List<ShopFavoriteRecord>> _stores;
+  late Future<List<FarmFavoriteRecord>> _farms;
+  late final TabController _tabs;
 
   bool get _previewing => widget.preview != null;
 
@@ -39,11 +44,20 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   void initState() {
     super.initState();
     final preview = widget.preview;
+    _tabs = TabController(length: 2, vsync: this);
     if (preview != null) {
       _stores = Future.value(preview.stores);
+      _farms = Future.value(preview.farms);
       return;
     }
     _stores = context.read<AuthController>().api.shopFavorites();
+    _farms = context.read<AuthController>().api.farmFavorites();
+  }
+
+  @override
+  void dispose() {
+    _tabs.dispose();
+    super.dispose();
   }
 
   @override
@@ -51,6 +65,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     super.didUpdateWidget(oldWidget);
     if (widget.active && !oldWidget.active && !_previewing) {
       _stores = context.read<AuthController>().api.shopFavorites();
+      _farms = context.read<AuthController>().api.farmFavorites();
     }
   }
 
@@ -59,8 +74,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       return;
     }
     final stores = context.read<AuthController>().api.shopFavorites();
-    setState(() => _stores = stores);
-    await stores;
+    final farms = context.read<AuthController>().api.farmFavorites();
+    setState(() {
+      _stores = stores;
+      _farms = farms;
+    });
+    await Future.wait([stores, farms]);
   }
 
   Future<void> _remove(int sellerId) async {
@@ -80,9 +99,49 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     }
   }
 
+  Future<void> _unfollowFarm(int farmId) async {
+    if (_previewing) {
+      return;
+    }
+    try {
+      await context.read<AuthController>().api.removeFarmFavorite(farmId);
+      if (mounted) {
+        await _reload();
+      }
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
+    return Column(
+      children: [
+        TabBar(
+          controller: _tabs,
+          tabs: [
+            Tab(text: s.favoriteStores),
+            Tab(key: const Key('favorite-farms-tab'), text: s.favoriteFarms),
+          ],
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabs,
+            children: [
+              _storesTab(s),
+              _farmsTab(s),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _storesTab(AppStrings s) {
     return AsyncView<List<ShopFavoriteRecord>>(
       future: _stores,
       onRetry: _reload,
@@ -166,6 +225,84 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                           tooltip: s.removeStoreFromFavorites,
                           icon: const Icon(Icons.delete_outline),
                           onPressed: () => _remove(favorite.sellerId),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _farmsTab(AppStrings s) {
+    return AsyncView<List<FarmFavoriteRecord>>(
+      future: _farms,
+      onRetry: _reload,
+      emptyMessage: s.noFavoriteFarms,
+      builder: (context, items) {
+        return RefreshIndicator(
+          onRefresh: _reload,
+          child: ListView.separated(
+            padding: AniHowSpace.screenPadding,
+            itemCount: items.length,
+            separatorBuilder: (_, _) =>
+                const SizedBox(height: AniHowSpace.cardGap),
+            itemBuilder: (context, index) {
+              final favorite = items[index];
+              final place = favorite.place?.trim();
+              return Card(
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => openBuyerFarmPage(context, favorite.farmId),
+                  child: Padding(
+                    padding: AniHowSpace.cardPadding,
+                    child: Row(
+                      children: [
+                        AniHowAvatar(
+                          name: favorite.name,
+                          imageUrl: favorite.coverUrl,
+                          radius: 26,
+                        ),
+                        const SizedBox(width: AniHowSpace.cardGap),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                favorite.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: AniHowSpace.title,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              if (place != null && place.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  place,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          key: Key('unfollow-farm-${favorite.farmId}'),
+                          tooltip: s.followingFarm,
+                          onPressed: () => _unfollowFarm(favorite.farmId),
+                          style: IconButton.styleFrom(
+                            minimumSize: const Size(48, 48),
+                          ),
+                          icon: Icon(
+                            Icons.favorite,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
                         ),
                       ],
                     ),

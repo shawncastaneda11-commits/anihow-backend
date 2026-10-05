@@ -19,7 +19,7 @@ class RequestAccountDeletionAction
     {
         if ($user->hasOpenMarketplaceOrders()) {
             throw ValidationException::withMessages([
-                'status' => 'You have open orders (placed, confirmed, or ready) that must be completed or cancelled before you can request account deletion.',
+                'status' => "You can't request deletion while you have orders in progress (placed, confirmed, or ready). Finished or cancelled orders don't block it.",
             ]);
         }
 

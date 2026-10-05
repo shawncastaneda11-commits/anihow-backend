@@ -96,7 +96,7 @@ void main() {
 
     final s = AppStrings(false);
     expect(find.text('Manggahan Farm'), findsWidgets);
-    expect(find.text('Barangay hall'), findsOneWidget);
+    expect(find.text('Manggahan, General Trias'), findsOneWidget);
     expect(find.text('Nena Stall'), findsOneWidget);
     expect(find.text('Tonyo Stall'), findsOneWidget);
     expect(find.text(s.shopsAtThisFarm(2)), findsOneWidget);
@@ -104,6 +104,11 @@ void main() {
     expect(find.text('Plain List Stall'), findsNothing);
     expect(find.byType(FarmMapCard), findsNothing);
     expect(find.byIcon(Icons.favorite_outline), findsWidgets);
+    await tester.tap(find.byKey(const Key('farm-tab-about')));
+    await tester.pumpAndSettle();
+    expect(find.text('Barangay hall'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('farm-tab-shops')));
+    await tester.pumpAndSettle();
 
     await tester.enterText(
       find.byWidgetPredicate(
@@ -134,7 +139,11 @@ void main() {
     await tester.tap(find.text(s.farmLine('Manggahan Farm')));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byKey(const Key('farm-tab-about')));
+    await tester.pumpAndSettle();
     expect(find.text('Barangay hall'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('farm-tab-shops')));
+    await tester.pumpAndSettle();
     expect(find.text('Nena Stall'), findsWidgets);
     expect(find.text('Tonyo Stall'), findsOneWidget);
     expect(find.text(s.farmStorefronts), findsNothing);

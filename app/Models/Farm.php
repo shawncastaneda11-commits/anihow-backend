@@ -151,6 +151,11 @@ class Farm extends Model
         return $this->hasMany(FarmAnnouncement::class);
     }
 
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(FarmFavorite::class);
+    }
+
     public function faqEntries(): HasMany
     {
         return $this->hasMany(FaqEntry::class);

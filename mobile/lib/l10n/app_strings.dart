@@ -152,8 +152,8 @@ class AppStrings {
   String get confirmDeletionTitle =>
       t('Delete your account?', 'Burahin ang account mo?');
   String get confirmDeletionBody => t(
-    'A Super Admin will review this. You can cancel while it is pending. If you have open orders (placed, confirmed, or ready), finish or cancel them first — the app will tell you if deletion is blocked.',
-    'Susuriin ito ng Super Admin. Maaari mo itong kanselahin habang pending. Kung may bukas na order (placed, confirmed, o ready), tapusin o kanselahin muna — sasabihin ng app kung hindi maaari ang pagbura.',
+    "You can't request deletion while you have orders in progress (placed, confirmed, or ready). Finished or cancelled orders don't block it.",
+    'Hindi ka maaaring humiling ng pagbura habang may order na isinasagawa (placed, confirmed, o ready). Hindi ito hinaharangan ng mga tapos o kinanselang order.',
   );
   String get confirmDeletion => t('Send request', 'Ipadala ang kahilingan');
   String get deletionRequested => t(
@@ -202,6 +202,16 @@ class AppStrings {
   String get favorites => t('Favorites', 'Mga paborito');
   String get favoriteCrops => t('Crops', 'Mga ani');
   String get favoriteStores => t('Stores', 'Mga tindahan');
+  String get favoriteFarms => t('Farms', 'Mga bukid');
+  String get noFavoriteFarms =>
+      t('No farms yet.', 'Wala pang sinusundang bukid.');
+  String get farmShopsTab => t('Shops', 'Mga tindahan');
+  String get followFarm => t('Follow', 'Sundan');
+  String get followingFarm => t('Following', 'Sinusundan');
+  String get directions => t('Directions', 'Direksyon');
+  String get farmUpdates => t('Updates', 'Mga update');
+  String get noUpdatesYet => t('No updates yet', 'Wala pang update');
+  String shopsCount(int count) => t('$count shops', '$count tindahan');
   String get noFavoriteStores =>
       t('No favorite stores yet.', 'Wala pang paboritong tindahan.');
   String get addStoreToFavorites =>
@@ -670,6 +680,8 @@ class AppStrings {
   String get contact => t('Contact', 'Contact');
   String get shopNotFound =>
       t('Shop not found.', 'Hindi nahanap ang tindahan.');
+  String get couldNotOpenLink =>
+      t('Could not open the link.', 'Hindi mabuksan ang link.');
   String get couldNotOpenPhone =>
       t('Could not open the phone app.', 'Hindi mabuksan ang phone app.');
   String get readyToReview => t('Ready to review', 'Puwede nang i-review');

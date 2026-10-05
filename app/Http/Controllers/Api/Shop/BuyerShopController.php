@@ -7,9 +7,11 @@ use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Shop\BuyerShopIndexRequest;
 use App\Http\Resources\Api\ShopProfileResource;
+use App\Models\Farm;
 use App\Models\User;
 use App\Support\FarmProximity;
 use App\Support\ShopReviews;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -20,7 +22,7 @@ class BuyerShopController extends Controller
         $shops = User::query()
             ->role(Role::FarmerSeller->value)
             ->where('status', UserStatus::Active)
-            ->with('farm')
+            ->with(['farm' => fn ($query) => $this->loadFarmFavoriteState($query, $request)])
             ->withCount(ShopReviews::receivedAggregate())
             ->withAvg(ShopReviews::receivedAggregate(), 'rating')
             ->when(
@@ -54,7 +56,7 @@ class BuyerShopController extends Controller
         abort_unless($farmerSeller->isFarmerSeller() && $farmerSeller->isActive(), 404);
 
         $farmerSeller->load([
-            'farm',
+            'farm' => fn ($query) => $this->loadFarmFavoriteState($query, $request),
             'listings' => fn ($query) => $query
                 ->buyerVisible()
                 ->with(['cropType', 'farm', 'activeTawadRule'])
@@ -82,5 +84,23 @@ class BuyerShopController extends Controller
         abort_unless($farmerSeller->isFarmerSeller() && $farmerSeller->isActive(), 404);
 
         return ShopReviews::collection($farmerSeller);
+    }
+
+    /**
+     * @param  Relation<Farm, *, *>  $query
+     */
+    private function loadFarmFavoriteState(Relation $query, Request $request): void
+    {
+        $query->withCount('favorites');
+
+        $buyer = $request->user();
+        if ($buyer === null) {
+            return;
+        }
+
+        $query->withExists([
+            'favorites as is_favorited' => fn ($favorites) => $favorites
+                ->where('buyer_id', $buyer->id),
+        ]);
     }
 }

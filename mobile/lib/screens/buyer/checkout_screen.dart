@@ -186,12 +186,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: AniHowSpace.cardGap),
-                    AniHowHintCard(
-                      icon: Icons.payments_outlined,
-                      title: s.cashAtMeetup,
-                      tone: AniHowHintTone.cash,
-                    ),
                     const SizedBox(height: AniHowSpace.section),
                     PrimaryButton(
                       label: groups.length > 1 ? s.placeOrders(groups.length) : s.placeOrder,
@@ -420,12 +414,6 @@ class _PlacedView extends StatelessWidget {
             icon: Icons.check_circle_outline,
             title: orders.length == 1 ? s.orderPlacedTitle : s.cartSplit(orders.length),
             tone: AniHowHintTone.brand,
-          ),
-          const SizedBox(height: AniHowSpace.cardGap),
-          AniHowHintCard(
-            icon: Icons.payments_outlined,
-            title: s.cashAtMeetup,
-            tone: AniHowHintTone.cash,
           ),
           const SizedBox(height: AniHowSpace.cardGap),
           for (final order in orders) ...[

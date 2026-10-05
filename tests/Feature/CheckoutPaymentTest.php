@@ -192,4 +192,37 @@ class CheckoutPaymentTest extends TestCase
         ]);
         $this->assertSame(0, StallMessage::query()->count());
     }
+
+    public function test_a_failed_second_seller_rolls_back_orders_and_qr_messages(): void
+    {
+        $farm = $this->farm();
+        $first = $this->farmer(['email' => 'first@example.com', 'shop_name' => 'First Stall'], $farm);
+        $second = $this->farmer(['email' => 'second@example.com', 'shop_name' => 'Second Stall'], $farm);
+        $firstListing = $this->listingFor($first, [
+            'title' => 'Pechay',
+            'price_per_unit' => 30,
+            'quantity_available' => 10,
+        ]);
+        $secondListing = $this->listingFor($second, [
+            'title' => 'Sitaw',
+            'price_per_unit' => 40,
+            'quantity_available' => 10,
+        ]);
+        $buyer = $this->buyer();
+        $this->addToCart($buyer, $firstListing, 1);
+        $this->addToCart($buyer, $secondListing, 1);
+        $secondListing->forceFill(['quantity_available' => 0])->save();
+
+        $this->checkout($buyer, [
+            'payments' => [
+                ['seller_id' => $first->id, 'method' => PaymentMethod::OnlineTransfer->value],
+                ['seller_id' => $second->id, 'method' => PaymentMethod::OnlineTransfer->value],
+            ],
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('cart');
+
+        $this->assertSame(0, Order::query()->count());
+        $this->assertSame(0, StallMessage::query()->count());
+        $this->assertDatabaseCount('in_app_notifications', 0);
+    }
 }

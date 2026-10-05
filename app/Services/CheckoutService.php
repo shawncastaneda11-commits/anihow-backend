@@ -67,7 +67,7 @@ class CheckoutService
 
         $removed = CartItem::pruneUnavailable($buyer);
 
-        return DB::transaction(function () use ($buyer, $preference, $fulfillmentNote, $removed, $payments): Collection {
+        $orders = DB::transaction(function () use ($buyer, $preference, $fulfillmentNote, $removed, $payments): Collection {
             $cartItems = CartItem::query()
                 ->where('buyer_id', $buyer->id)
                 ->with(['listing.cropType', 'listing.farmerSeller', 'listing.activeTawadRule'])
@@ -110,6 +110,14 @@ class CheckoutService
 
             return $orders;
         });
+
+        foreach ($orders as $order) {
+            if ($order->payment_method === PaymentMethod::OnlineTransfer->value) {
+                $this->askSellerForQr($buyer, $order);
+            }
+        }
+
+        return $orders;
     }
 
     /**
@@ -200,10 +208,6 @@ class CheckoutService
 
         if ($seller !== null) {
             $this->notifier->orderPlaced($seller, $order);
-        }
-
-        if ($paymentMethod === PaymentMethod::OnlineTransfer) {
-            $this->askSellerForQr($buyer, $order);
         }
 
         return $order;

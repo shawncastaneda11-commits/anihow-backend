@@ -259,6 +259,7 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                       const SizedBox(height: AniHowSpace.cardGap),
                       FarmLinkChip(
                         farmId: shop.farmId!,
+                        openCombinedPage: true,
                         label: shop.farmName == null || shop.farmName!.isEmpty
                             ? s.farm
                             : s.farmLine(shop.farmName!),

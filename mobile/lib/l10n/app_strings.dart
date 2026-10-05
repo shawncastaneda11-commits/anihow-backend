@@ -283,6 +283,14 @@ class AppStrings {
   String get farmSavedToFavorites =>
       t('Farm saved to favorites.', 'Nasave ang bukid sa mga paborito.');
   String get searchShops => t('Search shops', 'Maghanap ng tindahan');
+  String shopsAtThisFarm(int count) => t(
+    'Shops at this farm ($count)',
+    'Mga tindahan sa bukid na ito ($count)',
+  );
+  String get noShopsAtFarm => t(
+    'No shops at this farm yet.',
+    'Wala pang tindahan sa bukid na ito.',
+  );
   String get searchFarms => t('Search farms', 'Maghanap ng bukid');
   String get noFarmsYet => t('No farms yet.', 'Wala pang bukid.');
   String get noFarmsMatch =>

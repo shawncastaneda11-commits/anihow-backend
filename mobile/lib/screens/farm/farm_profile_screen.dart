@@ -11,6 +11,7 @@ import '../../widgets/async_view.dart';
 import '../../widgets/farm_map_card.dart';
 import '../../widgets/hint_card.dart';
 import '../../widgets/profile_avatar_button.dart';
+import '../buyer/farm_page_screen.dart';
 import '../buyer/shop_profile_screen.dart';
 
 void openFarmProfile(BuildContext context, int farmId) {
@@ -20,10 +21,19 @@ void openFarmProfile(BuildContext context, int farmId) {
 }
 
 class FarmLinkChip extends StatelessWidget {
-  const FarmLinkChip({super.key, required this.farmId, this.label});
+  const FarmLinkChip({
+    super.key,
+    required this.farmId,
+    this.label,
+    this.openCombinedPage = false,
+  });
 
   final int farmId;
   final String? label;
+
+  /// Buyer storefronts open the farm page. The seller's own chip stays on
+  /// [FarmProfileScreen].
+  final bool openCombinedPage;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +45,9 @@ class FarmLinkChip extends StatelessWidget {
         child: ActionChip(
           avatar: const Icon(Icons.agriculture_outlined, size: 18),
           label: Text(text),
-          onPressed: () => openFarmProfile(context, farmId),
+          onPressed: () => openCombinedPage
+              ? openBuyerFarmPage(context, farmId)
+              : openFarmProfile(context, farmId),
         ),
       ),
     );
@@ -131,6 +143,38 @@ class FarmProfileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        FarmProfileContent(
+          farm: farm,
+          onCall: onCall,
+          onStorefront: onStorefront,
+        ),
+      ],
+    );
+  }
+}
+
+class FarmProfileContent extends StatelessWidget {
+  const FarmProfileContent({
+    super.key,
+    required this.farm,
+    this.onCall,
+    this.onStorefront,
+    this.includeStorefronts = true,
+  });
+
+  final FarmProfile farm;
+  final Future<void> Function(String number)? onCall;
+  final ValueChanged<int>? onStorefront;
+
+  /// The seller profile lists storefront names. The buyer farm page uses
+  /// seller cards instead, so it passes false.
+  final bool includeStorefronts;
+
+  @override
+  Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     final theme = Theme.of(context);
     final place = farm.placeLabel;
@@ -139,7 +183,8 @@ class FarmProfileView extends StatelessWidget {
     final contactPerson = farm.contactPerson?.trim();
     final contactNumber = _isBuyer(context) ? null : farm.contactNumber?.trim();
 
-    return ListView(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _Cover(farm: farm),
         Padding(
@@ -244,23 +289,27 @@ class FarmProfileView extends StatelessWidget {
                     return _PhotoTile(photo: photo);
                   },
                 ),
-              const SizedBox(height: AniHowSpace.section),
-              Text(s.farmStorefronts, style: theme.textTheme.titleMedium),
-              const SizedBox(height: AniHowSpace.cardGap),
-              if (farm.storefronts.isEmpty)
-                Text(s.noFarmStorefronts, style: theme.textTheme.bodyMedium)
-              else
-                ...farm.storefronts.map(
-                  (storefront) => Padding(
-                    padding: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
-                    child: _StorefrontTile(
-                      storefront: storefront,
-                      onTap: onStorefront == null
-                          ? null
-                          : () => onStorefront!(storefront.id),
+              if (includeStorefronts) ...[
+                const SizedBox(height: AniHowSpace.section),
+                Text(s.farmStorefronts, style: theme.textTheme.titleMedium),
+                const SizedBox(height: AniHowSpace.cardGap),
+                if (farm.storefronts.isEmpty)
+                  Text(s.noFarmStorefronts, style: theme.textTheme.bodyMedium)
+                else
+                  ...farm.storefronts.map(
+                    (storefront) => Padding(
+                      padding: const EdgeInsets.only(
+                        bottom: AniHowSpace.cardGap,
+                      ),
+                      child: _StorefrontTile(
+                        storefront: storefront,
+                        onTap: onStorefront == null
+                            ? null
+                            : () => onStorefront!(storefront.id),
+                      ),
                     ),
                   ),
-                ),
+              ],
             ],
           ),
         ),

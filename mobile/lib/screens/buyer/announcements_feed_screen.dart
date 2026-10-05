@@ -6,7 +6,7 @@ import '../../models/models.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/async_view.dart';
-import '../farm/farm_profile_screen.dart';
+import 'farm_page_screen.dart';
 
 typedef AnnouncementPageLoader = Future<PagedBuyerAnnouncements> Function({
   required bool following,
@@ -209,7 +209,7 @@ class _AnnouncementCardState extends State<_AnnouncementCard> {
                       alignment: Alignment.centerLeft,
                       padding: EdgeInsets.zero,
                     ),
-                    onPressed: () => openFarmProfile(context, post.farmId),
+                    onPressed: () => openBuyerFarmPage(context, post.farmId),
                     child: Text(post.farmName),
                   ),
                 ),

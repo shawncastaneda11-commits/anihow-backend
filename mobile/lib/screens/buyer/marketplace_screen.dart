@@ -710,66 +710,121 @@ class _FilterSheetState extends State<_FilterSheet> {
     final theme = Theme.of(context);
     final language = context.watch<PreferencesController>().language;
     return SafeArea(
-      child: SingleChildScrollView(
+      child: Padding(
         padding: AniHowSpace.screenPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(s.sort, style: theme.textTheme.titleMedium),
-            _option(
-              s.sortFairMix,
-              _sort == 'fair',
-              () => _sort = 'fair',
-              subtitle: s.sortFairMixHint,
-              key: const Key('sort-fair'),
-            ),
-            _option(
-              s.sortNewest,
-              _sort == 'freshest',
-              () => _sort = 'freshest',
-              key: const Key('sort-newest'),
-            ),
-            _option(
-              s.priceLowHigh,
-              _sort == 'price_asc',
-              () => _sort = 'price_asc',
-            ),
-            _option(
-              s.priceHighLow,
-              _sort == 'price_desc',
-              () => _sort = 'price_desc',
-            ),
-            _option(
-              s.inStockFirst,
-              _sort == 'availability',
-              () => _sort = 'availability',
-            ),
-            _option(s.nearest, _sort == 'nearest', () => _sort = 'nearest'),
-            const SizedBox(height: AniHowSpace.cardGap),
-            Text(s.growingMethod, style: theme.textTheme.titleMedium),
-            _option(s.any, _growingMethod == null, () => _growingMethod = null),
-            _option(
-              s.certifiedOrganicFilter,
-              _growingMethod == 'certified_organic',
-              () => _growingMethod = 'certified_organic',
-            ),
-            _option(
-              s.naturallyGrown,
-              _growingMethod == 'naturally_grown',
-              () => _growingMethod = 'naturally_grown',
-            ),
-            const SizedBox(height: AniHowSpace.cardGap),
-            Text(s.cropFilter, style: theme.textTheme.titleMedium),
-            _option(s.any, _cropTypeId == null, () => _cropTypeId = null),
-            for (final cropType in widget.cropTypes)
-              _option(
-                cropType.labelFor(language),
-                _cropTypeId == cropType.id,
-                () => _cropTypeId = cropType.id,
-                key: ValueKey('crop-${cropType.id}'),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(s.sort, style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _chip(
+                          s.sortFairMix,
+                          _sort == 'fair',
+                          () => _sort = 'fair',
+                          key: const Key('sort-fair'),
+                        ),
+                        _chip(
+                          s.sortNewest,
+                          _sort == 'freshest',
+                          () => _sort = 'freshest',
+                          key: const Key('sort-newest'),
+                        ),
+                        _chip(
+                          s.priceLowHigh,
+                          _sort == 'price_asc',
+                          () => _sort = 'price_asc',
+                        ),
+                        _chip(
+                          s.priceHighLow,
+                          _sort == 'price_desc',
+                          () => _sort = 'price_desc',
+                        ),
+                        _chip(
+                          s.inStockFirst,
+                          _sort == 'availability',
+                          () => _sort = 'availability',
+                        ),
+                        _chip(
+                          s.nearest,
+                          _sort == 'nearest',
+                          () => _sort = 'nearest',
+                        ),
+                      ],
+                    ),
+                    if (_sort == 'fair') ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        s.sortFairMixHint,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.7,
+                          ),
+                          fontSize: AniHowSpace.label,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: AniHowSpace.cardGap),
+                    Text(s.growingMethod, style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _chip(
+                          s.any,
+                          _growingMethod == null,
+                          () => _growingMethod = null,
+                        ),
+                        _chip(
+                          s.certifiedOrganicFilter,
+                          _growingMethod == 'certified_organic',
+                          () => _growingMethod = 'certified_organic',
+                        ),
+                        _chip(
+                          s.naturallyGrown,
+                          _growingMethod == 'naturally_grown',
+                          () => _growingMethod = 'naturally_grown',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AniHowSpace.cardGap),
+                    Text(s.cropFilter, style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _chip(
+                          s.any,
+                          _cropTypeId == null,
+                          () => _cropTypeId = null,
+                        ),
+                        for (final cropType in widget.cropTypes)
+                          _chip(
+                            cropType.labelFor(language),
+                            _cropTypeId == cropType.id,
+                            () => _cropTypeId = cropType.id,
+                            key: ValueKey('crop-${cropType.id}'),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            const SizedBox(height: AniHowSpace.section),
+            ),
+            const SizedBox(height: AniHowSpace.cardGap),
             Row(
               children: [
                 Expanded(
@@ -813,42 +868,29 @@ class _FilterSheetState extends State<_FilterSheet> {
     );
   }
 
-  Widget _option(
+  Widget _chip(
     String label,
     bool selected,
     VoidCallback select, {
     Key? key,
-    String? subtitle,
   }) {
     final theme = Theme.of(context);
-    return InkWell(
+    return ChoiceChip(
       key: key,
-      onTap: () => setState(select),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48),
-        child: Row(
-          children: [
-            Icon(
-              selected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: selected ? theme.colorScheme.primary : null,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(label),
-                    if (subtitle != null)
-                      Text(subtitle, style: theme.textTheme.bodySmall),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+      label: Text(label),
+      selected: selected,
+      materialTapTargetSize: MaterialTapTargetSize.padded,
+      labelStyle: TextStyle(
+        color: theme.colorScheme.onSurface,
+        fontWeight: FontWeight.w600,
+        fontSize: AniHowSpace.label,
       ),
+      onSelected: (chosen) {
+        if (!chosen) {
+          return;
+        }
+        setState(select);
+      },
     );
   }
 }

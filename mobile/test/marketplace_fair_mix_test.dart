@@ -121,15 +121,17 @@ void main() {
     await tester.tap(find.byKey(const Key('marketplace-filter')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Fair mix'), findsOneWidget);
+    expect(find.byKey(const Key('sort-fair')), findsOneWidget);
     expect(
       find.text('Every farm takes turns at the top. Changes daily.'),
       findsOneWidget,
     );
-    expect(find.text('Newest'), findsOneWidget);
-    expect(
-      tester.getTopLeft(find.text('Fair mix')).dy,
-      lessThan(tester.getTopLeft(find.text('Newest')).dy),
-    );
+    expect(find.byKey(const Key('sort-newest')), findsOneWidget);
+    final fair = tester.getTopLeft(find.byKey(const Key('sort-fair')));
+    final newest = tester.getTopLeft(find.byKey(const Key('sort-newest')));
+    final fairIsFirst =
+        fair.dy < newest.dy - 1 ||
+        ((fair.dy - newest.dy).abs() < 1 && fair.dx < newest.dx);
+    expect(fairIsFirst, isTrue);
   });
 }

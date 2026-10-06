@@ -6,6 +6,7 @@ use App\Enums\Permission;
 use App\Enums\Role;
 use App\Enums\UserStatus;
 use App\Models\User;
+use Closure;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -73,6 +74,7 @@ class UserForm
                     ->visible(fn (Get $get): bool => self::canManageAccounts() && self::isFarmScoped($get))
                     ->required(fn (Get $get): bool => self::canManageAccounts() && self::isFarmScoped($get))
                     ->dehydrated(fn (Get $get): bool => self::canManageAccounts() && self::isFarmScoped($get))
+                    ->rule(fn (Get $get, Select $component): Closure => self::oneContentEditorPerFarm($get, $component))
                     ->helperText('Content Editors and Farmer-Sellers belong to one farm. One Content Editor per farm.'),
 
                 Select::make('status')
@@ -119,6 +121,34 @@ class UserForm
     private static function canManageAccounts(): bool
     {
         return auth()->user()?->can(Permission::ManageAccounts->value) ?? false;
+    }
+
+    /**
+     * A farm has one Content Editor. Farmer-sellers on that farm are unaffected.
+     */
+    private static function oneContentEditorPerFarm(Get $get, Select $component): Closure
+    {
+        return function (string $attribute, mixed $value, Closure $fail) use ($get, $component): void {
+            if (blank($value) || ! self::hasRole($get, Role::ContentEditor)) {
+                return;
+            }
+
+            $record = $component->getRecord();
+            $recordId = ($record !== null && $record->exists) ? $record->getKey() : null;
+
+            $farmAlreadyHasEditor = User::query()
+                ->where('farm_id', $value)
+                ->when(
+                    $recordId !== null,
+                    fn (Builder $query): Builder => $query->whereKeyNot($recordId),
+                )
+                ->role(Role::ContentEditor->value)
+                ->exists();
+
+            if ($farmAlreadyHasEditor) {
+                $fail('This farm already has a Content Editor.');
+            }
+        };
     }
 
     private static function isFarmScoped(Get $get): bool

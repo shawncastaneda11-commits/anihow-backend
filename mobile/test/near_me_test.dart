@@ -150,7 +150,7 @@ void main() {
   ) async {
     await tester.binding.setSurfaceSize(const Size(400, 1200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    BuyerLocation.read = () async => null;
+    BuyerLocation.read = () async => const BuyerLocationUnavailable();
     final api = _MarketplaceApi();
     final auth = AuthController(api: api)..restoring = false;
 
@@ -271,10 +271,10 @@ void main() {
   testWidgets('nearest shows progress while locating, then the distance line', (
     tester,
   ) async {
-    final gate = Completer<BuyerPoint?>();
+    final gate = Completer<BuyerLocationResult>();
     addTearDown(() {
       if (!gate.isCompleted) {
-        gate.complete(null);
+        gate.complete(const BuyerLocationUnavailable());
       }
     });
     BuyerLocation.read = () => gate.future;
@@ -292,7 +292,7 @@ void main() {
     expect(tester.widget<FilterChip>(find.byType(FilterChip)).onSelected, isNull);
     expect(AppStrings(true).findingYourLocation, 'Hinahanap ang lokasyon mo…');
 
-    gate.complete(const BuyerPoint(14.38, 120.88));
+    gate.complete(const BuyerLocationFound(BuyerPoint(14.38, 120.88)));
     await tester.pumpAndSettle();
 
     expect(find.text('Sorted by distance from you'), findsOneWidget);
@@ -305,7 +305,8 @@ void main() {
   });
 
   testWidgets('a farm without a pin says so after nearest sort', (tester) async {
-    BuyerLocation.read = () async => const BuyerPoint(14.38, 120.88);
+    BuyerLocation.read = () async =>
+        const BuyerLocationFound(BuyerPoint(14.38, 120.88));
     final api = _ShopsApi(shops: const [_pinnedFarm, _unpinnedFarm]);
     final auth = AuthController(api: api)..restoring = false;
 
@@ -324,7 +325,8 @@ void main() {
   });
 
   testWidgets('nearest explains when no farm has a map pin', (tester) async {
-    BuyerLocation.read = () async => const BuyerPoint(14.38, 120.88);
+    BuyerLocation.read = () async =>
+        const BuyerLocationFound(BuyerPoint(14.38, 120.88));
     final api = _ShopsApi(shops: const [_unpinnedFarm]);
     final auth = AuthController(api: api)..restoring = false;
 
@@ -346,7 +348,7 @@ void main() {
   testWidgets('farms nearest still explains when location is unavailable', (
     tester,
   ) async {
-    BuyerLocation.read = () async => null;
+    BuyerLocation.read = () async => const BuyerLocationUnavailable();
     final api = _ShopsApi();
     final auth = AuthController(api: api)..restoring = false;
 
@@ -361,6 +363,84 @@ void main() {
     expect(find.text('Sorted by distance from you'), findsNothing);
     expect(find.text('Finding your location…'), findsNothing);
     expect(find.text('No map pin yet'), findsNothing);
+    expect(api.sort, 'nearest');
+    expect(api.nearLat, isNull);
+  });
+
+  test('a timeout uses the last known position', () async {
+    final result = await BuyerLocation.lookup(
+      current: () => Future<BuyerPoint?>.error(TimeoutException('no fix')),
+      lastKnown: () async => const BuyerPoint(14.38, 120.88),
+    );
+
+    expect(result, isA<BuyerLocationFound>());
+    final found = result as BuyerLocationFound;
+    expect(found.point.latitude, 14.38);
+    expect(found.point.longitude, 120.88);
+  });
+
+  test('no fresh fix and no last known point is a no-fix result', () async {
+    final result = await BuyerLocation.lookup(
+      current: () => Future<BuyerPoint?>.error(TimeoutException('no fix')),
+      lastKnown: () async => null,
+    );
+
+    expect(result, isA<BuyerLocationNoFix>());
+  });
+
+  testWidgets('farms nearest re-enables and explains when there is no fix', (
+    tester,
+  ) async {
+    BuyerLocation.read = () async => const BuyerLocationNoFix();
+    final api = _ShopsApi();
+    final auth = AuthController(api: api)..restoring = false;
+
+    await tester.pumpWidget(_app(const ShopsScreen(), auth: auth));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(FilterChip));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('location-no-fix')), findsOneWidget);
+    expect(
+      find.text(
+        "Couldn't get your location. Try again outside or check that location is on.",
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Finding your location…'), findsNothing);
+    expect(find.byKey(const Key('location-unavailable')), findsNothing);
+    expect(
+      tester.widget<FilterChip>(find.byType(FilterChip)).onSelected,
+      isNotNull,
+    );
+    expect(
+      AppStrings(true).locationNoFix,
+      'Hindi makuha ang lokasyon mo. Subukan ulit sa labas o tingnan kung naka-on ang lokasyon.',
+    );
+  });
+
+  testWidgets('marketplace nearest explains when there is no fix', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    BuyerLocation.read = () async => const BuyerLocationNoFix();
+    final api = _MarketplaceApi();
+    final auth = AuthController(api: api)..restoring = false;
+
+    await tester.pumpWidget(_app(const MarketplaceScreen(), auth: auth));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('marketplace-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Nearest'));
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('location-no-fix')), findsOneWidget);
+    expect(find.byKey(const Key('location-unavailable')), findsNothing);
+    expect(find.text('Kamatis'), findsWidgets);
     expect(api.sort, 'nearest');
     expect(api.nearLat, isNull);
   });

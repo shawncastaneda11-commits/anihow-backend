@@ -197,7 +197,10 @@ void main() {
   });
 
   testWidgets('a 403 cancel tells the buyer to verify email', (tester) async {
-    final api = _OrdersApi(fail: 'Forbidden', statusCode: 403);
+    final api = _OrdersApi(
+      fail: 'Your email address is not verified.',
+      statusCode: 403,
+    );
     final auth = AuthController(api: api)..restoring = false;
 
     await tester.pumpWidget(
@@ -212,6 +215,40 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.text('Verify email to order.'), findsOneWidget);
-    expect(find.text('Forbidden'), findsNothing);
+    expect(find.text('Your email address is not verified.'), findsNothing);
+  });
+
+  testWidgets('a late 403 says the seller already confirmed', (tester) async {
+    final api = _OrdersApi(
+      fail: 'This action is unauthorized.',
+      statusCode: 403,
+    );
+    final auth = AuthController(api: api)..restoring = false;
+
+    await tester.pumpWidget(
+      _app(const BuyerOrderDetailScreen(orderId: 12), auth: auth),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('cancel-buyer-order')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-cancel-order')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(
+      find.text(
+        "The seller already confirmed this order, so it can't be cancelled anymore.",
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('This action is unauthorized.'), findsNothing);
+    expect(find.text('Verify email to order.'), findsNothing);
+    expect(find.byKey(const Key('cancel-buyer-order')), findsNothing);
+    expect(find.text('Confirmed'), findsWidgets);
+    expect(
+      AppStrings(true).orderAlreadyConfirmed,
+      'Kinumpirma na ng tindahan ang order na ito, kaya hindi na ito makakansela.',
+    );
   });
 }

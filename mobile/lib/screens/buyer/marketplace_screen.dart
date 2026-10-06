@@ -39,6 +39,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   double? _nearLat;
   double? _nearLng;
   bool _locationUnavailable = false;
+  bool _locationNoFix = false;
   bool _updatesHidden = false;
   bool _loading = true;
   bool _loadingMore = false;
@@ -221,16 +222,24 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     double? latitude;
     double? longitude;
     var unavailable = false;
+    var noFix = false;
     if (choice.sort == 'nearest') {
-      final point = await BuyerLocation.read();
-      if (!mounted) {
-        return;
-      }
-      if (point == null) {
-        unavailable = true;
-      } else {
-        latitude = point.latitude;
-        longitude = point.longitude;
+      try {
+        final result = await BuyerLocation.read();
+        if (!mounted) {
+          return;
+        }
+        switch (result) {
+          case BuyerLocationFound(:final point):
+            latitude = point.latitude;
+            longitude = point.longitude;
+          case BuyerLocationUnavailable():
+            unavailable = true;
+          case BuyerLocationNoFix():
+            noFix = true;
+        }
+      } catch (_) {
+        noFix = true;
       }
     }
     setState(() {
@@ -240,6 +249,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       _nearLat = latitude;
       _nearLng = longitude;
       _locationUnavailable = unavailable;
+      _locationNoFix = noFix;
     });
     await _reload();
   }
@@ -307,6 +317,21 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                       child: Text(
                         s.locationUnavailable,
                         key: const Key('location-unavailable'),
+                      ),
+                    ),
+                  ),
+                if (_locationNoFix)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AniHowSpace.screen,
+                        AniHowSpace.cardGap,
+                        AniHowSpace.screen,
+                        0,
+                      ),
+                      child: Text(
+                        s.locationNoFix,
+                        key: const Key('location-no-fix'),
                       ),
                     ),
                   ),

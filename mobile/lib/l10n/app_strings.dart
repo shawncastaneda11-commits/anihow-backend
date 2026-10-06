@@ -359,6 +359,10 @@ class AppStrings {
     'Location is off. Showing the usual order.',
     'Naka-off ang lokasyon. Ipinapakita ang karaniwang ayos.',
   );
+  String get locationNoFix => t(
+    "Couldn't get your location. Try again outside or check that location is on.",
+    'Hindi makuha ang lokasyon mo. Subukan ulit sa labas o tingnan kung naka-on ang lokasyon.',
+  );
   String get openInGoogleMaps =>
       t('Open in Google Maps', 'Buksan sa Google Maps');
   String get openStreetMapCredit =>
@@ -837,6 +841,10 @@ class AppStrings {
   );
   String get keepOrder => t('Keep order', 'Panatilihin ang order');
   String get orderCancelled => t('Order cancelled.', 'Kinansela ang order.');
+  String get orderAlreadyConfirmed => t(
+    "The seller already confirmed this order, so it can't be cancelled anymore.",
+    'Kinumpirma na ng tindahan ang order na ito, kaya hindi na ito makakansela.',
+  );
   String get pleaseWait => t('Please wait…', 'Sandali…');
   String get cashReceived => t('Cash received', 'Cash na natanggap');
   String cashReceivedLine(String peso) =>

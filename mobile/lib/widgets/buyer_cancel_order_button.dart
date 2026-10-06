@@ -66,7 +66,7 @@ class _BuyerCancelOrderButtonState extends State<BuyerCancelOrderButton> {
       if (!mounted) {
         return;
       }
-      final message = error.statusCode == 403 ? s.verifyBanner : error.message;
+      final message = _cancelFailureMessage(s, error);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message)),
       );
@@ -168,4 +168,14 @@ class _BuyerCancelOrderDialogState extends State<BuyerCancelOrderDialog> {
       ],
     );
   }
+}
+
+String _cancelFailureMessage(AppStrings strings, ApiException error) {
+  if (error.statusCode == 403) {
+    if (error.message.toLowerCase().contains('not verified')) {
+      return strings.verifyBanner;
+    }
+    return strings.orderAlreadyConfirmed;
+  }
+  return error.message;
 }

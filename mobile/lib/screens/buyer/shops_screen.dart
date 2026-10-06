@@ -45,6 +45,7 @@ class _ShopsScreenState extends State<ShopsScreen> {
   double? _nearLat;
   double? _nearLng;
   bool _locationUnavailable = false;
+  bool _locationNoFix = false;
   bool _locating = false;
   late Future<List<ShopProfile>> _future;
 
@@ -76,25 +77,40 @@ class _ShopsScreenState extends State<ShopsScreen> {
     double? latitude;
     double? longitude;
     var unavailable = false;
+    var noFix = false;
     if (value == 'nearest') {
       setState(() => _locating = true);
-      final point = await BuyerLocation.read();
+      try {
+        final result = await BuyerLocation.read();
+        if (!mounted) {
+          return;
+        }
+        switch (result) {
+          case BuyerLocationFound(:final point):
+            latitude = point.latitude;
+            longitude = point.longitude;
+          case BuyerLocationUnavailable():
+            unavailable = true;
+          case BuyerLocationNoFix():
+            noFix = true;
+        }
+      } catch (_) {
+        noFix = true;
+      } finally {
+        if (mounted) {
+          setState(() => _locating = false);
+        }
+      }
       if (!mounted) {
         return;
       }
-      if (point == null) {
-        unavailable = true;
-      } else {
-        latitude = point.latitude;
-        longitude = point.longitude;
-      }
     }
     setState(() {
-      _locating = false;
       _sort = value;
       _nearLat = latitude;
       _nearLng = longitude;
       _locationUnavailable = unavailable;
+      _locationNoFix = noFix;
     });
     await _reload();
   }
@@ -279,6 +295,20 @@ class _ShopsScreenState extends State<ShopsScreen> {
                 child: Text(
                   s.locationUnavailable,
                   key: const Key('location-unavailable'),
+                  style: muted,
+                ),
+              )
+            else if (_locationNoFix)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AniHowSpace.screen,
+                  0,
+                  AniHowSpace.screen,
+                  AniHowSpace.cardGap,
+                ),
+                child: Text(
+                  s.locationNoFix,
+                  key: const Key('location-no-fix'),
                   style: muted,
                 ),
               )

@@ -50,7 +50,7 @@ class _RecordingApi extends ApiClient {
   }
 }
 
-Widget _app(Widget home, {AuthController? auth}) {
+Widget _app(Widget home, {AuthController? auth, bool dark = false}) {
   final controller = auth ?? (AuthController()..restoring = false);
   controller.restoring = false;
   return MultiProvider(
@@ -66,9 +66,17 @@ Widget _app(Widget home, {AuthController? auth}) {
       ChangeNotifierProvider(create: (_) => CartController(controller)),
     ],
     child: MaterialApp(
-      theme: AniHowTheme.light(),
+      theme: dark ? AniHowTheme.dark() : AniHowTheme.light(),
       home: Scaffold(body: home),
     ),
+  );
+}
+
+Ink _chipInk(WidgetTester tester, Key key) {
+  return tester.widget<Ink>(
+    find
+        .descendant(of: find.byKey(key), matching: find.byType(Ink))
+        .first,
   );
 }
 
@@ -109,6 +117,48 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.category, isNull);
+  });
+
+  testWidgets('a selected category chip uses the brand fill', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(411, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    for (final dark in [false, true]) {
+      final api = _RecordingApi();
+      final auth = AuthController(api: api)..restoring = false;
+
+      await tester.pumpWidget(
+        _app(const MarketplaceScreen(), auth: auth, dark: dark),
+      );
+      await tester.pumpAndSettle();
+
+      final selected = _chipInk(tester, const ValueKey('category-all'));
+      final selectedFill = selected.decoration! as ShapeDecoration;
+      expect(selectedFill.color, AniHowColors.brand);
+      expect((selectedFill.shape as StadiumBorder).side, BorderSide.none);
+
+      final label = DefaultTextStyle.of(
+        tester.element(
+          find.descendant(
+            of: find.byKey(const ValueKey('category-all')),
+            matching: find.text('All'),
+          ),
+        ),
+      ).style;
+      expect(label.color, Colors.white);
+      expect(label.fontWeight, FontWeight.w600);
+
+      final idle = _chipInk(tester, const ValueKey('category-fresh_produce'));
+      final idleFill = idle.decoration! as ShapeDecoration;
+      final outline = Theme.of(
+        tester.element(find.byKey(const ValueKey('category-fresh_produce'))),
+      ).colorScheme.outline;
+      expect(idleFill.color, Colors.transparent);
+      expect(
+        (idleFill.shape as StadiumBorder).side,
+        BorderSide(color: outline),
+      );
+    }
   });
 
   testWidgets('badges render for certified and naturally grown listings', (

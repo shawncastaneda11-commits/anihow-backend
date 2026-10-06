@@ -103,6 +103,7 @@ Widget _app(
   Widget home, {
   required AuthController auth,
   CropLanguage? language,
+  bool dark = false,
 }) {
   return MultiProvider(
     providers: [
@@ -120,7 +121,7 @@ Widget _app(
       ChangeNotifierProvider(create: (_) => CartController(auth)),
     ],
     child: MaterialApp(
-      theme: AniHowTheme.light(),
+      theme: dark ? AniHowTheme.dark() : AniHowTheme.light(),
       home: Scaffold(body: home),
     ),
   );
@@ -218,5 +219,39 @@ void main() {
     expect(find.text('2.4 km away'), findsOneWidget);
     expect(api.nearLat, isNull);
     expect(api.sort, isNull);
+  });
+
+  testWidgets('the farm search and nearest chip share a row', (tester) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    for (final dark in [false, true]) {
+      for (final size in const [Size(360, 640), Size(411, 800)]) {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = size;
+        final api = _ShopsApi();
+        final auth = AuthController(api: api)..restoring = false;
+
+        await tester.pumpWidget(
+          _app(const ShopsScreen(), auth: auth, dark: dark),
+        );
+        await tester.pumpAndSettle();
+
+        final search = tester.getRect(find.byType(TextField));
+        final narrow = size.width < 380;
+        final chipFinder = find.byType(FilterChip);
+        final chip = tester.getRect(chipFinder);
+        final nearest = tester.widget<FilterChip>(chipFinder);
+
+        expect(nearest.tooltip, narrow ? 'Nearest' : isNull);
+        expect(
+          find.descendant(of: chipFinder, matching: find.text('Nearest')),
+          narrow ? findsNothing : findsOneWidget,
+        );
+        expect((search.center.dy - chip.center.dy).abs(), lessThan(1));
+        expect(chip.left, greaterThanOrEqualTo(search.right));
+        expect(tester.takeException(), isNull);
+      }
+    }
   });
 }

@@ -874,17 +874,11 @@ class _FilterSheetState extends State<_FilterSheet> {
     VoidCallback select, {
     Key? key,
   }) {
-    final theme = Theme.of(context);
     return ChoiceChip(
       key: key,
       label: Text(label),
       selected: selected,
       materialTapTargetSize: MaterialTapTargetSize.padded,
-      labelStyle: TextStyle(
-        color: theme.colorScheme.onSurface,
-        fontWeight: FontWeight.w600,
-        fontSize: AniHowSpace.label,
-      ),
       onSelected: (chosen) {
         if (!chosen) {
           return;

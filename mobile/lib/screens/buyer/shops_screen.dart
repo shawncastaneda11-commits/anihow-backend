@@ -141,6 +141,28 @@ class _ShopsScreenState extends State<ShopsScreen> {
     return visible;
   }
 
+  Widget _nearestChip(BuildContext context, AppStrings s) {
+    final narrow = MediaQuery.sizeOf(context).width < 380;
+    final selected = _sort == 'nearest';
+
+    return FilterChip(
+      avatar: Icon(
+        Icons.near_me_outlined,
+        size: 18,
+        color: selected
+            ? Colors.white
+            : Theme.of(context).colorScheme.onSurface,
+      ),
+      label: narrow ? const SizedBox.shrink() : Text(s.nearest),
+      tooltip: narrow ? s.nearest : null,
+      selected: selected,
+      materialTapTargetSize: MaterialTapTargetSize.padded,
+      onSelected: (chosen) {
+        _applySort(chosen ? 'nearest' : 'name');
+      },
+    );
+  }
+
   String _place(ShopProfile shop) {
     final parts = [shop.farmBarangay, shop.farmMunicipality]
         .map((part) => part?.trim() ?? '')
@@ -194,34 +216,21 @@ class _ShopsScreenState extends State<ShopsScreen> {
                 AniHowSpace.screen,
                 AniHowSpace.cardGap,
               ),
-              child: TextField(
-                controller: _search,
-                decoration: InputDecoration(
-                  hintText: s.searchFarms,
-                  prefixIcon: const Icon(Icons.search),
-                ),
-                onChanged: (_) => setState(() {}),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AniHowSpace.screen,
-                0,
-                AniHowSpace.screen,
-                AniHowSpace.cardGap,
-              ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: SizedBox(
-                  height: 48,
-                  child: FilterChip(
-                    label: Text(s.nearest),
-                    selected: _sort == 'nearest',
-                    onSelected: (selected) {
-                      _applySort(selected ? 'nearest' : 'name');
-                    },
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _search,
+                      decoration: InputDecoration(
+                        hintText: s.searchFarms,
+                        prefixIcon: const Icon(Icons.search),
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  _nearestChip(context, s),
+                ],
               ),
             ),
             if (_locationUnavailable)

@@ -60,6 +60,45 @@ class AniHowTheme {
   static const double controlRadius = AniHowSpace.radius;
   static const EdgeInsets pagePadding = AniHowSpace.screenPadding;
 
+  /// Selected chips are brand-filled with white type. Unselected chips stay
+  /// transparent with a 1px outline so the active choice stays obvious.
+  static ChipThemeData _chips({required Color outline, required Color label}) {
+    return ChipThemeData(
+      backgroundColor: Colors.transparent,
+      selectedColor: AniHowColors.brand,
+      disabledColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      shadowColor: Colors.transparent,
+      selectedShadowColor: Colors.transparent,
+      elevation: 0,
+      pressElevation: 0,
+      showCheckmark: false,
+      shape: const StadiumBorder(),
+      color: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return AniHowColors.brand;
+        }
+        return Colors.transparent;
+      }),
+      side: WidgetStateBorderSide.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return BorderSide.none;
+        }
+        return BorderSide(color: outline);
+      }),
+      labelStyle: TextStyle(
+        color: WidgetStateColor.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.white;
+          }
+          return label;
+        }),
+        fontWeight: FontWeight.w600,
+        fontSize: AniHowSpace.label,
+      ),
+    );
+  }
+
   static ThemeData light() => _build(
         brightness: Brightness.light,
         background: AniHowColors.cream,
@@ -137,17 +176,7 @@ class AniHowTheme {
         backgroundColor: AniHowColors.badge,
         textColor: Colors.white,
       ),
-      chipTheme: ChipThemeData(
-        backgroundColor: card,
-        selectedColor: AniHowColors.brand.withValues(alpha: 0.16),
-        side: BorderSide(color: hairline),
-        labelStyle: TextStyle(
-          color: text,
-          fontWeight: FontWeight.w600,
-          fontSize: AniHowSpace.label,
-        ),
-        shape: const StadiumBorder(),
-      ),
+      chipTheme: _chips(outline: scheme.outline, label: text),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: card,

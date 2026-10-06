@@ -304,26 +304,13 @@ class _FarmPageScreenState extends State<FarmPageScreen>
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AniHowSpace.screen,
-        8,
+        AniHowSpace.cardGap,
         AniHowSpace.screen,
         AniHowSpace.cardGap,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            height: 28,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned(
-                  left: 0,
-                  top: -40,
-                  child: _FarmLogo(farm: farm),
-                ),
-              ],
-            ),
-          ),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -554,6 +541,7 @@ class _FarmHeaderCover extends StatelessWidget {
     final place = farm.placeLabel;
     final cover = farm.coverPhotoUrl;
     return Stack(
+      key: const Key('farm-header-cover'),
       fit: StackFit.expand,
       children: [
         if (farm.hasCoverPhoto && cover != null)
@@ -573,6 +561,11 @@ class _FarmHeaderCover extends StatelessWidget {
               colors: [Color(0x00000000), Color(0xCC000000)],
             ),
           ),
+        ),
+        Positioned(
+          left: 16,
+          bottom: 12,
+          child: _FarmLogo(farm: farm),
         ),
         if (place.isNotEmpty)
           Positioned(
@@ -626,6 +619,7 @@ class _FarmLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      key: const Key('farm-logo'),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(

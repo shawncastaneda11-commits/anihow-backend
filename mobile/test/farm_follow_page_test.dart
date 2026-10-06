@@ -146,6 +146,29 @@ void main() {
     expect(find.text('4.8'), findsWidgets);
   });
 
+  testWidgets('the farm logo sits fully inside the cover', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(411, 800);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final api = _FarmApi(_plain);
+
+    await tester.pumpWidget(_app(const FarmPageScreen(farmId: 1), api));
+    await tester.pumpAndSettle();
+
+    final cover = find.byKey(const Key('farm-header-cover'));
+    final logo = find.byKey(const Key('farm-logo'));
+    expect(find.descendant(of: cover, matching: logo), findsOneWidget);
+
+    final coverRect = tester.getRect(cover);
+    final logoRect = tester.getRect(logo);
+    expect(logoRect.left, greaterThanOrEqualTo(coverRect.left));
+    expect(logoRect.top, greaterThanOrEqualTo(coverRect.top));
+    expect(logoRect.right, lessThanOrEqualTo(coverRect.right));
+    expect(logoRect.bottom, lessThanOrEqualTo(coverRect.bottom));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Follow toggles and calls the farm favorite API', (tester) async {
     await tester.binding.setSurfaceSize(const Size(400, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));

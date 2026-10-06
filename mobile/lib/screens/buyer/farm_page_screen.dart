@@ -15,6 +15,41 @@ import '../../widgets/produce_card.dart';
 import '../../widgets/profile_avatar_button.dart';
 import 'shop_profile_screen.dart';
 
+/// Review-weighted rating across a farm's shops.
+///
+/// A shop with a rating and no review count counts as one review.
+class FarmRatingSummary {
+  const FarmRatingSummary({required this.rating, required this.reviewsCount});
+
+  final String rating;
+  final int reviewsCount;
+}
+
+FarmRatingSummary? weightedFarmRating(List<ShopProfile> shops) {
+  var weightedSum = 0.0;
+  var totalReviews = 0;
+  for (final shop in shops) {
+    final raw = shop.averageRating?.trim();
+    if (raw == null || raw.isEmpty) {
+      continue;
+    }
+    final rating = double.tryParse(raw);
+    if (rating == null) {
+      continue;
+    }
+    final count = shop.reviewsCount > 0 ? shop.reviewsCount : 1;
+    weightedSum += rating * count;
+    totalReviews += count;
+  }
+  if (totalReviews == 0) {
+    return null;
+  }
+  return FarmRatingSummary(
+    rating: (weightedSum / totalReviews).toStringAsFixed(1),
+    reviewsCount: totalReviews,
+  );
+}
+
 void openBuyerFarmPage(BuildContext context, int farmId) {
   Navigator.of(context).push(
     MaterialPageRoute<void>(builder: (_) => FarmPageScreen(farmId: farmId)),
@@ -214,16 +249,8 @@ class _FarmPageScreenState extends State<FarmPageScreen>
     }).toList();
   }
 
-  String? _averageRating(List<ShopProfile> shops) {
-    final rated = shops.where((shop) => shop.hasRating).toList();
-    if (rated.isEmpty) {
-      return null;
-    }
-    var sum = 0.0;
-    for (final shop in rated) {
-      sum += double.tryParse(shop.averageRating!) ?? 0;
-    }
-    return (sum / rated.length).toStringAsFixed(1);
+  FarmRatingSummary? _averageRating(List<ShopProfile> shops) {
+    return weightedFarmRating(shops);
   }
 
   @override
@@ -347,7 +374,29 @@ class _FarmPageScreenState extends State<FarmPageScreen>
                 runSpacing: 8,
                 children: [
                   Chip(label: Text(s.shopsCount(farm.farmerSellersCount))),
-                  if (rating != null) Chip(label: Text(rating)),
+                  if (rating != null)
+                    Tooltip(
+                      message: s.farmRating,
+                      child: Semantics(
+                        label: s.farmRating,
+                        child: Chip(
+                          key: const Key('farm-rating'),
+                          label: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.star_rounded,
+                                size: 16,
+                                color: AniHowColors.pending,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(rating.rating),
+                              Text(' · ${s.reviewsCount(rating.reviewsCount)}'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               );
             },

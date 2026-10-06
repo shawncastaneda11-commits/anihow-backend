@@ -212,6 +212,7 @@ class AppStrings {
   String get farmUpdates => t('Updates', 'Mga update');
   String get noUpdatesYet => t('No updates yet', 'Wala pang update');
   String shopsCount(int count) => t('$count shops', '$count tindahan');
+  String get farmRating => t('Farm rating', 'Rating ng bukid');
   String get noFavoriteStores =>
       t('No favorite stores yet.', 'Wala pang paboritong tindahan.');
   String get addStoreToFavorites =>

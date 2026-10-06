@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:anihow/l10n/app_strings.dart';
 import 'package:anihow/models/models.dart';
 import 'package:anihow/screens/buyer/marketplace_screen.dart';
@@ -68,9 +70,31 @@ class _MarketplaceApi extends ApiClient {
   }
 }
 
-class _ShopsApi extends ApiClient {
-  _ShopsApi() : super(onUnauthorized: () {});
+const _pinnedFarm = ShopProfile(
+  id: 4,
+  shopName: 'Nena Stall',
+  name: 'Nena',
+  farmId: 1,
+  farmName: 'Manggahan Farm',
+  farmMunicipality: 'General Trias',
+  farmIsActive: true,
+  distanceKm: 2.4,
+);
 
+const _unpinnedFarm = ShopProfile(
+  id: 5,
+  shopName: 'Rosa Stall',
+  name: 'Rosa',
+  farmId: 2,
+  farmName: 'Riverside Farm',
+  farmMunicipality: 'General Trias',
+  farmIsActive: true,
+);
+
+class _ShopsApi extends ApiClient {
+  _ShopsApi({this.shops = const [_pinnedFarm]}) : super(onUnauthorized: () {});
+
+  final List<ShopProfile> shops;
   String? sort;
   double? nearLat;
   double? nearLng;
@@ -84,18 +108,7 @@ class _ShopsApi extends ApiClient {
     this.sort = sort;
     this.nearLat = nearLat;
     this.nearLng = nearLng;
-    return const [
-      ShopProfile(
-        id: 4,
-        shopName: 'Nena Stall',
-        name: 'Nena',
-        farmId: 1,
-        farmName: 'Manggahan Farm',
-        farmMunicipality: 'General Trias',
-        farmIsActive: true,
-        distanceKm: 2.4,
-      ),
-    ];
+    return shops;
   }
 }
 
@@ -253,5 +266,102 @@ void main() {
         expect(tester.takeException(), isNull);
       }
     }
+  });
+
+  testWidgets('nearest shows progress while locating, then the distance line', (
+    tester,
+  ) async {
+    final gate = Completer<BuyerPoint?>();
+    addTearDown(() {
+      if (!gate.isCompleted) {
+        gate.complete(null);
+      }
+    });
+    BuyerLocation.read = () => gate.future;
+    final api = _ShopsApi();
+    final auth = AuthController(api: api)..restoring = false;
+
+    await tester.pumpWidget(_app(const ShopsScreen(), auth: auth));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(FilterChip));
+    await tester.pump();
+
+    expect(find.text('Finding your location…'), findsOneWidget);
+    expect(find.byKey(const Key('nearest-locating')), findsOneWidget);
+    expect(tester.widget<FilterChip>(find.byType(FilterChip)).onSelected, isNull);
+    expect(AppStrings(true).findingYourLocation, 'Hinahanap ang lokasyon mo…');
+
+    gate.complete(const BuyerPoint(14.38, 120.88));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sorted by distance from you'), findsOneWidget);
+    expect(find.text('2.4 km away'), findsOneWidget);
+    expect(find.text('Finding your location…'), findsNothing);
+    expect(api.sort, 'nearest');
+    expect(api.nearLat, 14.38);
+    expect(api.nearLng, 120.88);
+    expect(AppStrings(true).sortedByDistance, 'Nakaayos ayon sa layo mula sa iyo');
+  });
+
+  testWidgets('a farm without a pin says so after nearest sort', (tester) async {
+    BuyerLocation.read = () async => const BuyerPoint(14.38, 120.88);
+    final api = _ShopsApi(shops: const [_pinnedFarm, _unpinnedFarm]);
+    final auth = AuthController(api: api)..restoring = false;
+
+    await tester.pumpWidget(_app(const ShopsScreen(), auth: auth));
+    await tester.pumpAndSettle();
+    expect(find.text('No map pin yet'), findsNothing);
+
+    await tester.tap(find.byType(FilterChip));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sorted by distance from you'), findsOneWidget);
+    expect(find.text('No map pin yet'), findsOneWidget);
+    expect(find.text('2.4 km away'), findsOneWidget);
+    expect(find.text('Riverside Farm'), findsOneWidget);
+    expect(AppStrings(true).noMapPinYet, 'Wala pang pin sa mapa');
+  });
+
+  testWidgets('nearest explains when no farm has a map pin', (tester) async {
+    BuyerLocation.read = () async => const BuyerPoint(14.38, 120.88);
+    final api = _ShopsApi(shops: const [_unpinnedFarm]);
+    final auth = AuthController(api: api)..restoring = false;
+
+    await tester.pumpWidget(_app(const ShopsScreen(), auth: auth));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(FilterChip));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Farms have not added their map location yet.'), findsOneWidget);
+    expect(find.text('Sorted by distance from you'), findsNothing);
+    expect(find.text('No map pin yet'), findsOneWidget);
+    expect(
+      AppStrings(true).farmsMissingMapPins,
+      'Hindi pa idinadagdag ng mga bukid ang lokasyon nila sa mapa.',
+    );
+  });
+
+  testWidgets('farms nearest still explains when location is unavailable', (
+    tester,
+  ) async {
+    BuyerLocation.read = () async => null;
+    final api = _ShopsApi();
+    final auth = AuthController(api: api)..restoring = false;
+
+    await tester.pumpWidget(_app(const ShopsScreen(), auth: auth));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(FilterChip));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('location-unavailable')), findsOneWidget);
+    expect(find.text('Location is off. Showing the usual order.'), findsOneWidget);
+    expect(find.text('Sorted by distance from you'), findsNothing);
+    expect(find.text('Finding your location…'), findsNothing);
+    expect(find.text('No map pin yet'), findsNothing);
+    expect(api.sort, 'nearest');
+    expect(api.nearLat, isNull);
   });
 }

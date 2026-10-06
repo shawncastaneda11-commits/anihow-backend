@@ -547,6 +547,15 @@ class ApiClient {
     return OrderRecord.fromJson(_asMap(response['data'] ?? response));
   }
 
+  /// Buyer cancel is allowed only while the order is still placed.
+  /// The server sets the reason; do not send one.
+  Future<OrderRecord> cancelBuyerOrder(int id, {String? note}) async {
+    final response = await _patchJson('/buyer/orders/$id/cancel', {
+      if (note != null && note.isNotEmpty) 'note': note,
+    });
+    return OrderRecord.fromJson(_asMap(response['data'] ?? response));
+  }
+
   Future<List<OrderMessage>> orderMessages(int orderId, {int? afterId}) {
     return _list(
       '/orders/$orderId/messages',
@@ -1027,7 +1036,7 @@ class ApiClient {
       final response = await _dio.put(path, data: body);
       return _asMap(response.data);
     } on DioException catch (error) {
-      throw _apiException(error);
+      throw ApiException(_messageFrom(error));
     }
   }
 
@@ -1043,7 +1052,7 @@ class ApiClient {
       final response = await _dio.patch(path, data: body);
       return _asMap(response.data);
     } on DioException catch (error) {
-      throw ApiException(_messageFrom(error));
+      throw _apiException(error);
     }
   }
 

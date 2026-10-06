@@ -45,6 +45,7 @@ class _ShopsScreenState extends State<ShopsScreen> {
   double? _nearLat;
   double? _nearLng;
   bool _locationUnavailable = false;
+  bool _locating = false;
   late Future<List<ShopProfile>> _future;
 
   @override
@@ -76,6 +77,7 @@ class _ShopsScreenState extends State<ShopsScreen> {
     double? longitude;
     var unavailable = false;
     if (value == 'nearest') {
+      setState(() => _locating = true);
       final point = await BuyerLocation.read();
       if (!mounted) {
         return;
@@ -88,6 +90,7 @@ class _ShopsScreenState extends State<ShopsScreen> {
       }
     }
     setState(() {
+      _locating = false;
       _sort = value;
       _nearLat = latitude;
       _nearLng = longitude;
@@ -146,20 +149,29 @@ class _ShopsScreenState extends State<ShopsScreen> {
     final selected = _sort == 'nearest';
 
     return FilterChip(
-      avatar: Icon(
-        Icons.near_me_outlined,
-        size: 18,
-        color: selected
-            ? Colors.white
-            : Theme.of(context).colorScheme.onSurface,
-      ),
+      avatar: _locating
+          ? const SizedBox(
+              key: Key('nearest-locating'),
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(
+              Icons.near_me_outlined,
+              size: 18,
+              color: selected
+                  ? Colors.white
+                  : Theme.of(context).colorScheme.onSurface,
+            ),
       label: narrow ? const SizedBox.shrink() : Text(s.nearest),
       tooltip: narrow ? s.nearest : null,
       selected: selected,
       materialTapTargetSize: MaterialTapTargetSize.padded,
-      onSelected: (chosen) {
-        _applySort(chosen ? 'nearest' : 'name');
-      },
+      onSelected: _locating
+          ? null
+          : (chosen) {
+              _applySort(chosen ? 'nearest' : 'name');
+            },
     );
   }
 
@@ -206,6 +218,15 @@ class _ShopsScreenState extends State<ShopsScreen> {
         }
         final farms = _farms(shops);
         final buyer = context.watch<AuthController>().user?.isBuyer ?? false;
+        final nearestReady =
+            _sort == 'nearest' && !_locationUnavailable && _nearLat != null;
+        final anyPin = shops.any(
+          (shop) =>
+              shop.farmId != null && shop.farmIsActive && shop.distanceKm != null,
+        );
+        final muted = Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.68),
+        );
 
         return Column(
           children: [
@@ -233,7 +254,21 @@ class _ShopsScreenState extends State<ShopsScreen> {
                 ],
               ),
             ),
-            if (_locationUnavailable)
+            if (_locating)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AniHowSpace.screen,
+                  0,
+                  AniHowSpace.screen,
+                  AniHowSpace.cardGap,
+                ),
+                child: Text(
+                  s.findingYourLocation,
+                  key: const Key('finding-location'),
+                  style: muted,
+                ),
+              )
+            else if (_locationUnavailable)
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AniHowSpace.screen,
@@ -244,6 +279,21 @@ class _ShopsScreenState extends State<ShopsScreen> {
                 child: Text(
                   s.locationUnavailable,
                   key: const Key('location-unavailable'),
+                  style: muted,
+                ),
+              )
+            else if (nearestReady)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AniHowSpace.screen,
+                  0,
+                  AniHowSpace.screen,
+                  AniHowSpace.cardGap,
+                ),
+                child: Text(
+                  anyPin ? s.sortedByDistance : s.farmsMissingMapPins,
+                  key: Key(anyPin ? 'sorted-by-distance' : 'farms-no-map-pins'),
+                  style: muted,
                 ),
               ),
             Expanded(
@@ -278,6 +328,7 @@ class _ShopsScreenState extends State<ShopsScreen> {
                             farm: farm,
                             followed: _followed[farm.id] ?? false,
                             showFollow: buyer,
+                            nearest: nearestReady,
                             onFollow: () => _toggleFollow(farm.id),
                           );
                         },
@@ -327,11 +378,13 @@ class _FarmCard extends StatelessWidget {
     required this.followed,
     required this.showFollow,
     required this.onFollow,
+    this.nearest = false,
   });
 
   final _FarmRow farm;
   final bool followed;
   final bool showFollow;
+  final bool nearest;
   final VoidCallback onFollow;
 
   @override
@@ -396,6 +449,15 @@ class _FarmCard extends StatelessWidget {
                     if (farm.distanceKm != null) ...[
                       const SizedBox(height: 4),
                       Text(s.kilometersAway(farm.distanceKm!)),
+                    ] else if (nearest) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        s.noMapPinYet,
+                        key: Key('farm-no-pin-${farm.id}'),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: muted,
+                        ),
+                      ),
                     ],
                   ],
                 ),

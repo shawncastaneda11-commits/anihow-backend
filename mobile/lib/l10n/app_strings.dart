@@ -344,6 +344,17 @@ class AppStrings {
   );
   String get sortNewest => t('Newest', 'Pinakabago');
   String get nearest => t('Nearest', 'Pinakamalapit');
+  String get findingYourLocation =>
+      t('Finding your location…', 'Hinahanap ang lokasyon mo…');
+  String get sortedByDistance => t(
+    'Sorted by distance from you',
+    'Nakaayos ayon sa layo mula sa iyo',
+  );
+  String get noMapPinYet => t('No map pin yet', 'Wala pang pin sa mapa');
+  String get farmsMissingMapPins => t(
+    'Farms have not added their map location yet.',
+    'Hindi pa idinadagdag ng mga bukid ang lokasyon nila sa mapa.',
+  );
   String get locationUnavailable => t(
     'Location is off. Showing the usual order.',
     'Naka-off ang lokasyon. Ipinapakita ang karaniwang ayos.',
@@ -818,6 +829,14 @@ class AppStrings {
   String get markReady => t('Mark ready', 'Markahang ready');
   String get completeHandover => t('Complete handover', 'Tapusin ang handover');
   String get cancelOrder => t('Cancel order', 'Kanselahin ang order');
+  String get cancelThisOrder =>
+      t('Cancel this order?', 'Kanselahin ang order na ito?');
+  String get cancelBeforeConfirm => t(
+    'The seller has not confirmed it yet. You can add a short note for the seller.',
+    'Hindi pa ito kinukumpirma ng tindahan. Puwede kang maglagay ng maikling tala para sa kanila.',
+  );
+  String get keepOrder => t('Keep order', 'Panatilihin ang order');
+  String get orderCancelled => t('Order cancelled.', 'Kinansela ang order.');
   String get pleaseWait => t('Please wait…', 'Sandali…');
   String get cashReceived => t('Cash received', 'Cash na natanggap');
   String cashReceivedLine(String peso) =>

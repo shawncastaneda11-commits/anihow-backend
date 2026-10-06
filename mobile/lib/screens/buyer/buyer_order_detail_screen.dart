@@ -9,6 +9,7 @@ import '../../support/relative_time.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/async_view.dart';
+import '../../widgets/buyer_cancel_order_button.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/hint_card.dart';
 import '../../widgets/order_look.dart';
@@ -91,7 +92,9 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen>
       return;
     }
     final future = _load();
-    setState(() => _future = future);
+    setState(() {
+      _future = future;
+    });
     await future;
   }
 
@@ -213,6 +216,19 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen>
                   ),
                 ),
               ),
+              if (order.status == 'placed') ...[
+                const SizedBox(height: AniHowSpace.cardGap),
+                BuyerCancelOrderButton(
+                  order: order,
+                  expanded: true,
+                  onUpdated: (updated) {
+                    setState(() {
+                      _future = Future.value(updated);
+                    });
+                  },
+                  onReload: _reload,
+                ),
+              ],
               if (_needsCashHint(order)) ...[
                 const SizedBox(height: AniHowSpace.cardGap),
                 AniHowHintCard(

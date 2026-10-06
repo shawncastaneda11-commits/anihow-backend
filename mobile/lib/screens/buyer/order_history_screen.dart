@@ -8,6 +8,7 @@ import '../../support/relative_time.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/async_view.dart';
+import '../../widgets/buyer_cancel_order_button.dart';
 import '../../widgets/notification_bell.dart';
 import '../../widgets/order_look.dart';
 import '../../widgets/order_progress.dart';
@@ -140,6 +141,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
             separatorBuilder: (_, _) => const SizedBox(height: AniHowSpace.cardGap),
             itemBuilder: (context, index) => BuyerOrderCard(
               order: items[index],
+              onChanged: (_) => _reload(),
               onTap: () async {
                 await Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -195,14 +197,42 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
   }
 }
 
-class BuyerOrderCard extends StatelessWidget {
-  const BuyerOrderCard({super.key, required this.order, this.onTap});
+class BuyerOrderCard extends StatefulWidget {
+  const BuyerOrderCard({
+    super.key,
+    required this.order,
+    this.onTap,
+    this.onChanged,
+  });
 
   final OrderRecord order;
   final VoidCallback? onTap;
+  final ValueChanged<OrderRecord>? onChanged;
+
+  @override
+  State<BuyerOrderCard> createState() => _BuyerOrderCardState();
+}
+
+class _BuyerOrderCardState extends State<BuyerOrderCard> {
+  late OrderRecord _order;
+
+  @override
+  void initState() {
+    super.initState();
+    _order = widget.order;
+  }
+
+  @override
+  void didUpdateWidget(BuyerOrderCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.order != widget.order) {
+      _order = widget.order;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final order = _order;
     final s = AppStrings.of(context);
     final theme = Theme.of(context);
     final location = order.location;
@@ -222,7 +252,7 @@ class BuyerOrderCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             InkWell(
-              onTap: onTap,
+              onTap: widget.onTap,
               borderRadius: BorderRadius.circular(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -284,24 +314,41 @@ class BuyerOrderCard extends StatelessWidget {
                 ],
               ),
             ),
-            if (!order.isWalkIn)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => OrderChatScreen(order: order),
+            if (!order.isWalkIn || order.status == 'placed')
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  if (!order.isWalkIn)
+                    TextButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => OrderChatScreen(order: order),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                      label: Text(s.chatWithStall),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.only(top: 6, right: 8),
+                        visualDensity: VisualDensity.compact,
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                  label: Text(s.chatWithStall),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.only(top: 6, right: 8),
-                    visualDensity: VisualDensity.compact,
+                    ),
+                  BuyerCancelOrderButton(
+                    order: order,
+                    onUpdated: (updated) {
+                      setState(() => _order = updated);
+                      widget.onChanged?.call(updated);
+                    },
+                    onReload: widget.onChanged == null
+                        ? null
+                        : () async {
+                            widget.onChanged?.call(_order);
+                          },
                   ),
-                ),
+                ],
               ),
           ],
         ),

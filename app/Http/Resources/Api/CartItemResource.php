@@ -20,19 +20,35 @@ class CartItemResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $listing = $this->listing;
         $quantity = (float) $this->quantity;
+
+        if ($listing === null) {
+            return [
+                'id' => $this->id,
+                'quantity' => $quantity,
+                'listed_price' => 0.0,
+                'line_subtotal' => 0.0,
+                'tawad_amount' => 0.0,
+                'line_total' => 0.0,
+                'listing' => null,
+            ];
+        }
+
         $subtotal = $this->lineSubtotal();
-        $rule = $this->listing->activeTawadRule;
+        $rule = $listing->relationLoaded('activeTawadRule')
+            ? $listing->activeTawadRule
+            : null;
         $tawad = $rule?->discountFor($quantity) ?? 0.0;
 
         return [
             'id' => $this->id,
             'quantity' => $quantity,
-            'listed_price' => (float) $this->listing->price_per_unit,
+            'listed_price' => (float) $listing->price_per_unit,
             'line_subtotal' => $subtotal,
             'tawad_amount' => $tawad,
             'line_total' => $subtotal - $tawad,
-            'listing' => new ListingResource($this->whenLoaded('listing')),
+            'listing' => $this->whenLoaded('listing', fn () => new ListingResource($listing)),
         ];
     }
 }

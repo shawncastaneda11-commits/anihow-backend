@@ -21,6 +21,7 @@ class UpdateShopProfileRequest extends FormRequest
             'bio' => ['sometimes', 'nullable', 'string', 'max:2000'],
             'location' => ['sometimes', 'nullable', 'string', 'max:255'],
             'contact' => ['sometimes', 'nullable', 'string', 'max:30'],
+            'accepts_online_payment' => ['sometimes', 'boolean'],
         ];
     }
 }

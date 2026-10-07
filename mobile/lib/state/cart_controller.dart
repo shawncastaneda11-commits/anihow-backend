@@ -16,6 +16,7 @@ class CartController extends ChangeNotifier {
   CartSnapshot snapshot = const CartSnapshot();
   bool loading = false;
   Object? error;
+  int _reloadGeneration = 0;
 
   ApiClient get api => _auth.api;
 
@@ -53,15 +54,26 @@ class CartController extends ChangeNotifier {
     loading = snapshot.items.isEmpty;
     error = null;
     notifyListeners();
+    final generation = ++_reloadGeneration;
     try {
       final items = await _auth.api.cartItems();
-      snapshot = CartSnapshot(items: items);
+      if (generation != _reloadGeneration) {
+        return;
+      }
+      snapshot = CartSnapshot(
+        items: items.where((item) => item.isPurchasable).toList(),
+      );
       error = null;
-    } on ApiException catch (caught) {
+    } catch (caught) {
+      if (generation != _reloadGeneration) {
+        return;
+      }
       error = caught;
     } finally {
-      loading = false;
-      notifyListeners();
+      if (generation == _reloadGeneration) {
+        loading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -83,10 +95,12 @@ class CartController extends ChangeNotifier {
   Future<List<OrderRecord>> checkout({
     required String fulfillmentPreference,
     String? fulfillmentNote,
+    List<Map<String, dynamic>> payments = const [],
   }) async {
     final orders = await _auth.api.checkout(
       fulfillmentPreference: fulfillmentPreference,
       fulfillmentNote: fulfillmentNote,
+      payments: payments,
     );
     snapshot = const CartSnapshot();
     notifyListeners();

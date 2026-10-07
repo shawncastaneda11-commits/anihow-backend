@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api\Cart;
 
+use App\Actions\Reservations\OpenDueReservations;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Cart\StoreCartItemRequest;
 use App\Http\Requests\Api\Cart\UpdateCartItemRequest;
 use App\Http\Resources\Api\CartItemResource;
 use App\Models\CartItem;
 use App\Models\Listing;
+use App\Support\ShopReviews;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -15,19 +17,30 @@ use Illuminate\Validation\ValidationException;
 
 class CartController extends Controller
 {
-    private const CART_RELATIONS = [
-        'listing.cropType',
-        'listing.farmerSeller',
-        'listing.activeTawadRule',
-    ];
+    /**
+     * @return array<int|string, mixed>
+     */
+    private function cartRelations(): array
+    {
+        return [
+            'listing.cropType',
+            'listing.farm',
+            'listing.activeTawadRule',
+            'listing.farmerSeller' => fn ($query) => $query
+                ->withAvg(ShopReviews::receivedAggregate(), 'rating')
+                ->withCount(ShopReviews::receivedAggregate()),
+        ];
+    }
 
     public function index(Request $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', CartItem::class);
 
+        CartItem::pruneUnavailable($request->user());
+
         $items = $request->user()
             ->cartItems()
-            ->with(self::CART_RELATIONS)
+            ->with($this->cartRelations())
             ->latest()
             ->get();
 
@@ -36,10 +49,23 @@ class CartController extends Controller
 
     public function store(StoreCartItemRequest $request): JsonResponse
     {
+        app(OpenDueReservations::class)->forListing((int) $request->validated('listing_id'));
+
         $listing = Listing::query()
-            ->marketplaceVisible()
             ->with('cropType')
             ->findOrFail($request->validated('listing_id'));
+
+        if (! Listing::query()->listedForBuyers()->whereKey($listing->id)->exists()) {
+            abort(404);
+        }
+
+        if ($listing->isUpcoming() || $listing->isExpired()) {
+            throw ValidationException::withMessages([
+                'listing_id' => $listing->isExpired()
+                    ? "{$listing->title} is no longer available."
+                    : "{$listing->title} is not available yet.",
+            ]);
+        }
 
         $existing = $request->user()
             ->cartItems()
@@ -48,6 +74,7 @@ class CartController extends Controller
 
         $total = (float) $request->validated('quantity') + (float) ($existing->quantity ?? 0);
 
+        $this->assertOrderQuantity($listing, $total);
         $this->assertStock($listing, $total);
 
         $item = $request->user()->cartItems()->updateOrCreate(
@@ -55,7 +82,7 @@ class CartController extends Controller
             ['quantity' => $total],
         );
 
-        $item->load(self::CART_RELATIONS);
+        $item->load($this->cartRelations());
 
         return (new CartItemResource($item))
             ->additional(['message' => 'Added to cart.'])
@@ -65,12 +92,31 @@ class CartController extends Controller
 
     public function update(UpdateCartItemRequest $request, CartItem $cartItem): CartItemResource
     {
+        app(OpenDueReservations::class)->forListing((int) $cartItem->listing_id);
+        $cartItem->unsetRelation('listing');
+
+        $listing = $cartItem->listing;
+        if ($listing !== null && $listing->isUpcoming()) {
+            throw ValidationException::withMessages([
+                'quantity' => "{$listing->title} is not available yet.",
+            ]);
+        }
+
+        if ($listing === null || ! Listing::query()->buyerVisible()->whereKey($listing->id)->exists()) {
+            $cartItem->delete();
+
+            throw ValidationException::withMessages([
+                'quantity' => 'This listing is no longer available.',
+            ]);
+        }
+
         $quantity = (float) $request->validated('quantity');
 
-        $this->assertStock($cartItem->listing, $quantity);
+        $this->assertOrderQuantity($listing, $quantity);
+        $this->assertStock($listing, $quantity);
 
         $cartItem->update(['quantity' => $quantity]);
-        $cartItem->load(self::CART_RELATIONS);
+        $cartItem->load($this->cartRelations());
 
         return (new CartItemResource($cartItem))
             ->additional(['message' => 'Cart updated.']);
@@ -89,6 +135,23 @@ class CartController extends Controller
      * Sellable quantity, not quantity_available: stock held by other buyers'
      * placed orders is not available to this cart.
      */
+    private function assertOrderQuantity(Listing $listing, float $quantity): void
+    {
+        $left = $listing->sellableQuantity();
+
+        if (Listing::orderHundredths($left) < Listing::orderHundredths((float) $listing->min_order_quantity)) {
+            throw ValidationException::withMessages([
+                'quantity' => $listing->belowMinimumStockMessage($left),
+            ]);
+        }
+
+        if (! $listing->allowsOrderQuantity($quantity)) {
+            throw ValidationException::withMessages([
+                'quantity' => $listing->orderQuantityMessage(),
+            ]);
+        }
+    }
+
     private function assertStock(Listing $listing, float $quantity): void
     {
         if ($listing->hasStockFor($quantity)) {

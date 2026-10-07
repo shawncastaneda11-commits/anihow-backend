@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * Every display value is snapshotted at checkout. An order confirmed at a
  * price keeps that price even if the listing or the tawad rule changes later.
+ * Deleting the crop type clears crop_type_id and leaves this snapshot.
  *
  * unit_price is the listed price and is never overwritten by a tawad. The
  * buyer sees three lines: listed price, tawad, final total.
@@ -42,7 +43,7 @@ class OrderItem extends Model
             'unit' => ListingUnit::class,
             'tawad_type' => TawadType::class,
             'quantity' => 'decimal:2',
-            'unit_price' => 'decimal:2',
+            'unit_price' => 'decimal:4',
             'line_subtotal' => 'decimal:2',
             'tawad_amount' => 'decimal:2',
             'line_total' => 'decimal:2',

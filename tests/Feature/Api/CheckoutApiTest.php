@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use App\Enums\FulfillmentPreference;
+use App\Enums\ListingStatus;
 use App\Models\Order;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -114,6 +115,76 @@ class CheckoutApiTest extends TestCase
             'id' => $order->id,
             'payment_method' => 'cash_on_handover',
             'fulfillment_note' => 'Saturday 7am at the hall.',
+        ]);
+    }
+
+    public function test_checkout_uses_the_listing_farm_when_the_seller_farm_id_is_missing(): void
+    {
+        $farm = $this->farm();
+        $farmer = $this->farmer([], $farm);
+        $listing = $this->listingFor($farmer, [
+            'farm_id' => $farm->id,
+            'price_per_unit' => 30,
+            'quantity_available' => 10,
+        ]);
+        $farmer->forceFill(['farm_id' => null])->save();
+
+        $buyer = $this->buyer();
+        $this->addToCart($buyer, $listing, 1);
+
+        $orderId = $this->checkout($buyer)
+            ->assertCreated()
+            ->json('data.0.id');
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $orderId,
+            'farm_id' => $farm->id,
+        ]);
+    }
+
+    public function test_an_empty_cart_is_refused_without_claiming_items_were_removed(): void
+    {
+        $buyer = $this->buyer();
+
+        $this->checkout($buyer)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'cart' => 'Your cart is empty.',
+            ]);
+    }
+
+    public function test_checkout_drops_unavailable_cart_lines_instead_of_failing(): void
+    {
+        $farmer = $this->farmer();
+        $available = $this->listingFor($farmer, [
+            'title' => 'Sitaw, sariwa',
+            'price_per_unit' => 30,
+            'quantity_available' => 20,
+        ]);
+        $removed = $this->listingFor($farmer, [
+            'title' => 'Talong, mahaba',
+            'price_per_unit' => 30,
+            'quantity_available' => 20,
+        ]);
+        $buyer = $this->buyer();
+        $this->addToCart($buyer, $available, 1);
+        $this->addToCart($buyer, $removed, 1);
+
+        $removed->forceFill([
+            'status' => ListingStatus::TakenDown,
+            'is_active' => false,
+        ])->save();
+
+        $this->checkout($buyer)
+            ->assertCreated()
+            ->assertJsonCount(1, 'data');
+
+        $this->assertSame(0, $buyer->cartItems()->count());
+        $this->assertDatabaseHas('order_items', [
+            'listing_id' => $available->id,
+        ]);
+        $this->assertDatabaseMissing('order_items', [
+            'listing_id' => $removed->id,
         ]);
     }
 }

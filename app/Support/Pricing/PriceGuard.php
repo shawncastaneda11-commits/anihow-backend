@@ -16,8 +16,7 @@ final class PriceGuard
     public function __construct(
         public readonly float $floor,
         public readonly float $ceiling,
-    ) {
-    }
+    ) {}
 
     /** A listing price is legal at or above the effective floor. */
     public function allowsPrice(float|string $price): bool

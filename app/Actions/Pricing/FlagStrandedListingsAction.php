@@ -2,11 +2,13 @@
 
 namespace App\Actions\Pricing;
 
+use App\Enums\ListingStatus;
 use App\Models\CropType;
 use App\Models\Farm;
 use App\Models\Listing;
 use App\Support\InAppNotifier;
 use App\Support\Pricing\PriceGuard;
+use App\Support\Pricing\UnitConverter;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -42,6 +44,7 @@ class FlagStrandedListingsAction
 {
     public function __construct(
         private readonly InAppNotifier $notifier,
+        private readonly UnitConverter $units,
     ) {}
 
     /**
@@ -62,7 +65,17 @@ class FlagStrandedListingsAction
                 continue;
             }
 
-            $price = PriceGuard::centavos($listing->price_per_unit);
+            $converted = $this->units->guardPrice(
+                $listing->unit,
+                $cropType->unit_of_measure,
+                $listing->price_per_unit,
+            );
+
+            if ($converted === null) {
+                continue;
+            }
+
+            $price = PriceGuard::centavos($converted);
 
             if ($price >= PriceGuard::centavos($previousFloor) && $price < PriceGuard::centavos($newFloor)) {
                 $this->notifier->floorPriceRaised($seller, $listing, $newFloor);
@@ -114,12 +127,55 @@ class FlagStrandedListingsAction
                 continue;
             }
 
-            $amount = PriceGuard::centavos($rule->discount_amount);
+            $converted = $this->units->guardPrice(
+                $listing->unit,
+                $cropType->unit_of_measure,
+                $rule->discount_amount,
+            );
+
+            if ($converted === null) {
+                continue;
+            }
+
+            $amount = PriceGuard::centavos($converted);
 
             if ($amount <= PriceGuard::centavos($previousCeiling) && $amount > PriceGuard::centavos($newCeiling)) {
                 $this->notifier->tawadCeilingLowered($seller, $listing, $newCeiling);
                 $notified[] = $listing->getKey();
             }
+        }
+
+        return $notified;
+    }
+
+    /**
+     * Published listings whose unit cannot convert into a crop that is now
+     * guarded. Same notice path as a price stranded by a raised floor.
+     *
+     * @return list<int>
+     */
+    public function incompatibleUnits(Farm $farm, CropType $cropType): array
+    {
+        if (! $this->units->isGuarded($cropType, $farm->getKey())) {
+            return [];
+        }
+
+        $notified = [];
+
+        foreach ($this->candidates($farm, $cropType) as $listing) {
+            if ($listing->status !== ListingStatus::Published) {
+                continue;
+            }
+
+            $seller = $listing->farmerSeller;
+            $unit = $listing->unit;
+
+            if ($seller === null || ($unit !== null && $cropType->unit_of_measure->convertsTo($unit))) {
+                continue;
+            }
+
+            $this->notifier->listingUnitNotAllowed($seller, $listing);
+            $notified[] = $listing->getKey();
         }
 
         return $notified;
@@ -138,7 +194,7 @@ class FlagStrandedListingsAction
             ->forFarm($farm->getKey())
             ->where('listings.crop_type_id', $cropType->getKey())
             ->whereNull('listings.taken_down_at')
-            ->with(['farmerSeller', 'activeTawadRule'])
+            ->with(['farmerSeller', 'activeTawadRule', 'cropType'])
             ->get();
     }
 }

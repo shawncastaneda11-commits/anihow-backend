@@ -2,11 +2,15 @@
 
 namespace App\Filament\Resources\Listings\Tables;
 
+use App\Actions\Listings\TakeDownListingAction;
+use App\Actions\Reservations\GuardListingReservationCancellation;
 use App\Enums\ListingStatus;
 use App\Models\Listing;
 use App\Support\InAppNotifier;
+use App\Support\Pricing\UnitConverter;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Textarea;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
@@ -41,6 +45,11 @@ class ListingsTable
             ELSE crop_types.floor_price
         END
         SQL;
+
+    public static function belowFloorSql(): string
+    {
+        return UnitConverter::belowFloorComparison(self::EFFECTIVE_FLOOR_SQL);
+    }
 
     public static function configure(Table $table): Table
     {
@@ -81,6 +90,15 @@ class ListingsTable
                 TextColumn::make('quantity_held')
                     ->label('Held')
                     ->toggleable(),
+                TextColumn::make('availability_state')
+                    ->label('Availability')
+                    ->badge()
+                    ->getStateUsing(fn (Listing $record): string => ucfirst($record->availabilityState()))
+                    ->color(fn (string $state): string => match ($state) {
+                        'Upcoming' => 'warning',
+                        'Expired' => 'gray',
+                        default => 'success',
+                    }),
                 TextColumn::make('status')
                     ->badge()
                     ->formatStateUsing(fn (ListingStatus $state): string => $state->label())
@@ -98,6 +116,21 @@ class ListingsTable
             ->filters([
                 SelectFilter::make('status')
                     ->options(ListingStatus::options()),
+                SelectFilter::make('availability')
+                    ->label('Availability')
+                    ->options([
+                        'available' => 'Available',
+                        'upcoming' => 'Upcoming',
+                        'expired' => 'Expired',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return match ($data['value'] ?? null) {
+                            'available' => $query->availableNow(),
+                            'upcoming' => $query->upcoming(),
+                            'expired' => $query->expired(),
+                            default => $query,
+                        };
+                    }),
                 SelectFilter::make('crop_type')
                     ->relationship('cropType', 'name')
                     ->label('Crop type'),
@@ -107,14 +140,13 @@ class ListingsTable
                     ->label('Seller active'),
                 // Same answer as the red price badge, computed in SQL so it can
                 // filter. Compares against the farm's effective floor, not the
-                // system floor alone.
+                // system floor alone. The listing price is converted into the
+                // crop type's unit first, using the same factors as UnitConverter.
                 Filter::make('below_floor')
                     ->label('Priced below floor')
                     ->query(fn (Builder $query): Builder => $query->whereHas(
                         'cropType',
-                        fn (Builder $cropType): Builder => $cropType->whereRaw(
-                            '('.self::EFFECTIVE_FLOOR_SQL.') > listings.price_per_unit',
-                        ),
+                        fn (Builder $cropType): Builder => $cropType->whereRaw(self::belowFloorSql()),
                     )),
             ])
             ->recordActions([
@@ -130,22 +162,26 @@ class ListingsTable
                     ->color('danger')
                     ->requiresConfirmation()
                     ->visible(fn (Listing $record): bool => $record->status === ListingStatus::Published)
+                    ->modalDescription(fn (Listing $record): ?string => app(GuardListingReservationCancellation::class)->warning($record))
                     ->schema([
                         Textarea::make('takedown_reason')
                             ->label('Reason')
                             ->required()
                             ->rows(2)
                             ->helperText('Shown to the seller.'),
+                        Checkbox::make('confirm_cancel_reservations')
+                            ->label('I understand the reservations will be cancelled')
+                            ->visible(fn (Listing $record): bool => app(GuardListingReservationCancellation::class)->describe($record) !== null)
+                            ->required(fn (Listing $record): bool => app(GuardListingReservationCancellation::class)->describe($record) !== null)
+                            ->accepted(fn (Listing $record): bool => app(GuardListingReservationCancellation::class)->describe($record) !== null),
                     ])
                     ->action(function (Listing $record, array $data): void {
-                        $record->update([
-                            'status' => ListingStatus::TakenDown,
-                            'taken_down_at' => now(),
-                            'taken_down_by' => auth()->id(),
-                            'takedown_reason' => $data['takedown_reason'],
-                        ]);
-
-                        app(InAppNotifier::class)->listingTakenDown($record->farmerSeller, $record);
+                        app(TakeDownListingAction::class)->handle(
+                            $record,
+                            auth()->user(),
+                            $data['takedown_reason'],
+                            (bool) ($data['confirm_cancel_reservations'] ?? false),
+                        );
                     }),
 
                 Action::make('restore')

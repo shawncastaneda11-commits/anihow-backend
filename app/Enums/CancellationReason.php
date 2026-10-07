@@ -7,6 +7,7 @@ enum CancellationReason: string
     case BuyerCancelled = 'buyer_cancelled';
     case SellerDeclined = 'seller_declined';
     case NoShow = 'no_show';
+    case SellerUnresponsive = 'seller_unresponsive';
     case Other = 'other';
 
     public function label(): string
@@ -15,6 +16,7 @@ enum CancellationReason: string
             self::BuyerCancelled => 'Cancelled by buyer',
             self::SellerDeclined => 'Declined by farmer-seller',
             self::NoShow => 'No-show at handover',
+            self::SellerUnresponsive => 'Seller unresponsive',
             self::Other => 'Other',
         };
     }

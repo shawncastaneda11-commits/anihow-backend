@@ -1,0 +1,31 @@
+<?php
+
+namespace App\Http\Resources\Api;
+
+use App\Models\StallMessage;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+/** @mixin StallMessage */
+class OrderMessageResource extends JsonResource
+{
+    /**
+     * @return array<string, mixed>
+     */
+    public function toArray(Request $request): array
+    {
+        $author = $this->author;
+
+        return [
+            'id' => $this->id,
+            'body' => (string) ($this->body ?? ''),
+            'created_at' => $this->created_at?->toIso8601String(),
+            'author' => [
+                'id' => $author?->id,
+                'name' => $author?->name,
+                'role' => $author?->roles->first()?->name,
+                'avatar_url' => $author?->avatarUrl(),
+            ],
+        ];
+    }
+}

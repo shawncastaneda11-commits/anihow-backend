@@ -23,6 +23,7 @@ class CropCareArticleResource extends JsonResource
             'category' => $this->category->value,
             'category_label' => $this->category->label(),
             'image_url' => $this->imageUrl(),
+            'thumbnail_url' => $this->thumbnailUrl(),
             'published_at' => $this->published_at?->toIso8601String(),
             'farm' => new FarmResource($this->whenLoaded('farm')),
             'author_name' => $this->whenLoaded('author', fn (): ?string => $this->author?->name),

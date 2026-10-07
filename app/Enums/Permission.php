@@ -14,6 +14,9 @@ enum Permission: string
     case ManageOwnFarmProfile = 'manage_own_farm_profile';
     case ViewOwnFarmRoster = 'view_own_farm_roster';
 
+    // Organic certification is a legal claim. Only the Super Admin records it.
+    case ManageOrganicCertification = 'manage_organic_certification';
+
     // Crop taxonomy
     case ManageCropTypes = 'manage_crop_types';
     case SetCropPricing = 'set_crop_pricing';
@@ -51,11 +54,23 @@ enum Permission: string
     case ManageOwnFarmArticles = 'manage_own_farm_articles';
     case ModerateArticles = 'moderate_articles';
 
+    // Farm announcements
+    case ManageOwnFarmAnnouncements = 'manage_own_farm_announcements';
+
+    // FAQ bot answers. Super Admin writes the system-wide script; a Content
+    // Editor may add or override farmer-seller answers for their own farm.
+    case ManageSystemFaq = 'manage_system_faq';
+    case ManageOwnFarmFaq = 'manage_own_farm_faq';
+
     // Descriptive analytics
     case ViewSystemAnalytics = 'view_system_analytics';
     case ViewFarmAnalytics = 'view_farm_analytics';
     case ViewOwnAnalytics = 'view_own_analytics';
     case GenerateExports = 'generate_exports';
+
+    // Data-subject rights for app users (buyers and farmer-sellers)
+    case ExportOwnData = 'export_own_data';
+    case RequestAccountDeletion = 'request_account_deletion';
 
     public function label(): string
     {
@@ -66,6 +81,7 @@ enum Permission: string
             self::ManageFarms => 'Manage farms',
             self::ManageOwnFarmProfile => 'Manage own farm profile',
             self::ViewOwnFarmRoster => 'View own farm roster',
+            self::ManageOrganicCertification => 'Manage organic certification',
             self::ManageCropTypes => 'Manage crop taxonomy',
             self::SetCropPricing => 'Set floor price and maximum discount',
             self::SetFarmPricing => 'Tighten a farm floor price and maximum discount',
@@ -83,10 +99,15 @@ enum Permission: string
             self::ResolveReports => 'Resolve reports',
             self::ManageOwnFarmArticles => 'Manage own farm crop-care articles',
             self::ModerateArticles => 'Moderate crop-care articles',
+            self::ManageOwnFarmAnnouncements => 'Manage own farm announcements',
+            self::ManageSystemFaq => 'Manage system-wide FAQ answers',
+            self::ManageOwnFarmFaq => 'Manage own farm FAQ answers',
             self::ViewSystemAnalytics => 'View system-wide analytics',
             self::ViewFarmAnalytics => 'View farm analytics',
             self::ViewOwnAnalytics => 'View own analytics',
             self::GenerateExports => 'Generate exports',
+            self::ExportOwnData => 'Export own data',
+            self::RequestAccountDeletion => 'Request account deletion',
         };
     }
 
@@ -118,6 +139,7 @@ enum Permission: string
                 self::ApproveFarmerSeller,
                 self::SuspendAccounts,
                 self::ManageFarms,
+                self::ManageOrganicCertification,
                 self::ManageCropTypes,
                 self::SetCropPricing,
                 self::SetFarmPricing,
@@ -126,6 +148,8 @@ enum Permission: string
                 self::ModerateReviews,
                 self::ResolveReports,
                 self::ModerateArticles,
+                self::ManageOwnFarmAnnouncements,
+                self::ManageSystemFaq,
                 self::ViewSystemAnalytics,
                 self::ViewFarmAnalytics,
                 self::GenerateExports,
@@ -136,6 +160,8 @@ enum Permission: string
                 self::SetFarmPricing,
                 self::ViewOwnFarmRoster,
                 self::ManageOwnFarmArticles,
+                self::ManageOwnFarmAnnouncements,
+                self::ManageOwnFarmFaq,
                 self::ViewFarmAnalytics,
             ],
 
@@ -146,6 +172,8 @@ enum Permission: string
                 self::RecordWalkInSales,
                 self::ViewOwnAnalytics,
                 self::SubmitReports,
+                self::ExportOwnData,
+                self::RequestAccountDeletion,
             ],
 
             Role::Buyer => [
@@ -153,6 +181,8 @@ enum Permission: string
                 self::PlaceOrders,
                 self::WriteReviews,
                 self::SubmitReports,
+                self::ExportOwnData,
+                self::RequestAccountDeletion,
             ],
         };
     }

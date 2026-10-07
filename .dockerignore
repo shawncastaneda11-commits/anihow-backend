@@ -1,0 +1,15 @@
+.git
+.env*
+vendor
+node_modules
+mobile
+dist
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+database/*.sqlite
+tests
+docs
+.cursor
+.idea

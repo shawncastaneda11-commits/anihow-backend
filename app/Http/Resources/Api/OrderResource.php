@@ -36,15 +36,19 @@ class OrderResource extends JsonResource
             'fulfillment_preference' => $this->fulfillment_preference->value,
             'fulfillment_label' => $this->fulfillment_preference->label(),
             'fulfillment_note' => $this->fulfillment_note,
-            'payment_method' => $this->payment_method,
+            'payment_method' => $this->paymentMethodValue(),
+            'payment_label' => $this->paymentMethodLabel(),
             'subtotal' => (float) $this->subtotal,
             'tawad_total' => (float) $this->tawad_total,
             'total' => (float) $this->total,
             'amount_received' => $this->amount_received !== null ? (float) $this->amount_received : null,
             'cancellation_reason' => $this->cancellation_reason?->value,
             'cancellation_label' => $this->cancellation_reason?->label(),
+            'cancellation_note' => $this->cancellation_note,
             'cancelled_by' => $this->cancelled_by?->value,
             'can_be_reviewed' => $this->canBeReviewed(),
+            'reservation_id' => $this->reservation_id,
+            'from_reservation' => $this->reservation_id !== null,
             'placed_at' => $this->created_at?->toIso8601String(),
             'confirmed_at' => $this->confirmed_at?->toIso8601String(),
             'ready_at' => $this->ready_at?->toIso8601String(),
@@ -57,6 +61,7 @@ class OrderResource extends JsonResource
                 'name' => $this->farmerSeller->name,
                 'shop_name' => $this->farmerSeller->shop_name,
                 'contact' => $this->farmerSeller->shopContact(),
+                'avatar_url' => $this->farmerSeller->avatarUrl(),
             ]),
             // Null on a walk-in. whenLoaded() returns null for a loaded but
             // empty relation without calling the closure, so no buyer is fine.
@@ -64,6 +69,7 @@ class OrderResource extends JsonResource
                 'id' => $this->buyer->id,
                 'name' => $this->buyer->name,
                 'contact' => $this->buyer->phone,
+                'avatar_url' => $this->buyer->avatarUrl(),
             ]),
             'history' => $this->whenLoaded('statusHistories', fn () => $this->statusHistories->map(
                 fn ($entry): array => [

@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_strings.dart';
 import '../state/auth_controller.dart';
+import '../state/preferences_controller.dart';
+import '../support/crop_language.dart';
 import '../theme/anihow_space.dart';
 import '../widgets/auth_layout.dart';
 import '../widgets/form_label.dart';
+import '../widgets/password_field.dart';
 import '../widgets/primary_button.dart';
+import 'auth/forgot_password_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -19,7 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _busy = false;
-  bool _hidePassword = true;
+  bool _remember = true;
 
   @override
   void dispose() {
@@ -30,7 +35,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _submit() async {
     setState(() => _busy = true);
-    await context.read<AuthController>().login(_email.text.trim(), _password.text);
+    await context.read<AuthController>().login(
+      _email.text.trim(),
+      _password.text,
+      remember: _remember,
+    );
     if (mounted) {
       setState(() => _busy = false);
     }
@@ -38,27 +47,30 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final error = context.watch<AuthController>().error;
-    final muted = Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7);
+    final auth = context.watch<AuthController>();
+    final s = AppStrings.of(context);
+    final error = auth.sessionEnded ? s.sessionEnded : auth.error;
+    final muted = Theme.of(context).textTheme.bodyMedium?.color
+        ?.withValues(alpha: 0.7);
 
     return AuthLayout(
       form: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Sign in',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            s.signIn,
+            style: Theme.of(context).textTheme.headlineMedium
+                ?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: AniHowSpace.labelGap),
           Text(
-            'Welcome back',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: muted),
+            s.welcomeBack,
+            style: Theme.of(context).textTheme.bodyMedium
+                ?.copyWith(color: muted),
           ),
           const SizedBox(height: AniHowSpace.section),
           AniHowField(
-            label: 'Email',
+            label: s.email,
             child: TextField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
@@ -68,21 +80,43 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
           const SizedBox(height: AniHowSpace.fieldGap),
-          AniHowField(
-            label: 'Password',
-            child: TextField(
-              controller: _password,
-              obscureText: _hidePassword,
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.lock_outline),
-                suffixIcon: IconButton(
-                  tooltip: _hidePassword ? 'Show password' : 'Hide password',
-                  onPressed: () => setState(() => _hidePassword = !_hidePassword),
-                  icon: Icon(
-                    _hidePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                  ),
-                ),
+          PasswordField(
+            controller: _password,
+            label: s.password,
+            showLockIcon: true,
+          ),
+          SizedBox(
+            key: const Key('forgot-password'),
+            height: 48,
+            width: double.infinity,
+            child: TextButton(
+              style: TextButton.styleFrom(
+                minimumSize: const Size(48, 48),
+                alignment: Alignment.centerLeft,
               ),
+              onPressed: _busy
+                  ? null
+                  : () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const ForgotPasswordScreen(),
+                        ),
+                      );
+                    },
+              child: Text(s.forgotPassword),
+            ),
+          ),
+          SizedBox(
+            height: 48,
+            child: CheckboxListTile(
+              value: _remember,
+              onChanged: _busy
+                  ? null
+                  : (value) => setState(() => _remember = value ?? false),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: Text(s.rememberMe),
+              dense: true,
             ),
           ),
           if (error != null) ...[
@@ -96,15 +130,36 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ],
           const SizedBox(height: AniHowSpace.section),
-          PrimaryButton(label: 'Sign in', busy: _busy, onPressed: _submit),
+          PrimaryButton(label: s.signIn, busy: _busy, onPressed: _submit),
           const SizedBox(height: AniHowSpace.cardGap),
           TextButton(
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const RegisterScreen()),
-              );
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const RegisterScreen()));
             },
-            child: const Text('Create a buyer account'),
+            child: Text(s.createBuyerAccount),
+          ),
+          const SizedBox(height: AniHowSpace.section),
+          SegmentedButton<CropLanguage>(
+            segments: [
+              ButtonSegment(
+                value: CropLanguage.english,
+                label: Text(s.english),
+              ),
+              ButtonSegment(
+                value: CropLanguage.filipino,
+                label: Text(s.filipinoLabel),
+              ),
+            ],
+            selected: {
+              context.watch<PreferencesController>().language ==
+                      CropLanguage.filipino
+                  ? CropLanguage.filipino
+                  : CropLanguage.english,
+            },
+            onSelectionChanged: (value) =>
+                context.read<PreferencesController>().setLanguage(value.first),
           ),
         ],
       ),

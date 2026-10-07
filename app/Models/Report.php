@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ReportReason;
 use App\Enums\ReportStatus;
 use Database\Factories\ReportFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -30,6 +31,7 @@ class Report extends Model
     protected function casts(): array
     {
         return [
+            'reason' => ReportReason::class,
             'status' => ReportStatus::class,
             'resolved_at' => 'datetime',
         ];

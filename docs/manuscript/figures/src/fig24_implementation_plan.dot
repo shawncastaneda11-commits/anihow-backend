@@ -1,0 +1,16 @@
+digraph G {
+  graph [rankdir=TB, nodesep=0.3, ranksep=0.28, pad=0.25, fontname="Liberation Sans"];
+  node  [fontname="Liberation Sans", fontsize=10.5, shape=plaintext];
+  edge  [penwidth=1.0, arrowsize=0.7, color="#333333"];
+  p1 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" BGCOLOR="#FFFFFF"><TR><TD BGCOLOR="#E1E6ED" ALIGN="LEFT" WIDTH="520"><B>Phase 1: Server preparation</B></TD></TR><TR><TD ALIGN="LEFT" WIDTH="520"><FONT POINT-SIZE="9.5">Provision the virtual private server (2 vCPU, 4 GB RAM, 40 GB SSD); install MySQL 8.4;<BR ALIGN="LEFT"/>configure HTTPS and secure WebSocket; supervise the queue worker and Reverb;<BR ALIGN="LEFT"/>register the scheduler; set Philippine time; configure Gmail SMTP<BR ALIGN="LEFT"/></FONT></TD></TR></TABLE>>];
+  p2 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" BGCOLOR="#FFFFFF"><TR><TD BGCOLOR="#E1E6ED" ALIGN="LEFT" WIDTH="520"><B>Phase 2: Deployment and initial data</B></TD></TR><TR><TD ALIGN="LEFT" WIDTH="520"><FONT POINT-SIZE="9.5">Deploy the Laravel application; run migrations; seed roles, permissions, and FAQ answers;<BR ALIGN="LEFT"/>enter the crop taxonomy and system price guards; set up daily database backups<BR ALIGN="LEFT"/></FONT></TD></TR></TABLE>>];
+  p3 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" BGCOLOR="#FFFFFF"><TR><TD BGCOLOR="#E1E6ED" ALIGN="LEFT" WIDTH="520"><B>Phase 3: Accounts and release build</B></TD></TR><TR><TD ALIGN="LEFT" WIDTH="520"><FONT POINT-SIZE="9.5">Create the Super Admin, Content Editor, and farmer-seller accounts;<BR ALIGN="LEFT"/>build the Android application with the production addresses and install it on participants’ phones<BR ALIGN="LEFT"/></FONT></TD></TR></TABLE>>];
+  p4 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" BGCOLOR="#FFFFFF"><TR><TD BGCOLOR="#E1E6ED" ALIGN="LEFT" WIDTH="520"><B>Phase 4: Orientation</B></TD></TR><TR><TD ALIGN="LEFT" WIDTH="520"><FONT POINT-SIZE="9.5">Orient the Content Editor on the content management panel, the farmer-sellers on listings and<BR ALIGN="LEFT"/>orders, and the buyers on ordering, in English and Filipino<BR ALIGN="LEFT"/></FONT></TD></TR></TABLE>>];
+  p5 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" BGCOLOR="#FFFFFF"><TR><TD BGCOLOR="#E1E6ED" ALIGN="LEFT" WIDTH="520"><B>Phase 5: Parallel operation and evaluation</B></TD></TR><TR><TD ALIGN="LEFT" WIDTH="520"><FONT POINT-SIZE="9.5">Run AniHow for two weeks alongside the chapter’s existing selling and records;<BR ALIGN="LEFT"/>cross-check recorded sales; hold the five-day evaluation window and collect questionnaires<BR ALIGN="LEFT"/></FONT></TD></TR></TABLE>>];
+  p6 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="6" BGCOLOR="#FFFFFF"><TR><TD BGCOLOR="#E1E6ED" ALIGN="LEFT" WIDTH="520"><B>Phase 6: Turnover</B></TD></TR><TR><TD ALIGN="LEFT" WIDTH="520"><FONT POINT-SIZE="9.5">Hand administration to the LPU-Cavite ICT Department (Super Admin);<BR ALIGN="LEFT"/>the chapter’s Content Editor maintains farm content and price guards<BR ALIGN="LEFT"/></FONT></TD></TR></TABLE>>];
+  p1 -> p2;
+  p2 -> p3;
+  p3 -> p4;
+  p4 -> p5;
+  p5 -> p6;
+}

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Database\Factories\CartItemFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -43,5 +44,20 @@ class CartItem extends Model
     public function lineSubtotal(): float
     {
         return (float) $this->quantity * (float) $this->listing->price_per_unit;
+    }
+
+    /**
+     * Drop lines whose listing has left the market. This commits on its own,
+     * before checkout, so a later refusal cannot put the lines back.
+     */
+    public static function pruneUnavailable(User $buyer): int
+    {
+        return static::query()
+            ->where('buyer_id', $buyer->id)
+            ->whereDoesntHave(
+                'listing',
+                fn (Builder $listing): Builder => $listing->marketplaceVisible(),
+            )
+            ->delete();
     }
 }

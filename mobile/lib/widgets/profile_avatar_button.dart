@@ -34,12 +34,14 @@ class AniHowAvatar extends StatelessWidget {
   const AniHowAvatar({
     super.key,
     required this.name,
+    this.imageUrl,
     this.radius = AniHowSpace.avatar,
     this.backgroundColor,
     this.foregroundColor,
   });
 
   final String name;
+  final String? imageUrl;
   final double radius;
   final Color? backgroundColor;
   final Color? foregroundColor;
@@ -57,17 +59,24 @@ class AniHowAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final photo = imageUrl?.trim();
+    final hasPhoto = photo != null && photo.isNotEmpty;
+
     return CircleAvatar(
       radius: radius,
       backgroundColor: backgroundColor ?? AniHowColors.brand,
-      foregroundColor: foregroundColor ?? Theme.of(context).colorScheme.onPrimary,
-      child: Text(
-        _initials,
-        style: TextStyle(
-          fontWeight: FontWeight.w800,
-          fontSize: radius * 0.7,
-        ),
-      ),
+      foregroundColor:
+          foregroundColor ?? Theme.of(context).colorScheme.onPrimary,
+      backgroundImage: hasPhoto ? NetworkImage(photo) : null,
+      child: hasPhoto
+          ? null
+          : Text(
+              _initials,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: radius * 0.7,
+              ),
+            ),
     );
   }
 }

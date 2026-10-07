@@ -7,9 +7,9 @@ use App\Services\AnalyticsService;
 use Filament\Widgets\ChartWidget;
 
 /**
- * Units are summed in each crop's own unit of measure, which is why the crop
- * type owns the unit rather than the listing. Two sellers listing kamatis in
- * different units would make this chart meaningless.
+ * Units are summed in each family's base unit. Grams and kilograms of the
+ * same crop add up as kilograms. A tray stays a tray, on its own bar, labelled
+ * with that base unit.
  */
 class UnitsSoldPerCropTypeChart extends ChartWidget
 {

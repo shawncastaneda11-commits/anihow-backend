@@ -5,40 +5,72 @@ namespace App\Http\Controllers\Api\Shop;
 use App\Enums\Role;
 use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\Api\ReviewResource;
+use App\Http\Requests\Api\Shop\BuyerShopIndexRequest;
 use App\Http\Resources\Api\ShopProfileResource;
+use App\Models\Farm;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Builder;
+use App\Support\FarmProximity;
+use App\Support\ShopReviews;
+use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class BuyerShopController extends Controller
 {
-    public function index(): AnonymousResourceCollection
+    public function index(BuyerShopIndexRequest $request): AnonymousResourceCollection
     {
         $shops = User::query()
             ->role(Role::FarmerSeller->value)
             ->where('status', UserStatus::Active)
-            ->withCount($this->visibleReviews())
-            ->withAvg($this->visibleReviews(), 'rating')
-            ->orderByRaw('coalesce(shop_name, name)')
-            ->paginate();
+            ->with(['farm' => fn ($query) => $this->loadFarmFavoriteState($query, $request)])
+            ->withCount(ShopReviews::receivedAggregate())
+            ->withAvg(ShopReviews::receivedAggregate(), 'rating')
+            ->when(
+                $request->user() !== null,
+                fn ($query) => $query->withExists([
+                    'shopFans as is_favorited' => fn ($favorites) => $favorites
+                        ->where('buyer_id', $request->user()->id),
+                ]),
+            );
+
+        if ($request->validated('sort') === 'nearest') {
+            $lat = $request->validated('near_lat');
+            $lng = $request->validated('near_lng');
+            FarmProximity::apply(
+                $shops,
+                'users.farm_id',
+                is_numeric($lat) ? (float) $lat : null,
+                is_numeric($lng) ? (float) $lng : null,
+            );
+        } else {
+            $shops->orderByRaw('coalesce(shop_name, name)');
+        }
+
+        $shops = $shops->paginate();
 
         return ShopProfileResource::collection($shops);
     }
 
-    public function show(User $farmerSeller): ShopProfileResource
+    public function show(Request $request, User $farmerSeller): ShopProfileResource
     {
         abort_unless($farmerSeller->isFarmerSeller() && $farmerSeller->isActive(), 404);
 
         $farmerSeller->load([
-            'farm',
+            'farm' => fn ($query) => $this->loadFarmFavoriteState($query, $request),
             'listings' => fn ($query) => $query
-                ->marketplaceVisible()
+                ->buyerVisible()
                 ->with(['cropType', 'farm', 'activeTawadRule'])
                 ->latest(),
-        ])
-            ->loadCount($this->visibleReviews())
-            ->loadAvg($this->visibleReviews(), 'rating');
+        ]);
+
+        if ($request->user() !== null) {
+            $farmerSeller->loadExists([
+                'shopFans as is_favorited' => fn ($favorites) => $favorites
+                    ->where('buyer_id', $request->user()->id),
+            ]);
+        }
+
+        ShopReviews::loadStats($farmerSeller);
 
         $farmerSeller->listings->each(
             fn ($listing) => $listing->setRelation('farmerSeller', $farmerSeller),
@@ -51,31 +83,24 @@ class BuyerShopController extends Controller
     {
         abort_unless($farmerSeller->isFarmerSeller() && $farmerSeller->isActive(), 404);
 
-        $reviews = $farmerSeller->reviewsReceived()
-            ->visible()
-            ->with('buyer')
-            ->latest()
-            ->orderByDesc('id')
-            ->paginate();
-
-        $farmerSeller
-            ->loadCount($this->visibleReviews())
-            ->loadAvg($this->visibleReviews(), 'rating');
-
-        return ReviewResource::collection($reviews)->additional([
-            'average_rating' => $farmerSeller->averageRating(),
-            'reviews_count' => (int) ($farmerSeller->reviews_received_count ?? 0),
-        ]);
+        return ShopReviews::collection($farmerSeller);
     }
 
     /**
-     * A review the Super Admin removed must not count toward a seller's
-     * rating or appear in their review list.
-     *
-     * @return array<string, callable>
+     * @param  Relation<Farm, *, *>  $query
      */
-    private function visibleReviews(): array
+    private function loadFarmFavoriteState(Relation $query, Request $request): void
     {
-        return ['reviewsReceived' => fn (Builder $query): Builder => $query->where('is_removed', false)];
+        $query->withCount('favorites');
+
+        $buyer = $request->user();
+        if ($buyer === null) {
+            return;
+        }
+
+        $query->withExists([
+            'favorites as is_favorited' => fn ($favorites) => $favorites
+                ->where('buyer_id', $buyer->id),
+        ]);
     }
 }

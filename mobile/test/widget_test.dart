@@ -11,7 +11,22 @@ import 'package:anihow/widgets/status_pill.dart';
 void main() {
   test('Android emulator API host is 10.0.2.2', () {
     expect(ApiConfig.emulatorHost, 'http://10.0.2.2:8000');
+    expect(ApiConfig.localHost, 'http://127.0.0.1:8000');
+    expect(ApiConfig.hasReleaseApi, isFalse);
     expect(ApiConfig.baseUrl.endsWith('/api'), isTrue);
+    expect(ApiConfig.broadcastingAuthUrl.endsWith('/broadcasting/auth'), isTrue);
+    expect(ApiConfig.reverbPort, 8080);
+    expect(ApiConfig.reverbScheme, 'ws');
+    expect(ApiConfig.reverbAppKey, 'anihow-reverb-key');
+    expect(ApiConfig.reverbHost, anyOf('10.0.2.2', '127.0.0.1'));
+  });
+
+  test('media URLs from Laravel localhost are rewritten to the API host', () {
+    expect(
+      ApiConfig.mediaUrl('http://127.0.0.1:8000/storage/listings/tomato.jpg'),
+      '${ApiConfig.host}/storage/listings/tomato.jpg',
+    );
+    expect(ApiConfig.mediaUrl(null), isNull);
   });
 
   test('warm agricultural palette tokens', () {
@@ -104,18 +119,27 @@ void main() {
 
     const statuses = {
       'placed': AniHowColors.pending,
-      'confirmed': AniHowColors.sage,
-      'ready': AniHowColors.ready,
-      'completed': AniHowColors.completed,
-      'cancelled': AniHowColors.cancelled,
+      'confirmed': AniHowColors.confirmedBlue,
+      'ready': AniHowColors.readyTeal,
+      'completed': AniHowColors.completeGreen,
+      'cancelled': AniHowColors.cancelledRed,
     };
     for (final entry in statuses.entries) {
       final pill = StatusPill.order(entry.key);
-      expect(pill.color, entry.value, reason: '${entry.key} must not fall through to the default branch');
-      expect(pill.label.toLowerCase(), isNot('pending'));
+      expect(
+        pill.color,
+        entry.value,
+        reason: '${entry.key} must not fall through to the default branch',
+      );
     }
-    expect(StatusPill.order('placed').label, 'Placed');
+    expect(StatusPill.order('placed').label, 'Pending');
     expect(StatusPill.order('confirmed').label, 'Confirmed');
+    expect(StatusPill.order('ready').label, 'Ready for pickup');
+    expect(
+      StatusPill.order('ready', fulfillmentPreference: 'seller_delivers').label,
+      'Out for delivery',
+    );
+    expect(StatusPill.order('completed').label, 'Order complete');
   });
 
   test('farmer order parses allowed_next, buyer, and seller cancel reasons', () {
@@ -314,6 +338,72 @@ void main() {
     expect(placed.total, '160');
     expect(placed.paymentLabel, 'Cash on handover');
     expect(placed.items.single.listedPrice, '30');
+    expect(
+      placed.chatPeerTitle(viewingAsSeller: false),
+      'Aling Nena Produce',
+    );
+  });
+
+  test('order chat title is the stall for a buyer and the buyer for a seller', () {
+    final order = OrderRecord.fromJson({
+      'id': 11,
+      'order_number': 'AH-260925-CY7JUU',
+      'status': 'placed',
+      'total': 80,
+      'seller': {'id': 4, 'shop_name': 'Kuya Jun Harvest'},
+      'buyer': {'id': 9, 'name': 'Carla Santos'},
+    });
+
+    expect(order.chatPeerTitle(viewingAsSeller: false), 'Kuya Jun Harvest');
+    expect(order.chatPeerTitle(viewingAsSeller: true), 'Carla Santos');
+  });
+
+  test('checkout order payload parses string ids and wrapped item lists', () {
+    final order = OrderRecord.fromJson({
+      'id': '43',
+      'order_number': 'AH-260925-JXYT9',
+      'status': 'placed',
+      'total': 310,
+      'seller': {'id': '7', 'shop_name': 'Aling Nena Produce'},
+      'items': {
+        'data': [
+          {
+            'listing_name': 'Talong, mahaba',
+            'quantity': 8,
+            'listed_price': 40,
+            'line_subtotal': 320,
+            'tawad_amount': 10,
+            'line_total': 310,
+          },
+        ],
+      },
+    });
+
+    expect(order.id, 43);
+    expect(order.sellerId, 7);
+    expect(order.items, hasLength(1));
+    expect(order.items.single.listingName, 'Talong, mahaba');
+  });
+
+  test('a taken-down listing is not purchasable from the cart', () {
+    const line = CartLine(
+      id: 1,
+      quantity: '2',
+      listedPrice: '40',
+      lineSubtotal: '80',
+      tawadAmount: '0',
+      lineTotal: '80',
+      listing: ListingItem(
+        id: 7,
+        title: 'Talong, mahaba',
+        pricePerUnit: '40',
+        quantityAvailable: '10',
+        isActive: true,
+        status: 'taken_down',
+      ),
+    );
+
+    expect(line.isPurchasable, isFalse);
   });
 
   test('tawad request shapes are peso-only with exactly two types', () {

@@ -10,13 +10,27 @@ use App\Http\Requests\Api\Listings\StoreListingRequest;
 use App\Http\Requests\Api\Listings\UpdateListingRequest;
 use App\Http\Resources\Api\ListingResource;
 use App\Models\Listing;
+use App\Support\ShopReviews;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ListingController extends Controller
 {
-    private const RELATIONS = ['cropType', 'farmerSeller', 'farm', 'activeTawadRule'];
+    /**
+     * @return array<int|string, mixed>
+     */
+    public static function relations(): array
+    {
+        return [
+            'cropType',
+            'farm',
+            'activeTawadRule',
+            'farmerSeller' => fn ($query) => $query
+                ->withAvg(ShopReviews::receivedAggregate(), 'rating')
+                ->withCount(ShopReviews::receivedAggregate()),
+        ];
+    }
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -24,7 +38,8 @@ class ListingController extends Controller
 
         $listings = $request->user()
             ->listings()
-            ->with(self::RELATIONS)
+            ->with(self::relations())
+            ->withActiveReservationTotals()
             ->latest()
             ->paginate();
 
@@ -39,7 +54,12 @@ class ListingController extends Controller
             $request->file('image'),
         );
 
-        return (new ListingResource($listing->load(self::RELATIONS)))
+        $listing = Listing::query()
+            ->with(self::relations())
+            ->withActiveReservationTotals()
+            ->findOrFail($listing->id);
+
+        return (new ListingResource($listing))
             ->additional(['message' => 'Listing created.'])
             ->response()
             ->setStatusCode(201);
@@ -49,7 +69,10 @@ class ListingController extends Controller
     {
         $this->authorize('view', $listing);
 
-        $listing->load(self::RELATIONS);
+        $listing = Listing::query()
+            ->with(self::relations())
+            ->withActiveReservationTotals()
+            ->findOrFail($listing->id);
 
         return new ListingResource($listing);
     }
@@ -63,17 +86,29 @@ class ListingController extends Controller
             $listing,
             $request->listingAttributes(),
             $request->file('image'),
+            $request->boolean('confirm_cancel_reservations'),
         );
 
-        return (new ListingResource($listing->load(self::RELATIONS)))
-            ->additional(['message' => 'Listing updated.']);
+        $listing = Listing::query()
+            ->with(self::relations())
+            ->withActiveReservationTotals()
+            ->findOrFail($listing->id);
+
+        $additional = ['message' => 'Listing updated.'];
+
+        if ((float) $listing->quantity_available < (float) ($listing->reserved_quantity ?? 0)) {
+            $additional['warning'] = 'The available quantity is now below what buyers have reserved.';
+        }
+
+        return (new ListingResource($listing))
+            ->additional($additional);
     }
 
-    public function destroy(Listing $listing, DeleteListingAction $deleteListing): JsonResponse
+    public function destroy(Request $request, Listing $listing, DeleteListingAction $deleteListing): JsonResponse
     {
         $this->authorize('delete', $listing);
 
-        $deleteListing->handle($listing);
+        $deleteListing->handle($listing, $request->boolean('confirm_cancel_reservations'));
 
         return response()->json(['message' => 'Listing deleted.']);
     }

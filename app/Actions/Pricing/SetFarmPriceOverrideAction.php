@@ -56,6 +56,13 @@ class SetFarmPriceOverrideAction
             $toldAboutFloor = $this->flagStranded->floorRaised($farm, $cropType, $before->floor, $after->floor);
             $this->flagStranded->ceilingLowered($farm, $cropType, $before->ceiling, $after->ceiling, $toldAboutFloor);
 
+            $wasGuarded = $before->floor > 0 || $before->ceiling > 0;
+            $nowGuarded = $after->floor > 0 || $after->ceiling > 0;
+
+            if (! $wasGuarded && $nowGuarded) {
+                $this->flagStranded->incompatibleUnits($farm, $cropType);
+            }
+
             return $override;
         });
     }

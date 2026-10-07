@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Listing;
+use App\Support\Pricing\UnitConverter;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -33,18 +34,35 @@ class OrderLinePricer
         string $belowFloorMessage,
     ): array {
         $cropType = $listing->cropType;
+
+        if ($cropType === null) {
+            throw ValidationException::withMessages([
+                $errorKey => "{$listing->title} is no longer available.",
+            ]);
+        }
+
         $guard = $listing->priceGuard();
+        $listingUnit = $listing->unit ?? $cropType->unit_of_measure;
         $unitPrice = (float) $listing->price_per_unit;
+        $converter = app(UnitConverter::class);
+        $guardPrice = $converter->guardPrice($listingUnit, $cropType->unit_of_measure, $unitPrice);
 
         // A floor may have risen since the listing was priced, the system one
-        // or the farm's.
-        if (! $guard->allowsPrice($unitPrice)) {
+        // or the farm's. The check is in the crop type's unit. A unit that
+        // cannot convert fails closed.
+        if ($guardPrice === null) {
+            if ($converter->isGuarded($cropType, $listing->farm_id)) {
+                throw ValidationException::withMessages([
+                    $errorKey => $converter->checkoutRefusal($listing),
+                ]);
+            }
+        } elseif (! $guard->allowsPrice($guardPrice)) {
             throw ValidationException::withMessages([
                 $errorKey => $belowFloorMessage,
             ]);
         }
 
-        $lineSubtotal = $unitPrice * $quantity;
+        $lineSubtotal = self::centavos($unitPrice * $quantity);
         $rule = $listing->activeTawadRule;
         $tawadAmount = 0.0;
 
@@ -55,11 +73,19 @@ class OrderLinePricer
             // when the rule was created; the floor or the ceiling may have
             // moved since. A rule that fails is skipped, not rejected: the
             // line goes through at the listed price. Decision 15.
+            // The recorded tawad stays in the listing's unit. Only the check
+            // is converted into the crop type's unit.
             $discountedUnitPrice = ($lineSubtotal - $candidate) / $quantity;
+            $guardCandidate = $converter->guardPrice($listingUnit, $cropType->unit_of_measure, $candidate);
+            $guardDiscounted = $converter->guardPrice($listingUnit, $cropType->unit_of_measure, $discountedUnitPrice);
 
-            if ($candidate <= $guard->ceiling
-                && $discountedUnitPrice >= $guard->floor) {
-                $tawadAmount = $candidate;
+            $withinGuard = $guardCandidate !== null
+                && $guardDiscounted !== null
+                && $guardCandidate <= $guard->ceiling
+                && $guardDiscounted >= $guard->floor;
+
+            if ($withinGuard || ! $converter->isGuarded($cropType, $listing->farm_id)) {
+                $tawadAmount = self::centavos($candidate);
             }
         }
 
@@ -67,14 +93,23 @@ class OrderLinePricer
             'listing_id' => $listing->id,
             'crop_type_id' => $cropType->id,
             'listing_name' => $listing->title,
-            'unit' => $cropType->unit_of_measure,
+            'unit' => $listingUnit,
             'quantity' => $quantity,
             'unit_price' => $unitPrice,
             'line_subtotal' => $lineSubtotal,
             'tawad_rule_id' => $tawadAmount > 0 ? $rule->id : null,
             'tawad_type' => $tawadAmount > 0 ? $rule->type : null,
             'tawad_amount' => $tawadAmount,
-            'line_total' => $lineSubtotal - $tawadAmount,
+            'line_total' => self::centavos($lineSubtotal - $tawadAmount),
         ];
+    }
+
+    /**
+     * One rounding, half up, so a 4-decimal unit price never leaves a
+     * fraction of a centavo on the line.
+     */
+    public static function centavos(float $amount): float
+    {
+        return round($amount, 2, PHP_ROUND_HALF_UP);
     }
 }

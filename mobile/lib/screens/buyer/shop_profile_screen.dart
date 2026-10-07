@@ -1,28 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
+import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
-import '../../support/relative_time.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/produce_card.dart';
 import '../../widgets/shop_profile_parts.dart';
+import '../../widgets/chat_with_stall_button.dart';
+import '../../widgets/shop_review_tile.dart';
+import '../farm/farm_profile_screen.dart';
 import 'listing_detail_screen.dart';
 
 void openBuyerShop(BuildContext context, int sellerId) {
   Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => ShopProfileScreen(sellerId: sellerId)),
+    MaterialPageRoute<void>(
+      builder: (_) => ShopProfileScreen(sellerId: sellerId),
+    ),
   );
 }
 
 class ShopProfileScreen extends StatefulWidget {
-  const ShopProfileScreen({super.key, required this.sellerId});
+  const ShopProfileScreen({super.key, required this.sellerId, this.preview});
 
   final int sellerId;
+  final ShopProfile? preview;
 
   @override
   State<ShopProfileScreen> createState() => _ShopProfileScreenState();
@@ -30,6 +35,8 @@ class ShopProfileScreen extends StatefulWidget {
 
 class _ShopProfileScreenState extends State<ShopProfileScreen> {
   late Future<ShopProfile> _shop;
+  bool? _favorited;
+  bool _favoriteBusy = false;
   final List<ShopReview> _reviews = [];
   int _page = 0;
   int _lastPage = 1;
@@ -37,17 +44,40 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
   bool _loadingMore = false;
   String? _reviewsError;
 
+  bool get _previewing => widget.preview != null;
+
+  bool get _canFavorite {
+    if (_previewing) {
+      return true;
+    }
+    try {
+      return context.read<AuthController>().user?.isBuyer ?? false;
+    } on ProviderNotFoundException {
+      return false;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    final preview = widget.preview;
+    if (preview != null) {
+      _shop = Future.value(preview);
+      _loadingReviews = false;
+      return;
+    }
     _shop = context.read<AuthController>().api.buyerShop(widget.sellerId);
     _loadReviews();
   }
 
   Future<void> _reload() async {
+    if (_previewing) {
+      return;
+    }
     final shop = context.read<AuthController>().api.buyerShop(widget.sellerId);
     setState(() {
       _shop = shop;
+      _favorited = null;
       _reviews.clear();
       _page = 0;
       _lastPage = 1;
@@ -70,9 +100,9 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
     try {
       final page = more ? _page + 1 : 1;
       final result = await context.read<AuthController>().api.shopReviews(
-            widget.sellerId,
-            page: page,
-          );
+        widget.sellerId,
+        page: page,
+      );
       if (!mounted) {
         return;
       }
@@ -99,62 +129,163 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
     }
   }
 
-  Future<void> _call(String number) async {
-    final digits = number.replaceAll(RegExp(r'[^\d+]'), '');
-    if (digits.isEmpty) {
+  bool _isFavorited(ShopProfile shop) => _favorited ?? shop.isFavorited;
+
+  Future<void> _toggleFavorite(ShopProfile shop) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final wasFavorited = _isFavorited(shop);
+    setState(() => _favorited = !wasFavorited);
+    if (_previewing) {
       return;
     }
-    final opened = await launchUrl(Uri(scheme: 'tel', path: digits));
-    if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open the phone app.')),
-      );
+    setState(() => _favoriteBusy = true);
+    try {
+      if (wasFavorited) {
+        await context.read<AuthController>().api.removeShopFavorite(shop.id);
+      } else {
+        await context.read<AuthController>().api.addShopFavorite(shop.id);
+      }
+      if (!mounted) {
+        return;
+      }
+      if (!wasFavorited) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(AppStrings.read(context).storeSavedToFavorites),
+          ),
+        );
+      }
+    } on ApiException catch (error) {
+      if (mounted) {
+        setState(() => _favorited = wasFavorited);
+        messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _favoriteBusy = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Shop')),
+      appBar: AppBar(
+        title: Text(AppStrings.of(context).shop),
+        actions: [
+          if (_canFavorite)
+            FutureBuilder<ShopProfile>(
+              future: _shop,
+              builder: (context, snapshot) {
+                final shop = snapshot.data;
+                if (shop == null) {
+                  return const SizedBox(width: 48, height: 48);
+                }
+                final s = AppStrings.of(context);
+                return IconButton(
+                  icon: Icon(
+                    _isFavorited(shop)
+                        ? Icons.favorite
+                        : Icons.favorite_outline,
+                  ),
+                  tooltip: _isFavorited(shop)
+                      ? s.removeStoreFromFavorites
+                      : s.addStoreToFavorites,
+                  onPressed: _favoriteBusy ? null : () => _toggleFavorite(shop),
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size(48, 48),
+                    foregroundColor: Colors.white,
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
       body: FutureBuilder<ShopProfile>(
         future: _shop,
         builder: (context, snapshot) {
           return AsyncView<ShopProfile>.snapshot(
             snapshot: snapshot,
             onRetry: _reload,
-            emptyMessage: 'Shop not found.',
+            emptyMessage: AppStrings.of(context).shopNotFound,
             builder: (context, shop) {
+              final s = AppStrings.of(context);
               return RefreshIndicator(
                 onRefresh: _reload,
                 child: ListView(
                   padding: AniHowSpace.screenPadding,
                   children: [
-                    ShopIdentityHeader(shop: shop),
-                    const SizedBox(height: AniHowSpace.section),
-                    Text(
-                      'Pickup only',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: AniHowSpace.labelGap),
-                    Text(
-                      'Call to coordinate pickup at the stall.',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    if (shop.contact != null && shop.contact!.isNotEmpty) ...[
-                      const SizedBox(height: AniHowSpace.cardGap),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          onPressed: () => _call(shop.contact!),
-                          icon: const Icon(Icons.phone_outlined),
-                          label: Text(shop.contact!),
+                    if (shop.coverUrl != null && shop.coverUrl!.isNotEmpty) ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          shop.coverUrl!,
+                          height: 140,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
                         ),
+                      ),
+                      const SizedBox(height: AniHowSpace.cardGap),
+                    ],
+                    Card(
+                      child: Padding(
+                        padding: AniHowSpace.cardPadding,
+                        child: ShopIdentityHeader(shop: shop),
+                      ),
+                    ),
+                    if (_canFavorite) ...[
+                      const SizedBox(height: AniHowSpace.cardGap),
+                      OutlinedButton.icon(
+                        onPressed: _favoriteBusy
+                            ? null
+                            : () => _toggleFavorite(shop),
+                        icon: Icon(
+                          _isFavorited(shop)
+                              ? Icons.favorite
+                              : Icons.favorite_outline,
+                        ),
+                        label: Text(
+                          _isFavorited(shop)
+                              ? s.removeStoreFromFavorites
+                              : s.addStoreToFavorites,
+                        ),
+                      ),
+                    ],
+                    if (!_previewing && _canFavorite) ...[
+                      const SizedBox(height: AniHowSpace.cardGap),
+                      ChatWithStallButton(sellerId: shop.id),
+                    ],
+                    if (shop.farmId != null && shop.farmIsActive) ...[
+                      const SizedBox(height: AniHowSpace.cardGap),
+                      FarmLinkChip(
+                        farmId: shop.farmId!,
+                        openCombinedPage: true,
+                        label: shop.farmName == null || shop.farmName!.isEmpty
+                            ? s.farm
+                            : s.farmLine(shop.farmName!),
+                      ),
+                    ] else if (shop.farmName != null &&
+                        shop.farmName!.isNotEmpty) ...[
+                      const SizedBox(height: AniHowSpace.cardGap),
+                      Text(
+                        s.farmLine(shop.farmName!),
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
                     const SizedBox(height: AniHowSpace.section),
                     Text(
-                      'Active listings',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                      s.pickupOnly,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: AniHowSpace.labelGap),
+                    Text(
+                      s.callToPickup,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: AniHowSpace.section),
+                    Text(
+                      s.activeListings,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: AniHowSpace.cardGap),
                     if (shop.listings.isEmpty)
@@ -162,14 +293,18 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                     else
                       ...shop.listings.map(
                         (listing) => Padding(
-                          padding: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
+                          padding: const EdgeInsets.only(
+                            bottom: AniHowSpace.cardGap,
+                          ),
                           child: ProduceCard(
                             listing: listing,
                             showSeller: false,
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute<void>(
-                                  builder: (_) => ListingDetailScreen(listingId: listing.id),
+                                  builder: (_) => ListingDetailScreen(
+                                    listingId: listing.id,
+                                  ),
                                 ),
                               );
                             },
@@ -178,17 +313,22 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                       ),
                     const SizedBox(height: AniHowSpace.section),
                     Text(
-                      'Reviews',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                      s.reviews,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: AniHowSpace.cardGap),
                     if (_loadingReviews)
                       const Padding(
-                        padding: EdgeInsets.symmetric(vertical: AniHowSpace.section),
+                        padding: EdgeInsets.symmetric(
+                          vertical: AniHowSpace.section,
+                        ),
                         child: Center(child: CircularProgressIndicator()),
                       )
                     else if (_reviewsError != null)
-                      Text(_reviewsError!, style: Theme.of(context).textTheme.bodyMedium)
+                      Text(
+                        _reviewsError!,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      )
                     else if (_reviews.isEmpty)
                       const _EmptyNote(
                         icon: Icons.rate_review_outlined,
@@ -197,13 +337,17 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
                     else ...[
                       ..._reviews.map(
                         (review) => Padding(
-                          padding: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
-                          child: _ReviewCard(review: review),
+                          padding: const EdgeInsets.only(
+                            bottom: AniHowSpace.cardGap,
+                          ),
+                          child: ShopReviewTile(review: review),
                         ),
                       ),
                       if (_page < _lastPage)
                         TextButton(
-                          onPressed: _loadingMore ? null : () => _loadReviews(more: true),
+                          onPressed: _loadingMore
+                              ? null
+                              : () => _loadReviews(more: true),
                           child: Text(_loadingMore ? 'Loading…' : 'Show more'),
                         ),
                     ],
@@ -213,60 +357,6 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
             },
           );
         },
-      ),
-    );
-  }
-}
-
-class _ReviewCard extends StatelessWidget {
-  const _ReviewCard({required this.review});
-
-  final ShopReview review;
-
-  @override
-  Widget build(BuildContext context) {
-    final time = relativeTime(review.createdAt);
-    return Card(
-      child: Padding(
-        padding: AniHowSpace.cardPadding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    review.reviewerName,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                ),
-                if (time.isNotEmpty)
-                  Text(
-                    time,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w400,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: AniHowSpace.labelGap),
-            Row(
-              children: [
-                for (var index = 1; index <= 5; index++)
-                  Icon(
-                    index <= review.rating ? Icons.star_rounded : Icons.star_outline_rounded,
-                    size: 16,
-                    color: AniHowColors.pending,
-                  ),
-              ],
-            ),
-            if (review.comment != null && review.comment!.isNotEmpty) ...[
-              const SizedBox(height: AniHowSpace.labelGap),
-              Text(review.comment!, style: Theme.of(context).textTheme.bodyMedium),
-            ],
-          ],
-        ),
       ),
     );
   }

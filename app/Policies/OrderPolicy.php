@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\OrderStatus;
 use App\Enums\Permission;
 use App\Models\Order;
 use App\Models\User;
@@ -24,6 +25,32 @@ class OrderPolicy
     {
         if ($user->can(Permission::ViewAllOrders->value)) {
             return true;
+        }
+
+        return $order->isOwnedByBuyer($user) || $order->isOwnedByFarmer($user);
+    }
+
+    /**
+     * App orders only. Walk-ins have no buyer account to chat with.
+     */
+    public function chat(User $user, Order $order): bool
+    {
+        return $this->view($user, $order) && ! $order->isWalkIn();
+    }
+
+    /**
+     * Only the buyer or seller on that order may send. Super Admin may read
+     * in Filament but never posts into the thread. Cancelled threads are
+     * read-only.
+     */
+    public function sendMessage(User $user, Order $order): bool
+    {
+        if (! $this->chat($user, $order)) {
+            return false;
+        }
+
+        if ($order->status === OrderStatus::Cancelled) {
+            return false;
         }
 
         return $order->isOwnedByBuyer($user) || $order->isOwnedByFarmer($user);

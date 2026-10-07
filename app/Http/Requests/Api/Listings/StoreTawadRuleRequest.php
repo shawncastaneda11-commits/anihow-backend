@@ -6,6 +6,7 @@ use App\Enums\TawadType;
 use App\Models\Listing;
 use App\Models\TawadRule;
 use App\Support\Pricing\PriceGuardResolver;
+use App\Support\Pricing\UnitConverter;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -26,7 +27,7 @@ class StoreTawadRuleRequest extends FormRequest
     {
         return [
             'type' => ['required', Rule::enum(TawadType::class)],
-            'discount_amount' => ['required', 'numeric', 'gt:0', 'max:99999.99'],
+            'discount_amount' => ['required', 'numeric', 'gt:0', 'decimal:0,4', 'max:99999.9999'],
             'min_quantity' => [
                 'nullable',
                 'required_if:type,'.TawadType::MinimumQuantity->value,
@@ -56,8 +57,26 @@ class StoreTawadRuleRequest extends FormRequest
                 $cropType = $listing->cropType;
                 $guard = app(PriceGuardResolver::class)->forFarmId($listing->farm_id, $cropType);
                 $amount = (float) $this->validated('discount_amount');
+                $listingUnit = $listing->unit ?? $cropType->unit_of_measure;
+                $converter = app(UnitConverter::class);
+                $convertedAmount = $converter->guardPrice(
+                    $listingUnit,
+                    $cropType->unit_of_measure,
+                    $amount,
+                );
 
-                if (! $guard->allowsDiscount($amount)) {
+                if ($convertedAmount === null) {
+                    if ($converter->isGuarded($cropType, $listing->farm_id)) {
+                        $validator->errors()->add(
+                            'discount_amount',
+                            $converter->refusalMessage($cropType, $listing->farm_id),
+                        );
+                    }
+
+                    return;
+                }
+
+                if (! $guard->allowsDiscount($convertedAmount)) {
                     $max = number_format($guard->ceiling, 2, '.', '');
                     $validator->errors()->add(
                         'discount_amount',

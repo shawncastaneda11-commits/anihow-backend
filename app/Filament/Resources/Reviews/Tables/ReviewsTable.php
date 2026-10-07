@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Reviews\Tables;
 
+use App\Actions\Reviews\RemoveReviewAction;
 use App\Enums\Permission;
 use App\Models\Review;
 use Filament\Actions\Action;
@@ -70,12 +71,13 @@ class ReviewsTable
                             ->required()
                             ->rows(2),
                     ])
-                    ->action(fn (Review $record, array $data): bool => $record->update([
-                        'is_removed' => true,
-                        'removed_by' => auth()->id(),
-                        'removed_at' => now(),
-                        'removal_reason' => $data['removal_reason'],
-                    ])),
+                    ->action(function (Review $record, array $data): void {
+                        app(RemoveReviewAction::class)->handle(
+                            $record,
+                            auth()->user(),
+                            $data['removal_reason'],
+                        );
+                    }),
                 Action::make('restore')
                     ->icon('heroicon-o-eye')
                     ->color('success')

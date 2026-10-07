@@ -22,6 +22,7 @@ class ToggleListingActiveRequest extends FormRequest
     {
         return [
             'is_active' => ['sometimes', 'boolean'],
+            'confirm_cancel_reservations' => ['sometimes', 'boolean'],
         ];
     }
 }

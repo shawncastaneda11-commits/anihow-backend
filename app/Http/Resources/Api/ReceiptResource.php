@@ -21,7 +21,8 @@ class ReceiptResource extends JsonResource
         return [
             'order_number' => $this->order_number,
             'completed_at' => $this->completed_at?->toIso8601String(),
-            'payment_method' => $this->payment_method,
+            'payment_method' => $this->paymentMethodValue(),
+            'payment_label' => $this->paymentMethodLabel(),
             'fulfillment' => $this->fulfillment_preference->label(),
             'seller' => $this->whenLoaded('farmerSeller', fn (): array => [
                 'name' => $this->farmerSeller->name,

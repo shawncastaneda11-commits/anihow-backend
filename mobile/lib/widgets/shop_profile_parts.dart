@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../models/models.dart';
 import '../theme/anihow_space.dart';
 import 'produce_card.dart';
@@ -18,7 +19,7 @@ class ShopIdentityHeader extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AniHowAvatar(name: shop.shopName, radius: 28),
+        AniHowAvatar(name: shop.shopName, imageUrl: shop.avatarUrl, radius: 28),
         const SizedBox(width: AniHowSpace.cardGap),
         Expanded(
           child: Column(
@@ -26,7 +27,10 @@ class ShopIdentityHeader extends StatelessWidget {
             children: [
               Text(
                 shop.shopName,
-                style: const TextStyle(fontSize: AniHowSpace.title, fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                  fontSize: AniHowSpace.title,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               if (location != null && location.isNotEmpty) ...[
                 const SizedBox(height: 2),
@@ -46,7 +50,10 @@ class ShopIdentityHeader extends StatelessWidget {
               ],
               if (shop.hasRating) ...[
                 const SizedBox(height: AniHowSpace.labelGap),
-                RatingLabel(rating: shop.averageRating!, count: shop.reviewsCount),
+                RatingLabel(
+                  rating: shop.averageRating!,
+                  count: shop.reviewsCount,
+                ),
               ],
             ],
           ),
@@ -57,12 +64,7 @@ class ShopIdentityHeader extends StatelessWidget {
 }
 
 class ShopStatRow extends StatelessWidget {
-  const ShopStatRow({
-    super.key,
-    this.listings,
-    this.sales,
-    this.rating,
-  });
+  const ShopStatRow({super.key, this.listings, this.sales, this.rating});
 
   final int? listings;
   final int? sales;
@@ -70,11 +72,12 @@ class ShopStatRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     final cells = <_StatCell>[
-      if (listings != null) _StatCell(value: '$listings', label: 'Listings'),
-      if (sales != null) _StatCell(value: '$sales', label: 'Sales'),
+      if (listings != null) _StatCell(value: '$listings', label: s.listings),
+      if (sales != null) _StatCell(value: '$sales', label: s.sales),
       if (rating != null && rating!.isNotEmpty)
-        _StatCell(value: AniHowMoney.rating(rating), label: 'Rating'),
+        _StatCell(value: AniHowMoney.rating(rating), label: s.rating),
     ];
     if (cells.isEmpty) {
       return const SizedBox.shrink();
@@ -109,18 +112,21 @@ class _StatCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AniHowSpace.cardPad, horizontal: 8),
+      padding: const EdgeInsets.symmetric(
+        vertical: AniHowSpace.cardPad,
+        horizontal: 8,
+      ),
       child: Column(
         children: [
           Text(
             value,
-            style: const TextStyle(fontSize: AniHowSpace.name, fontWeight: FontWeight.w800),
+            style: const TextStyle(
+              fontSize: AniHowSpace.name,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 2),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall,
-          ),
+          Text(label, style: Theme.of(context).textTheme.labelSmall),
         ],
       ),
     );
@@ -128,11 +134,7 @@ class _StatCell extends StatelessWidget {
 }
 
 class ShopAboutCard extends StatelessWidget {
-  const ShopAboutCard({
-    super.key,
-    required this.shop,
-    this.onCall,
-  });
+  const ShopAboutCard({super.key, required this.shop, this.onCall});
 
   final ShopProfile shop;
   final ValueChanged<String>? onCall;
@@ -140,6 +142,7 @@ class ShopAboutCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final s = AppStrings.of(context);
     final bio = shop.bio?.trim();
     final location = shop.location?.trim();
     final contact = shop.contact?.trim();
@@ -152,20 +155,22 @@ class ShopAboutCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              (bio != null && bio.isNotEmpty) ? bio : 'No bio yet',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+              (bio != null && bio.isNotEmpty) ? bio : s.noBioYet,
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: AniHowSpace.cardGap),
             _IconRow(
               icon: Icons.location_on_outlined,
-              text: (location != null && location.isNotEmpty) ? location : 'No location yet',
+              text: (location != null && location.isNotEmpty)
+                  ? location
+                  : s.noLocationYet,
             ),
             const SizedBox(height: AniHowSpace.labelGap),
             _IconRow(
               icon: Icons.phone_outlined,
-              text: (contact != null && contact.isNotEmpty) ? contact : 'No contact yet',
+              text: (contact != null && contact.isNotEmpty)
+                  ? contact
+                  : s.noContactYet,
               onTap: canCall ? () => onCall!(contact) : null,
             ),
           ],
@@ -176,11 +181,7 @@ class ShopAboutCard extends StatelessWidget {
 }
 
 class _IconRow extends StatelessWidget {
-  const _IconRow({
-    required this.icon,
-    required this.text,
-    this.onTap,
-  });
+  const _IconRow({required this.icon, required this.text, this.onTap});
 
   final IconData icon;
   final String text;
@@ -191,7 +192,11 @@ class _IconRow extends StatelessWidget {
     final theme = Theme.of(context);
     final row = Row(
       children: [
-        Icon(icon, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+        Icon(
+          icon,
+          size: 16,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+        ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
@@ -221,12 +226,16 @@ class ShopListingsEmpty extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: AniHowSpace.section),
       child: Column(
         children: [
-          Icon(Icons.inventory_2_outlined, size: 40, color: Theme.of(context).colorScheme.primary),
+          Icon(
+            Icons.inventory_2_outlined,
+            size: 40,
+            color: Theme.of(context).colorScheme.primary,
+          ),
           const SizedBox(height: AniHowSpace.cardGap),
-          const Text(
-            'No active listings',
+          Text(
+            AppStrings.of(context).noActiveListings,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: AniHowSpace.body),
+            style: const TextStyle(fontSize: AniHowSpace.body),
           ),
         ],
       ),

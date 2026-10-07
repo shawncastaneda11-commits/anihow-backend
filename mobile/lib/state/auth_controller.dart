@@ -4,18 +4,29 @@ import '../models/models.dart';
 import '../services/api_client.dart';
 
 class AuthController extends ChangeNotifier {
-  AuthController() {
-    api = ApiClient(onUnauthorized: () {
-      user = null;
-      notifyListeners();
-      api.clearToken();
-    });
+  AuthController({ApiClient? api}) {
+    if (api != null) {
+      this.api = api;
+      return;
+    }
+
+    this.api = ApiClient(
+      onUnauthorized: () {
+        user = null;
+        sessionEnded = true;
+        notifyListeners();
+        this.api.clearToken();
+      },
+    );
   }
 
   late final ApiClient api;
   UserAccount? user;
   bool restoring = true;
   String? error;
+  bool sessionEnded = false;
+  bool pendingEmailVerification = false;
+  String? pendingVerificationCode;
 
   Future<void> restoreSession() async {
     restoring = true;
@@ -36,11 +47,20 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  Future<bool> login(String email, String password) async {
+  Future<bool> login(
+    String email,
+    String password, {
+    bool remember = true,
+  }) async {
     error = null;
+    sessionEnded = false;
     notifyListeners();
     try {
-      final result = await api.login(email: email, password: password);
+      final result = await api.login(
+        email: email,
+        password: password,
+        remember: remember,
+      );
       user = result.user;
       notifyListeners();
       return true;
@@ -69,6 +89,8 @@ class AuthController extends ChangeNotifier {
         phone: phone,
       );
       user = result.user;
+      pendingEmailVerification = true;
+      pendingVerificationCode = result.verificationCode;
       notifyListeners();
       return true;
     } on ApiException catch (e) {
@@ -78,14 +100,30 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  void clearPendingEmailVerification() {
+    pendingEmailVerification = false;
+  }
+
+  void rememberVerificationCode(String? code) {
+    pendingVerificationCode = code;
+    notifyListeners();
+  }
+
   Future<void> refreshUser() async {
     user = await api.currentUser();
+    notifyListeners();
+  }
+
+  void applyAccount(UserAccount next) {
+    user = next;
     notifyListeners();
   }
 
   Future<void> logout() async {
     await api.logout();
     user = null;
+    pendingEmailVerification = false;
+    pendingVerificationCode = null;
     notifyListeners();
   }
 }

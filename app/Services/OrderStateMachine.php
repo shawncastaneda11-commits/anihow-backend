@@ -45,7 +45,7 @@ class OrderStateMachine
     public function transition(
         Order $order,
         OrderStatus $next,
-        User $actor,
+        User|OrderActor $actor,
         ?string $note = null,
         ?CancellationReason $reason = null,
         ?float $amountReceived = null,
@@ -143,7 +143,7 @@ class OrderStateMachine
     /**
      * Release or restore stock depending on whether the order was confirmed.
      */
-    private function cancel(Order $order, User $actor, ?CancellationReason $reason, ?string $note): void
+    private function cancel(Order $order, User|OrderActor $actor, ?CancellationReason $reason, ?string $note): void
     {
         if ($reason === null) {
             throw ValidationException::withMessages([
@@ -180,18 +180,37 @@ class OrderStateMachine
 
         $order->cancellation_reason = $reason;
         $order->cancellation_note = $note;
-        $order->cancelled_by = $order->isOwnedByBuyer($actor)
-            ? OrderActor::Buyer
-            : OrderActor::FarmerSeller;
+        $order->cancelled_by = match (true) {
+            $actor === OrderActor::System => OrderActor::System,
+            $actor instanceof User && $order->isOwnedByBuyer($actor) => OrderActor::Buyer,
+            default => OrderActor::FarmerSeller,
+        };
         $order->cancelled_at = now();
     }
 
     /**
      * The farmer-seller advances the status. A buyer may only cancel, and
-     * only before the seller confirms.
+     * only before the seller confirms. The system may cancel a placed app
+     * order left unanswered.
      */
-    private function assertActorMayTransition(Order $order, OrderStatus $next, User $actor): void
+    private function assertActorMayTransition(Order $order, OrderStatus $next, User|OrderActor $actor): void
     {
+        if ($actor === OrderActor::System) {
+            if ($next === OrderStatus::Cancelled && $order->status === OrderStatus::Placed && ! $order->isWalkIn()) {
+                return;
+            }
+
+            throw ValidationException::withMessages([
+                'status' => 'The system can only cancel a placed order.',
+            ]);
+        }
+
+        if (! $actor instanceof User) {
+            throw ValidationException::withMessages([
+                'status' => 'You are not a party to this order.',
+            ]);
+        }
+
         if ($order->isOwnedByFarmer($actor)) {
             return;
         }
@@ -215,14 +234,14 @@ class OrderStateMachine
         Order $order,
         OrderStatus $from,
         OrderStatus $to,
-        User $actor,
+        User|OrderActor $actor,
         ?string $note,
     ): void {
         OrderStatusHistory::create([
             'order_id' => $order->id,
             'from_status' => $from,
             'to_status' => $to,
-            'changed_by' => $actor->id,
+            'changed_by' => $actor instanceof User ? $actor->id : null,
             'note' => $note,
         ]);
     }

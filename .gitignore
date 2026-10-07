@@ -2,6 +2,7 @@
 .DS_Store
 .env
 .env.backup
+.env.backup-*
 .env.production
 .env.*.local
 .phpactor.json
@@ -17,14 +18,13 @@
 /auth.json
 /node_modules
 /public/build
-/public/css/filament
+# Filament assets are committed (Railpack skips composer scripts). After a Filament upgrade run: php artisan filament:assets
 /public/fonts-manifest.dev.json
-/public/fonts/filament
 /public/hot
-/public/js/filament
 /public/storage
 /storage/*.key
 /storage/pail
+/dist/
 /vendor
 _ide_helper.php
 Homestead.json

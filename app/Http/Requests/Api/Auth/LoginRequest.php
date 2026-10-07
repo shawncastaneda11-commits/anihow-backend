@@ -11,6 +11,13 @@ class LoginRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (! $this->exists('remember')) {
+            $this->merge(['remember' => true]);
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -20,6 +27,7 @@ class LoginRequest extends FormRequest
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
             'device_name' => ['nullable', 'string', 'max:255'],
+            'remember' => ['sometimes', 'boolean'],
         ];
     }
 }

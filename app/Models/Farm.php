@@ -3,13 +3,17 @@
 namespace App\Models;
 
 use App\Enums\Role;
+use App\Support\FarmPin;
+use App\Support\ImageVariants;
 use Database\Factories\FarmFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Validator;
 
 #[Fillable([
     'name',
@@ -23,6 +27,11 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'pickup_point',
     'cover_photo_path',
     'is_active',
+    'organic_certifier',
+    'organic_certificate_no',
+    'organic_certified_until',
+    'latitude',
+    'longitude',
 ])]
 class Farm extends Model
 {
@@ -33,7 +42,53 @@ class Farm extends Model
     {
         return [
             'is_active' => 'boolean',
+            'organic_certified_until' => 'date',
+            'latitude' => 'decimal:7',
+            'longitude' => 'decimal:7',
         ];
+    }
+
+    public function hasPin(): bool
+    {
+        return $this->latitude !== null && $this->longitude !== null;
+    }
+
+    public function mapsUrl(): ?string
+    {
+        if (! $this->hasPin()) {
+            return null;
+        }
+
+        return 'https://www.google.com/maps/search/?api=1&query='
+            .rawurlencode((string) $this->latitude).','
+            .rawurlencode((string) $this->longitude);
+    }
+
+    /**
+     * A certificate counts only while the certifier, the number, and an
+     * unexpired date are all on file. Any gap means the farm is not certified.
+     */
+    public function isOrganicCertified(): bool
+    {
+        return filled($this->organic_certifier)
+            && filled($this->organic_certificate_no)
+            && $this->organic_certified_until !== null
+            && $this->organic_certified_until->greaterThanOrEqualTo(today());
+    }
+
+    /**
+     * @param  Builder<Farm>  $query
+     * @return Builder<Farm>
+     */
+    public function scopeOrganicCertified(Builder $query): Builder
+    {
+        return $query
+            ->whereNotNull('organic_certifier')
+            ->where('organic_certifier', '!=', '')
+            ->whereNotNull('organic_certificate_no')
+            ->where('organic_certificate_no', '!=', '')
+            ->whereNotNull('organic_certified_until')
+            ->whereDate('organic_certified_until', '>=', today());
     }
 
     public function users(): HasMany
@@ -44,6 +99,22 @@ class Farm extends Model
     public function farmerSellers(): HasMany
     {
         return $this->hasMany(User::class)->role(Role::FarmerSeller->value);
+    }
+
+    /**
+     * Crop types assigned to this farm's sellers. An empty list for a seller
+     * means that seller may use every crop type.
+     */
+    public function sellerCropTypes(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            FarmerCropType::class,
+            User::class,
+            'farm_id',
+            'user_id',
+            'id',
+            'id',
+        );
     }
 
     /**
@@ -73,6 +144,61 @@ class Farm extends Model
     public function photos(): HasMany
     {
         return $this->hasMany(FarmPhoto::class)->orderBy('sort_order');
+    }
+
+    public function announcements(): HasMany
+    {
+        return $this->hasMany(FarmAnnouncement::class);
+    }
+
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(FarmFavorite::class);
+    }
+
+    public function faqEntries(): HasMany
+    {
+        return $this->hasMany(FaqEntry::class);
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (Farm $farm): void {
+            foreach (['latitude', 'longitude'] as $column) {
+                if ($farm->{$column} === '') {
+                    $farm->{$column} = null;
+                }
+            }
+
+            Validator::make(
+                [
+                    'latitude' => $farm->latitude,
+                    'longitude' => $farm->longitude,
+                ],
+                FarmPin::rules(),
+            )->validate();
+        });
+
+        static::updating(function (Farm $farm): void {
+            if ($farm->isDirty('cover_photo_path')) {
+                $previous = $farm->getOriginal('cover_photo_path');
+                app(ImageVariants::class)->delete(is_string($previous) ? $previous : null);
+            }
+        });
+
+        static::deleting(function (Farm $farm): void {
+            app(ImageVariants::class)->delete($farm->cover_photo_path);
+        });
+    }
+
+    public function coverPhotoUrl(): ?string
+    {
+        return app(ImageVariants::class)->url($this->cover_photo_path);
+    }
+
+    public function coverThumbnailUrl(): ?string
+    {
+        return app(ImageVariants::class)->thumbnailUrl($this->cover_photo_path);
     }
 
     /**

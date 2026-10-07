@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\Role;
+use App\Enums\UserStatus;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -29,7 +30,8 @@ class BuyerSeeder extends Seeder
                 [
                     ...$buyer,
                     'password' => 'password',
-                    'is_active' => true,
+                    'status' => UserStatus::Active,
+                    'approved_at' => now(),
                     'email_verified_at' => now(),
                 ],
             );

@@ -1,0 +1,110 @@
+digraph G {
+  graph [rankdir=TB, nodesep=0.5, ranksep=0.6, pad=0.4, fontname="Liberation Sans", newrank=true, splines=polyline, bgcolor="white"];
+  node  [fontname="Liberation Sans", fontsize=12, penwidth=1, color="#333333", style=filled, fillcolor="#FFFFFF", margin="0.26,0.16"];
+  edge  [penwidth=1, arrowsize=0.7, color="#333333", fontname="Liberation Sans", fontsize=11];
+  s [shape=box, style="rounded,filled", fillcolor="#F8F9FA", width=1.3, height=0.5, margin="0.2,0.1", label="Start"];
+  li [shape=parallelogram, fillcolor="#F8F9FA", label="Log in to the\nCMS", margin="0.30,0.12"];
+  ok [shape=diamond, fillcolor="#FFFFFF", label="Credentials valid\nand account active?", margin="0.20,0.10"];
+  err [shape=box, label="Show error message"];
+  ain [shape=circle, width=0.5, fixedsize=true, fillcolor="#F8F9FA", label="R"];
+  home [shape=box, label="Super Admin\ndashboard"];
+  lo [shape=box, label="Log out"];
+  end [shape=box, style="rounded,filled", fillcolor="#F8F9FA", width=1.3, height=0.5, margin="0.2,0.1", label="End"];
+  s -> li;
+  li -> ok;
+  ok -> err [label="No"];
+  err -> li [constraint=false];
+  ok -> home [label="Yes"];
+  ain -> home;
+  {rank=same; ok err}
+  {rank=same; home ain}
+  q0 [shape=diamond, fillcolor="#FFFFFF", label="Manage\naccounts?", margin="0.20,0.10"];
+  home -> q0;
+  s0_0 [shape=box, label="Create, approve, or\nsuspend an account"];
+  q0 -> s0_0 [label="Yes"];
+  s0_1 [shape=box, label="Save the\naccount"];
+  s0_0 -> s0_1;
+  r0 [shape=circle, width=0.5, fixedsize=true, fillcolor="#F8F9FA", label="R"];
+  s0_1 -> r0;
+  {rank=same; q0; s0_0; s0_1; r0}
+  q1 [shape=diamond, fillcolor="#FFFFFF", label="Edit crop\ntaxonomy?", margin="0.20,0.10"];
+  q0 -> q1 [label="No"];
+  s1_0 [shape=parallelogram, fillcolor="#F8F9FA", label="Enter floor price\nand discount", margin="0.30,0.12"];
+  q1 -> s1_0 [label="Yes"];
+  s1_1 [shape=diamond, fillcolor="#FFFFFF", label="Values\nvalid?", margin="0.20,0.10"];
+  s1_0 -> s1_1;
+  a1_1 [shape=box, label="Show\nerror"];
+  xa1_1 [shape=circle, width=0.5, fixedsize=true, fillcolor="#F8F9FA", label="R"];
+  s1_1 -> a1_1 [label="No"];
+  a1_1 -> xa1_1;
+  {rank=same; a1_1; xa1_1}
+  s1_2 [shape=box, label="Save; notify\nsellers"];
+  s1_1 -> s1_2 [label="Yes"];
+  r1 [shape=circle, width=0.5, fixedsize=true, fillcolor="#F8F9FA", label="R"];
+  s1_2 -> r1;
+  {rank=same; q1; s1_0; s1_1; s1_2; r1}
+  q2 [shape=diamond, fillcolor="#FFFFFF", label="Moderate\ncontent?", margin="0.20,0.10"];
+  q1 -> q2 [label="No", minlen=2];
+  s2_0 [shape=box, label="Review listings,\nreviews, answers"];
+  q2 -> s2_0 [label="Yes"];
+  s2_1 [shape=box, label="Take down, remove,\nor deactivate"];
+  s2_0 -> s2_1;
+  r2 [shape=circle, width=0.5, fixedsize=true, fillcolor="#F8F9FA", label="R"];
+  s2_1 -> r2;
+  {rank=same; q2; s2_0; s2_1; r2}
+  q3 [shape=diamond, fillcolor="#FFFFFF", label="Handle a\nreport?", margin="0.20,0.10"];
+  q2 -> q3 [label="No"];
+  s3_0 [shape=box, label="Open the\nreport"];
+  q3 -> s3_0 [label="Yes"];
+  s3_1 [shape=diamond, fillcolor="#FFFFFF", label="Action\nwarranted?", margin="0.20,0.10"];
+  s3_0 -> s3_1;
+  a3_1 [shape=box, label="Dismiss;\nnotify reporter"];
+  xa3_1 [shape=circle, width=0.5, fixedsize=true, fillcolor="#F8F9FA", label="R"];
+  s3_1 -> a3_1 [label="No"];
+  a3_1 -> xa3_1;
+  {rank=same; a3_1; xa3_1}
+  s3_2 [shape=box, label="Resolve; take down\nor remove"];
+  s3_1 -> s3_2 [label="Yes"];
+  r3 [shape=circle, width=0.5, fixedsize=true, fillcolor="#F8F9FA", label="R"];
+  s3_2 -> r3;
+  {rank=same; q3; s3_0; s3_1; s3_2; r3}
+  q4 [shape=diamond, fillcolor="#FFFFFF", label="Deletion\nrequest?", margin="0.20,0.10"];
+  q3 -> q4 [label="No", minlen=2];
+  s4_0 [shape=box, label="Open the\nrequest"];
+  q4 -> s4_0 [label="Yes"];
+  s4_1 [shape=diamond, fillcolor="#FFFFFF", label="No open orders\nand approved?", margin="0.20,0.10"];
+  s4_0 -> s4_1;
+  a4_1 [shape=box, label="Reject;\nnotify user"];
+  xa4_1 [shape=circle, width=0.5, fixedsize=true, fillcolor="#F8F9FA", label="R"];
+  s4_1 -> a4_1 [label="No"];
+  a4_1 -> xa4_1;
+  {rank=same; a4_1; xa4_1}
+  s4_2 [shape=box, label="Anonymize;\nemail notice"];
+  s4_1 -> s4_2 [label="Yes"];
+  r4 [shape=circle, width=0.5, fixedsize=true, fillcolor="#F8F9FA", label="R"];
+  s4_2 -> r4;
+  {rank=same; q4; s4_0; s4_1; s4_2; r4}
+  q5 [shape=diamond, fillcolor="#FFFFFF", label="View\nrecords?", margin="0.20,0.10"];
+  q4 -> q5 [label="No", minlen=2];
+  s5_0 [shape=box, label="View ledger, chats,\nand analytics"];
+  q5 -> s5_0 [label="Yes"];
+  s5_1 [shape=parallelogram, fillcolor="#F8F9FA", label="Export CSV\n(logged)", margin="0.30,0.12"];
+  s5_0 -> s5_1;
+  r5 [shape=circle, width=0.5, fixedsize=true, fillcolor="#F8F9FA", label="R"];
+  s5_1 -> r5;
+  {rank=same; q5; s5_0; s5_1; r5}
+  q5 -> lo [label="No"];
+  lo -> end;
+  s [group=trunk];
+  li [group=trunk];
+  ok [group=trunk];
+  home [group=trunk];
+  lo [group=trunk];
+  end [group=trunk];
+  q0 [group=trunk];
+  q1 [group=trunk];
+  q2 [group=trunk];
+  q3 [group=trunk];
+  q4 [group=trunk];
+  q5 [group=trunk];
+}

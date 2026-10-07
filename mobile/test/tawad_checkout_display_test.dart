@@ -1,3 +1,8 @@
+@Tags(['live'])
+library;
+
+// Live test: needs `php artisan serve` and `php artisan db:seed --class=SmokeTestSeeder`. Shares seed accounts, so run with --concurrency=1.
+
 import 'package:anihow/config/api_config.dart';
 import 'package:anihow/models/models.dart';
 import 'package:anihow/services/cart_requests.dart';

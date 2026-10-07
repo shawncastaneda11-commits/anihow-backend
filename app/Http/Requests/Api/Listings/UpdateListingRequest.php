@@ -2,11 +2,15 @@
 
 namespace App\Http\Requests\Api\Listings;
 
+use App\Enums\GrowingMethod;
+use App\Enums\ListingUnit;
 use App\Models\CropType;
 use App\Models\Listing;
 use App\Support\Pricing\PriceGuardResolver;
+use App\Support\Pricing\UnitConverter;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateListingRequest extends FormRequest
 {
@@ -22,11 +26,19 @@ class UpdateListingRequest extends FormRequest
     {
         return [
             'crop_type_id' => ['sometimes', 'integer', 'exists:crop_types,id'],
+            'unit' => ['sometimes', 'required', Rule::enum(ListingUnit::class)],
             'title' => ['sometimes', 'string', 'max:150'],
             'description' => ['sometimes', 'nullable', 'string', 'max:5000'],
-            'price_per_unit' => ['sometimes', 'numeric', 'gt:0', 'max:99999.99'],
+            'price_per_unit' => ['sometimes', 'numeric', 'gt:0', 'decimal:0,4', 'max:99999.9999'],
             'quantity_available' => ['sometimes', 'numeric', 'min:0', 'max:99999.99'],
+            'min_order_quantity' => ['sometimes', 'numeric', 'gt:0', 'decimal:0,2', 'max:99999.99'],
+            'order_step' => ['sometimes', 'numeric', 'gt:0', 'decimal:0,2', 'max:99999.99'],
             'is_active' => ['sometimes', 'boolean'],
+            'confirm_cancel_reservations' => ['sometimes', 'boolean'],
+            'available_from' => ['sometimes', 'nullable', 'date'],
+            'available_until' => ['sometimes', 'nullable', 'date'],
+            'harvested_on' => ['sometimes', 'nullable', 'date', 'before_or_equal:today'],
+            'growing_method' => ['sometimes', 'nullable', Rule::enum(GrowingMethod::class)],
             'image' => ['nullable', 'image', 'max:5120'],
         ];
     }
@@ -47,6 +59,20 @@ class UpdateListingRequest extends FormRequest
 
                 $listing = $this->listing();
 
+                StoreListingRequest::assertAvailabilityWindow(
+                    $validator,
+                    $this->exists('available_from') ? $this->input('available_from') : $listing->available_from,
+                    $this->exists('available_until') ? $this->input('available_until') : $listing->available_until,
+                );
+
+                if ($this->exists('growing_method')) {
+                    StoreListingRequest::assertGrowingMethod(
+                        $validator,
+                        $this->input('growing_method'),
+                        $listing->farm,
+                    );
+                }
+
                 $cropType = $this->has('crop_type_id')
                     ? CropType::find($this->validated('crop_type_id'))
                     : $listing->cropType;
@@ -55,21 +81,71 @@ class UpdateListingRequest extends FormRequest
                     return;
                 }
 
+                $seller = $this->user();
+
+                if (
+                    $seller !== null
+                    && $this->has('crop_type_id')
+                    && (int) $cropType->id !== (int) $listing->crop_type_id
+                    && ! $seller->mayUseCropType($cropType->id)
+                ) {
+                    $validator->errors()->add(
+                        'crop_type_id',
+                        'This crop type is not on your list.',
+                    );
+
+                    return;
+                }
+
+                $unit = $this->has('unit')
+                    ? ListingUnit::from($this->validated('unit'))
+                    : ($listing->unit ?? $cropType->unit_of_measure);
+
+                $converter = app(UnitConverter::class);
+
+                if (! $converter->accepts($cropType, $unit, $listing->farm_id)) {
+                    $validator->errors()->add(
+                        'unit',
+                        $converter->refusalMessage($cropType, $listing->farm_id),
+                    );
+
+                    return;
+                }
+
+                $min = $this->exists('min_order_quantity')
+                    ? (float) $this->input('min_order_quantity')
+                    : (float) $listing->min_order_quantity;
+                $step = $this->exists('order_step')
+                    ? (float) $this->input('order_step')
+                    : (float) $listing->order_step;
+
+                Listing::addOrderRuleErrors($validator, $unit, $min, $step);
+
                 $price = $this->has('price_per_unit')
                     ? (float) $this->validated('price_per_unit')
                     : (float) $listing->price_per_unit;
 
                 $guard = app(PriceGuardResolver::class)->forFarmId($listing->farm_id, $cropType);
+                $price = $converter->guardPrice($unit, $cropType->unit_of_measure, $price);
 
-                if ($guard->allowsPrice($price)) {
+                if ($price === null) {
+                    if ($converter->isGuarded($cropType, $listing->farm_id)) {
+                        $validator->errors()->add(
+                            'unit',
+                            $converter->refusalMessage($cropType, $listing->farm_id),
+                        );
+                    }
+
                     return;
                 }
 
-                $floor = number_format($guard->floor, 2, '.', '');
-                $validator->errors()->add(
-                    'price_per_unit',
-                    "The floor price for {$cropType->name} is PHP {$floor} per {$cropType->unit_of_measure->value}.",
-                );
+                if (! $guard->allowsPrice($price)) {
+                    $floor = number_format($guard->floor, 2, '.', '');
+                    $validator->errors()->add(
+                        'price_per_unit',
+                        "The floor price for {$cropType->name} is PHP {$floor} per {$cropType->unit_of_measure->value}.",
+                    );
+                }
             },
         ];
     }
@@ -82,11 +158,18 @@ class UpdateListingRequest extends FormRequest
         return collect($this->validated())
             ->only([
                 'crop_type_id',
+                'unit',
                 'title',
                 'description',
                 'price_per_unit',
                 'quantity_available',
+                'min_order_quantity',
+                'order_step',
                 'is_active',
+                'available_from',
+                'available_until',
+                'harvested_on',
+                'growing_method',
             ])
             ->all();
     }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\TawadType;
+use App\Support\Pricing\UnitConverter;
 use Database\Factories\TawadRuleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -33,7 +34,7 @@ class TawadRule extends Model
     {
         return [
             'type' => TawadType::class,
-            'discount_amount' => 'decimal:2',
+            'discount_amount' => 'decimal:4',
             'min_quantity' => 'decimal:2',
             'is_active' => 'boolean',
             'ended_at' => 'datetime',
@@ -90,8 +91,19 @@ class TawadRule extends Model
      */
     public function keepsUnitPriceAbove(Listing $listing, float $floor): bool
     {
-        $unitPrice = (float) $listing->price_per_unit;
-        $discount = (float) $this->discount_amount;
+        $listing->loadMissing('cropType');
+        $cropUnit = $listing->cropType?->unit_of_measure;
+        $converter = app(UnitConverter::class);
+        $unitPrice = $cropUnit === null
+            ? (float) $listing->price_per_unit
+            : $converter->guardPrice($listing->unit, $cropUnit, $listing->price_per_unit);
+        $discount = $cropUnit === null
+            ? (float) $this->discount_amount
+            : $converter->guardPrice($listing->unit, $cropUnit, $this->discount_amount);
+
+        if ($unitPrice === null || $discount === null) {
+            return $floor <= 0;
+        }
 
         $quantity = match ($this->type) {
             TawadType::Flat => 1.0,

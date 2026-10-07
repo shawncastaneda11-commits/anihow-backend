@@ -7,6 +7,7 @@ use App\Enums\FulfillmentPreference;
 use App\Enums\OrderActor;
 use App\Enums\OrderSource;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use Database\Factories\OrderFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -56,6 +57,8 @@ use Illuminate\Validation\ValidationException;
     'ready_at',
     'completed_at',
     'cancelled_at',
+    'reminder_sent_at',
+    'reservation_id',
 ])]
 class Order extends Model
 {
@@ -88,17 +91,18 @@ class Order extends Model
             'ready_at' => 'datetime',
             'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'reminder_sent_at' => 'datetime',
         ];
     }
 
     public function buyer(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'buyer_id');
+        return $this->belongsTo(User::class, 'buyer_id')->withTrashed();
     }
 
     public function farmerSeller(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'farmer_seller_id');
+        return $this->belongsTo(User::class, 'farmer_seller_id')->withTrashed();
     }
 
     public function farm(): BelongsTo
@@ -111,14 +115,50 @@ class Order extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    public function paymentMethodValue(): string
+    {
+        $method = $this->payment_method;
+
+        if ($method instanceof PaymentMethod) {
+            return $method->value;
+        }
+
+        return (string) $method;
+    }
+
+    public function paymentMethodLabel(): string
+    {
+        return PaymentMethod::tryFrom($this->paymentMethodValue())?->label()
+            ?? $this->paymentMethodValue();
+    }
+
     public function review(): HasOne
     {
         return $this->hasOne(Review::class);
     }
 
+    public function reservation(): BelongsTo
+    {
+        return $this->belongsTo(Reservation::class);
+    }
+
     public function statusHistories(): HasMany
     {
         return $this->hasMany(OrderStatusHistory::class)->orderBy('created_at');
+    }
+
+    public function messages(): HasMany
+    {
+        return $this->hasMany(OrderMessage::class)->orderBy('id');
+    }
+
+    /**
+     * Stall-thread rows tagged with this order. Untagged stall chatter stays
+     * out of the order ledger.
+     */
+    public function stallMessages(): HasMany
+    {
+        return $this->hasMany(StallMessage::class, 'order_id')->orderBy('id');
     }
 
     public function isWalkIn(): bool

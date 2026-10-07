@@ -88,7 +88,8 @@ class FarmerOrderApiTest extends TestCase
             ])
             ->assertOk()
             ->assertJsonPath('data.status', OrderStatus::Cancelled->value)
-            ->assertJsonPath('data.cancellation_reason', CancellationReason::NoShow->value);
+            ->assertJsonPath('data.cancellation_reason', CancellationReason::NoShow->value)
+            ->assertJsonPath('data.cancellation_note', 'Buyer did not arrive.');
 
         $this->assertContains($order->fresh()->status->value, array_column(OrderStatus::cases(), 'value'));
         $this->assertSame(OrderStatus::Cancelled, $order->fresh()->status);

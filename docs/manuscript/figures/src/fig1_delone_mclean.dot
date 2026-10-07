@@ -1,0 +1,30 @@
+// Figure 1. DeLone and McLean IS Success Model (2003) as applied to AniHow.
+// Render with neato; positions are pinned in inches.
+digraph G {
+  graph [layout=neato, splines=true, pad=0.3, bgcolor="white", fontname="Liberation Sans"];
+  node  [shape=box, style="rounded", penwidth=1.4, fontname="Liberation Sans", fontsize=15, width=2.5, height=0.8, fixedsize=true];
+  edge  [penwidth=1.2, arrowsize=0.8, color="#222222", fontname="Liberation Sans", fontsize=11];
+
+  sq  [label="System Quality",      pos="0,4!"];
+  iq  [label="Information Quality", pos="0,2.4!"];
+  vq  [label="Service Quality",     pos="0,0.8!"];
+  use [label=<Intention to Use<BR/><I>Use</I>>, pos="4.2,3.4!"];
+  sat [label="User Satisfaction",   pos="4.2,1.4!"];
+  nb  [label="Net Benefits",        pos="8.2,2.4!"];
+
+  qn [shape=plaintext, fixedsize=false, fontsize=11, pos="0,-0.15!",
+      label=<<I>ISO/IEC 25010:2023: functional suitability,<BR/>usability, reliability, performance efficiency</I>>];
+  sn [shape=plaintext, fixedsize=false, fontsize=11, pos="4.2,0.55!",
+      label=<<I>Four-point acceptability instrument</I>>];
+  nn [shape=plaintext, fixedsize=false, fontsize=11, pos="8.2,1.4!",
+      label=<<I>Value to farmer-sellers, buyers,<BR/>and the partner organization</I>>];
+
+  sq -> use; sq -> sat;
+  iq -> use; iq -> sat;
+  vq -> use; vq -> sat;
+  use -> sat [dir=both];
+  use -> nb;  sat -> nb;
+  nb -> use [style=dashed];
+  fb [shape=plaintext, fixedsize=false, fontsize=11, pos="6.2,3.25!", label=<<I>feedback</I>>];
+  nb -> sat [style=dashed];
+}

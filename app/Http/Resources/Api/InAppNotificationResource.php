@@ -4,6 +4,7 @@ namespace App\Http\Resources\Api;
 
 use App\Models\Listing;
 use App\Models\Order;
+use App\Models\Report;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -31,6 +32,7 @@ class InAppNotificationResource extends JsonResource
         return match ($this->related_type) {
             Order::class => 'order',
             Listing::class => 'listing',
+            Report::class => 'report',
             default => $this->related_type,
         };
     }

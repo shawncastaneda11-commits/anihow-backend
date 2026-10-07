@@ -21,6 +21,7 @@ class UserResource extends JsonResource
             'bio' => $this->bio,
             'contact' => $this->contact,
             'location' => $this->location,
+            'avatar_url' => $this->avatarUrl(),
             'status' => $this->status->value,
             'email_verified_at' => $this->email_verified_at,
             'roles' => $this->whenLoaded('roles', fn () => $this->roles->pluck('name')->values()),
@@ -31,6 +32,7 @@ class UserResource extends JsonResource
                     : [
                         'id' => $this->farm->id,
                         'name' => $this->farm->name,
+                        'is_organic_certified' => $this->farm->isOrganicCertified(),
                     ],
             ),
             'permissions' => $this->getAllPermissions()->pluck('name')->values(),

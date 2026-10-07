@@ -2,27 +2,25 @@
 
 namespace App\Actions\Listings;
 
-use App\Support\ListingStorage;
+use App\Support\ImageVariants;
 use Illuminate\Http\UploadedFile;
 
 class SyncListingImage
 {
+    public function __construct(private ImageVariants $images) {}
+
     public function store(UploadedFile $file): string
     {
-        return $file->store('listings', ListingStorage::diskName());
+        return $this->images->store($file, 'listings');
     }
 
     public function replace(?string $currentPath, UploadedFile $file): string
     {
-        $this->delete($currentPath);
-
-        return $this->store($file);
+        return $this->images->replace($currentPath, $file, 'listings');
     }
 
     public function delete(?string $path): void
     {
-        if (filled($path)) {
-            ListingStorage::disk()->delete($path);
-        }
+        $this->images->delete($path);
     }
 }

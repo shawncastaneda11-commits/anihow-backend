@@ -13,8 +13,9 @@ class RegisterBuyerAction
      * Farmer-seller accounts must be created by a super_admin.
      *
      * @param  array{name: string, email: string, password: string, phone?: string|null}  $data
+     * @return array{user: User, verification_code: string}
      */
-    public function handle(array $data): User
+    public function handle(array $data): array
     {
         $user = User::query()->create([
             'name' => $data['name'],
@@ -26,8 +27,11 @@ class RegisterBuyerAction
         ]);
 
         $user->assignRole(Role::Buyer);
-        $user->sendEmailVerificationNotification();
+        $code = app(SendEmailVerificationCodeAction::class)->handle($user);
 
-        return $user->load('roles');
+        return [
+            'user' => $user->load('roles'),
+            'verification_code' => $code,
+        ];
     }
 }

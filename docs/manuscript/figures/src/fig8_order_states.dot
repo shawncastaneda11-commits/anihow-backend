@@ -1,0 +1,31 @@
+// Figure 8. Order lifecycle state diagram (v3.5).
+digraph G {
+  graph [rankdir=TB, nodesep=0.9, ranksep=0.75, pad=0.3, fontname="Liberation Sans"];
+  node  [shape=box, style="rounded,filled", penwidth=1.4, fontname="Liberation Sans", fontsize=15, width=1.7, height=0.55];
+  edge  [penwidth=1.2, arrowsize=0.8, color="#333333", fontname="Liberation Sans", fontsize=10];
+
+  start [shape=circle, style=filled, fillcolor="#222222", width=0.22, height=0.22, label="", fixedsize=true];
+  end   [shape=doublecircle, style=filled, fillcolor="#222222", width=0.2, height=0.2, label="", fixedsize=true];
+
+  placed    [label="Placed",    fillcolor="#EEF2F6"];
+  confirmed [label="Confirmed", fillcolor="#EEF2F6"];
+  ready     [label="Ready",     fillcolor="#EEF2F6"];
+  completed [label="Completed", fillcolor="#E7EFE5"];
+  cancelled [label="Cancelled", fillcolor="#F2E6E6"];
+
+  start -> placed [label="  buyer checks out\n  (stock held)"];
+  placed -> placed [style=dashed, label="12 h unconfirmed:\none reminder to seller"];
+  placed -> confirmed [label="  seller confirms\n  (stock deducted,\n  prices frozen)"];
+  confirmed -> ready [label="  seller marks ready"];
+  ready -> completed [label="  handover\n  (amount received recorded)"];
+
+  placed -> cancelled [label="buyer or seller cancels\n(held stock released)"];
+  placed -> cancelled [style=dashed, label="system, after 48 h:\nreason seller unresponsive\n(held stock released)"];
+  confirmed -> cancelled [label="seller cancels with reason\n(stock restored)"];
+  ready -> cancelled [label="seller cancels with reason,\ne.g. no-show (stock restored)"];
+
+  start -> completed [style=dashed, constraint=false, label="    walk-in sale:\l    created at Completed\l    (stock deducted)\l"];
+
+  completed -> end; cancelled -> end;
+  {rank=same; confirmed; cancelled}
+}

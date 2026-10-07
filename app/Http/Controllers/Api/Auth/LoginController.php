@@ -16,6 +16,7 @@ class LoginController extends Controller
             email: $request->validated('email'),
             password: $request->validated('password'),
             deviceName: $request->validated('device_name') ?? 'mobile',
+            remember: $request->boolean('remember'),
         );
 
         return (new UserResource($result['user']))

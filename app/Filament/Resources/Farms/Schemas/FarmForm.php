@@ -2,7 +2,13 @@
 
 namespace App\Filament\Resources\Farms\Schemas;
 
+use App\Models\Farm;
+use App\Policies\FarmPolicy;
+use App\Support\FarmPin;
+use App\Support\ImageVariants;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -27,12 +33,15 @@ class FarmForm
                     ->helperText('Used in article URLs, so two farms can publish a guide with the same title.'),
                 Textarea::make('description')
                     ->rows(4)
-                    ->columnSpanFull(),
+                    ->columnSpanFull()
+                    ->helperText('Shown publicly in the app.'),
                 TextInput::make('contact_person')
-                    ->maxLength(150),
+                    ->maxLength(150)
+                    ->helperText('Shown publicly in the app.'),
                 TextInput::make('contact_number')
                     ->tel()
-                    ->maxLength(30),
+                    ->maxLength(30)
+                    ->helperText("Visible only to this farm's farmer-sellers and the Super Admin."),
                 TextInput::make('address')
                     ->maxLength(255),
                 TextInput::make('barangay')
@@ -43,18 +52,75 @@ class FarmForm
                 TextInput::make('pickup_point')
                     ->maxLength(255)
                     ->columnSpanFull()
-                    ->helperText('Where buyers meet sellers. Free text: no map, no route, no coordinates.'),
-                FileUpload::make('cover_photo_path')
-                    ->label('Cover photo')
-                    ->image()
-                    ->disk(config('anihow.listing_disk', 'public'))
-                    ->directory('farms')
-                    ->visibility('public')
-                    ->maxSize(2048)
+                    ->helperText('Shown publicly in the app. Where buyers meet sellers.'),
+                TextInput::make('latitude')
+                    ->label('Latitude')
+                    ->numeric()
+                    ->minValue(4)
+                    ->maxValue(22)
+                    ->nullable()
+                    ->rules(['required_with:longitude'])
+                    ->helperText(FarmPin::HELPER),
+                TextInput::make('longitude')
+                    ->label('Longitude')
+                    ->numeric()
+                    ->minValue(116)
+                    ->maxValue(127)
+                    ->nullable()
+                    ->rules(['required_with:latitude'])
+                    ->helperText(FarmPin::HELPER),
+                Placeholder::make('open_in_google_maps')
+                    ->label('Open in Google Maps')
+                    ->content('Open in Google Maps')
+                    ->url(fn (?Farm $record): ?string => $record?->mapsUrl())
+                    ->openUrlInNewTab()
+                    ->dehydrated(false)
+                    ->visible(fn (?Farm $record): bool => $record?->hasPin() ?? false)
                     ->columnSpanFull(),
+                ImageVariants::bindUpload(
+                    FileUpload::make('cover_photo_path')
+                        ->label('Cover photo')
+                        ->image()
+                        ->disk(config('anihow.listing_disk', 'public'))
+                        ->directory('farms')
+                        ->visibility('public')
+                        ->maxSize(2048)
+                        ->columnSpanFull()
+                        ->helperText('Shown publicly in the app.'),
+                    'farms',
+                ),
                 Toggle::make('is_active')
                     ->label('Active')
                     ->default(true),
+
+                TextInput::make('organic_certifier')
+                    ->label('Organic certifier')
+                    ->maxLength(150)
+                    ->visible(fn (?Farm $record): bool => self::canManageOrganicCertification($record))
+                    ->dehydrated(fn (?Farm $record): bool => self::canManageOrganicCertification($record))
+                    ->helperText('The body that certified this farm. Leave blank when the farm is not certified.'),
+                TextInput::make('organic_certificate_no')
+                    ->label('Organic certificate number')
+                    ->maxLength(100)
+                    ->visible(fn (?Farm $record): bool => self::canManageOrganicCertification($record))
+                    ->dehydrated(fn (?Farm $record): bool => self::canManageOrganicCertification($record)),
+                DatePicker::make('organic_certified_until')
+                    ->label('Organic certificate valid until')
+                    ->native(false)
+                    ->visible(fn (?Farm $record): bool => self::canManageOrganicCertification($record))
+                    ->dehydrated(fn (?Farm $record): bool => self::canManageOrganicCertification($record))
+                    ->helperText('A listing may say certified organic only while this date is today or later, and the certifier and number are both filled in.'),
             ]);
+    }
+
+    private static function canManageOrganicCertification(?Farm $record): bool
+    {
+        $user = auth()->user();
+
+        if ($user === null) {
+            return false;
+        }
+
+        return app(FarmPolicy::class)->manageOrganicCertification($user, $record);
     }
 }

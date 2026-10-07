@@ -2,10 +2,15 @@
 
 namespace Tests\Feature\Api;
 
+use App\Enums\ListingStatus;
 use App\Enums\TawadType;
+use App\Models\Listing;
 use App\Models\TawadRule;
+use App\Support\ListingStorage;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\CreatesMarketplaceActors;
 use Tests\TestCase;
 
@@ -37,6 +42,24 @@ class FarmerListingApiTest extends TestCase
             ->assertJsonValidationErrors(['title', 'crop_type_id']);
     }
 
+    public function test_farmer_without_a_farm_cannot_create_a_listing(): void
+    {
+        $farmer = $this->farmer();
+        $farmer->forceFill(['farm_id' => null])->save();
+        $cropType = $this->cropType();
+
+        $this->asUser($farmer)
+            ->postJson('/api/farmer/listings', [
+                'title' => 'Fresh kamatis, hand picked',
+                'crop_type_id' => $cropType->id,
+                'unit' => 'kg',
+                'price_per_unit' => 30,
+                'quantity_available' => 20,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['farm']);
+    }
+
     public function test_farmer_can_create_and_update_a_listing_with_the_live_body(): void
     {
         $farmer = $this->farmer();
@@ -45,6 +68,7 @@ class FarmerListingApiTest extends TestCase
         $create = $this->asUser($farmer)->postJson('/api/farmer/listings', [
             'title' => 'Fresh kamatis, hand picked',
             'crop_type_id' => $cropType->id,
+            'unit' => 'kg',
             'price_per_unit' => 30,
             'quantity_available' => 20,
             'description' => 'Morning harvest.',
@@ -69,6 +93,42 @@ class FarmerListingApiTest extends TestCase
             'title' => 'Kamatis, bagong ani',
             'crop_type_id' => $cropType->id,
         ]);
+    }
+
+    public function test_farmer_can_create_and_replace_a_listing_photo(): void
+    {
+        Storage::fake(ListingStorage::diskName());
+
+        $farmer = $this->farmer();
+        $cropType = $this->cropType();
+
+        $create = $this->asUser($farmer)->post('/api/farmer/listings', [
+            'title' => 'Fresh kamatis, hand picked',
+            'crop_type_id' => $cropType->id,
+            'unit' => 'kg',
+            'price_per_unit' => 30,
+            'quantity_available' => 20,
+            'image' => UploadedFile::fake()->image('produce.jpg'),
+        ], ['Accept' => 'application/json']);
+
+        $create->assertCreated()
+            ->assertJsonPath('data.title', 'Fresh kamatis, hand picked');
+        $this->assertNotEmpty($create->json('data.image_url'));
+
+        $listingId = $create->json('data.id');
+        $stored = Listing::query()->findOrFail($listingId);
+        $this->assertNotNull($stored->image_path);
+        Storage::disk(ListingStorage::diskName())->assertExists($stored->image_path);
+
+        $this->asUser($farmer)->post("/api/farmer/listings/{$listingId}", [
+            'title' => 'Kamatis, bagong ani',
+            'image' => UploadedFile::fake()->image('replacement.jpg'),
+        ], ['Accept' => 'application/json'])->assertOk();
+
+        $replaced = $stored->fresh();
+        $this->assertNotSame($stored->image_path, $replaced->image_path);
+        Storage::disk(ListingStorage::diskName())->assertExists($replaced->image_path);
+        Storage::disk(ListingStorage::diskName())->assertMissing($stored->image_path);
     }
 
     public function test_seller_cannot_view_or_update_another_sellers_listing(): void
@@ -184,5 +244,25 @@ class FarmerListingApiTest extends TestCase
         $this->assertFalse($rule->fresh()->is_active);
         $this->assertNotNull($rule->fresh()->ended_at);
         $this->assertNull($listing->fresh()->activeTawadRule);
+    }
+
+    public function test_a_taken_down_listing_cannot_be_turned_active_by_the_seller(): void
+    {
+        $farmer = $this->farmer();
+        $listing = $this->listingFor($farmer, [
+            'title' => 'Morning crate',
+            'is_active' => false,
+            'status' => ListingStatus::TakenDown,
+        ]);
+
+        $this->asUser($farmer)
+            ->patchJson('/api/farmer/listings/'.$listing->id.'/active', [
+                'is_active' => true,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('is_active');
+
+        $this->assertFalse($listing->fresh()->is_active);
+        $this->assertSame(ListingStatus::TakenDown, $listing->fresh()->status);
     }
 }

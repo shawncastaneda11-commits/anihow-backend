@@ -1,0 +1,7 @@
+{
+  "API_BASE_URL": "https://anihow.tech",
+  "REVERB_HOST": "anihow.tech",
+  "REVERB_PORT": "443",
+  "REVERB_SCHEME": "wss",
+  "REVERB_APP_KEY": "anihow-reverb-key"
+}

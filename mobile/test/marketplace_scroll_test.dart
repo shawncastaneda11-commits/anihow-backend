@@ -256,70 +256,70 @@ void main() {
     expect(api.calls.last['page'], isNull);
   });
 
-  testWidgets(
-    'the fair mix hint follows the selected chip and the actions stay on screen',
-    (tester) async {
-      const hint = 'Every farm takes turns at the top. Changes daily.';
-      for (final size in [const Size(360, 640), const Size(411, 800)]) {
-        await tester.binding.setSurfaceSize(size);
-        addTearDown(() => tester.binding.setSurfaceSize(null));
-        SharedPreferences.setMockInitialValues({});
+  testWidgets('sort chips stay on screen and none is highlighted by default', (
+    tester,
+  ) async {
+    for (final size in [const Size(360, 640), const Size(411, 800)]) {
+      await tester.binding.setSurfaceSize(size);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      SharedPreferences.setMockInitialValues({});
 
-        await tester.pumpWidget(_app(_MarketApi(listings: [_listing(1)])));
-        await tester.pumpAndSettle();
-        await tester.tap(find.byKey(const Key('marketplace-filter')));
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(_app(_MarketApi(listings: [_listing(1)])));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('marketplace-filter')));
+      await tester.pumpAndSettle();
 
-        expect(find.text(hint), findsOneWidget);
-        expect(tester.takeException(), isNull);
+      expect(find.text('Fair mix'), findsNothing);
+      expect(tester.takeException(), isNull);
 
-        final scroll = tester.state<ScrollableState>(
-          find.descendant(
-            of: find.byType(SingleChildScrollView),
-            matching: find.byType(Scrollable),
-          ),
-        );
-        expect(scroll.position.pixels, 0);
+      final scroll = tester.state<ScrollableState>(
+        find.descendant(
+          of: find.byType(SingleChildScrollView),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      expect(scroll.position.pixels, 0);
 
-        void expectVisible(Finder finder) {
-          expect(finder.hitTestable(), findsOneWidget);
-          final rect = tester.getRect(finder);
-          expect(rect.top, greaterThanOrEqualTo(0));
-          expect(rect.bottom, lessThanOrEqualTo(size.height));
-        }
-
-        expectVisible(find.text('Sort'));
-        expectVisible(find.byKey(const Key('sort-fair')));
-        expectVisible(find.byKey(const Key('sort-newest')));
-        expectVisible(find.widgetWithText(ChoiceChip, 'Price low-high'));
-        expectVisible(find.widgetWithText(ChoiceChip, 'Price high-low'));
-        expectVisible(find.widgetWithText(ChoiceChip, 'Availability'));
-        expectVisible(find.widgetWithText(ChoiceChip, 'Nearest'));
-        expectVisible(find.text('Growing method'));
-        expectVisible(find.widgetWithText(ChoiceChip, 'Certified organic'));
-        expectVisible(find.widgetWithText(ChoiceChip, 'Naturally grown'));
-        expectVisible(find.text('Clear'));
-        expectVisible(find.text('Apply'));
-
-        final fair = tester.widget<ChoiceChip>(
-          find.byKey(const Key('sort-fair')),
-        );
-        expect(fair.materialTapTargetSize, MaterialTapTargetSize.padded);
-
-        await tester.tap(find.byKey(const Key('sort-newest')));
-        await tester.pumpAndSettle();
-        expect(find.text(hint), findsNothing);
-        expect(scroll.position.pixels, 0);
-
-        await tester.tap(find.byKey(const Key('sort-fair')));
-        await tester.pumpAndSettle();
-        expect(find.text(hint), findsOneWidget);
-
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pumpAndSettle();
+      void expectVisible(Finder finder) {
+        expect(finder.hitTestable(), findsOneWidget);
+        final rect = tester.getRect(finder);
+        expect(rect.top, greaterThanOrEqualTo(0));
+        expect(rect.bottom, lessThanOrEqualTo(size.height));
       }
-    },
-  );
+
+      expectVisible(find.text('Sort'));
+      expect(find.byKey(const Key('sort-fair')), findsNothing);
+      expectVisible(find.byKey(const Key('sort-newest')));
+      expectVisible(find.widgetWithText(ChoiceChip, 'Price low-high'));
+      expectVisible(find.widgetWithText(ChoiceChip, 'Price high-low'));
+      expectVisible(find.widgetWithText(ChoiceChip, 'Availability'));
+      expectVisible(find.widgetWithText(ChoiceChip, 'Nearest'));
+      expectVisible(find.text('Growing method'));
+      expectVisible(find.widgetWithText(ChoiceChip, 'Certified organic'));
+      expectVisible(find.widgetWithText(ChoiceChip, 'Naturally grown'));
+      expectVisible(find.text('Clear'));
+      expectVisible(find.text('Apply'));
+
+      final newest = tester.widget<ChoiceChip>(
+        find.byKey(const Key('sort-newest')),
+      );
+      expect(newest.selected, isFalse);
+      expect(newest.materialTapTargetSize, MaterialTapTargetSize.padded);
+
+      await tester.tap(find.byKey(const Key('sort-newest')));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<ChoiceChip>(find.byKey(const Key('sort-newest')))
+            .selected,
+        isTrue,
+      );
+      expect(scroll.position.pixels, 0);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    }
+  });
 
   testWidgets('category and crop chips combine', (tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 900));

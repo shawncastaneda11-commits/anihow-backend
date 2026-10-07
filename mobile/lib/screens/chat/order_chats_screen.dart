@@ -179,12 +179,15 @@ class _OrderChatsScreenState extends State<OrderChatsScreen> {
                 return _ChatCard(
                   order: order,
                   title: order.chatPeerTitle(viewingAsSeller: widget.forSeller),
-                  onTap: () {
-                    Navigator.of(context).push(
+                  onTap: () async {
+                    await Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) => OrderChatScreen(order: order),
                       ),
                     );
+                    if (mounted) {
+                      await _reload();
+                    }
                   },
                 );
               }
@@ -202,9 +205,13 @@ class _OrderChatsScreenState extends State<OrderChatsScreen> {
                       ),
                     ),
                   );
-                  if (removed == true && mounted) {
+                  if (!mounted) {
+                    return;
+                  }
+                  if (removed == true) {
                     setState(() => _hiddenLatestAt[chat.id] = chat.latestAt);
                   }
+                  await _reload();
                 },
                 onAskRemove: () => confirmRemoveStallChat(context, title),
                 onRemove: () => _hideAndDelete(chat),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_strings.dart';
+import '../../models/models.dart';
 import '../../state/auth_controller.dart';
 import 'order_chat_screen.dart';
 import 'stall_chat_screen.dart';
@@ -15,7 +17,15 @@ Future<void> openChatWithStall(
 }) async {
   final api = context.read<AuthController>().api;
   if (listingId == null) {
-    final orders = await api.buyerOrders();
+    final List<OrderRecord> orders;
+    try {
+      orders = await api.buyerOrders();
+    } catch (_) {
+      if (context.mounted) {
+        _showChatError(context);
+      }
+      return;
+    }
     final open = orders
         .where(
           (order) =>
@@ -39,7 +49,15 @@ Future<void> openChatWithStall(
     }
   }
 
-  final chat = await api.openStallChat(sellerId);
+  final StallChat chat;
+  try {
+    chat = await api.openStallChat(sellerId);
+  } catch (_) {
+    if (context.mounted) {
+      _showChatError(context);
+    }
+    return;
+  }
   if (!context.mounted) {
     return;
   }
@@ -47,5 +65,14 @@ Future<void> openChatWithStall(
     MaterialPageRoute<void>(
       builder: (_) => StallChatScreen(chat: chat, attachListingId: listingId),
     ),
+  );
+}
+
+void _showChatError(BuildContext context) {
+  if (!context.mounted) {
+    return;
+  }
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(AppStrings.of(context).chatOpenFailed)),
   );
 }

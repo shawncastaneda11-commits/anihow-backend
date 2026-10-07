@@ -402,10 +402,18 @@ class _OrderCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Flexible(
-                        child: StatusPill.order(
-                          order.status,
-                          strings: s,
-                          fulfillmentPreference: order.fulfillmentPreference,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            StatusPill.order(
+                              order.status,
+                              strings: s,
+                              fulfillmentPreference:
+                                  order.fulfillmentPreference,
+                            ),
+                            const SizedBox(height: 6),
+                            StatusPill.payment(order.paymentMethod, strings: s),
+                          ],
                         ),
                       ),
                     ],
@@ -679,7 +687,14 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
             ),
           ),
         ),
-        if (order.isReady) ...[
+        if (order.isReady && order.paymentMethod == 'online_transfer') ...[
+          const SizedBox(height: AniHowSpace.cardGap),
+          AniHowHintCard(
+            icon: Icons.qr_code_2_outlined,
+            title: s.onlinePayment,
+            tone: AniHowHintTone.brand,
+          ),
+        ] else if (order.isReady) ...[
           const SizedBox(height: AniHowSpace.cardGap),
           AniHowHintCard(
             icon: Icons.payments_outlined,

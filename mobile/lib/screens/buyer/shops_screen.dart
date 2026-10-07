@@ -47,6 +47,7 @@ class _ShopsScreenState extends State<ShopsScreen> {
   bool _locationUnavailable = false;
   bool _locationNoFix = false;
   bool _locating = false;
+  int _requestId = 0;
   late Future<List<ShopProfile>> _future;
 
   @override
@@ -62,15 +63,26 @@ class _ShopsScreenState extends State<ShopsScreen> {
   }
 
   Future<void> _reload() async {
+    final request = ++_requestId;
     final future = context.read<AuthController>().api.buyerShops(
       sort: _sort == 'nearest' ? 'nearest' : null,
       nearLat: _sort == 'nearest' ? _nearLat : null,
       nearLng: _sort == 'nearest' ? _nearLng : null,
     );
+    if (!mounted || request != _requestId) {
+      return;
+    }
     setState(() {
       _future = future;
     });
-    await future;
+    try {
+      await future;
+    } catch (_) {
+      // FutureBuilder shows the error for the request that is still current.
+    }
+    if (!mounted || request != _requestId) {
+      return;
+    }
   }
 
   Future<void> _applySort(String value) async {
@@ -238,10 +250,13 @@ class _ShopsScreenState extends State<ShopsScreen> {
             _sort == 'nearest' && !_locationUnavailable && _nearLat != null;
         final anyPin = shops.any(
           (shop) =>
-              shop.farmId != null && shop.farmIsActive && shop.distanceKm != null,
+              shop.farmId != null &&
+              shop.farmIsActive &&
+              shop.distanceKm != null,
         );
         final muted = Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.68),
+          color: Theme.of(context).colorScheme.onSurface
+              .withValues(alpha: 0.68),
         );
 
         return Column(
@@ -497,12 +512,8 @@ class _FarmCard extends StatelessWidget {
                   key: Key('farm-follow-${farm.id}'),
                   tooltip: followed ? s.followingFarm : s.followFarm,
                   onPressed: onFollow,
-                  style: IconButton.styleFrom(
-                    minimumSize: const Size(48, 48),
-                  ),
-                  icon: Icon(
-                    followed ? Icons.favorite : Icons.favorite_border,
-                  ),
+                  style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
+                  icon: Icon(followed ? Icons.favorite : Icons.favorite_border),
                   color: followed ? theme.colorScheme.error : muted,
                 ),
               Icon(Icons.chevron_right, color: muted),

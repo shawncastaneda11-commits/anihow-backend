@@ -99,100 +99,103 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-      appBar: AppBar(
-        title: Text(s.orderHistory),
-        actions: const [NotificationBellButton()],
-        bottom: TabBar(
-          labelColor: Colors.white,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w700),
-          unselectedLabelColor: Colors.white.withValues(alpha: 0.75),
-          indicator: const UnderlineTabIndicator(
-            borderSide: BorderSide(color: Colors.white, width: 3),
+        appBar: AppBar(
+          title: Text(s.orderHistory),
+          actions: const [NotificationBellButton()],
+          bottom: TabBar(
+            labelColor: Colors.white,
+            labelStyle: const TextStyle(fontWeight: FontWeight.w700),
+            unselectedLabelColor: Colors.white.withValues(alpha: 0.75),
+            indicator: const UnderlineTabIndicator(
+              borderSide: BorderSide(color: Colors.white, width: 3),
+            ),
+            dividerColor: Colors.transparent,
+            tabs: [
+              Tab(text: s.ordersTab),
+              Tab(text: s.reservationsTab),
+            ],
           ),
-          dividerColor: Colors.transparent,
-          tabs: [
-            Tab(text: s.ordersTab),
-            Tab(text: s.reservationsTab),
+        ),
+        body: TabBarView(
+          children: [
+            Column(
+              children: [
+                const UnverifiedEmailBanner(),
+                Expanded(
+                  child: AsyncView<List<OrderRecord>>(
+                    future: _future,
+                    onRetry: _reload,
+                    emptyMessage: AppStrings.of(context).noOrders,
+                    builder: (context, items) {
+                      return RefreshIndicator(
+                        onRefresh: _reload,
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(
+                            AniHowSpace.screen,
+                            AniHowSpace.screen,
+                            AniHowSpace.screen,
+                            AniHowSpace.screen + AniHowSpace.section,
+                          ),
+                          itemCount: items.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: AniHowSpace.cardGap),
+                          itemBuilder: (context, index) => BuyerOrderCard(
+                            order: items[index],
+                            onChanged: (_) => _reload(),
+                            onTap: () async {
+                              await Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => BuyerOrderDetailScreen(
+                                    order: items[index],
+                                  ),
+                                ),
+                              );
+                              if (mounted) {
+                                await _reload();
+                              }
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+            Column(
+              children: [
+                const UnverifiedEmailBanner(),
+                Expanded(
+                  child: AsyncView<List<ReservationRecord>>(
+                    future: _reservations,
+                    onRetry: _reloadReservations,
+                    emptyMessage: s.noReservations,
+                    builder: (context, items) {
+                      return BuyerReservationsList(
+                        reservations: items,
+                        onCancel: _cancelReservation,
+                        onOpenOrder: (reservation) {
+                          final orderId = reservation.orderId;
+                          if (orderId == null) {
+                            return;
+                          }
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) =>
+                                  BuyerOrderDetailScreen(orderId: orderId),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
-      body: TabBarView(
-        children: [
-          Column(
-        children: [
-          const UnverifiedEmailBanner(),
-          Expanded(
-            child: AsyncView<List<OrderRecord>>(
-        future: _future,
-        onRetry: _reload,
-        emptyMessage: AppStrings.of(context).noOrders,
-        builder: (context, items) {
-          return RefreshIndicator(
-            onRefresh: _reload,
-            child: ListView.separated(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(
-              AniHowSpace.screen,
-              AniHowSpace.screen,
-              AniHowSpace.screen,
-              AniHowSpace.screen + AniHowSpace.section,
-            ),
-            itemCount: items.length,
-            separatorBuilder: (_, _) => const SizedBox(height: AniHowSpace.cardGap),
-            itemBuilder: (context, index) => BuyerOrderCard(
-              order: items[index],
-              onChanged: (_) => _reload(),
-              onTap: () async {
-                await Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => BuyerOrderDetailScreen(order: items[index]),
-                  ),
-                );
-                if (mounted) {
-                  await _reload();
-                }
-              },
-            ),
-          ),
-          );
-        },
-            ),
-          ),
-        ],
-      ),
-          Column(
-            children: [
-              const UnverifiedEmailBanner(),
-              Expanded(
-                child: AsyncView<List<ReservationRecord>>(
-                  future: _reservations,
-                  onRetry: _reloadReservations,
-                  emptyMessage: s.noReservations,
-                  builder: (context, items) {
-                    return BuyerReservationsList(
-                      reservations: items,
-                      onCancel: _cancelReservation,
-                      onOpenOrder: (reservation) {
-                        final orderId = reservation.orderId;
-                        if (orderId == null) {
-                          return;
-                        }
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) =>
-                                BuyerOrderDetailScreen(orderId: orderId),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ),
     );
   }
 }
@@ -240,10 +243,7 @@ class _BuyerOrderCardState extends State<BuyerOrderCard> {
       color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
     );
     final when = order.placedAt == null ? null : relativeTime(order.placedAt);
-    final summary = [
-      AniHowMoney.peso(order.total),
-      ?when,
-    ].join('  ·  ');
+    final summary = [AniHowMoney.peso(order.total), ?when].join('  ·  ');
 
     return Card(
       child: Padding(
@@ -266,7 +266,10 @@ class _BuyerOrderCardState extends State<BuyerOrderCard> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(order.stallName, style: theme.textTheme.titleMedium),
+                            Text(
+                              order.stallName,
+                              style: theme.textTheme.titleMedium,
+                            ),
                             const SizedBox(height: 4),
                             Text(summary, style: muted),
                             if (tawadIsActive(order.tawadDisplay))
@@ -287,10 +290,18 @@ class _BuyerOrderCardState extends State<BuyerOrderCard> {
                       ),
                       const SizedBox(width: 8),
                       Flexible(
-                        child: StatusPill.order(
-                          order.status,
-                          strings: s,
-                          fulfillmentPreference: order.fulfillmentPreference,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            StatusPill.order(
+                              order.status,
+                              strings: s,
+                              fulfillmentPreference:
+                                  order.fulfillmentPreference,
+                            ),
+                            const SizedBox(height: 6),
+                            StatusPill.payment(order.paymentMethod, strings: s),
+                          ],
                         ),
                       ),
                     ],
@@ -387,9 +398,7 @@ class BuyerReservationsList extends StatelessWidget {
         for (final reservation in active)
           _ReservationTile(
             reservation: reservation,
-            onCancel: onCancel == null
-                ? null
-                : () => onCancel!(reservation),
+            onCancel: onCancel == null ? null : () => onCancel!(reservation),
           ),
         if (history.isNotEmpty) ...[
           const SizedBox(height: 12),
@@ -407,7 +416,10 @@ class BuyerReservationsList extends StatelessWidget {
   }
 }
 
-StatusPill _reservationStatus(AppStrings strings, ReservationRecord reservation) {
+StatusPill _reservationStatus(
+  AppStrings strings,
+  ReservationRecord reservation,
+) {
   if (reservation.isActive) {
     return StatusPill(
       label: strings.activeReservations,
@@ -441,7 +453,8 @@ class _ReservationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     final unit = reservation.unit ?? '';
-    final quantity = reservation.quantity == reservation.quantity.roundToDouble()
+    final quantity =
+        reservation.quantity == reservation.quantity.roundToDouble()
         ? reservation.quantity.toStringAsFixed(0)
         : reservation.quantity.toString();
 
@@ -461,9 +474,7 @@ class _ReservationTile extends StatelessWidget {
         trailing: onCancel == null
             ? null
             : TextButton(
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(48, 48),
-                ),
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
                 onPressed: onCancel,
                 child: Text(s.cancelReservation),
               ),

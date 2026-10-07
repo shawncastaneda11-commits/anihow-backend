@@ -71,13 +71,17 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
     if (_realtime != null) {
       return;
     }
-    final realtime = StallChatRealtime(
-      api: context.read<AuthController>().api,
-      conversationId: chat.id,
-    );
-    _realtime = realtime;
-    _liveSub = realtime.messages.listen(_appendIfNew);
-    await realtime.connect();
+    try {
+      final realtime = StallChatRealtime(
+        api: context.read<AuthController>().api,
+        conversationId: chat.id,
+      );
+      _realtime = realtime;
+      _liveSub = realtime.messages.listen(_appendIfNew);
+      await realtime.connect();
+    } catch (_) {
+      // A dead websocket must not block the thread. Polling still runs.
+    }
   }
 
   Future<void> _reload() async {
@@ -107,9 +111,6 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
       if (!mounted) {
         return;
       }
-      if (chat != null) {
-        await _listen(chat);
-      }
       if (!mounted) {
         return;
       }
@@ -122,7 +123,10 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
         _error = null;
       });
       _scrollToOrder();
-    } on ApiException catch (error) {
+      if (chat != null) {
+        unawaited(_listen(chat));
+      }
+    } catch (error) {
       if (!mounted) {
         return;
       }
@@ -145,19 +149,11 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
         if (chat == null || !mounted) {
           return;
         }
-        _chat = chat;
-        await _listen(chat);
-        final items = await api.stallMessages(chat.id);
         if (!mounted) {
           return;
         }
-        setState(() {
-          _messages
-            ..clear()
-            ..addAll(items);
-        });
-        _scrollToOrder();
-        return;
+        setState(() => _chat = chat);
+        unawaited(_listen(chat));
       }
 
       final newer = await api.stallMessages(
@@ -167,7 +163,7 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
       for (final message in newer) {
         _appendIfNew(message);
       }
-    } on ApiException {
+    } catch (_) {
       // Quiet fallback; the composer stays usable.
     }
   }
@@ -271,7 +267,7 @@ class _OrderChatScreenState extends State<OrderChatScreen> {
         return;
       }
       _chat = chat;
-      await _listen(chat);
+      unawaited(_listen(chat));
       final message = await api.sendStallMessage(
         chat.id,
         body: body,

@@ -1,5 +1,8 @@
 import 'package:anihow/models/models.dart';
 import 'package:anihow/screens/buyer/order_history_screen.dart';
+import 'package:anihow/screens/farmer/farmer_orders_screen.dart';
+import 'package:anihow/services/api_client.dart';
+import 'package:anihow/state/auth_controller.dart';
 import 'package:anihow/state/preferences_controller.dart';
 import 'package:anihow/theme/anihow_theme.dart';
 import 'package:flutter/material.dart';
@@ -14,9 +17,8 @@ Widget _app({required Widget home, double textScale = 1}) {
       theme: AniHowTheme.light(),
       builder: (context, child) {
         return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler: TextScaler.linear(textScale),
-          ),
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         );
       },
@@ -26,38 +28,43 @@ Widget _app({required Widget home, double textScale = 1}) {
 }
 
 void main() {
-  testWidgets('buyer order address is wider than the old list-tile column at font 1.3', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(360, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+  testWidgets(
+    'buyer order address is wider than the old list-tile column at font 1.3',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    const address = 'Manggahan, General Trias';
-    await tester.pumpWidget(
-      _app(
-        textScale: 1.3,
-        home: const BuyerOrderCard(
-          order: OrderRecord(
-            id: 1,
-            status: 'completed',
-            statusLabel: 'Completed',
-            total: '160',
-            subtotal: '180',
-            tawadTotal: '20',
-            items: [],
-            orderNumber: 'AH-260921-MQ2V6',
-            shopName: 'Mang Tonyo Farm',
-            location: address,
+      const address = 'Manggahan, General Trias';
+      await tester.pumpWidget(
+        _app(
+          textScale: 1.3,
+          home: const BuyerOrderCard(
+            order: OrderRecord(
+              id: 1,
+              status: 'completed',
+              statusLabel: 'Completed',
+              total: '160',
+              subtotal: '180',
+              tawadTotal: '20',
+              items: [],
+              orderNumber: 'AH-260921-MQ2V6',
+              shopName: 'Mang Tonyo Farm',
+              location: address,
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    final paragraph = tester.renderObject<RenderParagraph>(find.text(address));
-    expect(paragraph.constraints.maxWidth, greaterThan(160));
-  });
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.text(address),
+      );
+      expect(paragraph.constraints.maxWidth, greaterThan(160));
+    },
+  );
 
-  testWidgets('buyer order card shows seller unresponsive in English', (tester) async {
+  testWidgets('buyer order card shows seller unresponsive in English', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _app(
         home: const BuyerOrderCard(
@@ -77,7 +84,9 @@ void main() {
     expect(find.text('Seller unresponsive'), findsOneWidget);
   });
 
-  testWidgets('buyer order card shows the seller cancellation note', (tester) async {
+  testWidgets('buyer order card shows the seller cancellation note', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _app(
         home: const BuyerOrderCard(
@@ -137,4 +146,66 @@ void main() {
 
     expect(find.text('Chat with stall'), findsNothing);
   });
+
+  testWidgets('an online order shows the online payment pill', (tester) async {
+    await tester.pumpWidget(
+      _app(
+        home: const BuyerOrderCard(
+          order: OrderRecord(
+            id: 9,
+            status: 'ready',
+            statusLabel: 'Ready',
+            total: '80',
+            items: [],
+            shopName: 'Mang Tonyo Farm',
+            paymentMethod: 'online_transfer',
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Online payment'), findsOneWidget);
+    expect(find.text('Cash'), findsNothing);
+  });
+
+  testWidgets('a ready online order hides the farmer cash card', (
+    tester,
+  ) async {
+    const order = OrderRecord(
+      id: 4,
+      status: 'ready',
+      statusLabel: 'Ready',
+      total: '80',
+      items: [],
+      counterpartyName: 'Ana',
+      paymentMethod: 'online_transfer',
+    );
+    final auth = AuthController(api: _OrderApi(order))..restoring = false;
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => PreferencesController()),
+          ChangeNotifierProvider.value(value: auth),
+        ],
+        child: MaterialApp(
+          theme: AniHowTheme.light(),
+          home: const FarmerOrderDetailScreen(order: order),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cash at meetup'), findsNothing);
+    expect(find.text("Online payment (seller's QR)"), findsWidgets);
+  });
+}
+
+class _OrderApi extends ApiClient {
+  _OrderApi(this.order) : super(onUnauthorized: () {});
+
+  final OrderRecord order;
+
+  @override
+  Future<OrderRecord> farmerOrder(int id) async => order;
 }

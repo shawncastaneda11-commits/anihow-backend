@@ -92,6 +92,17 @@ if [[ -f /root/.ssh/authorized_keys ]]; then
 fi
 install -d -m 755 -o anihow -g anihow /var/www/anihow
 
+php_limits="$(cat <<'EOF'
+upload_max_filesize = 20M
+post_max_size = 25M
+memory_limit = 512M
+max_execution_time = 60
+date.timezone = Asia/Manila
+EOF
+)"
+printf '%s\n' "${php_limits}" > /etc/php/8.4/fpm/conf.d/99-anihow.ini
+printf '%s\n' "${php_limits}" > /etc/php/8.4/cli/conf.d/99-anihow.ini
+
 pool="/etc/php/8.4/fpm/pool.d/www.conf"
 sed -i 's/^user = .*/user = anihow/' "${pool}"
 sed -i 's/^group = .*/group = anihow/' "${pool}"

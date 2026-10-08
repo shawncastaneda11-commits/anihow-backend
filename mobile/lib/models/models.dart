@@ -17,6 +17,7 @@ class UserAccount {
     this.farmId,
     this.farmName,
     this.farmIsOrganicCertified = false,
+    this.mustChangePassword = false,
   });
 
   final int id;
@@ -32,6 +33,26 @@ class UserAccount {
   final int? farmId;
   final String? farmName;
   final bool farmIsOrganicCertified;
+  final bool mustChangePassword;
+
+  UserAccount withMustChangePassword(bool value) {
+    return UserAccount(
+      id: id,
+      name: name,
+      email: email,
+      roles: roles,
+      permissions: permissions,
+      phone: phone,
+      location: location,
+      shopName: shopName,
+      avatarUrl: avatarUrl,
+      emailVerifiedAt: emailVerifiedAt,
+      farmId: farmId,
+      farmName: farmName,
+      farmIsOrganicCertified: farmIsOrganicCertified,
+      mustChangePassword: value,
+    );
+  }
 
   factory UserAccount.fromJson(Map<String, dynamic> json) {
     final farmJson = json['farm'];
@@ -56,6 +77,7 @@ class UserAccount {
       farmId: ListingItem._asCount(farmMap?['id']),
       farmName: farmMap?['name'] as String?,
       farmIsOrganicCertified: farmMap?['is_organic_certified'] == true,
+      mustChangePassword: json['must_change_password'] == true,
     );
   }
 
@@ -449,7 +471,9 @@ class ListingItem {
       minOrderQuantity: _asDouble(json['min_order_quantity']) ?? 1,
       orderStep: _asDouble(json['order_step']) ?? 1,
       sellableQuantity: json['sellable_quantity']?.toString(),
-      acceptsOnlinePayment: _acceptsOnline(sellerMap?['accepts_online_payment']),
+      acceptsOnlinePayment: _acceptsOnline(
+        sellerMap?['accepts_online_payment'],
+      ),
     );
   }
 
@@ -1192,7 +1216,8 @@ class ShopProfile {
               farmMap['is_active'] == '1'),
       farmIsFavorited:
           farmMap?['is_favorited'] == true || farmMap?['is_favorited'] == 1,
-      farmFavoritesCount: ListingItem._asCount(farmMap?['favorites_count']) ?? 0,
+      farmFavoritesCount:
+          ListingItem._asCount(farmMap?['favorites_count']) ?? 0,
       farmCoverUrl: ApiConfig.mediaUrl(farmMap?['cover_photo_url'] as String?),
       acceptsOnlinePayment: ListingItem._acceptsOnline(
         json['accepts_online_payment'],
@@ -1474,8 +1499,7 @@ class FarmProfile {
           .toList(),
       latitude: ListingItem._asDouble(json['latitude']),
       longitude: ListingItem._asDouble(json['longitude']),
-      isFavorited:
-          json['is_favorited'] == true || json['is_favorited'] == 1,
+      isFavorited: json['is_favorited'] == true || json['is_favorited'] == 1,
       favoritesCount: ListingItem._asCount(json['favorites_count']) ?? 0,
     );
   }

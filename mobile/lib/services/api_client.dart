@@ -62,8 +62,16 @@ Map<String, String> listingMultipartFields(Map<String, dynamic> body) {
   };
 }
 
+bool isPasswordChangeRequired(int? statusCode, Object? data) {
+  if (statusCode != 403 || data is! Map) {
+    return false;
+  }
+
+  return data['code'] == 'password_change_required';
+}
+
 class ApiClient {
-  ApiClient({required this.onUnauthorized})
+  ApiClient({required this.onUnauthorized, this.onPasswordChangeRequired})
     : _dio = Dio(
         BaseOptions(
           baseUrl: ApiConfig.baseUrl,
@@ -98,6 +106,12 @@ class ApiClient {
           if (error.response?.statusCode == 401 && !isCredentialAttempt) {
             onUnauthorized();
           }
+          if (isPasswordChangeRequired(
+            error.response?.statusCode,
+            error.response?.data,
+          )) {
+            onPasswordChangeRequired?.call();
+          }
           handler.next(error);
         },
       ),
@@ -109,6 +123,7 @@ class ApiClient {
 
   final Dio _dio;
   final void Function() onUnauthorized;
+  final void Function()? onPasswordChangeRequired;
   String acceptLanguage = 'en';
 
   /// Set only when the user turns Remember me off. It is never written to disk.

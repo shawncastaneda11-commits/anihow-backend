@@ -20,7 +20,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rules\Password;
 use Laravel\Sanctum\HasApiTokens;
+use RuntimeException;
+use SensitiveParameter;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -52,6 +56,10 @@ use Spatie\Permission\Traits\HasRoles;
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser, MustVerifyEmail
 {
+    public const EXPIRED_TEMPORARY_PASSWORD_MESSAGE = 'Your temporary password has expired. Ask the AniHow administrator to reset it.';
+
+    private const TEMPORARY_PASSWORD_ALPHABET = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
 
@@ -60,6 +68,12 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
      * and Sanctum (token) users of this model.
      */
     protected string $guard_name = 'web';
+
+    /**
+     * True only while issueTemporaryPassword() is saving, so the password
+     * hook leaves the temporary-password flag in place.
+     */
+    public bool $issuingTemporaryPassword = false;
 
     /**
      * @return array<string, string>
@@ -73,11 +87,22 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             'accepts_online_payment' => 'boolean',
             'approved_at' => 'datetime',
             'suspended_at' => 'datetime',
+            'must_change_password' => 'boolean',
+            'temporary_password_expires_at' => 'datetime',
         ];
     }
 
     protected static function booted(): void
     {
+        static::saving(function (User $user): void {
+            if ($user->issuingTemporaryPassword || ! $user->isDirty('password')) {
+                return;
+            }
+
+            $user->must_change_password = false;
+            $user->temporary_password_expires_at = null;
+        });
+
         static::updating(function (User $user): void {
             $images = app(ImageVariants::class);
 
@@ -100,6 +125,77 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
      * Super Admin and Content Editor share one panel, gated per resource by
      * policy. Farmer-Sellers and Buyers use the Android app only.
      */
+    /**
+     * Replace the password with a one-time temporary password, force a change
+     * at the next sign-in, and sign the account out of the app.
+     */
+    public function issueTemporaryPassword(): string
+    {
+        $plain = $this->generateTemporaryPassword();
+        $days = (int) config('anihow.auth.temporary_password_days', 7);
+
+        $this->issuingTemporaryPassword = true;
+
+        try {
+            $this->forceFill([
+                'password' => $plain,
+                'must_change_password' => true,
+                'temporary_password_expires_at' => now()->addDays($days),
+            ])->save();
+        } finally {
+            $this->issuingTemporaryPassword = false;
+        }
+
+        $this->tokens()->delete();
+
+        return $plain;
+    }
+
+    public function hasExpiredTemporaryPassword(): bool
+    {
+        return $this->must_change_password
+            && $this->temporary_password_expires_at !== null
+            && $this->temporary_password_expires_at->isPast();
+    }
+
+    public function temporaryPasswordNotice(#[SensitiveParameter] string $plainPassword): string
+    {
+        $days = (int) config('anihow.auth.temporary_password_days', 7);
+
+        return $plainPassword."\n\n".$this->email."\n\nGive this to the user in person. It expires in {$days} days and must be changed at first sign-in.";
+    }
+
+    private function generateTemporaryPassword(): string
+    {
+        $alphabet = self::TEMPORARY_PASSWORD_ALPHABET;
+        $last = strlen($alphabet) - 1;
+
+        for ($attempt = 0; $attempt < 20; $attempt++) {
+            $chars = '';
+
+            for ($index = 0; $index < 12; $index++) {
+                $chars .= $alphabet[random_int(0, $last)];
+            }
+
+            if (! preg_match('/[a-z]/', $chars) || ! preg_match('/[A-Z]/', $chars) || ! preg_match('/[2-9]/', $chars)) {
+                continue;
+            }
+
+            $plain = substr($chars, 0, 4).'-'.substr($chars, 4, 4).'-'.substr($chars, 8, 4);
+
+            $validator = Validator::make(
+                ['password' => $plain],
+                ['password' => ['required', Password::defaults()]],
+            );
+
+            if (! $validator->fails()) {
+                return $plain;
+            }
+        }
+
+        throw new RuntimeException('Could not generate a temporary password.');
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         return $this->status === UserStatus::Active
@@ -150,7 +246,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         app(SendEmailVerificationCodeAction::class)->handle($this);
     }
 
-    public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
+    public function sendPasswordResetNotification(#[SensitiveParameter] $token): void
     {
         $this->notify(new ResetPasswordNotification((string) $token));
     }

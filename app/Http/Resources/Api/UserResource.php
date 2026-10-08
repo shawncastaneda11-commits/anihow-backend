@@ -24,6 +24,7 @@ class UserResource extends JsonResource
             'avatar_url' => $this->avatarUrl(),
             'status' => $this->status->value,
             'email_verified_at' => $this->email_verified_at,
+            'must_change_password' => (bool) $this->must_change_password,
             'roles' => $this->whenLoaded('roles', fn () => $this->roles->pluck('name')->values()),
             'farm' => $this->whenLoaded(
                 'farm',

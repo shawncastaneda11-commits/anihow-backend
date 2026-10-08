@@ -45,6 +45,8 @@ class AnihowTestFixturesTest extends TestCase
             ->assertSuccessful();
 
         $this->assertSame(11, User::query()->count());
+        $this->assertSame(0, User::query()->where('must_change_password', true)->count());
+        $this->assertSame(0, User::query()->whereNotNull('temporary_password_expires_at')->count());
         $this->assertSame(3, Farm::query()->count());
         $this->assertSame(7, Listing::query()->count());
         $this->assertSame(2, Reservation::query()->count());

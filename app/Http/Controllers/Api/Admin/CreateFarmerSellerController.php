@@ -12,11 +12,12 @@ class CreateFarmerSellerController extends Controller
 {
     public function __invoke(StoreFarmerSellerRequest $request, CreateFarmerSellerAction $createFarmerSeller): JsonResponse
     {
-        $user = $createFarmerSeller->handle($request->validated());
+        $created = $createFarmerSeller->handle($request->validated());
 
-        return (new UserResource($user))
+        return (new UserResource($created['user']))
             ->additional([
                 'message' => 'Farmer-seller account created.',
+                'temporary_password' => $created['temporary_password'],
             ])
             ->response()
             ->setStatusCode(201);

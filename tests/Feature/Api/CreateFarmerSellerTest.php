@@ -36,17 +36,22 @@ class CreateFarmerSellerTest extends TestCase
 
         $response->assertCreated()
             ->assertJsonPath('data.email', 'juan@farm.ph')
-            ->assertJsonPath('data.roles.0', Role::FarmerSeller->value);
+            ->assertJsonPath('data.roles.0', Role::FarmerSeller->value)
+            ->assertJsonPath('data.must_change_password', true);
 
+        $temporaryPassword = $response->json('temporary_password');
+
+        $this->assertIsString($temporaryPassword);
         $this->assertNotNull(User::query()->where('email', 'juan@farm.ph')->value('email_verified_at'));
         $this->assertDatabaseHas('users', [
             'email' => 'juan@farm.ph',
             'status' => UserStatus::Pending->value,
+            'must_change_password' => true,
         ]);
 
         $this->postJson('/api/auth/login', [
             'email' => 'juan@farm.ph',
-            'password' => 'password123',
+            'password' => $temporaryPassword,
         ])
             ->assertUnprocessable()
             ->assertJsonPath(

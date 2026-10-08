@@ -17,6 +17,7 @@ class AuthController extends ChangeNotifier {
         notifyListeners();
         this.api.clearToken();
       },
+      onPasswordChangeRequired: requirePasswordChange,
     );
   }
 
@@ -106,6 +107,15 @@ class AuthController extends ChangeNotifier {
 
   void rememberVerificationCode(String? code) {
     pendingVerificationCode = code;
+    notifyListeners();
+  }
+
+  void requirePasswordChange() {
+    final current = user;
+    if (current == null) {
+      return;
+    }
+    user = current.withMustChangePassword(true);
     notifyListeners();
   }
 

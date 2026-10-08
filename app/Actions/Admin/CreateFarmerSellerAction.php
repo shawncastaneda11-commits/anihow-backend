@@ -5,20 +5,24 @@ namespace App\Actions\Admin;
 use App\Enums\Role;
 use App\Enums\UserStatus;
 use App\Models\User;
+use Illuminate\Support\Str;
 
 class CreateFarmerSellerAction
 {
     /**
      * Farmer-seller accounts are created (and thereby verified) by super_admin only.
+     * Any password sent by the client is ignored. The temporary password is returned
+     * once and is not stored in plain text.
      *
-     * @param  array{name: string, email: string, password: string, phone?: string|null, location?: string|null, shop_name?: string|null, bio?: string|null, contact?: string|null}  $data
+     * @param  array{name: string, email: string, phone?: string|null, location?: string|null, shop_name?: string|null, bio?: string|null, contact?: string|null}  $data
+     * @return array{user: User, temporary_password: string}
      */
-    public function handle(array $data): User
+    public function handle(array $data): array
     {
         $user = User::query()->create([
             'name' => $data['name'],
             'email' => $data['email'],
-            'password' => $data['password'],
+            'password' => Str::password(32),
             'phone' => $data['phone'] ?? null,
             'location' => $data['location'] ?? null,
             'shop_name' => $data['shop_name'] ?? null,
@@ -30,7 +34,11 @@ class CreateFarmerSellerAction
         ]);
 
         $user->assignRole(Role::FarmerSeller);
+        $temporaryPassword = $user->issueTemporaryPassword();
 
-        return $user->load('roles');
+        return [
+            'user' => $user->load('roles'),
+            'temporary_password' => $temporaryPassword,
+        ];
     }
 }

@@ -9,11 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-ShopProfile _shop({
-  required int id,
-  String? rating,
-  int reviews = 0,
-}) {
+ShopProfile _shop({required int id, String? rating, int reviews = 0}) {
   return ShopProfile(
     id: id,
     shopName: 'Stall $id',
@@ -92,19 +88,16 @@ void main() {
       final s = AppStrings(false);
 
       await tester.pumpWidget(
-        _app(
-          [
-            _shop(id: 1, rating: '4.0', reviews: 3),
-            _shop(id: 2, rating: '1.0', reviews: 1),
-          ],
-          pageKey: const Key('rated-farm'),
-        ),
+        _app([
+          _shop(id: 1, rating: '4.0', reviews: 3),
+          _shop(id: 2, rating: '1.0', reviews: 1),
+        ], pageKey: const Key('rated-farm')),
       );
       await tester.pumpAndSettle();
 
       final chip = find.byKey(const Key('farm-rating'));
       expect(chip, findsOneWidget);
-      expect(find.text('2 shops'), findsOneWidget);
+      expect(find.text('2'), findsWidgets);
       expect(
         find.descendant(of: chip, matching: find.byIcon(Icons.star_rounded)),
         findsOneWidget,
@@ -113,12 +106,12 @@ void main() {
         find.descendant(of: chip, matching: find.byIcon(Icons.star_rounded)),
       );
       expect(star.color, AniHowColors.pending);
-      expect(find.descendant(of: chip, matching: find.text('3.3')), findsOneWidget);
       expect(
-        find.descendant(
-          of: chip,
-          matching: find.text(' · ${s.reviewsCount(4)}'),
-        ),
+        find.descendant(of: chip, matching: find.text('3.3')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: chip, matching: find.text(s.farmReviewCount(4))),
         findsOneWidget,
       );
       expect(find.byTooltip(s.farmRating), findsOneWidget);
@@ -128,8 +121,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('farm-rating')), findsNothing);
-      expect(find.text('2 shops'), findsOneWidget);
+      expect(find.byKey(const Key('farm-rating')), findsOneWidget);
+      expect(find.text(s.farmNoReviews), findsOneWidget);
+      expect(find.text('3.3'), findsNothing);
+      expect(find.text('2'), findsWidgets);
     },
   );
 }

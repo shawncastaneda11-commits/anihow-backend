@@ -97,6 +97,8 @@ void main() {
     final s = AppStrings(false);
     expect(find.text('Manggahan Farm'), findsWidgets);
     expect(find.text('Manggahan, General Trias'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('farm-tab-shops')));
+    await tester.pumpAndSettle();
     expect(find.text('Nena Stall'), findsOneWidget);
     expect(find.text('Tonyo Stall'), findsOneWidget);
     expect(find.text(s.shopsAtThisFarm(2)), findsOneWidget);

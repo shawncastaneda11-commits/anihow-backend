@@ -28,6 +28,7 @@ class _RecordingApi extends ApiClient {
     String? growingMethod,
     int? page,
     String? mixDay,
+    int? farmId,
   }) async {
     this.category = category;
     return const MarketplaceFeed(items: []);
@@ -74,9 +75,7 @@ Widget _app(Widget home, {AuthController? auth, bool dark = false}) {
 
 Ink _chipInk(WidgetTester tester, Key key) {
   return tester.widget<Ink>(
-    find
-        .descendant(of: find.byKey(key), matching: find.byType(Ink))
-        .first,
+    find.descendant(of: find.byKey(key), matching: find.byType(Ink)).first,
   );
 }
 

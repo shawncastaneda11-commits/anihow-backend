@@ -42,6 +42,7 @@ class _MarketApi extends ApiClient {
     String? growingMethod,
     int? page,
     String? mixDay,
+    int? farmId,
   }) async {
     this.sort = sort;
     this.category = category;

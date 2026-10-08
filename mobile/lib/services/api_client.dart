@@ -28,10 +28,13 @@ class PagedItems<T> {
 }
 
 class MarketplaceFeed {
-  const MarketplaceFeed({required this.items, this.mixDay});
+  const MarketplaceFeed({required this.items, this.mixDay, this.total});
 
   final List<ListingItem> items;
   final String? mixDay;
+
+  /// `meta.total` from the marketplace page, or null when the body omits it.
+  final int? total;
 }
 
 const _datesClearedAsEmpty = {
@@ -47,6 +50,34 @@ Map<String, dynamic> buyerAnnouncementQuery({
   required int page,
 }) {
   return {'page': page, if (following) 'following': 1, 'farm_id': ?farmId};
+}
+
+/// Query string for [ApiClient.marketplace]. A null [farmId] is omitted.
+Map<String, dynamic> marketplaceQuery({
+  String? search,
+  int? cropTypeId,
+  String? sort,
+  String? category,
+  double? nearLat,
+  double? nearLng,
+  String? growingMethod,
+  int? page,
+  String? mixDay,
+  int? farmId,
+}) {
+  return {
+    if (search != null && search.isNotEmpty) 'search': search,
+    'crop_type_id': ?cropTypeId,
+    if (sort != null && sort.isNotEmpty) 'sort': sort,
+    if (category != null && category.isNotEmpty) 'category': category,
+    if (nearLat != null && nearLng != null) 'near_lat': nearLat,
+    if (nearLat != null && nearLng != null) 'near_lng': nearLng,
+    if (growingMethod != null && growingMethod.isNotEmpty)
+      'growing_method': growingMethod,
+    if (page != null && page > 1) 'page': page,
+    if (mixDay != null && mixDay.isNotEmpty) 'mix_day': mixDay,
+    'farm_id': ?farmId,
+  };
 }
 
 /// Multipart fields for a listing save. A cleared availability or harvest date
@@ -282,30 +313,38 @@ class ApiClient {
     String? growingMethod,
     int? page,
     String? mixDay,
+    int? farmId,
   }) async {
     try {
       final response = await _dio.get(
         '/buyer/marketplace',
-        queryParameters: {
-          if (search != null && search.isNotEmpty) 'search': search,
-          'crop_type_id': ?cropTypeId,
-          if (sort != null && sort.isNotEmpty) 'sort': sort,
-          if (category != null && category.isNotEmpty) 'category': category,
-          if (nearLat != null && nearLng != null) 'near_lat': nearLat,
-          if (nearLat != null && nearLng != null) 'near_lng': nearLng,
-          if (growingMethod != null && growingMethod.isNotEmpty)
-            'growing_method': growingMethod,
-          if (page != null && page > 1) 'page': page,
-          if (mixDay != null && mixDay.isNotEmpty) 'mix_day': mixDay,
-        },
+        queryParameters: marketplaceQuery(
+          search: search,
+          cropTypeId: cropTypeId,
+          sort: sort,
+          category: category,
+          nearLat: nearLat,
+          nearLng: nearLng,
+          growingMethod: growingMethod,
+          page: page,
+          mixDay: mixDay,
+          farmId: farmId,
+        ),
       );
       final body = _asMap(response.data);
       final meta = _asMap(body['meta']);
       final mix = meta['mix_day'];
+      final rawTotal = meta['total'];
+      final total = switch (rawTotal) {
+        final num value => value.toInt(),
+        final String value => int.tryParse(value),
+        _ => null,
+      };
 
       return MarketplaceFeed(
         items: _parseList(response.data, ListingItem.fromJson),
         mixDay: mix is String && mix.isNotEmpty ? mix : null,
+        total: total,
       );
     } on DioException catch (error) {
       throw ApiException(_messageFrom(error));

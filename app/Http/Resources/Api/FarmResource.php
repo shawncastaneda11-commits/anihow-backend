@@ -17,6 +17,8 @@ class FarmResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $organicCertified = $this->isOrganicCertified();
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -70,6 +72,11 @@ class FarmResource extends JsonResource
                     ->values()
                     ->all(),
             ),
+            'is_organic_certified' => $organicCertified,
+            'organic_certifier' => $organicCertified ? $this->organic_certifier : null,
+            'organic_certified_until' => $organicCertified
+                ? $this->organic_certified_until?->toDateString()
+                : null,
         ];
     }
 

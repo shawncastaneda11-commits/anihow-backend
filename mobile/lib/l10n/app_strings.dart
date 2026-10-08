@@ -212,6 +212,7 @@ class AppStrings {
   String get favoriteFarms => t('Farms', 'Mga bukid');
   String get noFavoriteFarms =>
       t('No farms yet.', 'Wala pang sinusundang bukid.');
+  String get farmProductsTab => t('Products', 'Mga produkto');
   String get farmShopsTab => t('Shops', 'Mga tindahan');
   String get followFarm => t('Follow', 'Sundan');
   String get followingFarm => t('Following', 'Sinusundan');
@@ -219,6 +220,55 @@ class AppStrings {
   String get farmUpdates => t('Updates', 'Mga update');
   String get noUpdatesYet => t('No updates yet', 'Wala pang update');
   String shopsCount(int count) => t('$count shops', '$count tindahan');
+  String get followers => t('Followers', 'Mga tagasunod');
+  String get farmNoReviews => t('No reviews yet', 'Wala pang review');
+  String farmReviewCount(int count) => count == 1
+      ? t('1 review', '1 review')
+      : t('$count reviews', '$count review');
+  String productsFromFarm(int count) => count == 1
+      ? t('1 product from this farm', '1 produkto mula sa bukid na ito')
+      : t(
+          '$count products from this farm',
+          '$count produkto mula sa bukid na ito',
+        );
+  String get noProduceListed =>
+      t('No produce listed right now', 'Walang produktong nakalista ngayon');
+  String get noDescriptionYet =>
+      t('No description yet', 'Wala pang paglalarawan');
+  String get organicCertified =>
+      t('Organic certified', 'Sertipikadong organiko');
+  String validUntil(String date) =>
+      t('Valid until $date', 'Balido hanggang $date');
+  String timeAgo(DateTime when, {DateTime? now}) {
+    final clock = now ?? DateTime.now();
+    final delta = clock.difference(when);
+    if (delta.inMinutes < 1) {
+      return t('Just now', 'Ngayon lang');
+    }
+    if (delta.inMinutes < 60) {
+      final minutes = delta.inMinutes;
+      return minutes == 1
+          ? t('1 minute ago', '1 minutong nakalipas')
+          : t('$minutes minutes ago', '$minutes minutong nakalipas');
+    }
+    if (delta.inHours < 24) {
+      final hours = delta.inHours;
+      return hours == 1
+          ? t('1 hour ago', '1 oras na ang nakalipas')
+          : t('$hours hours ago', '$hours oras na ang nakalipas');
+    }
+    if (delta.inDays < 7) {
+      final days = delta.inDays;
+      return days == 1
+          ? t('1 day ago', '1 araw na ang nakalipas')
+          : t('$days days ago', '$days araw na ang nakalipas');
+    }
+    final weeks = delta.inDays ~/ 7;
+    return weeks == 1
+        ? t('1 week ago', '1 linggo na ang nakalipas')
+        : t('$weeks weeks ago', '$weeks linggo na ang nakalipas');
+  }
+
   String get farmRating => t('Farm rating', 'Rating ng bukid');
   String get noFavoriteStores =>
       t('No favorite stores yet.', 'Wala pang paboritong tindahan.');
@@ -321,8 +371,9 @@ class AppStrings {
   String get farmSavedToFavorites =>
       t('Farm saved to favorites.', 'Nasave ang bukid sa mga paborito.');
   String get searchShops => t('Search shops', 'Maghanap ng tindahan');
-  String shopsAtThisFarm(int count) =>
-      t('Shops at this farm ($count)', 'Mga tindahan sa bukid na ito ($count)');
+  String shopsAtThisFarm(int count) => count == 1
+      ? t('1 shop at this farm', '1 tindahan sa bukid na ito')
+      : t('$count shops at this farm', '$count tindahan sa bukid na ito');
   String get noShopsAtFarm =>
       t('No shops at this farm yet.', 'Wala pang tindahan sa bukid na ito.');
   String get searchFarms => t('Search farms', 'Maghanap ng bukid');

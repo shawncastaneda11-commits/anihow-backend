@@ -198,4 +198,51 @@ class FarmProfileApiTest extends TestCase
             ->assertOk()
             ->assertJsonMissingPath('data.contact_number');
     }
+
+    public function test_organic_certification_is_sent_only_while_the_certificate_is_valid(): void
+    {
+        $buyer = $this->buyer();
+        $until = today()->addYear();
+        $certified = Farm::factory()->create([
+            'organic_certifier' => 'OCCP',
+            'organic_certificate_no' => 'OC-100',
+            'organic_certified_until' => $until,
+        ]);
+
+        $this->asUser($buyer)
+            ->getJson('/api/farms/'.$certified->id)
+            ->assertOk()
+            ->assertJsonPath('data.is_organic_certified', true)
+            ->assertJsonPath('data.organic_certifier', 'OCCP')
+            ->assertJsonPath('data.organic_certified_until', $until->toDateString())
+            ->assertJsonMissingPath('data.organic_certificate_no');
+
+        $expired = Farm::factory()->create([
+            'organic_certifier' => 'OCCP',
+            'organic_certificate_no' => 'OC-200',
+            'organic_certified_until' => today()->subDay(),
+        ]);
+
+        $this->asUser($buyer)
+            ->getJson('/api/farms/'.$expired->id)
+            ->assertOk()
+            ->assertJsonPath('data.is_organic_certified', false)
+            ->assertJsonPath('data.organic_certifier', null)
+            ->assertJsonPath('data.organic_certified_until', null)
+            ->assertJsonMissingPath('data.organic_certificate_no');
+
+        $missingNumber = Farm::factory()->create([
+            'organic_certifier' => 'OCCP',
+            'organic_certificate_no' => null,
+            'organic_certified_until' => $until,
+        ]);
+
+        $this->asUser($buyer)
+            ->getJson('/api/farms/'.$missingNumber->id)
+            ->assertOk()
+            ->assertJsonPath('data.is_organic_certified', false)
+            ->assertJsonPath('data.organic_certifier', null)
+            ->assertJsonPath('data.organic_certified_until', null)
+            ->assertJsonMissingPath('data.organic_certificate_no');
+    }
 }

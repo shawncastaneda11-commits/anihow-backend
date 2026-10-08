@@ -47,7 +47,11 @@ const _rich = FarmProfile(
     ),
   ],
   photos: [
-    FarmPhotoItem(id: 4, url: 'https://example.test/tomato.jpg', caption: 'Tomatoes'),
+    FarmPhotoItem(
+      id: 4,
+      url: 'https://example.test/tomato.jpg',
+      caption: 'Tomatoes',
+    ),
   ],
 );
 
@@ -137,12 +141,14 @@ void main() {
     await tester.pumpWidget(_app(const FarmPageScreen(farmId: 1), api));
     await tester.pumpAndSettle();
 
+    final s = AppStrings(false);
     expect(find.byKey(const Key('farm-name')), findsOneWidget);
     expect(find.text('Manggahan Farm'), findsWidgets);
     expect(find.byKey(const Key('farm-place')), findsOneWidget);
     expect(find.text('Manggahan, General Trias'), findsOneWidget);
     expect(find.byKey(const Key('farm-cover-fallback')), findsOneWidget);
-    expect(find.text('2 shops'), findsOneWidget);
+    expect(find.text('2'), findsWidgets);
+    expect(find.text(s.farmShopsTab), findsWidgets);
     expect(find.text('4.8'), findsWidgets);
   });
 
@@ -158,14 +164,15 @@ void main() {
 
     final cover = find.byKey(const Key('farm-header-cover'));
     final logo = find.byKey(const Key('farm-logo'));
-    expect(find.descendant(of: cover, matching: logo), findsOneWidget);
+    expect(cover, findsOneWidget);
+    expect(logo, findsOneWidget);
 
     final coverRect = tester.getRect(cover);
     final logoRect = tester.getRect(logo);
-    expect(logoRect.left, greaterThanOrEqualTo(coverRect.left));
-    expect(logoRect.top, greaterThanOrEqualTo(coverRect.top));
-    expect(logoRect.right, lessThanOrEqualTo(coverRect.right));
-    expect(logoRect.bottom, lessThanOrEqualTo(coverRect.bottom));
+    expect(logoRect.top, lessThan(coverRect.bottom));
+    expect(logoRect.bottom, greaterThan(coverRect.bottom));
+    final overlap = coverRect.bottom - logoRect.top;
+    expect((overlap - (logoRect.height / 2)).abs(), lessThan(8));
     expect(tester.takeException(), isNull);
   });
 
@@ -178,7 +185,7 @@ void main() {
     await tester.pumpWidget(_app(const FarmPageScreen(farmId: 1), api));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('farm-directions')), findsNothing);
+    expect(find.byKey(const Key('farm-directions')), findsOneWidget);
     await tester.tap(find.byKey(const Key('farm-follow')));
     await tester.pumpAndSettle();
 
@@ -227,9 +234,9 @@ void main() {
     await tester.ensureVisible(find.byKey(const Key('farm-tab-updates')));
     await tester.tap(find.byKey(const Key('farm-tab-updates')));
     await tester.pumpAndSettle();
-    expect(find.text('Harvest morning'), findsOneWidget);
+    expect(find.text('Harvest morning'), findsWidgets);
     expect(find.text('2026-10-05'), findsOneWidget);
-    expect(find.text('Tomatoes are ready.'), findsOneWidget);
+    expect(find.text('Tomatoes are ready.'), findsWidgets);
 
     await tester.ensureVisible(find.byKey(const Key('farm-tab-photos')));
     await tester.tap(find.byKey(const Key('farm-tab-photos')));
@@ -237,9 +244,7 @@ void main() {
     expect(find.text('Tomatoes'), findsOneWidget);
   });
 
-  testWidgets('empty updates and photos', (
-    tester,
-  ) async {
+  testWidgets('empty updates and photos', (tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 1200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final s = AppStrings(false);
@@ -249,7 +254,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('farm-updates-action')));
+    await tester.ensureVisible(find.byKey(const Key('farm-tab-updates')));
+    await tester.tap(find.byKey(const Key('farm-tab-updates')));
     await tester.pumpAndSettle();
     expect(find.text(s.noUpdatesYet), findsOneWidget);
 

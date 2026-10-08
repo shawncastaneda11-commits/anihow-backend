@@ -47,7 +47,8 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   String? _rejectionReason;
   bool _breakdown = false;
   String? _formError;
-  DateTime? _harvestDate;
+  bool _showReasonError = false;
+  DateTime _harvestDate = DateTime.now();
   final _minOrder = TextEditingController(text: '1');
   final _orderStep = TextEditingController(text: '1');
   final _description = TextEditingController();
@@ -110,12 +111,13 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   Future<void> _pickDate({
     required DateTime? current,
     required ValueChanged<DateTime> onPicked,
+    DateTime? firstDate,
     DateTime? lastDate,
   }) async {
     final picked = await showDatePicker(
       context: context,
       initialDate: current ?? DateTime.now(),
-      firstDate: DateTime(2020),
+      firstDate: firstDate ?? DateTime(2020),
       lastDate: lastDate ?? DateTime.now().add(const Duration(days: 365 * 3)),
     );
     if (picked != null) {
@@ -164,6 +166,10 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   }
 
   Future<void> _save({bool confirmed = false}) async {
+    if (_harvestReasonMissing()) {
+      setState(() => _showReasonError = true);
+      return;
+    }
     if (_cropTypeId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppStrings.read(context).chooseCrop)),
@@ -257,6 +263,15 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
         setState(() => _busy = false);
       }
     }
+  }
+
+  bool _harvestReasonMissing() {
+    if (widget.listing != null || _isUpcoming) {
+      return false;
+    }
+    final rejected = double.tryParse(_rejected.text.trim()) ?? 0;
+    return rejected > 0 &&
+        (_rejectionReason == null || _rejectionReason!.isEmpty);
   }
 
   bool get _isUpcoming {
@@ -999,9 +1014,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                             HarvestFields(
                               valueAdded: selectedCrop?.isValueAdded == true,
                               unit: _unit ?? selectedCrop?.unit ?? '',
-                              harvestedOnLabel: _harvestDate == null
-                                  ? ''
-                                  : s.shortDate(_harvestDate!),
+                              harvestedOnLabel: s.shortDate(_harvestDate),
                               harvested: _harvestedQty,
                               rejected: _rejected,
                               reason: _rejectionReason,
@@ -1009,9 +1022,13 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                               cost: _productionCost,
                               costs: _costs,
                               breakdownOpen: _breakdown,
+                              showReasonError: _showReasonError,
                               onChanged: () => setState(_syncCost),
                               onPickDate: () => _pickDate(
                                 current: _harvestDate,
+                                firstDate: DateTime.now().subtract(
+                                  const Duration(days: 365),
+                                ),
                                 lastDate: DateTime.now(),
                                 onPicked: (date) =>
                                     setState(() => _harvestDate = date),

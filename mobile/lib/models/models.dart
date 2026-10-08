@@ -2207,9 +2207,11 @@ class StockSummary {
     required this.hasEstimated,
     required this.recordsWithoutCost,
     this.costTotal,
+    this.unit,
   });
 
   final String? trackedSince;
+  final String? unit;
   final String harvested;
   final String good;
   final String sold;
@@ -2233,6 +2235,7 @@ class StockSummary {
       costTotal: json['cost_total']?.toString(),
       recordsWithoutCost:
           ListingItem._asCount(json['records_without_cost']) ?? 0,
+      unit: json['unit'] as String?,
     );
   }
 }

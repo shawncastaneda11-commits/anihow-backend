@@ -1,3 +1,4 @@
+import 'package:anihow/l10n/app_strings.dart';
 import 'package:anihow/models/models.dart';
 import 'package:anihow/screens/farmer/listing_form_screen.dart';
 import 'package:anihow/screens/farmer/stock_history_screen.dart';
@@ -47,28 +48,35 @@ class _ScriptedApi extends ApiClient {
       currentPage: 1,
       lastPage: 1,
       summary: const StockSummary(
-        trackedSince: '2026-10-01',
-        harvested: '20.00',
-        good: '20.00',
+        trackedSince: '2026-10-09T04:20:52+08:00',
+        harvested: '193.00',
+        good: '193.00',
         sold: '0.00',
-        removed: '0.00',
-        available: '20.00',
+        removed: '6.00',
+        available: '187.00',
         held: '0.00',
-        hasEstimated: true,
-        recordsWithoutCost: 2,
+        hasEstimated: false,
+        recordsWithoutCost: 1,
+        costTotal: '900.00',
+        unit: 'kg',
       ),
       events: const [
         StockEvent(
           type: 'harvest',
           id: 1,
           kind: 'opening',
-          quantityGood: '20.00',
+          harvestedOn: '2026-10-09',
+          quantityHarvested: '193.00',
+          quantityGood: '193.00',
+          quantityRejected: '0.00',
         ),
         StockEvent(
-          type: 'harvest',
+          type: 'removal',
           id: 2,
-          kind: 'estimated',
-          quantityGood: '5.00',
+          quantity: '6.00',
+          reason: 'spoiled',
+          note: 'Soft spots',
+          createdAt: '2026-10-09T08:00:00+08:00',
         ),
       ],
     );
@@ -307,7 +315,123 @@ void main() {
     expect(find.textContaining('6 kg is already reserved'), findsWidgets);
   });
 
-  testWidgets('stock history shows opening, estimated, and no cost', (
+  testWidgets('a new harvest date starts today and cannot read as not set', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _app(ListingFormScreen(cropTypes: Future.value(const []))),
+    );
+    await tester.pumpAndSettle();
+
+    final now = DateTime.now();
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final today = '${months[now.month - 1]} ${now.day}';
+    await tester.ensureVisible(find.byKey(const ValueKey('harvest-date')));
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('harvest-date')),
+        matching: find.text(today),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('harvest-date')),
+        matching: find.text('Not set'),
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('good to sell gains the unit only after one is chosen', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    const crop = CategoryItem(
+      id: 7,
+      name: 'Kamatis',
+      labelEn: 'Tomato',
+      unit: 'kg',
+    );
+    await tester.pumpWidget(
+      _app(ListingFormScreen(cropTypes: Future.value([crop]))),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byKey(const ValueKey('good-to-sell')));
+    expect(find.text('Good to sell: 0'), findsOneWidget);
+
+    await tester.tap(find.byType(DropdownButtonFormField<int>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tomato').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Good to sell: 0 kg'), findsOneWidget);
+  });
+
+  testWidgets('a missing rejection reason is hinted and then flagged', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    const listing = ListingItem(
+      id: 6,
+      title: 'Pechay',
+      pricePerUnit: '30',
+      quantityAvailable: '10',
+      unit: 'kg',
+    );
+    await tester.pumpWidget(
+      _app(
+        Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showAddStockSheet(context, listing),
+            child: const Text('Open add'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open add'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey('rejected-quantity')),
+      '2',
+    );
+    await tester.pump();
+    expect(find.byKey(const ValueKey('rejection-reason-hint')), findsOneWidget);
+    expect(find.text('Choose a reason'), findsOneWidget);
+    expect(find.byKey(const ValueKey('rejection-reason-error')), findsNothing);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Add stock'));
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('rejection-reason-error')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('stock history formats dates, units, tiles, and cards', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -315,9 +439,22 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('No cost recorded'), findsWidgets);
+    final tracked = DateTime.parse('2026-10-09T04:20:52+08:00').toLocal();
+    expect(
+      find.text(const AppStrings(false).trackedSince(tracked)),
+      findsOneWidget,
+    );
+    expect(find.text('193 kg'), findsWidgets);
+    expect(find.byKey(const ValueKey('stock-stat-harvested')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stock-stat-good')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stock-stat-sold')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stock-stat-left')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stock-stat-removed')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stock-stat-cost')), findsOneWidget);
+    expect(find.text('Starting stock 193 kg'), findsOneWidget);
     expect(find.text('Opening stock'), findsOneWidget);
-    expect(find.text('Estimated'), findsOneWidget);
+    expect(find.text('Removed 6 kg'), findsOneWidget);
+    expect(find.byKey(const ValueKey('removal-2')), findsOneWidget);
   });
 
   testWidgets('harvest and expired-stock notifications open stock history', (

@@ -137,6 +137,7 @@ class StockHistory
 
         return [
             'tracked_since' => $since?->toIso8601String(),
+            'unit' => $listing->unit?->value,
             'harvested' => $harvested,
             'rejected' => $rejected,
             'good' => $good,

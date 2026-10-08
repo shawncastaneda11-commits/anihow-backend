@@ -55,6 +55,7 @@ class _HarvestSheetState extends State<_HarvestSheet> {
   DateTime? _harvestedOn = DateTime.now();
   String? _reason;
   bool _breakdown = false;
+  bool _showReasonError = false;
   bool _busy = false;
   String? _error;
 
@@ -99,6 +100,11 @@ class _HarvestSheetState extends State<_HarvestSheet> {
 
   Future<void> _save() async {
     final s = AppStrings.read(context);
+    final rejected = double.tryParse(_rejected.text.trim()) ?? 0;
+    if (rejected > 0 && (_reason == null || _reason!.isEmpty)) {
+      setState(() => _showReasonError = true);
+      return;
+    }
     final good = goodQuantity(_harvested.text, _rejected.text);
     final reserved = widget.listing.reservedQuantity ?? 0;
     var confirm = false;
@@ -200,6 +206,7 @@ class _HarvestSheetState extends State<_HarvestSheet> {
               cost: _cost,
               costs: _costs,
               breakdownOpen: _breakdown,
+              showReasonError: _showReasonError,
               onChanged: () => setState(_syncCost),
               onPickDate: _pickDate,
               onReason: (value) => setState(() => _reason = value),

@@ -9,6 +9,7 @@ use App\Models\Farm;
 use App\Models\Listing;
 use App\Support\HarvestInput;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -54,6 +55,7 @@ class UpdateListingAction
         $updated = DB::transaction(function () use ($listing, $attributes): Listing {
             $locked = Listing::query()->whereKey($listing->id)->lockForUpdate()->firstOrFail();
             $attributes = $this->guardStockEdits($locked, $attributes);
+            $attributes = $this->resetReminderClaims($locked, $attributes);
             $locked->update($attributes);
             $this->ensureHarvest->forListing($locked->refresh());
 
@@ -112,5 +114,42 @@ class UpdateListingAction
         }
 
         return $attributes;
+    }
+
+    /**
+     * A new open date or end date should be able to remind the seller again.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    private function resetReminderClaims(Listing $listing, array $attributes): array
+    {
+        if (array_key_exists('available_from', $attributes)
+            && $this->scheduleChanged($listing->available_from, $attributes['available_from'])) {
+            $attributes['harvest_reminded_at'] = null;
+        }
+
+        if (array_key_exists('available_until', $attributes)
+            && $this->scheduleChanged($listing->available_until, $attributes['available_until'])) {
+            $attributes['expired_stock_notified_at'] = null;
+        }
+
+        return $attributes;
+    }
+
+    private function scheduleChanged(mixed $current, mixed $incoming): bool
+    {
+        $existing = $current instanceof Carbon || $current === null
+            ? $current
+            : Carbon::parse((string) $current);
+        $next = $incoming === null || $incoming === ''
+            ? null
+            : Carbon::parse((string) $incoming);
+
+        if ($existing === null || $next === null) {
+            return $existing !== null || $next !== null;
+        }
+
+        return ! $existing->equalTo($next);
     }
 }

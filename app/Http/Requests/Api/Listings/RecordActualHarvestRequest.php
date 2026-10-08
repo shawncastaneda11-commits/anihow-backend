@@ -18,8 +18,13 @@ class RecordActualHarvestRequest extends FormRequest
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<string, string>
      */
+    public function messages(): array
+    {
+        return HarvestInput::messages();
+    }
+
     public function rules(): array
     {
         return [

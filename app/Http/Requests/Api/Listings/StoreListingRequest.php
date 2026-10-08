@@ -24,6 +24,14 @@ class StoreListingRequest extends FormRequest
     }
 
     /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return HarvestInput::messages();
+    }
+
+    /**
      * The seller chooses the unit. A crop with a floor price or a maximum
      * discount only accepts a unit that converts into the crop type's unit.
      * Analytics sum each family in its base unit, so grams and kilograms
@@ -46,7 +54,6 @@ class StoreListingRequest extends FormRequest
             'is_active' => ['sometimes', 'boolean'],
             'available_from' => ['nullable', 'date'],
             'available_until' => ['nullable', 'date'],
-            'harvested_on' => ['nullable', 'date', 'before_or_equal:today'],
             'growing_method' => ['nullable', Rule::enum(GrowingMethod::class)],
             'image' => ['nullable', 'image', 'max:5120'],
         ];

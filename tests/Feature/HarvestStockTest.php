@@ -151,6 +151,112 @@ class HarvestStockTest extends TestCase
         $this->assertSame(20.0, (float) $listing->quantity_available);
     }
 
+    public function test_a_harvest_date_is_required_and_must_be_within_the_last_year(): void
+    {
+        $farmer = $this->farmer();
+        $crop = $this->cropType(['floor_price' => 20, 'max_discount' => 5]);
+        $payload = [
+            'title' => 'Dated pechay',
+            'crop_type_id' => $crop->id,
+            'unit' => 'kg',
+            'price_per_unit' => 30,
+            'quantity_harvested' => 8,
+            'quantity_rejected' => 0,
+        ];
+
+        $this->asUser($farmer)->postJson('/api/farmer/listings', $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('harvested_on');
+
+        $this->asUser($farmer)->postJson('/api/farmer/listings', [
+            ...$payload,
+            'harvested_on' => now()->subDays(400)->toDateString(),
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('harvested_on')
+            ->assertJsonPath('errors.harvested_on.0', 'Pick a harvest date within the last year.');
+
+        $this->asUser($farmer)->postJson('/api/farmer/listings', [
+            ...$payload,
+            'harvested_on' => now()->toDateString(),
+        ])->assertCreated();
+    }
+
+    public function test_production_cost_and_a_breakdown_sum_cannot_pass_the_cap(): void
+    {
+        $farmer = $this->farmer();
+        $listing = $this->tracked($farmer, 10, 30);
+
+        $this->asUser($farmer)->postJson("/api/farmer/listings/{$listing->id}/harvests", $this->harvestBody([
+            'production_cost' => '10000000',
+        ]))->assertUnprocessable()->assertJsonValidationErrors('production_cost');
+
+        $this->asUser($farmer)->postJson("/api/farmer/listings/{$listing->id}/harvests", $this->harvestBody([
+            'cost_breakdown' => [
+                'seeds' => '6000000',
+                'labor' => '5000000',
+            ],
+        ]))->assertUnprocessable()->assertJsonValidationErrors('production_cost');
+
+        $this->asUser($farmer)->postJson("/api/farmer/listings/{$listing->id}/harvests", $this->harvestBody([
+            'cost_breakdown' => ['seeds' => '10000000'],
+        ]))->assertUnprocessable()->assertJsonValidationErrors('cost_breakdown.seeds');
+    }
+
+    public function test_extending_an_expired_listing_allows_another_expiry_notice(): void
+    {
+        $farmer = $this->farmer();
+        $listing = $this->listingFor($farmer, [
+            'title' => 'Ended again',
+            'quantity_available' => 3,
+            'unit' => 'kg',
+            'available_until' => now()->subHour(),
+            'needs_actual_harvest' => false,
+        ]);
+
+        $this->artisan('listings:harvest-upkeep')->assertSuccessful();
+        $this->assertSame(1, InAppNotification::query()->where('type', NotificationType::ExpiredStockLeft)->count());
+        $this->assertNotNull($listing->fresh()->expired_stock_notified_at);
+
+        $this->asUser($farmer)->patchJson("/api/farmer/listings/{$listing->id}", [
+            'available_until' => now()->addDays(3)->toIso8601String(),
+        ])->assertOk();
+        $this->assertNull($listing->fresh()->expired_stock_notified_at);
+
+        $this->asUser($farmer)->patchJson("/api/farmer/listings/{$listing->id}", [
+            'available_until' => now()->subHour()->toIso8601String(),
+        ])->assertOk();
+
+        $this->artisan('listings:harvest-upkeep')->assertSuccessful();
+        $this->assertSame(2, InAppNotification::query()->where('type', NotificationType::ExpiredStockLeft)->count());
+    }
+
+    public function test_the_data_migration_marks_listings_that_already_expired_with_stock(): void
+    {
+        $farmer = $this->farmer();
+        $expired = $this->listingFor($farmer, [
+            'quantity_available' => 4,
+            'available_until' => now()->subDay(),
+            'expired_stock_notified_at' => null,
+        ]);
+        $empty = $this->listingFor($farmer, [
+            'quantity_available' => 0,
+            'available_until' => now()->subDay(),
+            'expired_stock_notified_at' => null,
+        ]);
+        $open = $this->listingFor($farmer, [
+            'quantity_available' => 4,
+            'available_until' => now()->addDay(),
+            'expired_stock_notified_at' => null,
+        ]);
+
+        $migration = include database_path('migrations/2026_10_09_044653_mark_existing_expired_listings_stock_notified.php');
+        $migration->up();
+
+        $this->assertNotNull($expired->fresh()->expired_stock_notified_at);
+        $this->assertNull($empty->fresh()->expired_stock_notified_at);
+        $this->assertNull($open->fresh()->expired_stock_notified_at);
+    }
+
     public function test_an_upcoming_listing_stores_the_expected_quantity_without_a_record(): void
     {
         $farmer = $this->farmer();

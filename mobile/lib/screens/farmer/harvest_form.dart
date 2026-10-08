@@ -75,6 +75,7 @@ class HarvestFields extends StatelessWidget {
     required this.cost,
     required this.costs,
     required this.breakdownOpen,
+    this.showReasonError = false,
     required this.onChanged,
     required this.onPickDate,
     required this.onReason,
@@ -91,6 +92,7 @@ class HarvestFields extends StatelessWidget {
   final TextEditingController cost;
   final Map<String, TextEditingController> costs;
   final bool breakdownOpen;
+  final bool showReasonError;
   final VoidCallback onChanged;
   final VoidCallback onPickDate;
   final ValueChanged<String?> onReason;
@@ -104,7 +106,9 @@ class HarvestFields extends StatelessWidget {
         : freshRejectionReasons;
     final rejectedAmount = double.tryParse(rejected.text.trim()) ?? 0;
     final good = goodQuantity(harvested.text, rejected.text);
-    final unitLabel = unit.isEmpty ? '' : unit;
+    final unitLabel = unit.trim();
+    final reasonMissing =
+        rejectedAmount > 0 && (reason == null || reason!.isEmpty);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -152,6 +156,10 @@ class HarvestFields extends StatelessWidget {
               key: const ValueKey('rejection-reason'),
               isExpanded: true,
               initialValue: reasons.contains(reason) ? reason : null,
+              hint: Text(
+                s.chooseReason,
+                key: const ValueKey('rejection-reason-hint'),
+              ),
               items: [
                 for (final value in reasons)
                   DropdownMenuItem(
@@ -162,6 +170,15 @@ class HarvestFields extends StatelessWidget {
               onChanged: onReason,
             ),
           ),
+          if (showReasonError && reasonMissing)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                s.chooseReason,
+                key: const ValueKey('rejection-reason-error'),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
           if (reason == 'other') ...[
             const SizedBox(height: AniHowSpace.fieldGap),
             AniHowField(
@@ -176,7 +193,7 @@ class HarvestFields extends StatelessWidget {
         ],
         const SizedBox(height: AniHowSpace.cardGap),
         Text(
-          s.goodToSell(formatGoodQuantity(good), unitLabel).trim(),
+          s.goodToSell(formatGoodQuantity(good), unitLabel),
           key: const ValueKey('good-to-sell'),
           style: Theme.of(context).textTheme.titleSmall,
         ),

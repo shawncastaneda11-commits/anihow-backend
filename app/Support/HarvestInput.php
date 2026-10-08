@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Enums\CostCategory;
 use App\Enums\HarvestRejectionReason;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Validator;
 
 /**
@@ -13,22 +14,41 @@ use Illuminate\Validation\Validator;
  */
 class HarvestInput
 {
+    public const string MaxCost = '9999999.99';
+
     /**
      * @return array<string, mixed>
      */
     public static function rules(bool $required): array
     {
         $presence = $required ? 'required' : 'sometimes';
+        $earliest = now()->subDays(365)->toDateString();
 
         return [
-            'harvested_on' => [$presence, 'date', 'before_or_equal:today'],
+            'harvested_on' => [
+                $required ? 'required' : 'nullable',
+                'required_with:quantity_harvested',
+                'date',
+                'before_or_equal:today',
+                'after_or_equal:'.$earliest,
+            ],
             'quantity_harvested' => [$presence, 'numeric', 'gt:0', 'decimal:0,2', 'max:99999.99'],
             'quantity_rejected' => ['sometimes', 'numeric', 'gte:0', 'decimal:0,2', 'max:99999.99'],
             'rejection_reason' => ['nullable', 'string'],
             'rejection_note' => ['nullable', 'string', 'max:255'],
-            'production_cost' => ['nullable', 'numeric', 'gte:0', 'decimal:0,2'],
+            'production_cost' => ['nullable', 'numeric', 'gte:0', 'decimal:0,2', 'max:'.self::MaxCost],
             'cost_breakdown' => ['nullable', 'array'],
-            'cost_breakdown.*' => ['nullable', 'numeric', 'gte:0', 'decimal:0,2'],
+            'cost_breakdown.*' => ['nullable', 'numeric', 'gte:0', 'decimal:0,2', 'max:'.self::MaxCost],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function messages(): array
+    {
+        return [
+            'harvested_on.after_or_equal' => 'Pick a harvest date within the last year.',
         ];
     }
 
@@ -94,6 +114,16 @@ class HarvestInput
         }
 
         $sum = self::sum($breakdown);
+
+        if (bccomp($sum, self::MaxCost, 2) === 1) {
+            $validator->errors()->add(
+                'production_cost',
+                'The production cost may not be greater than '.self::MaxCost.'.',
+            );
+
+            return;
+        }
+
         if (! self::present($data, 'production_cost')) {
             return;
         }
@@ -143,7 +173,9 @@ class HarvestInput
         }
 
         return [
-            'harvested_on' => (string) $input['harvested_on'],
+            'harvested_on' => self::present($input, 'harvested_on')
+                ? Carbon::parse((string) $input['harvested_on'])->toDateString()
+                : now()->toDateString(),
             'quantity_harvested' => $harvested,
             'quantity_rejected' => $rejected,
             'quantity_good' => $good,

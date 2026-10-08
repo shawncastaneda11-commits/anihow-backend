@@ -93,8 +93,15 @@
 
     .farm-identity-copy {
         min-width: 0;
-        flex: 1 1 16rem;
+        flex: 1 1 0;
         padding: 12px 0 4px;
+    }
+
+    .farm-name-edit {
+        display: flex;
+        align-items: flex-start;
+        gap: 4px;
+        min-width: 0;
     }
 
     .farm-name-row {
@@ -169,14 +176,16 @@
 
         <div class="farm-identity-copy">
             <div class="farm-name-row">
-                <h2 class="farm-name">{{ $farm->name }}</h2>
-                <x-filament::icon-button
-                    color="gray"
-                    size="sm"
-                    :icon="Heroicon::OutlinedPencil"
-                    label="Edit name"
-                    wire:click="mountAction('editName')"
-                />
+                <div class="farm-name-edit">
+                    <h2 class="farm-name">{{ $farm->name }}</h2>
+                    <x-filament::icon-button
+                        color="gray"
+                        size="sm"
+                        :icon="Heroicon::OutlinedPencil"
+                        label="Edit name"
+                        wire:click="mountAction('editName')"
+                    />
+                </div>
                 <x-filament::badge :color="$farm->is_active ? 'success' : 'gray'" size="sm">
                     {{ $farm->is_active ? 'Active' : 'Inactive' }}
                 </x-filament::badge>

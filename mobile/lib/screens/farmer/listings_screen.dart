@@ -40,7 +40,13 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
       _error = null;
     });
     try {
-      final api = context.read<AuthController>().api;
+      final auth = context.read<AuthController>();
+      if (auth.user != null) {
+        try {
+          await auth.refreshUser();
+        } catch (_) {}
+      }
+      final api = auth.api;
       final items = await api.farmerListings();
       var announcements = const <FarmAnnouncement>[];
       try {
@@ -296,7 +302,18 @@ class _List extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                if (listing.tawad?.isActive == true)
+                if (listing.tawadPaused)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Chip(
+                      key: ValueKey('listing-discount-${listing.id}'),
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      label: Text(AppStrings.of(context).discountPaused),
+                      labelStyle: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  )
+                else if (listing.tawad?.isActive == true)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4),
                     child: Chip(

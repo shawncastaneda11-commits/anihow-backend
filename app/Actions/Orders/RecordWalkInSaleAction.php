@@ -7,6 +7,7 @@ use App\Enums\FulfillmentPreference;
 use App\Enums\ListingStatus;
 use App\Enums\OrderSource;
 use App\Enums\OrderStatus;
+use App\Models\Farm;
 use App\Models\Listing;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
@@ -73,6 +74,12 @@ class RecordWalkInSaleAction
             // record a sale against someone else's listing.
             if (! $listing->isOwnedBy($seller)) {
                 throw new AuthorizationException('You can only record sales of your own listings.');
+            }
+
+            if ($listing->farm !== null && ! $listing->farm->allowsWalkIn()) {
+                throw ValidationException::withMessages([
+                    'listing_id' => Farm::WALK_IN_OFF_MESSAGE,
+                ]);
             }
 
             // A paused listing may still sell at the stall; a taken-down one is

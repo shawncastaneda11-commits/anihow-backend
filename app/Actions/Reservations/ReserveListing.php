@@ -4,6 +4,7 @@ namespace App\Actions\Reservations;
 
 use App\Enums\FulfillmentPreference;
 use App\Enums\ReservationStatus;
+use App\Models\Farm;
 use App\Models\Listing;
 use App\Models\Reservation;
 use App\Models\User;
@@ -45,18 +46,30 @@ class ReserveListing
                 abort(404);
             }
 
-            if (! $listing->isUpcoming()) {
-                throw ValidationException::withMessages([
-                    'listing_id' => "{$listing->title} is not available to reserve.",
-                ]);
-            }
-
             $existing = Reservation::query()
                 ->where('buyer_id', $buyer->id)
                 ->where('listing_id', $listing->id)
                 ->where('status', ReservationStatus::Active)
                 ->lockForUpdate()
                 ->first();
+
+            if ($existing === null && ! Listing::query()->allowedByFarmFeatures()->whereKey($listing->id)->exists()) {
+                throw ValidationException::withMessages([
+                    'listing_id' => "{$listing->title} is no longer available.",
+                ]);
+            }
+
+            if ($existing === null && $listing->farm !== null && ! $listing->farm->allowsReservations()) {
+                throw ValidationException::withMessages([
+                    'listing_id' => Farm::RESERVATIONS_OFF_MESSAGE,
+                ]);
+            }
+
+            if (! $listing->isUpcoming()) {
+                throw ValidationException::withMessages([
+                    'listing_id' => "{$listing->title} is not available to reserve.",
+                ]);
+            }
 
             if ($existing === null) {
                 $activeCount = Reservation::query()

@@ -552,6 +552,30 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     }
   }
 
+  bool _discountPaused(BuildContext context) {
+    final listing = _listing;
+    if (listing == null) {
+      return false;
+    }
+    final features =
+        context.watch<AuthController>().user?.farmFeatures ??
+        const FarmFeatures();
+    return listing.tawadPaused || (listing.tawad != null && !features.tawad);
+  }
+
+  bool _showDiscount(BuildContext context) {
+    final features =
+        context.watch<AuthController>().user?.farmFeatures ??
+        const FarmFeatures();
+    return features.tawad || _listing?.tawad != null || _listing?.tawadPaused == true;
+  }
+
+  bool _walkInAllowed(BuildContext context) {
+    final user = context.watch<AuthController>().user;
+    return (user?.canRecordWalkInSales ?? false) &&
+        (user?.farmFeatures.walkIn ?? true);
+  }
+
   Future<void> _openWalkIn() async {
     final listing = _listing;
     if (listing == null) {
@@ -875,7 +899,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                         ],
                       ),
                     ),
-                    if (_listing != null) ...[
+                    if (_listing != null && _showDiscount(context)) ...[
                       const SizedBox(height: AniHowSpace.section),
                       Card(
                         child: Theme(
@@ -896,10 +920,31 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                               16,
                               16,
                             ),
-                            title: Text(s.discountOptionalTitle),
+                            title: Text(
+                              _discountPaused(context)
+                                  ? s.discountPaused
+                                  : s.discountOptionalTitle,
+                            ),
                             subtitle: Text(s.discountOptionalHelp),
                             children: [
-                              if (_discountOpen &&
+                              if (_discountPaused(context) &&
+                                  _discountOpen) ...[
+                                Text(
+                                  s.discountPaused,
+                                  key: const ValueKey('discount-paused'),
+                                ),
+                                const SizedBox(height: AniHowSpace.cardGap),
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: OutlinedButton(
+                                    style: OutlinedButton.styleFrom(
+                                      minimumSize: const Size(48, 48),
+                                    ),
+                                    onPressed: _busy ? null : _endTawad,
+                                    child: Text(s.endDiscount),
+                                  ),
+                                ),
+                              ] else if (_discountOpen &&
                                   sellerDiscountSummary(
                                         s,
                                         _listing!.tawad,
@@ -954,19 +999,16 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                           ),
                         ),
                       ),
-                      if (!_listing!.isTakenDown &&
-                          (context
-                                  .watch<AuthController>()
-                                  .user
-                                  ?.canRecordWalkInSales ??
-                              false)) ...[
-                        const SizedBox(height: AniHowSpace.cardGap),
-                        OutlinedButton.icon(
-                          onPressed: _busy ? null : _openWalkIn,
-                          icon: const Icon(Icons.point_of_sale_outlined),
-                          label: Text(s.recordWalkIn),
-                        ),
-                      ],
+                    ],
+                    if (_listing != null &&
+                        !_listing!.isTakenDown &&
+                        _walkInAllowed(context)) ...[
+                      const SizedBox(height: AniHowSpace.cardGap),
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : _openWalkIn,
+                        icon: const Icon(Icons.point_of_sale_outlined),
+                        label: Text(s.recordWalkIn),
+                      ),
                     ],
                   ],
                 ),

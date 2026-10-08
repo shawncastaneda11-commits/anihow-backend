@@ -88,7 +88,13 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen>
       _error = null;
     });
     try {
-      final items = await context.read<AuthController>().api.farmerOrders();
+      final auth = context.read<AuthController>();
+      if (auth.user != null) {
+        try {
+          await auth.refreshUser();
+        } catch (_) {}
+      }
+      final items = await auth.api.farmerOrders();
       if (!mounted) {
         return;
       }
@@ -194,6 +200,12 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen>
     );
   }
 
+  bool _walkInAllowed(BuildContext context) {
+    final user = context.watch<AuthController>().user;
+    return (user?.canRecordWalkInSales ?? false) &&
+        (user?.farmFeatures.walkIn ?? true);
+  }
+
   Future<void> _openWalkIn() async {
     final recorded = await Navigator.of(
       context,
@@ -213,8 +225,7 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen>
       child: Scaffold(
         body: Column(
           children: [
-            if (context.watch<AuthController>().user?.canRecordWalkInSales ??
-                false)
+            if (_walkInAllowed(context))
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AniHowSpace.screen,

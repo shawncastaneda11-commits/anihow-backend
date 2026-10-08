@@ -61,8 +61,10 @@ class ListingResource extends JsonResource
             ),
             'image_url' => $this->imageUrl(),
             'thumbnail_url' => $this->thumbnailUrl(),
+            'can_reserve' => $this->isUpcoming() && ($this->farm?->allowsReservations() ?? true),
             'crop_type' => new CropTypeResource($this->whenLoaded('cropType')),
-            'tawad' => new TawadRuleResource($this->whenLoaded('activeTawadRule')),
+            'tawad' => $this->visibleTawadRule($request),
+            'tawad_paused' => $this->tawadIsPaused($request),
             'farm' => new FarmResource($this->whenLoaded('farm')),
             'seller' => $this->whenLoaded('farmerSeller', fn (): array => [
                 'id' => $this->farmerSeller->id,
@@ -78,5 +80,29 @@ class ListingResource extends JsonResource
             ),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
+    }
+
+    private function tawadIsPaused(Request $request): bool
+    {
+        if ($this->farm?->allowsTawad() ?? true) {
+            return false;
+        }
+
+        $user = $request->user();
+
+        if ($user === null || (int) $user->id !== (int) $this->farmer_seller_id) {
+            return false;
+        }
+
+        return $this->activeTawadRule !== null;
+    }
+
+    private function visibleTawadRule(Request $request): mixed
+    {
+        if (! ($this->farm?->allowsTawad() ?? true) && ! $this->tawadIsPaused($request)) {
+            return null;
+        }
+
+        return new TawadRuleResource($this->whenLoaded('activeTawadRule'));
     }
 }

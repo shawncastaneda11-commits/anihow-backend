@@ -353,7 +353,13 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 Text(listing.description!),
               ],
               const SizedBox(height: AniHowSpace.section),
-              if (listing.isUpcoming)
+              if (listing.showComingSoon)
+                Text(
+                  s.comingSoon,
+                  key: const ValueKey('coming-soon'),
+                  style: Theme.of(context).textTheme.titleMedium,
+                )
+              else if (listing.showReserveButton)
                 FilledButton(
                   key: const ValueKey('reserve-harvest'),
                   style: FilledButton.styleFrom(

@@ -44,7 +44,7 @@ class LoginUserAction
         $token = $user->createToken($deviceName, ['*'], self::expiresAt($remember))->plainTextToken;
 
         return [
-            'user' => $user->load('roles'),
+            'user' => $user->load(['roles', 'farm']),
             'token' => $token,
         ];
     }

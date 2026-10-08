@@ -31,6 +31,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final Map<int, String> _payments = {};
   final _note = TextEditingController();
   bool _busy = false;
+  String? _refusal;
   List<OrderRecord>? _placed;
 
   @override
@@ -92,7 +93,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (!mounted) {
         return;
       }
-      setState(() => _busy = false);
+      setState(() {
+        _busy = false;
+        _refusal = error.message;
+      });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
     } catch (error) {
       if (!mounted) {
@@ -186,6 +190,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                       ),
                     ),
+                    if (_refusal != null) ...[
+                      const SizedBox(height: AniHowSpace.section),
+                      AniHowHintCard(
+                        icon: Icons.error_outline,
+                        title: _refusal!,
+                        tone: AniHowHintTone.danger,
+                      ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text(s.back),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: AniHowSpace.section),
                     PrimaryButton(
                       label: groups.length > 1 ? s.placeOrders(groups.length) : s.placeOrder,

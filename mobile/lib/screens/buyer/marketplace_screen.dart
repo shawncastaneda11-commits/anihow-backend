@@ -151,7 +151,13 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
   Future<void> _reload({bool scrollToTop = false}) async {
     final request = ++_requestId;
-    final api = context.read<AuthController>().api;
+    final auth = context.read<AuthController>();
+    if (auth.user != null) {
+      try {
+        await auth.refreshUser();
+      } catch (_) {}
+    }
+    final api = auth.api;
     setState(() {
       _loading = true;
       _loadingMore = false;

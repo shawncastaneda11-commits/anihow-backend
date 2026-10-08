@@ -50,6 +50,17 @@ class _CartScreenState extends State<CartScreen> {
     super.dispose();
   }
 
+  Future<void> _refresh() async {
+    final auth = context.read<AuthController>();
+    final cart = context.read<CartController>();
+    if (auth.user != null) {
+      try {
+        await auth.refreshUser();
+      } catch (_) {}
+    }
+    await cart.reload();
+  }
+
   Future<void> _run(int id, Future<void> Function() action) async {
     if (_acting.contains(id)) {
       return;
@@ -196,7 +207,7 @@ class _CartScreenState extends State<CartScreen> {
     );
     final total = groups.fold<double>(0, (sum, group) => sum + group.total);
     return RefreshIndicator(
-      onRefresh: cart.reload,
+      onRefresh: _refresh,
       child: ListView(
         padding: AniHowSpace.screenPadding,
         children: [

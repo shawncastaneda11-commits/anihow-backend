@@ -5,6 +5,7 @@ namespace App\Actions\Listings;
 use App\Actions\Reservations\CancelReservation;
 use App\Actions\Reservations\GuardListingReservationCancellation;
 use App\Enums\ReservationCancellationReason;
+use App\Models\Farm;
 use App\Models\Listing;
 use Illuminate\Http\UploadedFile;
 
@@ -31,6 +32,14 @@ class UpdateListingAction
 
         // farm_id is denormalized from the seller and is never set from input.
         unset($attributes['farm_id'], $attributes['farmer_seller_id'], $attributes['quantity_held'], $attributes['status']);
+
+        if (array_key_exists('crop_type_id', $attributes) && (int) $attributes['crop_type_id'] !== (int) $listing->crop_type_id) {
+            $listing->loadMissing('farm');
+            CreateListingAction::assertValueAddedAllowed(
+                $listing->farm instanceof Farm ? $listing->farm : null,
+                (int) $attributes['crop_type_id'],
+            );
+        }
 
         $turningOff = array_key_exists('is_active', $attributes) && ! $attributes['is_active'];
 

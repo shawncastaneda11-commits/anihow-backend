@@ -63,7 +63,7 @@ class OrderLinePricer
         }
 
         $lineSubtotal = self::centavos($unitPrice * $quantity);
-        $rule = $listing->activeTawadRule;
+        $rule = $listing->effectiveTawadRule();
         $tawadAmount = 0.0;
 
         if ($rule !== null && $rule->appliesTo($quantity)) {

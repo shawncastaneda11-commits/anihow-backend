@@ -40,12 +40,13 @@ class AniHowApp extends StatefulWidget {
   State<AniHowApp> createState() => _AniHowAppState();
 }
 
-class _AniHowAppState extends State<AniHowApp> {
+class _AniHowAppState extends State<AniHowApp> with WidgetsBindingObserver {
   final AuthController _auth = AuthController();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     widget.preferences.addListener(_syncApiLocale);
     _syncApiLocale();
     _auth.restoreSession();
@@ -57,7 +58,26 @@ class _AniHowAppState extends State<AniHowApp> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshSignedInUser();
+    }
+  }
+
+  Future<void> _refreshSignedInUser() async {
+    if (_auth.user == null) {
+      return;
+    }
+    try {
+      await _auth.refreshUser();
+    } catch (_) {
+      // A failed refresh leaves the last signed-in account on screen.
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     widget.preferences.removeListener(_syncApiLocale);
     _auth.dispose();
     super.dispose();

@@ -32,6 +32,10 @@ use Illuminate\Support\Facades\Validator;
     'organic_certified_until',
     'latitude',
     'longitude',
+    'value_added_enabled',
+    'reservations_enabled',
+    'tawad_enabled',
+    'walk_in_enabled',
 ])]
 class Farm extends Model
 {
@@ -42,10 +46,69 @@ class Farm extends Model
     {
         return [
             'is_active' => 'boolean',
+            'value_added_enabled' => 'boolean',
+            'reservations_enabled' => 'boolean',
+            'tawad_enabled' => 'boolean',
+            'walk_in_enabled' => 'boolean',
             'organic_certified_until' => 'date',
             'latitude' => 'decimal:7',
             'longitude' => 'decimal:7',
         ];
+    }
+
+    public const VALUE_ADDED_OFF_MESSAGE = 'Value-added products are turned off for your farm.';
+
+    public const RESERVATIONS_OFF_MESSAGE = 'This farm is not taking reservations right now.';
+
+    public const TAWAD_OFF_MESSAGE = 'Discounts are turned off for your farm.';
+
+    public const WALK_IN_OFF_MESSAGE = 'Walk-in sales are turned off for your farm.';
+
+    /**
+     * CMS labels and the effect shown when a switch is turned off.
+     *
+     * @return array<string, array{label: string, helper: string}>
+     */
+    public static function featureSwitches(): array
+    {
+        return [
+            'value_added_enabled' => [
+                'label' => 'Value-added products',
+                'helper' => 'Sellers can list processed goods (jams, chips, etc.). Off hides them from buyers.',
+            ],
+            'reservations_enabled' => [
+                'label' => 'Reservations',
+                'helper' => 'Buyers can reserve upcoming harvests. Off stops new reservations; existing ones finish.',
+            ],
+            'tawad_enabled' => [
+                'label' => 'Tawad (discounts)',
+                'helper' => 'Sellers can offer bulk discounts. Off pauses discounts on new orders.',
+            ],
+            'walk_in_enabled' => [
+                'label' => 'Walk-in sales',
+                'helper' => 'Sellers can record in-person sales in the app.',
+            ],
+        ];
+    }
+
+    public function allowsValueAdded(): bool
+    {
+        return $this->value_added_enabled !== false;
+    }
+
+    public function allowsReservations(): bool
+    {
+        return $this->reservations_enabled !== false;
+    }
+
+    public function allowsTawad(): bool
+    {
+        return $this->tawad_enabled !== false;
+    }
+
+    public function allowsWalkIn(): bool
+    {
+        return $this->walk_in_enabled !== false;
     }
 
     public function hasPin(): bool
@@ -163,6 +226,14 @@ class Farm extends Model
 
     protected static function booted(): void
     {
+        static::creating(function (Farm $farm): void {
+            foreach (['value_added_enabled', 'reservations_enabled', 'tawad_enabled', 'walk_in_enabled'] as $column) {
+                if ($farm->{$column} === null) {
+                    $farm->{$column} = true;
+                }
+            }
+        });
+
         static::saving(function (Farm $farm): void {
             foreach (['latitude', 'longitude'] as $column) {
                 if ($farm->{$column} === '') {

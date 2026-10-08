@@ -185,7 +185,12 @@ systemctl enable supervisor
 # Programs are loaded later, after the application exists.
 
 install -d -m 700 /root/anihow-setup
-install -m 700 "${SCRIPT_DIR}/backup.sh" /root/anihow-setup/backup.sh
+src="$(realpath "${SCRIPT_DIR}/backup.sh")"
+dst="/root/anihow-setup/backup.sh"
+if [[ ! -e "${dst}" || "$(realpath "${dst}")" != "${src}" ]]; then
+    install -m 700 "${src}" "${dst}"
+fi
+chmod 700 "${dst}"
 install -d -m 700 /var/backups/anihow
 
 cron_tmp="$(mktemp)"

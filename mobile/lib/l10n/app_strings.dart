@@ -226,6 +226,14 @@ class AppStrings {
   String get verifyBanner =>
       t('Verify email to order.', 'Beripikahin ang email para makapag-order.');
   String get verifyNow => t('Verify now', 'Beripikahin ngayon');
+  String emailVerifiedNotice(String email) => t(
+    'Your email $email is verified.',
+    'Beripikado na ang email mong $email.',
+  );
+  String get chatOpenFailed => t(
+    "Couldn't open the chat. Check your connection and try again.",
+    'Hindi mabuksan ang chat. Tingnan ang koneksyon at subukan ulit.',
+  );
 
   String get shopProfile => t('Shop profile', 'Profile ng tindahan');
   String get roleBuyer => t('Buyer', 'Buyer');
@@ -337,19 +345,12 @@ class AppStrings {
       t('Certified by $name', 'Sertipikado ng $name');
   String get searchProduce => t('Search produce', 'Maghanap ng ani');
   String get freshest => t('Freshest', 'Pinakabago');
-  String get sortFairMix => t('Fair mix', 'Patas na halo');
-  String get sortFairMixHint => t(
-    'Every farm takes turns at the top. Changes daily.',
-    'Salit-salitan ang bawat bukid sa itaas. Nagbabago araw-araw.',
-  );
   String get sortNewest => t('Newest', 'Pinakabago');
   String get nearest => t('Nearest', 'Pinakamalapit');
   String get findingYourLocation =>
       t('Finding your location…', 'Hinahanap ang lokasyon mo…');
-  String get sortedByDistance => t(
-    'Sorted by distance from you',
-    'Nakaayos ayon sa layo mula sa iyo',
-  );
+  String get sortedByDistance =>
+      t('Sorted by distance from you', 'Nakaayos ayon sa layo mula sa iyo');
   String get noMapPinYet => t('No map pin yet', 'Wala pang pin sa mapa');
   String get farmsMissingMapPins => t(
     'Farms have not added their map location yet.',
@@ -768,6 +769,8 @@ class AppStrings {
   String get payOnHandover => t('Cash on handover', 'Cash sa pag-abot');
   String get onlinePayment =>
       t("Online payment (seller's QR)", 'Online na bayad (QR ng nagbebenta)');
+  String get cashPill => t('Cash', 'Cash');
+  String get onlinePaymentPill => t('Online payment', 'Online na bayad');
   String paymentMethodLabel(String? method) =>
       method == 'online_transfer' ? onlinePayment : payOnHandover;
   String get acceptOnlinePayment => t(

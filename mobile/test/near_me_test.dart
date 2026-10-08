@@ -289,7 +289,10 @@ void main() {
 
     expect(find.text('Finding your location…'), findsOneWidget);
     expect(find.byKey(const Key('nearest-locating')), findsOneWidget);
-    expect(tester.widget<FilterChip>(find.byType(FilterChip)).onSelected, isNull);
+    expect(
+      tester.widget<FilterChip>(find.byType(FilterChip)).onSelected,
+      isNull,
+    );
     expect(AppStrings(true).findingYourLocation, 'Hinahanap ang lokasyon mo…');
 
     gate.complete(const BuyerLocationFound(BuyerPoint(14.38, 120.88)));
@@ -301,10 +304,15 @@ void main() {
     expect(api.sort, 'nearest');
     expect(api.nearLat, 14.38);
     expect(api.nearLng, 120.88);
-    expect(AppStrings(true).sortedByDistance, 'Nakaayos ayon sa layo mula sa iyo');
+    expect(
+      AppStrings(true).sortedByDistance,
+      'Nakaayos ayon sa layo mula sa iyo',
+    );
   });
 
-  testWidgets('a farm without a pin says so after nearest sort', (tester) async {
+  testWidgets('a farm without a pin says so after nearest sort', (
+    tester,
+  ) async {
     BuyerLocation.read = () async =>
         const BuyerLocationFound(BuyerPoint(14.38, 120.88));
     final api = _ShopsApi(shops: const [_pinnedFarm, _unpinnedFarm]);
@@ -336,7 +344,10 @@ void main() {
     await tester.tap(find.byType(FilterChip));
     await tester.pumpAndSettle();
 
-    expect(find.text('Farms have not added their map location yet.'), findsOneWidget);
+    expect(
+      find.text('Farms have not added their map location yet.'),
+      findsOneWidget,
+    );
     expect(find.text('Sorted by distance from you'), findsNothing);
     expect(find.text('No map pin yet'), findsOneWidget);
     expect(
@@ -359,7 +370,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('location-unavailable')), findsOneWidget);
-    expect(find.text('Location is off. Showing the usual order.'), findsOneWidget);
+    expect(
+      find.text('Location is off. Showing the usual order.'),
+      findsOneWidget,
+    );
     expect(find.text('Sorted by distance from you'), findsNothing);
     expect(find.text('Finding your location…'), findsNothing);
     expect(find.text('No map pin yet'), findsNothing);
@@ -444,4 +458,33 @@ void main() {
     expect(api.sort, 'nearest');
     expect(api.nearLat, isNull);
   });
+
+  testWidgets(
+    'marketplace nearest shows finding your location while it waits',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final gate = Completer<BuyerLocationResult>();
+      BuyerLocation.read = () => gate.future;
+      final api = _MarketplaceApi();
+      final auth = AuthController(api: api)..restoring = false;
+
+      await tester.pumpWidget(_app(const MarketplaceScreen(), auth: auth));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('marketplace-filter')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Nearest'));
+      await tester.tap(find.text('Apply'));
+      await tester.pump();
+
+      expect(find.byKey(const Key('finding-location')), findsOneWidget);
+      expect(find.text('Finding your location…'), findsOneWidget);
+
+      gate.complete(const BuyerLocationNoFix());
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('finding-location')), findsNothing);
+      expect(find.byKey(const Key('location-no-fix')), findsOneWidget);
+    },
+  );
 }

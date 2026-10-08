@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:anihow/models/models.dart';
 import 'package:anihow/screens/chat/order_chat_screen.dart';
 import 'package:anihow/services/api_client.dart';
@@ -63,18 +65,8 @@ void main() {
     tester,
   ) async {
     final messages = [
-      _message(
-        id: 1,
-        orderId: 12,
-        orderNumber: 'AH-261005-QWTJN',
-        body: 'One',
-      ),
-      _message(
-        id: 2,
-        orderId: 12,
-        orderNumber: 'AH-261005-QWTJN',
-        body: 'Two',
-      ),
+      _message(id: 1, orderId: 12, orderNumber: 'AH-261005-QWTJN', body: 'One'),
+      _message(id: 2, orderId: 12, orderNumber: 'AH-261005-QWTJN', body: 'Two'),
       _message(
         id: 3,
         orderId: 13,
@@ -224,6 +216,71 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  testWidgets('a chat timeout shows the retry view', (tester) async {
+    final api = _TimeoutApi();
+    final auth = AuthController(api: api)
+      ..user = const UserAccount(
+        id: 3,
+        name: 'Ana',
+        email: 'ana@example.com',
+        roles: ['buyer'],
+      )
+      ..restoring = false;
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(
+            create: (_) =>
+                PreferencesController()..notificationsEnabled = false,
+          ),
+          ChangeNotifierProvider.value(value: auth),
+        ],
+        child: MaterialApp(
+          theme: AniHowTheme.light(),
+          home: const OrderChatScreen(
+            order: OrderRecord(
+              id: 7,
+              status: 'placed',
+              total: '40',
+              items: [],
+              sellerId: 4,
+              shopName: 'Nena Stall',
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Retry'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+}
+
+class _TimeoutApi extends ApiClient {
+  _TimeoutApi() : super(onUnauthorized: () {});
+
+  @override
+  Future<StallChat> openStallChat(int sellerId) async {
+    return const StallChat(
+      id: 9,
+      sellerId: 4,
+      shopName: 'Nena Stall',
+      buyerName: 'Ana',
+      buyerId: 3,
+    );
+  }
+
+  @override
+  Future<List<OrderMessage>> stallMessages(
+    int conversationId, {
+    int? afterId,
+  }) async {
+    throw TimeoutException('websocket');
+  }
 }
 
 class _ThreadApi extends ApiClient {

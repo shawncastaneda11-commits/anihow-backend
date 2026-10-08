@@ -48,19 +48,23 @@ class _StallChatScreenState extends State<StallChatScreen> {
     super.initState();
     _pendingListingId = widget.attachListingId;
     _reload();
-    _startRealtime();
+    unawaited(_startRealtime());
     _poll = Timer.periodic(const Duration(seconds: 8), (_) => _pollNewer());
   }
 
   Future<void> _startRealtime() async {
-    final api = context.read<AuthController>().api;
-    final realtime = StallChatRealtime(
-      api: api,
-      conversationId: widget.chat.id,
-    );
-    _realtime = realtime;
-    _liveSub = realtime.messages.listen(_appendIfNew);
-    await realtime.connect();
+    try {
+      final api = context.read<AuthController>().api;
+      final realtime = StallChatRealtime(
+        api: api,
+        conversationId: widget.chat.id,
+      );
+      _realtime = realtime;
+      _liveSub = realtime.messages.listen(_appendIfNew);
+      await realtime.connect();
+    } catch (_) {
+      // A dead websocket must not block the thread. Polling still runs.
+    }
   }
 
   Future<void> _reload() async {
@@ -83,7 +87,7 @@ class _StallChatScreenState extends State<StallChatScreen> {
         _error = null;
       });
       _scrollToEnd();
-    } on ApiException catch (error) {
+    } catch (error) {
       if (!mounted) {
         return;
       }
@@ -106,7 +110,7 @@ class _StallChatScreenState extends State<StallChatScreen> {
       for (final message in newer) {
         _appendIfNew(message);
       }
-    } on ApiException {
+    } catch (_) {
       // Quiet fallback; the composer stays usable.
     }
   }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:anihow/models/models.dart';
 import 'package:anihow/screens/buyer/marketplace_screen.dart';
 import 'package:anihow/services/api_client.dart';
@@ -29,7 +31,13 @@ class _FairApi extends ApiClient {
     int? page,
     String? mixDay,
   }) async {
-    calls.add({'sort': sort, 'page': page, 'mixDay': mixDay});
+    calls.add({
+      'sort': sort,
+      'page': page,
+      'mixDay': mixDay,
+      'search': search,
+      'category': category,
+    });
     return MarketplaceFeed(items: listings, mixDay: this.mixDay);
   }
 
@@ -109,7 +117,9 @@ void main() {
     expect(api.calls[1]['mixDay'], '2026-10-06');
   });
 
-  testWidgets('the sort sheet lists fair mix first and newest', (tester) async {
+  testWidgets('the sort sheet hides fair mix and leaves no sort highlighted', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     await tester.binding.setSurfaceSize(const Size(400, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -121,17 +131,121 @@ void main() {
     await tester.tap(find.byKey(const Key('marketplace-filter')));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('sort-fair')), findsOneWidget);
+    expect(find.byKey(const Key('sort-fair')), findsNothing);
+    expect(find.text('Fair mix'), findsNothing);
     expect(
       find.text('Every farm takes turns at the top. Changes daily.'),
-      findsOneWidget,
+      findsNothing,
     );
     expect(find.byKey(const Key('sort-newest')), findsOneWidget);
-    final fair = tester.getTopLeft(find.byKey(const Key('sort-fair')));
-    final newest = tester.getTopLeft(find.byKey(const Key('sort-newest')));
-    final fairIsFirst =
-        fair.dy < newest.dy - 1 ||
-        ((fair.dy - newest.dy).abs() < 1 && fair.dx < newest.dx);
-    expect(fairIsFirst, isTrue);
+    expect(
+      tester.widget<ChoiceChip>(find.byKey(const Key('sort-newest'))).selected,
+      isFalse,
+    );
+
+    await tester.tap(find.text('Clear'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+
+    expect(api.calls.last['sort'], 'fair');
   });
+
+  testWidgets('a stale marketplace page is ignored after a newer request', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = _GatedApi();
+
+    await tester.pumpWidget(_app(api));
+    api.release([_namedListing(1, 'First')]);
+    await tester.pumpAndSettle();
+    expect(find.text('First'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('category-fresh_produce')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('category-value_added')));
+    await tester.pump();
+
+    api.release([_namedListing(2, 'Stale')]);
+    await tester.pump();
+    expect(find.text('Stale'), findsNothing);
+    expect(find.text('First'), findsOneWidget);
+
+    api.release([_namedListing(3, 'Newest')]);
+    await tester.pumpAndSettle();
+    expect(find.text('Newest'), findsOneWidget);
+    expect(find.text('Stale'), findsNothing);
+  });
+
+  testWidgets('the search clear button empties the field and reloads', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = _FairApi(listings: [_listing(1)]);
+
+    await tester.pumpWidget(_app(api));
+    await tester.pumpAndSettle();
+    final before = api.calls.length;
+
+    await tester.enterText(find.byKey(const Key('marketplace-search')), 'okra');
+    await tester.pump();
+    expect(find.byKey(const Key('marketplace-search-clear')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('marketplace-search-clear')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('okra'), findsNothing);
+    expect(api.calls.length, greaterThan(before));
+    expect(api.calls.last['search'], '');
+  });
+}
+
+class _GatedApi extends _FairApi {
+  _GatedApi() : super(listings: const []);
+
+  final _pending = <Completer<List<ListingItem>>>[];
+
+  @override
+  Future<MarketplaceFeed> marketplace({
+    String? search,
+    int? cropTypeId,
+    String? sort,
+    String? category,
+    double? nearLat,
+    double? nearLng,
+    String? growingMethod,
+    int? page,
+    String? mixDay,
+  }) {
+    calls.add({
+      'sort': sort,
+      'page': page,
+      'mixDay': mixDay,
+      'search': search,
+      'category': category,
+    });
+    final done = Completer<List<ListingItem>>();
+    _pending.add(done);
+    return done.future.then(
+      (items) => MarketplaceFeed(items: items, mixDay: this.mixDay),
+    );
+  }
+
+  void release(List<ListingItem> items) {
+    _pending.removeAt(0).complete(items);
+  }
+}
+
+ListingItem _namedListing(int id, String title) {
+  return ListingItem(
+    id: id,
+    title: title,
+    pricePerUnit: '40',
+    quantityAvailable: '8',
+  );
 }

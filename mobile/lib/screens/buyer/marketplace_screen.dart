@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -31,6 +33,8 @@ class MarketplaceScreen extends StatefulWidget {
 class _MarketplaceScreenState extends State<MarketplaceScreen> {
   final _search = TextEditingController();
   final _scroll = ScrollController();
+  Timer? _searchDebounce;
+  int _requestId = 0;
   int? _cropTypeId;
   String? _category;
   String _sort = 'fair';
@@ -40,6 +44,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   double? _nearLng;
   bool _locationUnavailable = false;
   bool _locationNoFix = false;
+  bool _locating = false;
   bool _updatesHidden = false;
   bool _loading = true;
   bool _loadingMore = false;
@@ -55,6 +60,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     super.initState();
     _cropTypes = context.read<AuthController>().api.cropTypes();
     _scroll.addListener(_onScroll);
+    _search.addListener(_onSearchText);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
@@ -66,10 +72,48 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
+    _search.removeListener(_onSearchText);
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
     _search.dispose();
     super.dispose();
+  }
+
+  void _onSearchText() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _onSearchChanged(String _) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () {
+      if (!mounted) {
+        return;
+      }
+      unawaited(_reload(scrollToTop: true));
+    });
+  }
+
+  void _submitSearch() {
+    _searchDebounce?.cancel();
+    unawaited(_reload(scrollToTop: true));
+  }
+
+  void _clearSearch() {
+    _search.clear();
+    _searchDebounce?.cancel();
+    unawaited(_reload(scrollToTop: true));
+  }
+
+  void _scrollToTop() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scroll.hasClients) {
+        return;
+      }
+      _scroll.jumpTo(0);
+    });
   }
 
   bool get _filtersActive =>
@@ -105,10 +149,12 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     }
   }
 
-  Future<void> _reload() async {
+  Future<void> _reload({bool scrollToTop = false}) async {
+    final request = ++_requestId;
     final api = context.read<AuthController>().api;
     setState(() {
       _loading = true;
+      _loadingMore = false;
       _error = null;
       _page = 1;
       _mixDay = null;
@@ -123,25 +169,21 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         nearLng: _sort == 'nearest' ? _nearLng : null,
         growingMethod: _growingMethod,
       );
-      List<BuyerFarmAnnouncement> updates = const [];
-      try {
-        final page = await api.buyerAnnouncements();
-        updates = page.items;
-      } catch (_) {
-        updates = const [];
-      }
-      if (!mounted) {
+      if (!mounted || request != _requestId) {
         return;
       }
       setState(() {
         _items = feed.items;
         _mixDay = feed.mixDay;
-        _updates = updates;
         _hasMore = feed.items.length >= _pageSize;
         _loading = false;
       });
+      if (scrollToTop) {
+        _scrollToTop();
+      }
+      unawaited(_loadUpdates(request));
     } catch (error) {
-      if (!mounted) {
+      if (!mounted || request != _requestId) {
         return;
       }
       setState(() {
@@ -153,10 +195,28 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     }
   }
 
+  Future<void> _loadUpdates(int request) async {
+    List<BuyerFarmAnnouncement> updates = const [];
+    try {
+      final page = await context
+          .read<AuthController>()
+          .api
+          .buyerAnnouncements();
+      updates = page.items;
+    } catch (_) {
+      updates = const [];
+    }
+    if (!mounted || request != _requestId) {
+      return;
+    }
+    setState(() => _updates = updates);
+  }
+
   Future<void> _loadMore() async {
     if (_loading || _loadingMore || !_hasMore) {
       return;
     }
+    final request = _requestId;
     setState(() => _loadingMore = true);
     final nextPage = _page + 1;
     try {
@@ -171,7 +231,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         page: nextPage,
         mixDay: _mixDay,
       );
-      if (!mounted) {
+      if (!mounted || request != _requestId) {
         return;
       }
       setState(() {
@@ -181,7 +241,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         _loadingMore = false;
       });
     } catch (_) {
-      if (mounted) {
+      if (mounted && request == _requestId) {
         setState(() => _loadingMore = false);
       }
     }
@@ -224,6 +284,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     var unavailable = false;
     var noFix = false;
     if (choice.sort == 'nearest') {
+      setState(() => _locating = true);
       try {
         final result = await BuyerLocation.read();
         if (!mounted) {
@@ -240,6 +301,13 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         }
       } catch (_) {
         noFix = true;
+      } finally {
+        if (mounted) {
+          setState(() => _locating = false);
+        }
+      }
+      if (!mounted) {
+        return;
       }
     }
     setState(() {
@@ -251,12 +319,12 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       _locationUnavailable = unavailable;
       _locationNoFix = noFix;
     });
-    await _reload();
+    await _reload(scrollToTop: true);
   }
 
   void _selectCategory(String? category) {
     setState(() => _category = category);
-    _reload();
+    unawaited(_reload(scrollToTop: true));
   }
 
   void _selectAll() {
@@ -264,7 +332,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       _category = null;
       _cropTypeId = null;
     });
-    _reload();
+    unawaited(_reload(scrollToTop: true));
   }
 
   @override
@@ -298,14 +366,31 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                       child: _SearchRow(
                         controller: _search,
                         filtersActive: _filtersActive,
-                        onSubmit: _reload,
+                        onChanged: _onSearchChanged,
+                        onSubmit: _submitSearch,
+                        onClear: _clearSearch,
                         onFilter: _openFilters,
                       ),
                     ),
                   ),
                 ),
                 SliverToBoxAdapter(child: _chipRow(s)),
-                if (_locationUnavailable)
+                if (_locating)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AniHowSpace.screen,
+                        AniHowSpace.cardGap,
+                        AniHowSpace.screen,
+                        0,
+                      ),
+                      child: Text(
+                        s.findingYourLocation,
+                        key: const Key('finding-location'),
+                      ),
+                    ),
+                  )
+                else if (_locationUnavailable)
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(
@@ -529,13 +614,17 @@ class _SearchRow extends StatelessWidget {
   const _SearchRow({
     required this.controller,
     required this.filtersActive,
+    required this.onChanged,
     required this.onSubmit,
+    required this.onClear,
     required this.onFilter,
   });
 
   final TextEditingController controller;
   final bool filtersActive;
+  final ValueChanged<String> onChanged;
   final VoidCallback onSubmit;
+  final VoidCallback onClear;
   final VoidCallback onFilter;
 
   @override
@@ -558,7 +647,16 @@ class _SearchRow extends StatelessWidget {
                 hintText: s.searchProduce,
                 prefixIcon: const Icon(Icons.search),
                 isDense: true,
+                suffixIcon: controller.text.isEmpty
+                    ? null
+                    : IconButton(
+                        key: const Key('marketplace-search-clear'),
+                        tooltip: s.clear,
+                        onPressed: onClear,
+                        icon: const Icon(Icons.close),
+                      ),
               ),
+              onChanged: onChanged,
               onSubmitted: (_) => onSubmit(),
             ),
           ),
@@ -753,12 +851,6 @@ class _FilterSheetState extends State<_FilterSheet> {
                       runSpacing: 8,
                       children: [
                         _chip(
-                          s.sortFairMix,
-                          _sort == 'fair',
-                          () => _sort = 'fair',
-                          key: const Key('sort-fair'),
-                        ),
-                        _chip(
                           s.sortNewest,
                           _sort == 'freshest',
                           () => _sort = 'freshest',
@@ -786,20 +878,6 @@ class _FilterSheetState extends State<_FilterSheet> {
                         ),
                       ],
                     ),
-                    if (_sort == 'fair') ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        s.sortFairMixHint,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.7,
-                          ),
-                          fontSize: AniHowSpace.label,
-                        ),
-                      ),
-                    ],
                     const SizedBox(height: AniHowSpace.cardGap),
                     Text(s.growingMethod, style: theme.textTheme.titleMedium),
                     const SizedBox(height: 8),
@@ -893,12 +971,7 @@ class _FilterSheetState extends State<_FilterSheet> {
     );
   }
 
-  Widget _chip(
-    String label,
-    bool selected,
-    VoidCallback select, {
-    Key? key,
-  }) {
+  Widget _chip(String label, bool selected, VoidCallback select, {Key? key}) {
     return ChoiceChip(
       key: key,
       label: Text(label),

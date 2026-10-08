@@ -21,6 +21,16 @@ class StatusPill extends StatelessWidget {
   final IconData? icon;
   final int maxLines;
 
+  factory StatusPill.payment(String? method, {AppStrings? strings}) {
+    final online = method == 'online_transfer';
+    return StatusPill(
+      label: online
+          ? (strings?.onlinePaymentPill ?? 'Online payment')
+          : (strings?.cashPill ?? 'Cash'),
+      color: online ? AniHowColors.completed : AniHowColors.pending,
+    );
+  }
+
   factory StatusPill.order(
     String status, {
     String? label,

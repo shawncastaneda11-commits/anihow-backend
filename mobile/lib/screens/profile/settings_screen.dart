@@ -43,9 +43,7 @@ class SettingsScreen extends StatelessWidget {
                 icon: Icons.help_outline,
                 label: s.faq,
                 onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const FaqBotScreen(),
-                  ),
+                  MaterialPageRoute<void>(builder: (_) => const FaqBotScreen()),
                 ),
               ),
             ],
@@ -58,17 +56,26 @@ class SettingsScreen extends StatelessWidget {
                 segments: [
                   ButtonSegment(
                     value: ThemeMode.light,
-                    label: FittedBox(fit: BoxFit.scaleDown, child: Text(s.light)),
+                    label: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(s.light),
+                    ),
                     icon: const Icon(Icons.light_mode_outlined),
                   ),
                   ButtonSegment(
                     value: ThemeMode.dark,
-                    label: FittedBox(fit: BoxFit.scaleDown, child: Text(s.dark)),
+                    label: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(s.dark),
+                    ),
                     icon: const Icon(Icons.dark_mode_outlined),
                   ),
                   ButtonSegment(
                     value: ThemeMode.system,
-                    label: FittedBox(fit: BoxFit.scaleDown, child: Text(s.system)),
+                    label: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(s.system),
+                    ),
                     icon: const Icon(Icons.phone_android),
                   ),
                 ],
@@ -101,11 +108,17 @@ class SettingsScreen extends StatelessWidget {
                 segments: [
                   ButtonSegment(
                     value: CropLanguage.english,
-                    label: FittedBox(fit: BoxFit.scaleDown, child: Text(s.english)),
+                    label: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(s.english),
+                    ),
                   ),
                   ButtonSegment(
                     value: CropLanguage.filipino,
-                    label: FittedBox(fit: BoxFit.scaleDown, child: Text(s.filipinoLabel)),
+                    label: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(s.filipinoLabel),
+                    ),
                   ),
                 ],
                 selected: {language},
@@ -121,7 +134,9 @@ class SettingsScreen extends StatelessWidget {
                   icon: Icons.storefront_outlined,
                   label: s.editProfile,
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(builder: (_) => const FarmerProfileScreen()),
+                    MaterialPageRoute<void>(
+                      builder: (_) => const FarmerProfileScreen(),
+                    ),
                   ),
                 ),
               if (user?.isBuyer == true || user?.isFarmerSeller == true)
@@ -129,7 +144,9 @@ class SettingsScreen extends StatelessWidget {
                   icon: Icons.shield_outlined,
                   label: s.myData,
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(builder: (_) => const MyDataScreen()),
+                    MaterialPageRoute<void>(
+                      builder: (_) => const MyDataScreen(),
+                    ),
                   ),
                 ),
               _SettingsRow(
@@ -144,14 +161,27 @@ class SettingsScreen extends StatelessWidget {
               _SettingsRow(
                 icon: Icons.mail_outline,
                 label: s.email,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const VerifyEmailScreen(),
-                  ),
-                ),
+                onTap: () {
+                  if (user?.isVerified == true) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(s.emailVerifiedNotice(user!.email)),
+                      ),
+                    );
+                    return;
+                  }
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const VerifyEmailScreen(),
+                    ),
+                  );
+                },
                 trailing: user?.isVerified == true
                     ? StatusPill(label: s.verified, color: AniHowColors.ready)
-                    : StatusPill(label: s.unverified, color: AniHowColors.pending),
+                    : StatusPill(
+                        label: s.unverified,
+                        color: AniHowColors.pending,
+                      ),
               ),
             ],
           ),
@@ -169,7 +199,10 @@ class SettingsScreen extends StatelessWidget {
                       showBrandLogo: true,
                       sections: [
                         for (final section in s.aboutSections)
-                          _CopySection(title: section.title, body: section.body),
+                          _CopySection(
+                            title: section.title,
+                            body: section.body,
+                          ),
                       ],
                     ),
                   ),
@@ -184,7 +217,10 @@ class SettingsScreen extends StatelessWidget {
                       title: s.termsPrivacy,
                       sections: [
                         for (final section in s.termsSections)
-                          _CopySection(title: section.title, body: section.body),
+                          _CopySection(
+                            title: section.title,
+                            body: section.body,
+                          ),
                       ],
                     ),
                   ),
@@ -238,7 +274,8 @@ class _SettingsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final rows = children;
     return Card(
-      child: child ??
+      child:
+          child ??
           Column(
             children: [
               for (var i = 0; i < (rows?.length ?? 0); i++) ...[

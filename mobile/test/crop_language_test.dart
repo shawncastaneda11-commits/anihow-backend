@@ -1,6 +1,7 @@
 import 'package:anihow/l10n/app_strings.dart';
 import 'package:anihow/models/models.dart';
 import 'package:anihow/screens/profile/settings_screen.dart';
+import 'package:anihow/screens/profile/verify_email_screen.dart';
 import 'package:anihow/state/auth_controller.dart';
 import 'package:anihow/state/preferences_controller.dart';
 import 'package:anihow/state/theme_controller.dart';
@@ -27,10 +28,22 @@ void main() {
   });
 
   test('saved bilingual preference becomes Filipino', () {
-    expect(PreferencesController.languageFromStored('bilingual'), CropLanguage.filipino);
-    expect(PreferencesController.languageFromStored('filipino'), CropLanguage.filipino);
-    expect(PreferencesController.languageFromStored('english'), CropLanguage.english);
-    expect(PreferencesController.languageFromStored(null), CropLanguage.english);
+    expect(
+      PreferencesController.languageFromStored('bilingual'),
+      CropLanguage.filipino,
+    );
+    expect(
+      PreferencesController.languageFromStored('filipino'),
+      CropLanguage.filipino,
+    );
+    expect(
+      PreferencesController.languageFromStored('english'),
+      CropLanguage.english,
+    );
+    expect(
+      PreferencesController.languageFromStored(null),
+      CropLanguage.english,
+    );
   });
 
   test('Filipino strings switch Settings chrome', () {
@@ -52,7 +65,10 @@ void main() {
       'May order na hinihintay ang kumpirmasyon',
     );
     expect(english.salesWindow('2026-09-18', '2026-09-24'), 'Sep 18 to Sep 24');
-    expect(filipino.salesWindow('2026-09-18', '2026-09-24'), 'Set 18 hanggang Set 24');
+    expect(
+      filipino.salesWindow('2026-09-18', '2026-09-24'),
+      'Set 18 hanggang Set 24',
+    );
     expect(filipino.unverified, 'Hindi pa');
     expect(filipino.logOut, 'Mag-log out');
     expect(english.myData, 'My data');
@@ -63,7 +79,9 @@ void main() {
     expect(filipino.submitReview, 'I-submit ang review');
   });
 
-  testWidgets('Settings has English and Filipino only, and Filipino copy', (tester) async {
+  testWidgets('Settings has English and Filipino only, and Filipino copy', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -92,4 +110,45 @@ void main() {
     expect(find.text('English'), findsOneWidget);
     expect(find.text('Filipino'), findsOneWidget);
   });
+
+  testWidgets(
+    'a verified email shows a snackbar instead of the verify screen',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final auth = AuthController()
+        ..restoring = false
+        ..user = const UserAccount(
+          id: 1,
+          name: 'Ana',
+          email: 'ana@example.com',
+          roles: ['buyer'],
+          emailVerifiedAt: '2026-01-01T00:00:00Z',
+        );
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => PreferencesController()),
+            ChangeNotifierProvider(create: (_) => ThemeController()),
+            ChangeNotifierProvider.value(value: auth),
+          ],
+          child: MaterialApp(
+            theme: AniHowTheme.light(),
+            home: const SettingsScreen(),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Email'));
+      await tester.pump();
+
+      expect(
+        find.text('Your email ana@example.com is verified.'),
+        findsOneWidget,
+      );
+      expect(find.byType(VerifyEmailScreen), findsNothing);
+    },
+  );
 }

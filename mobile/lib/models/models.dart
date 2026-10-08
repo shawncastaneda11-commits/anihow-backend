@@ -499,7 +499,9 @@ class ListingItem {
       availableUntil: _asDate(json['available_until']),
       harvestedOn: _asDate(json['harvested_on']),
       isUpcoming: json['is_upcoming'] == true,
-      canReserve: json.containsKey('can_reserve') ? json['can_reserve'] == true : null,
+      canReserve: json.containsKey('can_reserve')
+          ? json['can_reserve'] == true
+          : null,
       tawadPaused: json['tawad_paused'] == true,
       availabilityState: json['availability_state'] as String?,
       growingMethod: json['growing_method'] as String?,
@@ -1265,14 +1267,12 @@ class ShopProfile {
       farmFavoritesCount:
           ListingItem._asCount(farmMap?['favorites_count']) ?? 0,
       farmCoverUrl: ApiConfig.mediaUrl(farmMap?['cover_photo_url'] as String?),
-      farmLogoUrl: ApiConfig.mediaUrl(
-        () {
-          final thumbnail = farmMap?['logo_thumbnail_url'];
-          final logo = farmMap?['logo_url'];
-          final chosen = thumbnail ?? logo;
-          return chosen is String ? chosen : null;
-        }(),
-      ),
+      farmLogoUrl: ApiConfig.mediaUrl(() {
+        final thumbnail = farmMap?['logo_thumbnail_url'];
+        final logo = farmMap?['logo_url'];
+        final chosen = thumbnail ?? logo;
+        return chosen is String ? chosen : null;
+      }()),
       acceptsOnlinePayment: ListingItem._acceptsOnline(
         json['accepts_online_payment'],
       ),
@@ -1482,6 +1482,9 @@ class FarmProfile {
     this.longitude,
     this.isFavorited = false,
     this.favoritesCount = 0,
+    this.isOrganicCertified = false,
+    this.organicCertifier,
+    this.organicCertifiedUntil,
   });
 
   final int id;
@@ -1505,6 +1508,18 @@ class FarmProfile {
   final double? longitude;
   final bool isFavorited;
   final int favoritesCount;
+  final bool isOrganicCertified;
+  final String? organicCertifier;
+  final String? organicCertifiedUntil;
+
+  bool get isCertified {
+    if (isOrganicCertified) {
+      return true;
+    }
+    final certifier = organicCertifier?.trim() ?? '';
+    final until = organicCertifiedUntil?.trim() ?? '';
+    return certifier.isNotEmpty && until.isNotEmpty;
+  }
 
   bool get hasCoverPhoto => coverPhotoUrl != null && coverPhotoUrl!.isNotEmpty;
 
@@ -1541,7 +1556,9 @@ class FarmProfile {
       pickupPoint: json['pickup_point'] as String?,
       coverPhotoUrl: ApiConfig.mediaUrl(json['cover_photo_url'] as String?),
       logoUrl: ApiConfig.mediaUrl(json['logo_url'] as String?),
-      logoThumbnailUrl: ApiConfig.mediaUrl(json['logo_thumbnail_url'] as String?),
+      logoThumbnailUrl: ApiConfig.mediaUrl(
+        json['logo_thumbnail_url'] as String?,
+      ),
       isActive:
           json['is_active'] == true ||
           json['is_active'] == 1 ||
@@ -1572,6 +1589,11 @@ class FarmProfile {
       longitude: ListingItem._asDouble(json['longitude']),
       isFavorited: json['is_favorited'] == true || json['is_favorited'] == 1,
       favoritesCount: ListingItem._asCount(json['favorites_count']) ?? 0,
+      isOrganicCertified:
+          json['is_organic_certified'] == true ||
+          json['is_organic_certified'] == 1,
+      organicCertifier: json['organic_certifier'] as String?,
+      organicCertifiedUntil: json['organic_certified_until']?.toString(),
     );
   }
 }

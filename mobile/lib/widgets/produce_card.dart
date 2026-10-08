@@ -127,15 +127,7 @@ class ProduceCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.titleMedium,
           ),
-          Text(
-            [
-              if (cropLabel != null && cropLabel.isNotEmpty) cropLabel,
-              if (showSeller) sellerLabel,
-            ].join(' · '),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: muted,
-          ),
+          _posterSellerLine(cropLabel, sellerLabel, muted),
           const SizedBox(height: 4),
           Text(
             listing.priceLabel,
@@ -196,6 +188,44 @@ class ProduceCard extends StatelessWidget {
           },
         ),
       ),
+    );
+  }
+
+  Widget _posterSellerLine(
+    String? cropLabel,
+    String sellerLabel,
+    TextStyle? muted,
+  ) {
+    final crop = cropLabel?.trim() ?? '';
+    final seller = showSeller
+        ? GestureDetector(
+            onTap: onSellerTap,
+            behavior: HitTestBehavior.opaque,
+            child: Text(
+              sellerLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: muted,
+            ),
+          )
+        : null;
+
+    if (crop.isEmpty) {
+      return seller ?? const SizedBox.shrink();
+    }
+
+    return Row(
+      children: [
+        Flexible(
+          child: Text(
+            showSeller ? '$crop · ' : crop,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: muted,
+          ),
+        ),
+        if (seller != null) Flexible(child: seller),
+      ],
     );
   }
 

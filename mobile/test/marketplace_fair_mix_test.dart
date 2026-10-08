@@ -30,6 +30,7 @@ class _FairApi extends ApiClient {
     String? growingMethod,
     int? page,
     String? mixDay,
+    int? farmId,
   }) async {
     calls.add({
       'sort': sort,
@@ -221,6 +222,7 @@ class _GatedApi extends _FairApi {
     String? growingMethod,
     int? page,
     String? mixDay,
+    int? farmId,
   }) {
     calls.add({
       'sort': sort,

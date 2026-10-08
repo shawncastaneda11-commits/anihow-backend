@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -10,10 +13,13 @@ import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/farm_map_card.dart';
-import '../../widgets/hint_card.dart';
 import '../../widgets/produce_card.dart';
 import '../../widgets/profile_avatar_button.dart';
+import 'listing_detail_screen.dart';
 import 'shop_profile_screen.dart';
+
+/// Keeps the first row of a tab clear of the pinned tab bar.
+const double _tabScrollTop = 56;
 
 /// Review-weighted rating across a farm's shops.
 ///
@@ -75,14 +81,24 @@ class _FarmPageScreenState extends State<FarmPageScreen>
   late Future<List<ShopProfile>> _shops;
   bool? _followed;
   bool _followBusy = false;
+  final List<ListingItem> _products = [];
+  int _productsPage = 0;
+  int _productToken = 0;
+  bool _productsBusy = false;
+  bool _productsLoading = true;
+  bool _productsLoadingMore = false;
+  bool _productsHasMore = true;
+  String? _productsError;
 
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 4, vsync: this);
+    _tabs = TabController(length: 5, vsync: this);
     _farm = _loadFarm();
     _shops = _loadShops();
     _loadSaved();
+    _productsBusy = true;
+    unawaited(_fetchProducts(reset: true, notify: false));
   }
 
   @override
@@ -122,7 +138,12 @@ class _FarmPageScreenState extends State<FarmPageScreen>
   }
 
   Future<void> _reload() async {
-    await Future.wait([_reloadFarm(), _reloadShops(), _loadSaved()]);
+    await Future.wait([
+      _reloadFarm(),
+      _reloadShops(),
+      _loadSaved(),
+      _fetchProducts(reset: true),
+    ]);
   }
 
   Future<void> _loadSaved() async {
@@ -139,6 +160,91 @@ class _FarmPageScreenState extends State<FarmPageScreen>
     } on ApiException {
       // Hearts from the shop list still show. A tap tries again.
     }
+  }
+
+  Future<void> _fetchProducts({required bool reset, bool notify = true}) async {
+    if (!reset && (_productsBusy || !_productsHasMore)) {
+      return;
+    }
+    final token = reset ? ++_productToken : _productToken;
+    final page = reset ? 1 : _productsPage + 1;
+    void markLoading() {
+      _productsBusy = true;
+      _productsError = null;
+      if (reset) {
+        _products.clear();
+        _productsPage = 0;
+        _productsHasMore = true;
+        _productsLoading = true;
+        _productsLoadingMore = false;
+      } else {
+        _productsLoadingMore = _products.isNotEmpty;
+        _productsLoading = _products.isEmpty;
+      }
+    }
+
+    if (notify) {
+      setState(markLoading);
+    } else {
+      markLoading();
+    }
+    try {
+      final feed = await context.read<AuthController>().api.marketplace(
+        farmId: widget.farmId,
+        page: page,
+      );
+      if (!mounted || token != _productToken) {
+        return;
+      }
+      setState(() {
+        if (feed.items.isEmpty) {
+          _productsHasMore = false;
+          if (reset) {
+            _productsPage = 1;
+          }
+        } else if (reset) {
+          _products
+            ..clear()
+            ..addAll(feed.items);
+          _productsPage = 1;
+          _productsHasMore = true;
+        } else {
+          _products.addAll(feed.items);
+          _productsPage = page;
+          _productsHasMore = true;
+        }
+        _productsLoading = false;
+        _productsLoadingMore = false;
+        _productsBusy = false;
+      });
+    } on ApiException catch (error) {
+      if (!mounted || token != _productToken) {
+        return;
+      }
+      setState(() {
+        _productsError = error.message;
+        _productsLoading = false;
+        _productsLoadingMore = false;
+        _productsBusy = false;
+      });
+    }
+  }
+
+  bool _onProductsScroll(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) {
+      return false;
+    }
+    if (notification is! ScrollUpdateNotification) {
+      return false;
+    }
+    final metrics = notification.metrics;
+    if (metrics.maxScrollExtent <= 0 || metrics.pixels <= 0) {
+      return false;
+    }
+    if (metrics.pixels >= metrics.maxScrollExtent - 280) {
+      unawaited(_fetchProducts(reset: false));
+    }
+    return false;
   }
 
   Future<void> _toggle(ShopProfile shop) async {
@@ -222,9 +328,7 @@ class _FarmPageScreenState extends State<FarmPageScreen>
     if (!farm.hasPin) {
       return;
     }
-    final uri = Uri.parse(
-      FarmMapCard.urlFor(farm.latitude!, farm.longitude!),
-    );
+    final uri = Uri.parse(FarmMapCard.urlFor(farm.latitude!, farm.longitude!));
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -253,81 +357,126 @@ class _FarmPageScreenState extends State<FarmPageScreen>
     return weightedFarmRating(shops);
   }
 
+  void _openListing(ListingItem listing) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ListingDetailScreen(listingId: listing.id),
+      ),
+    );
+  }
+
+  int _productColumns(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final scale = MediaQuery.textScalerOf(context).scale(1);
+    if (width < 340 || scale >= 1.3) {
+      return 1;
+    }
+    return 2;
+  }
+
+  double _productExtent(BuildContext context, int columns) {
+    final scale = MediaQuery.textScalerOf(context).scale(1);
+    final base = columns == 1 ? 390.0 : 340.0;
+    return base + math.max(0, scale - 1) * 200;
+  }
+
+  double _expandedHeight(BuildContext context) {
+    return MediaQuery.paddingOf(context).top + 240 + 42;
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     return Scaffold(
-      body: AsyncView<FarmProfile>(
+      body: FutureBuilder<FarmProfile>(
         future: _farm,
-        onRetry: _reloadFarm,
-        emptyMessage: s.farmNotFound,
-        isEmpty: (_) => false,
-        builder: (context, farm) {
-          return RefreshIndicator(
-            onRefresh: _reload,
-            child: NestedScrollView(
-              headerSliverBuilder: (context, innerBoxIsScrolled) {
-                return [
-                  SliverAppBar(
-                    pinned: true,
-                    expandedHeight: 220,
-                    title: Text(
-                      farm.name,
-                      key: const Key('farm-name'),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    flexibleSpace: FlexibleSpaceBar(
-                      background: _FarmHeaderCover(farm: farm),
-                    ),
-                  ),
-                  SliverToBoxAdapter(child: _headerActions(s, farm)),
-                  SliverPersistentHeader(
-                    pinned: true,
-                    delegate: _FarmTabHeader(
-                      TabBar(
-                        controller: _tabs,
-                        isScrollable: true,
-                        tabAlignment: TabAlignment.start,
-                        tabs: [
-                          Tab(
-                            key: const Key('farm-tab-shops'),
-                            text: s.farmShopsTab,
-                          ),
-                          Tab(key: const Key('farm-tab-about'), text: s.about),
-                          Tab(
-                            key: const Key('farm-tab-updates'),
-                            text: s.farmUpdates,
-                          ),
-                          Tab(
-                            key: const Key('farm-tab-photos'),
-                            text: s.farmPhotos,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ];
-              },
-              body: TabBarView(
-                controller: _tabs,
-                children: [
-                  _shopsTab(s),
-                  _aboutTab(s, farm),
-                  _updatesTab(s, farm),
-                  _photosTab(s, farm),
-                ],
-              ),
-            ),
-          );
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const _FarmLoading();
+          }
+          if (snapshot.hasError || snapshot.data == null) {
+            return AsyncViewError(onRetry: _reloadFarm);
+          }
+          return _page(s, snapshot.data!);
         },
       ),
     );
   }
 
-  Widget _headerActions(AppStrings s, FarmProfile farm) {
-    final followed = _followed ?? farm.isFavorited;
-    final buyer = context.watch<AuthController>().user?.isBuyer ?? false;
+  Widget _page(AppStrings s, FarmProfile farm) {
+    final expanded = _expandedHeight(context);
+    return RefreshIndicator(
+      onRefresh: _reload,
+      child: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            SliverAppBar(
+              pinned: true,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              expandedHeight: expanded,
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              surfaceTintColor: Colors.transparent,
+              leading: const _CircleBackButton(),
+              flexibleSpace: _FarmFlexibleHeader(
+                farm: farm,
+                maxHeight: expanded,
+              ),
+            ),
+            SliverToBoxAdapter(child: _belowHeader(s, farm)),
+            SliverOverlapAbsorber(
+              handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+              sliver: SliverPersistentHeader(
+                pinned: true,
+                delegate: _FarmTabHeader(
+                  TabBar(
+                    controller: _tabs,
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
+                    indicatorColor: AniHowColors.brand,
+                    indicatorWeight: 3,
+                    labelColor: AniHowColors.brand,
+                    tabs: [
+                      Tab(
+                        key: const Key('farm-tab-products'),
+                        text: s.farmProductsTab,
+                      ),
+                      Tab(
+                        key: const Key('farm-tab-shops'),
+                        text: s.farmShopsTab,
+                      ),
+                      Tab(key: const Key('farm-tab-about'), text: s.about),
+                      Tab(
+                        key: const Key('farm-tab-updates'),
+                        text: s.farmUpdates,
+                      ),
+                      Tab(
+                        key: const Key('farm-tab-photos'),
+                        text: s.farmPhotos,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ];
+        },
+        body: TabBarView(
+          controller: _tabs,
+          children: [
+            _productsTab(s),
+            _shopsTab(s),
+            _aboutTab(s, farm),
+            _updatesTab(s, farm),
+            _photosTab(s, farm),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _belowHeader(AppStrings s, FarmProfile farm) {
+    final latest = farm.announcements.isEmpty ? null : farm.announcements.first;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AniHowSpace.screen,
@@ -336,72 +485,200 @@ class _FarmPageScreenState extends State<FarmPageScreen>
         AniHowSpace.cardGap,
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              if (buyer)
-                _ActionChip(
-                  key: const Key('farm-follow'),
-                  icon: followed ? Icons.favorite : Icons.favorite_outline,
-                  label: followed ? s.followingFarm : s.followFarm,
-                  onPressed: () => _toggleFollow(farm),
-                ),
-              if (farm.hasPin)
-                _ActionChip(
-                  key: const Key('farm-directions'),
-                  icon: Icons.directions_outlined,
-                  label: s.directions,
-                  onPressed: () => _directions(farm),
-                ),
-              _ActionChip(
-                key: const Key('farm-updates-action'),
-                icon: Icons.campaign_outlined,
-                label: s.farmUpdates,
-                onPressed: () => _tabs.animateTo(2),
-              ),
-            ],
-          ),
+          _FarmIdentity(farm: farm, strings: s),
           const SizedBox(height: AniHowSpace.cardGap),
           FutureBuilder<List<ShopProfile>>(
             future: _shops,
             builder: (context, snapshot) {
-              final rating = _averageRating(snapshot.data ?? const []);
-              return Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  Chip(label: Text(s.shopsCount(farm.farmerSellersCount))),
-                  if (rating != null)
-                    Tooltip(
-                      message: s.farmRating,
-                      child: Semantics(
-                        label: s.farmRating,
-                        child: Chip(
-                          key: const Key('farm-rating'),
-                          label: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.star_rounded,
-                                size: 16,
-                                color: AniHowColors.pending,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(rating.rating),
-                              Text(' · ${s.reviewsCount(rating.reviewsCount)}'),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
+              return _StatsStrip(
+                farm: farm,
+                rating: _averageRating(snapshot.data ?? const []),
+                onRating: () => _tabs.animateTo(1),
               );
             },
           ),
+          const SizedBox(height: AniHowSpace.cardGap),
+          _actions(s, farm),
+          if (latest != null) ...[
+            const SizedBox(height: AniHowSpace.cardGap),
+            _LatestUpdateCard(
+              announcement: latest,
+              onSeeAll: () => _tabs.animateTo(3),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _actions(AppStrings s, FarmProfile farm) {
+    final followed = _followed ?? farm.isFavorited;
+    final buyer = context.watch<AuthController>().user?.isBuyer ?? false;
+    final follow = followed
+        ? FilledButton.tonalIcon(
+            key: const Key('farm-follow'),
+            onPressed: _followBusy ? null : () => _toggleFollow(farm),
+            icon: const Icon(Icons.favorite),
+            label: Text(
+              s.followingFarm,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          )
+        : FilledButton.icon(
+            key: const Key('farm-follow'),
+            onPressed: _followBusy ? null : () => _toggleFollow(farm),
+            icon: const Icon(Icons.favorite_outline),
+            label: Text(
+              s.followFarm,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          );
+    return Row(
+      children: [
+        if (buyer) Expanded(child: follow),
+        if (buyer && farm.hasPin) const SizedBox(width: AniHowSpace.cardGap),
+        if (farm.hasPin)
+          Expanded(
+            child: OutlinedButton.icon(
+              key: const Key('farm-directions'),
+              onPressed: () => _directions(farm),
+              icon: const Icon(Icons.directions_outlined),
+              label: Text(
+                s.directions,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _productsTab(AppStrings s) {
+    return Builder(
+      builder: (context) {
+        final columns = _productColumns(context);
+        final extent = _productExtent(context, columns);
+        return NotificationListener<ScrollNotification>(
+          onNotification: _onProductsScroll,
+          child: CustomScrollView(
+            key: const PageStorageKey<String>('farm-products'),
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverOverlapInjector(
+                handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
+                  context,
+                ),
+              ),
+              if (_productsLoading && _products.isEmpty)
+                SliverPadding(
+                  padding: AniHowSpace.screenPadding,
+                  sliver: _placeholderGrid(columns, extent),
+                )
+              else if (_productsError != null && _products.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _CenteredStatus(
+                    icon: Icons.cloud_off_outlined,
+                    message: _productsError!,
+                    action: FilledButton(
+                      key: const Key('farm-products-retry'),
+                      onPressed: () => _fetchProducts(reset: true),
+                      child: Text(s.retry),
+                    ),
+                  ),
+                )
+              else ...[
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AniHowSpace.screen,
+                      _tabScrollTop,
+                      AniHowSpace.screen,
+                      AniHowSpace.cardGap,
+                    ),
+                    child: Text(
+                      s.productsFromFarm(_products.length),
+                      key: const Key('farm-products-count'),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+                if (_products.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _CenteredStatus(
+                      icon: Icons.shopping_basket_outlined,
+                      message: s.noProduceListed,
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AniHowSpace.screen,
+                      0,
+                      AniHowSpace.screen,
+                      AniHowSpace.screen,
+                    ),
+                    sliver: SliverGrid(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: columns,
+                        mainAxisExtent: extent,
+                        crossAxisSpacing: AniHowSpace.cardGap,
+                        mainAxisSpacing: AniHowSpace.cardGap,
+                      ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final listing = _products[index];
+                        return ProduceCard(
+                          listing: listing,
+                          style: ProduceCardStyle.poster,
+                          showSeller: true,
+                          onTap: () => _openListing(listing),
+                          onSellerTap: listing.sellerId == null
+                              ? null
+                              : () => openBuyerShop(context, listing.sellerId!),
+                        );
+                      }, childCount: _products.length),
+                    ),
+                  ),
+                if (_productsLoadingMore)
+                  const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _placeholderGrid(int columns, double extent) {
+    return SliverGrid(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        mainAxisExtent: extent * 0.72,
+        crossAxisSpacing: AniHowSpace.cardGap,
+        mainAxisSpacing: AniHowSpace.cardGap,
+      ),
+      delegate: SliverChildBuilderDelegate(
+        (context, index) => const _GreyBlock(),
+        childCount: 4,
       ),
     );
   }
@@ -417,157 +694,284 @@ class _FarmPageScreenState extends State<FarmPageScreen>
 
   Widget _shopSection(AppStrings s, List<ShopProfile> shops) {
     final sellers = _visible(shops);
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
-        AniHowSpace.screen,
-        AniHowSpace.cardGap,
-        AniHowSpace.screen,
-        AniHowSpace.screen,
-      ),
-      children: [
-        Text(
-          s.shopsAtThisFarm(shops.length),
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: AniHowSpace.cardGap),
-        TextField(
-          controller: _search,
-          decoration: InputDecoration(
-            hintText: s.searchShops,
-            prefixIcon: const Icon(Icons.search),
+    return Builder(
+      builder: (context) => CustomScrollView(
+        key: const PageStorageKey<String>('farm-shops'),
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverOverlapInjector(
+            handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
           ),
-          onChanged: (_) => setState(() {}),
-        ),
-        const SizedBox(height: AniHowSpace.cardGap),
-        if (shops.isEmpty)
-          Text(s.noShopsAtFarm)
-        else if (sellers.isEmpty)
-          Text(s.noShopsMatch)
-        else
-          for (var index = 0; index < sellers.length; index++) ...[
-            if (index > 0) const SizedBox(height: AniHowSpace.cardGap),
-            _SellerCard(
-              shop: sellers[index],
-              saved: _saved.contains(sellers[index].id),
-              onToggle: () => _toggle(sellers[index]),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              AniHowSpace.screen,
+              _tabScrollTop,
+              AniHowSpace.screen,
+              AniHowSpace.screen,
             ),
-          ],
-      ],
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                Text(
+                  s.shopsAtThisFarm(shops.length),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: AniHowSpace.cardGap),
+                TextField(
+                  controller: _search,
+                  decoration: InputDecoration(
+                    hintText: s.searchShops,
+                    prefixIcon: const Icon(Icons.search),
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: AniHowSpace.cardGap),
+                if (shops.isEmpty)
+                  _CenteredStatus(
+                    icon: Icons.storefront_outlined,
+                    message: s.noShopsAtFarm,
+                  )
+                else if (sellers.isEmpty)
+                  _CenteredStatus(
+                    icon: Icons.search_off,
+                    message: s.noShopsMatch,
+                  )
+                else
+                  for (var index = 0; index < sellers.length; index++) ...[
+                    if (index > 0) const SizedBox(height: AniHowSpace.cardGap),
+                    _SellerCard(
+                      shop: sellers[index],
+                      saved: _saved.contains(sellers[index].id),
+                      onToggle: () => _toggle(sellers[index]),
+                    ),
+                  ],
+              ]),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _aboutTab(AppStrings s, FarmProfile farm) {
-    final theme = Theme.of(context);
     final description = farm.description?.trim();
     final pickup = farm.pickupPoint?.trim();
     final contactPerson = farm.contactPerson?.trim();
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: AniHowSpace.screenPadding,
-      children: [
-        if (description != null && description.isNotEmpty)
-          Text(description, style: theme.textTheme.bodyMedium),
-        if (pickup != null && pickup.isNotEmpty) ...[
-          const SizedBox(height: AniHowSpace.section),
-          AniHowHintCard(
-            icon: Icons.place_outlined,
-            title: s.pickupPoint,
-            body: pickup,
-            tone: AniHowHintTone.brand,
+    final certifier = farm.organicCertifier?.trim();
+    final until = farm.organicCertifiedUntil?.trim();
+    return Builder(
+      builder: (context) => CustomScrollView(
+        key: const PageStorageKey<String>('farm-about'),
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverOverlapInjector(
+            handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              AniHowSpace.screen,
+              _tabScrollTop,
+              AniHowSpace.screen,
+              AniHowSpace.screen,
+            ),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                _AboutCard(
+                  icon: Icons.info_outline,
+                  title: s.about,
+                  body: description == null || description.isEmpty
+                      ? s.noDescriptionYet
+                      : description,
+                ),
+                if (pickup != null && pickup.isNotEmpty) ...[
+                  const SizedBox(height: AniHowSpace.cardGap),
+                  _AboutCard(
+                    icon: Icons.place_outlined,
+                    title: s.pickupPoint,
+                    body: pickup,
+                  ),
+                ],
+                if (farm.hasPin) ...[
+                  const SizedBox(height: AniHowSpace.cardGap),
+                  _SurfaceCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _AboutHeading(
+                          icon: Icons.map_outlined,
+                          title: s.location,
+                        ),
+                        const SizedBox(height: AniHowSpace.cardGap),
+                        FarmMapCard(
+                          latitude: farm.latitude!,
+                          longitude: farm.longitude!,
+                        ),
+                        const SizedBox(height: AniHowSpace.cardGap),
+                        OutlinedButton.icon(
+                          onPressed: () => _directions(farm),
+                          icon: const Icon(Icons.directions_outlined),
+                          label: Text(s.directions),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                if (contactPerson != null && contactPerson.isNotEmpty) ...[
+                  const SizedBox(height: AniHowSpace.cardGap),
+                  _AboutCard(
+                    icon: Icons.person_outline,
+                    title: s.farmContact,
+                    body: contactPerson,
+                    extra: s.farmContactBuyerHint,
+                  ),
+                ],
+                if (farm.isCertified) ...[
+                  const SizedBox(height: AniHowSpace.cardGap),
+                  _AboutCard(
+                    key: const Key('farm-organic'),
+                    icon: Icons.eco_outlined,
+                    title: s.organicCertified,
+                    body: [
+                      if (certifier != null && certifier.isNotEmpty)
+                        s.certifiedBy(certifier),
+                      if (until != null && until.isNotEmpty)
+                        s.validUntil(until),
+                    ].join('\n'),
+                  ),
+                ],
+              ]),
+            ),
           ),
         ],
-        if (farm.hasPin) ...[
-          const SizedBox(height: AniHowSpace.section),
-          FarmMapCard(latitude: farm.latitude!, longitude: farm.longitude!),
-        ],
-        if (contactPerson != null && contactPerson.isNotEmpty) ...[
-          const SizedBox(height: AniHowSpace.section),
-          Text(s.farmContact, style: theme.textTheme.titleMedium),
-          const SizedBox(height: AniHowSpace.labelGap),
-          Text(contactPerson, style: theme.textTheme.bodyMedium),
-          const SizedBox(height: AniHowSpace.labelGap),
-          Text(s.farmContactBuyerHint, style: theme.textTheme.bodyMedium),
-        ],
-      ],
+      ),
     );
   }
 
   Widget _updatesTab(AppStrings s, FarmProfile farm) {
     if (farm.announcements.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          const SizedBox(height: 80),
-          Center(child: Text(s.noUpdatesYet)),
-        ],
+      return _statusScroll(
+        icon: Icons.campaign_outlined,
+        message: s.noUpdatesYet,
+        storageKey: 'farm-updates',
       );
     }
-    return ListView.separated(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: AniHowSpace.screenPadding,
-      itemCount: farm.announcements.length,
-      separatorBuilder: (_, _) => const SizedBox(height: AniHowSpace.cardGap),
-      itemBuilder: (context, index) =>
-          _UpdateCard(announcement: farm.announcements[index]),
+    return Builder(
+      builder: (context) => CustomScrollView(
+        key: const PageStorageKey<String>('farm-updates'),
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverOverlapInjector(
+            handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              AniHowSpace.screen,
+              _tabScrollTop,
+              AniHowSpace.screen,
+              AniHowSpace.screen,
+            ),
+            sliver: SliverList.separated(
+              itemCount: farm.announcements.length,
+              separatorBuilder: (_, _) =>
+                  const SizedBox(height: AniHowSpace.section),
+              itemBuilder: (context, index) => _UpdateTimeline(
+                announcement: farm.announcements[index],
+                showLine: index < farm.announcements.length - 1,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _photosTab(AppStrings s, FarmProfile farm) {
     if (farm.photos.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          const SizedBox(height: 80),
-          Center(child: Text(s.noFarmPhotos)),
-        ],
+      return _statusScroll(
+        icon: Icons.photo_library_outlined,
+        message: s.noFarmPhotos,
+        storageKey: 'farm-photos',
       );
     }
-    return GridView.builder(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: AniHowSpace.screenPadding,
-      itemCount: farm.photos.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        mainAxisSpacing: AniHowSpace.cardGap,
-        crossAxisSpacing: AniHowSpace.cardGap,
-        childAspectRatio: 0.8,
-      ),
-      itemBuilder: (context, index) {
-        final photo = farm.photos[index];
-        final caption = photo.caption?.trim();
-        return InkWell(
-          onTap: () => _openPhotos(farm.photos, index),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(AniHowSpace.radius),
-                  child: Image.network(
-                    photo.gridUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => ColoredBox(
-                      color: AniHowColors.brand.withValues(alpha: 0.12),
-                      child: const Icon(Icons.image_outlined),
-                    ),
-                  ),
-                ),
-              ),
-              if (caption != null && caption.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    caption,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall,
-                  ),
-                ),
-            ],
+    return Builder(
+      builder: (context) => CustomScrollView(
+        key: const PageStorageKey<String>('farm-photos'),
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverOverlapInjector(
+            handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
           ),
-        );
-      },
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              AniHowSpace.screen,
+              _tabScrollTop,
+              AniHowSpace.screen,
+              AniHowSpace.screen,
+            ),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: AniHowSpace.cardGap,
+                crossAxisSpacing: AniHowSpace.cardGap,
+                childAspectRatio: 0.78,
+              ),
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final photo = farm.photos[index];
+                final caption = photo.caption?.trim();
+                return InkWell(
+                  onTap: () => _openPhotos(farm.photos, index),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            photo.gridUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => const _GreyBlock(),
+                          ),
+                        ),
+                      ),
+                      if (caption != null && caption.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            caption,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              }, childCount: farm.photos.length),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statusScroll({
+    required IconData icon,
+    required String message,
+    required String storageKey,
+  }) {
+    return Builder(
+      builder: (context) => CustomScrollView(
+        key: PageStorageKey<String>(storageKey),
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverOverlapInjector(
+            handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+          ),
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: _CenteredStatus(icon: icon, message: message),
+          ),
+        ],
+      ),
     );
   }
 
@@ -580,14 +984,187 @@ class _FarmPageScreenState extends State<FarmPageScreen>
   }
 }
 
-class _FarmHeaderCover extends StatelessWidget {
-  const _FarmHeaderCover({required this.farm});
+class _CircleBackButton extends StatelessWidget {
+  const _CircleBackButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: Material(
+        color: theme.colorScheme.surface.withValues(alpha: 0.92),
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: () => Navigator.of(context).maybePop(),
+          child: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface),
+        ),
+      ),
+    );
+  }
+}
+
+class _FarmFlexibleHeader extends StatelessWidget {
+  const _FarmFlexibleHeader({required this.farm, required this.maxHeight});
+
+  final FarmProfile farm;
+  final double maxHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final top = MediaQuery.paddingOf(context).top;
+    const coverBody = 240.0;
+    const logoSize = 84.0;
+    final coverHeight = top + coverBody;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final current = constraints.maxHeight;
+        final collapsed = top + kToolbarHeight;
+        final span = math.max(1.0, maxHeight - collapsed);
+        final t = ((maxHeight - current) / span).clamp(0.0, 1.0);
+        final titleOpacity = ((t - 0.72) / 0.28).clamp(0.0, 1.0);
+        return ClipRect(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: math.min(coverHeight, current),
+                child: _FarmCover(farm: farm),
+              ),
+              if (current > coverHeight)
+                Positioned(
+                  top: coverHeight - (logoSize / 2),
+                  left: AniHowSpace.screen,
+                  child: _FarmLogo(farm: farm),
+                ),
+              Positioned(
+                left: 64,
+                right: AniHowSpace.screen,
+                bottom: 0,
+                height: kToolbarHeight,
+                child: IgnorePointer(
+                  child: Opacity(
+                    opacity: titleOpacity,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        farm.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _FarmIdentity extends StatelessWidget {
+  const _FarmIdentity({required this.farm, required this.strings});
+
+  final FarmProfile farm;
+  final AppStrings strings;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final place = farm.placeLabel;
+    final accent = theme.brightness == Brightness.dark
+        ? AniHowColors.sage
+        : AniHowColors.inStock;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          farm.name,
+          key: const Key('farm-name'),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        if (farm.isCertified) ...[
+          const SizedBox(height: 8),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.eco, size: 16, color: accent),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      strings.organicCertified,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: accent,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        if (place.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(
+                Icons.location_on_outlined,
+                size: 18,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  place,
+                  key: const Key('farm-place'),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _FarmCover extends StatelessWidget {
+  const _FarmCover({required this.farm});
 
   final FarmProfile farm;
 
   @override
   Widget build(BuildContext context) {
-    final place = farm.placeLabel;
     final cover = farm.coverPhotoUrl;
     return Stack(
       key: const Key('farm-header-cover'),
@@ -598,63 +1175,61 @@ class _FarmHeaderCover extends StatelessWidget {
             cover,
             key: const Key('farm-cover'),
             fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => _CoverFallback(name: farm.name),
+            errorBuilder: (_, _, _) => const _CoverFallback(),
           )
         else
-          _CoverFallback(name: farm.name),
+          const _CoverFallback(),
         const DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Color(0x00000000), Color(0xCC000000)],
+              colors: [Color(0x00000000), Color(0x99000000)],
+              stops: [0.45, 1],
             ),
           ),
         ),
-        Positioned(
-          left: 16,
-          bottom: 12,
-          child: _FarmLogo(farm: farm),
-        ),
-        if (place.isNotEmpty)
-          Positioned(
-            left: 96,
-            right: 16,
-            bottom: 16,
-            child: Text(
-              place,
-              key: const Key('farm-place'),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
       ],
     );
   }
 }
 
 class _CoverFallback extends StatelessWidget {
-  const _CoverFallback({required this.name});
-
-  final String name;
+  const _CoverFallback();
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
+    const spots = <(double, double, IconData)>[
+      (24, 36, Icons.eco_outlined),
+      (120, 18, Icons.grass),
+      (220, 70, Icons.spa_outlined),
+      (300, 28, Icons.eco_outlined),
+      (70, 120, Icons.spa_outlined),
+      (180, 150, Icons.grass),
+      (280, 130, Icons.eco_outlined),
+    ];
+    return DecoratedBox(
       key: const Key('farm-cover-fallback'),
-      color: AniHowColors.brand,
-      child: Center(
-        child: Text(
-          _initials(name),
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onPrimary,
-            fontWeight: FontWeight.w800,
-          ),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF3C8F62), AniHowColors.brand, Color(0xFF143C28)],
         ),
+      ),
+      child: Stack(
+        children: [
+          for (final spot in spots)
+            Positioned(
+              left: spot.$1,
+              top: spot.$2,
+              child: Icon(
+                spot.$3,
+                size: 42,
+                color: Colors.white.withValues(alpha: 0.14),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -667,19 +1242,21 @@ class _FarmLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final surface = Theme.of(context).colorScheme.surface;
     return Container(
       key: const Key('farm-logo'),
+      width: 84,
+      height: 84,
+      alignment: Alignment.center,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(
-          color: Theme.of(context).colorScheme.surface,
-          width: 3,
-        ),
+        color: surface,
+        border: Border.all(color: surface, width: 4),
       ),
       child: AniHowAvatar(
         name: farm.name,
         imageUrl: farm.logoImageUrl,
-        radius: 32,
+        radius: 38,
         backgroundColor: AniHowColors.brand,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
       ),
@@ -687,27 +1264,334 @@ class _FarmLogo extends StatelessWidget {
   }
 }
 
-class _ActionChip extends StatelessWidget {
-  const _ActionChip({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.onPressed,
+class _StatsStrip extends StatelessWidget {
+  const _StatsStrip({
+    required this.farm,
+    required this.rating,
+    required this.onRating,
   });
 
-  final IconData icon;
-  final String label;
-  final VoidCallback onPressed;
+  final FarmProfile farm;
+  final FarmRatingSummary? rating;
+  final VoidCallback onRating;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon, size: 20),
-        label: Text(label),
+    final s = AppStrings.of(context);
+    return _SurfaceCard(
+      padding: EdgeInsets.zero,
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            Expanded(
+              child: _StatCell(
+                key: const Key('farm-rating'),
+                tooltip: s.farmRating,
+                onTap: onRating,
+                value: rating == null
+                    ? null
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.star_rounded,
+                            size: 18,
+                            color: AniHowColors.pending,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(rating!.rating),
+                        ],
+                      ),
+                label: rating == null
+                    ? s.farmNoReviews
+                    : s.farmReviewCount(rating!.reviewsCount),
+              ),
+            ),
+            const _StatDivider(),
+            Expanded(
+              child: _StatCell(
+                value: Text('${farm.farmerSellersCount}'),
+                label: s.farmShopsTab,
+              ),
+            ),
+            const _StatDivider(),
+            Expanded(
+              child: _StatCell(
+                value: Text('${farm.favoritesCount}'),
+                label: s.followers,
+              ),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _StatDivider extends StatelessWidget {
+  const _StatDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return VerticalDivider(
+      width: 1,
+      thickness: 1,
+      color: Theme.of(context).colorScheme.outlineVariant,
+    );
+  }
+}
+
+class _StatCell extends StatelessWidget {
+  const _StatCell({
+    super.key,
+    required this.label,
+    this.value,
+    this.onTap,
+    this.tooltip,
+  });
+
+  final String label;
+  final Widget? value;
+  final VoidCallback? onTap;
+  final String? tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final child = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (value != null)
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: DefaultTextStyle.merge(
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+                child: value!,
+              ),
+            ),
+          Text(
+            label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+    final tappable = onTap == null
+        ? child
+        : InkWell(onTap: onTap, child: child);
+    final message = tooltip;
+    if (message == null) {
+      return tappable;
+    }
+    return Tooltip(message: message, child: tappable);
+  }
+}
+
+class _LatestUpdateCard extends StatelessWidget {
+  const _LatestUpdateCard({required this.announcement, required this.onSeeAll});
+
+  final FarmAnnouncement announcement;
+  final VoidCallback onSeeAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+    final when = DateTime.tryParse(announcement.createdAt ?? '');
+    final accent = theme.brightness == Brightness.dark
+        ? AniHowColors.sage
+        : AniHowColors.brand;
+    return _SurfaceCard(
+      key: const Key('farm-latest-update'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.campaign_outlined, color: accent),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  announcement.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (announcement.body.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              announcement.body.trim(),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              if (when != null)
+                Expanded(
+                  child: Text(
+                    s.timeAgo(when.toLocal()),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                )
+              else
+                const Spacer(),
+              TextButton(
+                key: const Key('farm-updates-see-all'),
+                onPressed: onSeeAll,
+                child: Text(s.seeAll),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SurfaceCard extends StatelessWidget {
+  const _SurfaceCard({super.key, required this.child, this.padding});
+
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    return Material(
+      color: theme.colorScheme.surfaceContainerLow,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: dark ? theme.colorScheme.outlineVariant : Colors.transparent,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(padding: padding ?? AniHowSpace.cardPadding, child: child),
+    );
+  }
+}
+
+class _AboutCard extends StatelessWidget {
+  const _AboutCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.body,
+    this.extra,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+  final String? extra;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return _SurfaceCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _IconTile(icon: icon),
+          const SizedBox(width: AniHowSpace.cardGap),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                for (final line in body.split('\n'))
+                  if (line.trim().isNotEmpty) Text(line),
+                if (extra != null && extra!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    extra!,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AboutHeading extends StatelessWidget {
+  const _AboutHeading({required this.icon, required this.title});
+
+  final IconData icon;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _IconTile(icon: icon),
+        const SizedBox(width: AniHowSpace.cardGap),
+        Expanded(
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w800),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _IconTile extends StatelessWidget {
+  const _IconTile({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = theme.brightness == Brightness.dark
+        ? AniHowColors.sage
+        : AniHowColors.brand;
+    return Container(
+      width: 40,
+      height: 40,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(icon, color: accent, size: 22),
     );
   }
 }
@@ -741,72 +1625,114 @@ class _FarmTabHeader extends SliverPersistentHeaderDelegate {
   }
 }
 
-class _UpdateCard extends StatefulWidget {
-  const _UpdateCard({required this.announcement});
+class _UpdateTimeline extends StatefulWidget {
+  const _UpdateTimeline({required this.announcement, required this.showLine});
 
   final FarmAnnouncement announcement;
+  final bool showLine;
 
   @override
-  State<_UpdateCard> createState() => _UpdateCardState();
+  State<_UpdateTimeline> createState() => _UpdateTimelineState();
 }
 
-class _UpdateCardState extends State<_UpdateCard> {
+class _UpdateTimelineState extends State<_UpdateTimeline> {
   bool _open = false;
 
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
+    final theme = Theme.of(context);
     final item = widget.announcement;
     final body = item.body.trim();
     final long = body.length > 160;
     final shown = _open || !long ? body : '${body.substring(0, 160).trim()}…';
     final date = _dateLabel(item.createdAt);
     final image = item.imageUrl;
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: AniHowSpace.cardPadding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              item.title,
-              style: const TextStyle(
-                fontSize: AniHowSpace.title,
-                fontWeight: FontWeight.w800,
+    final accent = theme.brightness == Brightness.dark
+        ? AniHowColors.sage
+        : AniHowColors.brand;
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 24,
+            child: Column(
+              children: [
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: accent,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                if (widget.showLine)
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      color: theme.colorScheme.outlineVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _SurfaceCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (date != null)
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        child: Text(date, style: theme.textTheme.labelMedium),
+                      ),
+                    ),
+                  if (date != null) const SizedBox(height: 8),
+                  Text(
+                    item.title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  if (shown.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(shown),
+                  ],
+                  if (long && !_open)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: () => setState(() => _open = true),
+                        child: Text(s.readMore),
+                      ),
+                    ),
+                  if (image != null && image.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        image,
+                        height: 140,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
-            if (date != null) ...[
-              const SizedBox(height: 4),
-              Text(date, style: Theme.of(context).textTheme.bodySmall),
-            ],
-            if (shown.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(shown),
-            ],
-            if (long && !_open)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton(
-                  onPressed: () => setState(() => _open = true),
-                  child: Text(s.readMore),
-                ),
-              ),
-            if (image != null && image.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(AniHowSpace.radius),
-                child: Image.network(
-                  image,
-                  height: 140,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                ),
-              ),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -904,24 +1830,31 @@ class _SellerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final location = shop.location?.trim();
-    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.7);
+    final muted = theme.colorScheme.onSurfaceVariant;
     final person = shop.name.trim();
     final showPerson =
         person.isNotEmpty &&
         person.toLowerCase() != shop.shopName.trim().toLowerCase();
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
+    return _SurfaceCard(
+      padding: EdgeInsets.zero,
       child: InkWell(
         onTap: () => openBuyerShop(context, shop.id),
         child: Padding(
           padding: AniHowSpace.cardPadding,
           child: Row(
             children: [
-              AniHowAvatar(
-                name: shop.shopName,
-                imageUrl: shop.avatarUrl,
-                radius: 26,
+              Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: theme.colorScheme.outlineVariant),
+                ),
+                child: AniHowAvatar(
+                  name: shop.shopName,
+                  imageUrl: shop.avatarUrl,
+                  radius: 26,
+                ),
               ),
               const SizedBox(width: AniHowSpace.cardGap),
               Expanded(
@@ -979,14 +1912,23 @@ class _SellerCard extends StatelessWidget {
                     ],
                     if (shop.hasRating) ...[
                       const SizedBox(height: 6),
-                      SizedBox(
-                        height: 20,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: RatingLabel(
-                            rating: shop.averageRating!,
-                            count: shop.reviewsCount,
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AniHowColors.pending.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: RatingLabel(
+                              rating: shop.averageRating!,
+                              count: shop.reviewsCount,
+                            ),
                           ),
                         ),
                       ),
@@ -999,9 +1941,7 @@ class _SellerCard extends StatelessWidget {
                     ? AppStrings.of(context).removeStoreFromFavorites
                     : AppStrings.of(context).addStoreToFavorites,
                 onPressed: onToggle,
-                style: IconButton.styleFrom(
-                  minimumSize: const Size(48, 48),
-                ),
+                style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
                 icon: Icon(saved ? Icons.favorite : Icons.favorite_outline),
                 color: saved ? theme.colorScheme.error : muted,
               ),
@@ -1014,14 +1954,81 @@ class _SellerCard extends StatelessWidget {
   }
 }
 
-String _initials(String name) {
-  final parts = name
-      .trim()
-      .split(RegExp(r'\s+'))
-      .where((part) => part.isNotEmpty)
-      .take(2);
-  if (parts.isEmpty) {
-    return '';
+class _FarmLoading extends StatelessWidget {
+  const _FarmLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.all(AniHowSpace.screen),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(height: 24),
+          _GreyBlock(height: 220),
+          SizedBox(height: AniHowSpace.cardGap),
+          _GreyBlock(height: 72),
+          SizedBox(height: AniHowSpace.cardGap),
+          _GreyBlock(height: 48),
+        ],
+      ),
+    );
   }
-  return parts.map((part) => part[0].toUpperCase()).join();
+}
+
+class _GreyBlock extends StatelessWidget {
+  const _GreyBlock({this.height});
+
+  final double? height;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = theme.brightness == Brightness.dark
+        ? AniHowColors.darkHairline
+        : AniHowColors.photoPlaceholder;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: SizedBox(height: height, width: double.infinity),
+    );
+  }
+}
+
+class _CenteredStatus extends StatelessWidget {
+  const _CenteredStatus({
+    required this.icon,
+    required this.message,
+    this.action,
+  });
+
+  final IconData icon;
+  final String message;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: AniHowSpace.screenPadding,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 40, color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyLarge,
+          ),
+          if (action != null) ...[
+            const SizedBox(height: AniHowSpace.cardGap),
+            action!,
+          ],
+        ],
+      ),
+    );
+  }
 }

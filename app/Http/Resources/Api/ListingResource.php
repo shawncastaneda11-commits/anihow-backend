@@ -78,8 +78,27 @@ class ListingResource extends JsonResource
                 $this->status->value === 'taken_down',
                 $this->takedown_reason,
             ),
+            'needs_actual_harvest' => $this->when(
+                $this->ownedBy($request),
+                (bool) $this->needs_actual_harvest,
+            ),
+            'expired_with_stock' => $this->when(
+                $this->ownedBy($request),
+                $this->isExpired() && (float) $this->quantity_available > 0,
+            ),
+            'has_harvest_records' => $this->when(
+                $this->ownedBy($request),
+                fn (): bool => (bool) ($this->harvest_records_exists ?? $this->harvestRecords()->exists()),
+            ),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
+    }
+
+    private function ownedBy(Request $request): bool
+    {
+        $user = $request->user();
+
+        return $user !== null && (int) $user->id === (int) $this->farmer_seller_id;
     }
 
     private function tawadIsPaused(Request $request): bool

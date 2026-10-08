@@ -13,6 +13,7 @@ import 'cancel_reservations_dialog.dart';
 import 'farm_announcements_screen.dart';
 import 'listing_form_screen.dart';
 import 'listing_reservations_screen.dart';
+import 'stock_sheets.dart';
 
 class FarmerListingsScreen extends StatefulWidget {
   const FarmerListingsScreen({super.key});
@@ -264,6 +265,42 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
   }
 }
 
+class _ExpiredStockBanner extends StatelessWidget {
+  const _ExpiredStockBanner({required this.listing, required this.onExtend});
+
+  final ListingItem listing;
+  final VoidCallback onExtend;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final unit = listing.unit ?? '';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          s.leftAfterExpiry(listing.quantityAvailable, unit),
+          key: ValueKey('expired-left-${listing.id}'),
+        ),
+        TextButton(
+          key: ValueKey('remove-spoiled-${listing.id}'),
+          onPressed: () => showRemoveStockSheet(
+            context,
+            listing,
+            prefilledReason: 'spoiled',
+          ),
+          child: Text(s.removeAsSpoiled),
+        ),
+        TextButton(
+          key: ValueKey('extend-${listing.id}'),
+          onPressed: onExtend,
+          child: Text(s.extendListing),
+        ),
+      ],
+    );
+  }
+}
+
 class _List extends StatelessWidget {
   const _List({
     required this.items,
@@ -325,6 +362,17 @@ class _List extends StatelessWidget {
                     ),
                   ),
                 AvailabilityChip(state: listing.availabilityState),
+                if (listing.harvestDueSoon)
+                  ActionChip(
+                    key: ValueKey('record-harvest-${listing.id}'),
+                    label: Text(AppStrings.of(context).recordHarvest),
+                    onPressed: () => onOpen(listing),
+                  ),
+                if (listing.expiredWithStock)
+                  _ExpiredStockBanner(
+                    listing: listing,
+                    onExtend: () => onOpen(listing),
+                  ),
                 ReservedHarvestLabel(listing: listing),
                 if (listing.isUpcoming)
                   TextButton(

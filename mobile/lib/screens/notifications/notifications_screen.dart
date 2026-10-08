@@ -16,6 +16,7 @@ import '../buyer/order_history_screen.dart';
 import '../farmer/farmer_orders_screen.dart';
 import '../chat/order_chat_screen.dart';
 import '../farmer/farm_announcements_screen.dart';
+import '../farmer/stock_history_screen.dart';
 import '../farmer/listing_form_screen.dart';
 import '../farmer/listings_screen.dart';
 
@@ -88,7 +89,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       await context.read<AuthController>().api.markAllNotificationsRead();
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
         await _reload();
       }
     } finally {
@@ -105,7 +107,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         await context.read<AuthController>().api.markNotificationRead(item.id);
       } on ApiException catch (error) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(error.message)));
         }
       }
     }
@@ -128,7 +131,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           TextButton(
             style: TextButton.styleFrom(
               foregroundColor: Theme.of(context).colorScheme.onPrimary,
-              disabledForegroundColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
+              disabledForegroundColor: Theme.of(context).colorScheme.onPrimary
+                  .withValues(alpha: 0.7),
             ),
             onPressed: _busy || !hasUnread ? null : _markAllRead,
             child: Text(AppStrings.of(context).markAllRead),
@@ -162,10 +166,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               vertical: 8,
             ),
             leading: item.isReportNotice
-                ? Icon(
-                    _reportIcon(item.type),
-                    color: AniHowColors.brand,
-                  )
+                ? Icon(_reportIcon(item.type), color: AniHowColors.brand)
                 : _UnreadDot(visible: item.isUnread),
             title: Text(
               AppStrings.of(context).notificationTitle(item.type, item.title),
@@ -215,7 +216,11 @@ class _CaughtUpEmpty extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.notifications_none, size: 56, color: AniHowColors.brand),
+            const Icon(
+              Icons.notifications_none,
+              size: 56,
+              color: AniHowColors.brand,
+            ),
             const SizedBox(height: AniHowSpace.cardGap),
             Text(
               "You're all caught up",
@@ -259,7 +264,10 @@ IconData _reportIcon(String? type) {
   };
 }
 
-Future<void> openNotificationTarget(BuildContext context, AppNotification item) async {
+Future<void> openNotificationTarget(
+  BuildContext context,
+  AppNotification item,
+) async {
   if (item.isReportNotice) {
     return;
   }
@@ -280,6 +288,18 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
     return;
   }
 
+  if (item.pointsToStockHistory && item.relatedId != null && isFarmer) {
+    if (!context.mounted) {
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => StockHistoryScreen(listingId: item.relatedId!),
+      ),
+    );
+    return;
+  }
+
   if (item.pointsToListing && item.relatedId != null) {
     if (isFarmer) {
       try {
@@ -288,14 +308,20 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
           return;
         }
         await Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => ListingFormScreen(listing: listing)),
+          MaterialPageRoute(
+            builder: (_) => ListingFormScreen(listing: listing),
+          ),
         );
         return;
       } on ApiException {
         if (!context.mounted) {
           return;
         }
-        await _pushList(context, title: AppStrings.read(context).myListings, body: const FarmerListingsScreen());
+        await _pushList(
+          context,
+          title: AppStrings.read(context).myListings,
+          body: const FarmerListingsScreen(),
+        );
         return;
       }
     }
@@ -303,7 +329,9 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
       return;
     }
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ListingDetailScreen(listingId: item.relatedId!)),
+      MaterialPageRoute(
+        builder: (_) => ListingDetailScreen(listingId: item.relatedId!),
+      ),
     );
     return;
   }
@@ -313,11 +341,14 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
       return;
     }
     if (isFarmer) {
-      await _pushList(context, title: AppStrings.read(context).myListings, body: const FarmerListingsScreen());
-    } else {
-      await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const MarketplaceScreen()),
+      await _pushList(
+        context,
+        title: AppStrings.read(context).myListings,
+        body: const FarmerListingsScreen(),
       );
+    } else {
+      await Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => const MarketplaceScreen()));
     }
     return;
   }
@@ -331,9 +362,7 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
         return;
       }
       await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => OrderChatScreen(order: order),
-        ),
+        MaterialPageRoute<void>(builder: (_) => OrderChatScreen(order: order)),
       );
       return;
     } on ApiException {
@@ -355,9 +384,8 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
       );
       return;
     }
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const OrderHistoryScreen()),
-    );
+    await Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const OrderHistoryScreen()));
     return;
   }
 
@@ -373,7 +401,11 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
       );
       return;
     }
-    await _pushList(context, title: AppStrings.read(context).incomingOrders, body: const FarmerOrdersScreen());
+    await _pushList(
+      context,
+      title: AppStrings.read(context).incomingOrders,
+      body: const FarmerOrdersScreen(),
+    );
     return;
   }
 
@@ -381,13 +413,16 @@ Future<void> openNotificationTarget(BuildContext context, AppNotification item) 
     return;
   }
   if (isFarmer) {
-    await _pushList(context, title: AppStrings.read(context).incomingOrders, body: const FarmerOrdersScreen());
+    await _pushList(
+      context,
+      title: AppStrings.read(context).incomingOrders,
+      body: const FarmerOrdersScreen(),
+    );
     return;
   }
 
-  await Navigator.of(context).push(
-    MaterialPageRoute(builder: (_) => const OrderHistoryScreen()),
-  );
+  await Navigator.of(context)
+      .push(MaterialPageRoute(builder: (_) => const OrderHistoryScreen()));
 }
 
 Future<void> _pushList(

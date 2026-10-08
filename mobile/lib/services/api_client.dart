@@ -84,13 +84,26 @@ Map<String, dynamic> marketplaceQuery({
 /// is sent as an empty string so the server can null it. Other null fields
 /// stay out of the body.
 Map<String, String> listingMultipartFields(Map<String, dynamic> body) {
-  return {
-    for (final entry in body.entries)
-      if (entry.value != null)
-        entry.key: '${entry.value}'
-      else if (_datesClearedAsEmpty.contains(entry.key))
-        entry.key: '',
-  };
+  final fields = <String, String>{};
+  for (final entry in body.entries) {
+    final value = entry.value;
+    if (value is Map) {
+      for (final item in value.entries) {
+        final amount = item.value;
+        if (amount == null || '$amount'.trim().isEmpty) {
+          continue;
+        }
+        fields['${entry.key}[${item.key}]'] = '$amount';
+      }
+      continue;
+    }
+    if (value != null) {
+      fields[entry.key] = '$value';
+    } else if (_datesClearedAsEmpty.contains(entry.key)) {
+      fields[entry.key] = '';
+    }
+  }
+  return fields;
 }
 
 bool isPasswordChangeRequired(int? statusCode, Object? data) {
@@ -435,6 +448,45 @@ class ApiClient {
       imagePath: imagePath,
     );
     return ListingItem.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<ListingItem> addStock(int id, Map<String, dynamic> body) async {
+    final response = await _post('/farmer/listings/$id/harvests', body);
+    return ListingItem.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<ListingItem> recordActualHarvest(
+    int id,
+    Map<String, dynamic> body, {
+    bool confirmCancelReservations = false,
+  }) async {
+    final response = await _post('/farmer/listings/$id/actual-harvest', {
+      ...body,
+      if (confirmCancelReservations) 'confirm_cancel_reservations': true,
+    });
+    return ListingItem.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<ListingItem> removeStock(
+    int id, {
+    required String quantity,
+    required String reason,
+    String? note,
+  }) async {
+    final response = await _post('/farmer/listings/$id/stock-removals', {
+      'quantity': quantity,
+      'reason': reason,
+      if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+    });
+    return ListingItem.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<StockHistoryPage> stockHistory(int id, {int page = 1}) async {
+    final response = await _get(
+      '/farmer/listings/$id/stock-history',
+      query: {'page': page},
+    );
+    return StockHistoryPage.fromJson(response);
   }
 
   Future<ListingItem> updateListing(

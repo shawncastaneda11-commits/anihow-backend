@@ -30,6 +30,8 @@ enum NotificationType: string
     case ReservationMade = 'reservation_made';
     case ReservationConverted = 'reservation_converted';
     case ReservationCancelled = 'reservation_cancelled';
+    case HarvestReminder = 'harvest_reminder';
+    case ExpiredStockLeft = 'expired_stock_left';
 
     public function label(): string
     {
@@ -57,6 +59,8 @@ enum NotificationType: string
             self::ReservationMade => 'Reservation made',
             self::ReservationConverted => 'Reservation converted',
             self::ReservationCancelled => 'Reservation cancelled',
+            self::HarvestReminder => 'Record the actual harvest',
+            self::ExpiredStockLeft => 'Stock left after the listing ended',
         };
     }
 

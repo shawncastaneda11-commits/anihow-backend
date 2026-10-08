@@ -16,6 +16,10 @@ Schedule::command('reservations:open-due')
     ->everyFiveMinutes()
     ->withoutOverlapping();
 
+Schedule::command('listings:harvest-upkeep')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();
+
 Schedule::command('orders:sweep-stale')
     ->hourly()
     ->withoutOverlapping();

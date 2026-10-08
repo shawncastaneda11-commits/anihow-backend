@@ -2,6 +2,7 @@
 
 namespace App\Actions\Reservations;
 
+use App\Actions\Listings\EnsureHarvestRecorded;
 use App\Enums\FulfillmentPreference;
 use App\Enums\ReservationCancellationReason;
 use App\Enums\ReservationStatus;
@@ -19,7 +20,10 @@ use Illuminate\Support\Facades\DB;
  */
 class OpenDueReservations
 {
-    public function __construct(private readonly CancelReservation $canceller) {}
+    public function __construct(
+        private readonly CancelReservation $canceller,
+        private readonly EnsureHarvestRecorded $ensureHarvest,
+    ) {}
 
     public function handle(): void
     {
@@ -91,6 +95,8 @@ class OpenDueReservations
             if (! $this->windowHasOpened($listing)) {
                 return;
             }
+
+            $this->ensureHarvest->forListing($listing);
 
             foreach ($reservations as $reservation) {
                 $listing->refresh();

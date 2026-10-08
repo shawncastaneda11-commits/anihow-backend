@@ -40,6 +40,7 @@ class ListingController extends Controller
             ->listings()
             ->with(self::relations())
             ->withActiveReservationTotals()
+            ->withExists('harvestRecords')
             ->latest()
             ->paginate();
 
@@ -52,11 +53,13 @@ class ListingController extends Controller
             $request->user(),
             $request->listingAttributes(),
             $request->file('image'),
+            $request->harvestPayload(),
         );
 
         $listing = Listing::query()
             ->with(self::relations())
             ->withActiveReservationTotals()
+            ->withExists('harvestRecords')
             ->findOrFail($listing->id);
 
         return (new ListingResource($listing))
@@ -72,6 +75,7 @@ class ListingController extends Controller
         $listing = Listing::query()
             ->with(self::relations())
             ->withActiveReservationTotals()
+            ->withExists('harvestRecords')
             ->findOrFail($listing->id);
 
         return new ListingResource($listing);
@@ -92,16 +96,11 @@ class ListingController extends Controller
         $listing = Listing::query()
             ->with(self::relations())
             ->withActiveReservationTotals()
+            ->withExists('harvestRecords')
             ->findOrFail($listing->id);
 
-        $additional = ['message' => 'Listing updated.'];
-
-        if ((float) $listing->quantity_available < (float) ($listing->reserved_quantity ?? 0)) {
-            $additional['warning'] = 'The available quantity is now below what buyers have reserved.';
-        }
-
         return (new ListingResource($listing))
-            ->additional($additional);
+            ->additional(['message' => 'Listing updated.']);
     }
 
     public function destroy(Request $request, Listing $listing, DeleteListingAction $deleteListing): JsonResponse

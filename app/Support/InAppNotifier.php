@@ -386,6 +386,33 @@ class InAppNotifier
         );
     }
 
+    public function harvestReminder(User $farmer, Listing $listing): InAppNotification
+    {
+        $date = $listing->available_from?->toFormattedDateString() ?? '';
+
+        return $this->send(
+            $farmer,
+            NotificationType::HarvestReminder,
+            NotificationType::HarvestReminder->label(),
+            "Record the actual harvest for {$listing->title} before it opens on {$date}.",
+            $listing,
+        );
+    }
+
+    public function expiredStockLeft(User $farmer, Listing $listing): InAppNotification
+    {
+        $quantity = number_format((float) $listing->quantity_available, 2, '.', '');
+        $unit = $listing->unit?->value ?? '';
+
+        return $this->send(
+            $farmer,
+            NotificationType::ExpiredStockLeft,
+            NotificationType::ExpiredStockLeft->label(),
+            "{$listing->title} ended with {$quantity} {$unit} left. Remove it as spoiled or extend the listing.",
+            $listing,
+        );
+    }
+
     public function orderMessage(User $recipient, Order $order, User $sender, string $body): InAppNotification
     {
         $preview = mb_strlen($body) > 80 ? mb_substr($body, 0, 77).'...' : $body;

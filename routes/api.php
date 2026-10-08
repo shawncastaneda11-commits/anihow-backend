@@ -29,7 +29,10 @@ use App\Http\Controllers\Api\Farms\FarmController;
 use App\Http\Controllers\Api\Favorites\FarmFavoriteController;
 use App\Http\Controllers\Api\Favorites\FavoriteController;
 use App\Http\Controllers\Api\Favorites\ShopFavoriteController;
+use App\Http\Controllers\Api\Listings\HarvestController;
 use App\Http\Controllers\Api\Listings\ListingController;
+use App\Http\Controllers\Api\Listings\StockHistoryController;
+use App\Http\Controllers\Api\Listings\StockRemovalController;
 use App\Http\Controllers\Api\Listings\TawadRuleController;
 use App\Http\Controllers\Api\Listings\ToggleListingActiveController;
 use App\Http\Controllers\Api\Marketplace\CropTypeController;
@@ -170,6 +173,17 @@ Route::middleware([
         ->name('farmer.listings.reservations.cancel');
     Route::post('listings/{listing}/open', [FarmerReservationController::class, 'open'])
         ->name('farmer.listings.open');
+    Route::post('listings/{listing}/harvests', [HarvestController::class, 'store'])
+        ->withTrashed()
+        ->name('farmer.listings.harvests.store');
+    Route::post('listings/{listing}/actual-harvest', [HarvestController::class, 'actual'])
+        ->withTrashed()
+        ->name('farmer.listings.actual-harvest');
+    Route::post('listings/{listing}/stock-removals', [StockRemovalController::class, 'store'])
+        ->withTrashed()
+        ->name('farmer.listings.stock-removals.store');
+    Route::get('listings/{listing}/stock-history', [StockHistoryController::class, 'show'])
+        ->name('farmer.listings.stock-history');
 
     // Tawad: a seller-published peso discount rule, one active rule per listing.
     Route::post('listings/{listing}/tawad', [TawadRuleController::class, 'store'])

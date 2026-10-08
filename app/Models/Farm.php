@@ -129,6 +129,43 @@ class Farm extends Model
     }
 
     /**
+     * One line for the profile card. Barangay and municipality are left off
+     * when the street address already contains them.
+     */
+    public function addressLine(): string
+    {
+        $parts = [];
+
+        foreach ([$this->address, $this->barangay, $this->municipality] as $part) {
+            if (! is_string($part)) {
+                continue;
+            }
+
+            $part = trim($part);
+
+            if ($part === '') {
+                continue;
+            }
+
+            $alreadyListed = false;
+
+            foreach ($parts as $existing) {
+                if (mb_stripos($existing, $part) !== false) {
+                    $alreadyListed = true;
+
+                    break;
+                }
+            }
+
+            if (! $alreadyListed) {
+                $parts[] = $part;
+            }
+        }
+
+        return implode(', ', $parts);
+    }
+
+    /**
      * A certificate counts only while the certifier, the number, and an
      * unexpired date are all on file. Any gap means the farm is not certified.
      */

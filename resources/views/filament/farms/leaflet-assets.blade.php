@@ -9,6 +9,29 @@
     integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"
     crossorigin="anonymous"
 ></script>
+<style>
+    .farm-leaflet {
+        position: relative;
+        z-index: 0;
+        isolation: isolate;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .farm-leaflet-preview {
+        height: 200px;
+    }
+
+    .farm-leaflet-picker {
+        height: 320px;
+    }
+
+    @media (min-width: 640px) {
+        .farm-leaflet-picker {
+            height: 420px;
+        }
+    }
+</style>
 <script>
     document.addEventListener('alpine:init', function () {
         Alpine.data('farmLocationMap', function (config) {
@@ -18,6 +41,10 @@
                 interactive: config.interactive !== false,
                 latitudePath: config.latitudePath || '',
                 longitudePath: config.longitudePath || '',
+                updateAddressPath: config.updateAddressPath || '',
+                suggestedBarangayPath: config.suggestedBarangayPath || '',
+                suggestedMunicipalityPath: config.suggestedMunicipalityPath || '',
+                suggestedAddressPath: config.suggestedAddressPath || '',
                 query: '',
                 link: '',
                 places: [],
@@ -26,6 +53,12 @@
                 map: null,
                 marker: null,
                 label: '',
+                suggestionLabel: '',
+                lookupMessage: '',
+                updateAddress: true,
+                suggestion: null,
+                lookupTimer: null,
+                dragging: false,
                 bootMap: function () {
                     const start = function () {
                         this.mountMap();
@@ -51,8 +84,18 @@
                         : fallback;
 
                     window.L.Icon.Default.imagePath = 'https://unpkg.com/leaflet@1.9.4/dist/images/';
-                    this.map = window.L.map(this.$refs.canvas, {
+                    const canvas = this.$refs.canvas;
+                    canvas.style.position = 'relative';
+                    canvas.style.zIndex = '0';
+                    canvas.style.isolation = 'isolate';
+                    this.map = window.L.map(canvas, {
+                        dragging: this.interactive,
+                        zoomControl: this.interactive,
                         scrollWheelZoom: this.interactive,
+                        doubleClickZoom: this.interactive,
+                        boxZoom: this.interactive,
+                        keyboard: this.interactive,
+                        touchZoom: this.interactive,
                     }).setView(center, 15);
                     window.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         attribution: '&copy; OpenStreetMap contributors',
@@ -91,7 +134,16 @@
                         this.marker = window.L.marker(latlng, { draggable: this.interactive }).addTo(this.map);
 
                         if (this.interactive) {
+                            this.marker.on('dragstart', function () {
+                                this.dragging = true;
+
+                                if (this.lookupTimer) {
+                                    window.clearTimeout(this.lookupTimer);
+                                    this.lookupTimer = null;
+                                }
+                            }.bind(this));
                             this.marker.on('dragend', function () {
+                                this.dragging = false;
                                 const point = this.marker.getLatLng();
                                 this.sync(point.lat, point.lng);
                             }.bind(this));
@@ -123,6 +175,70 @@
 
                     this.$wire.set(this.latitudePath, Number(lat).toFixed(7));
                     this.$wire.set(this.longitudePath, Number(lng).toFixed(7));
+                    this.scheduleLookup();
+                },
+                scheduleLookup: function () {
+                    if (! this.interactive || this.dragging) {
+                        return;
+                    }
+
+                    if (this.lookupTimer) {
+                        window.clearTimeout(this.lookupTimer);
+                    }
+
+                    this.lookupTimer = window.setTimeout(function () {
+                        this.lookupTimer = null;
+
+                        if (this.dragging) {
+                            return;
+                        }
+
+                        this.lookupAddress();
+                    }.bind(this), 800);
+                },
+                lookupAddress: async function () {
+                    if (this.latitude === null || this.latitude === '' || this.longitude === null || this.longitude === '') {
+                        return;
+                    }
+
+                    const result = await this.$wire.reverseFarmPlace(Number(this.latitude), Number(this.longitude));
+
+                    if (! result || result.message) {
+                        this.suggestion = null;
+                        this.suggestionLabel = '';
+                        this.lookupMessage = (result && result.message)
+                            ? result.message
+                            : 'Couldn\'t look up this spot. You can still save the pin.';
+                        this.updateAddress = false;
+                        this.writeSuggestion(false);
+
+                        return;
+                    }
+
+                    this.suggestion = result;
+                    this.suggestionLabel = result.label || '';
+                    this.lookupMessage = '';
+                    this.updateAddress = true;
+                    this.writeSuggestion(true);
+                },
+                writeSuggestion: function (enabled) {
+                    const suggestion = enabled ? (this.suggestion || {}) : {};
+
+                    if (this.updateAddressPath) {
+                        this.$wire.set(this.updateAddressPath, !! enabled);
+                    }
+
+                    if (this.suggestedBarangayPath) {
+                        this.$wire.set(this.suggestedBarangayPath, enabled ? (suggestion.barangay || '') : '');
+                    }
+
+                    if (this.suggestedMunicipalityPath) {
+                        this.$wire.set(this.suggestedMunicipalityPath, enabled ? (suggestion.municipality || '') : '');
+                    }
+
+                    if (this.suggestedAddressPath) {
+                        this.$wire.set(this.suggestedAddressPath, enabled ? (suggestion.address || '') : '');
+                    }
                 },
                 writeLabel: function () {
                     if (this.latitude === null || this.latitude === '' || this.longitude === null || this.longitude === '') {

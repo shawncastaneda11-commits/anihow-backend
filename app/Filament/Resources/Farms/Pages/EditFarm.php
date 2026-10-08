@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Farms\Pages;
 use App\Enums\Permission;
 use App\Filament\Forms\FarmLocationPicker;
 use App\Filament\Resources\Farms\FarmResource;
+use App\Filament\Resources\Farms\Schemas\FarmProfileOverview;
 use App\Models\Farm;
 use App\Policies\FarmPolicy;
 use App\Support\GoogleMapsLinkResolver;
@@ -14,11 +15,14 @@ use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
@@ -37,13 +41,19 @@ class EditFarm extends EditRecord
 
     public function content(Schema $schema): Schema
     {
-        return $schema->components([
-            View::make('filament.farms.profile')
-                ->viewData(fn (): array => [
-                    'farm' => $this->getRecord(),
-                ]),
-            $this->getRelationManagersContentComponent(),
-        ]);
+        return $schema
+            ->columns(1)
+            ->components([
+                View::make('filament.farms.header')
+                    ->viewData(fn (): array => [
+                        'farm' => $this->getRecord(),
+                    ]),
+                Grid::make(['default' => 1, 'lg' => 3])
+                    ->schema(FarmProfileOverview::components($this)),
+                Group::make([
+                    $this->getRelationManagersContentComponent(),
+                ])->extraAttributes(['class' => 'mt-6']),
+            ]);
     }
 
     protected function resolveRecord(int|string $key): Model
@@ -240,11 +250,15 @@ class EditFarm extends EditRecord
     {
         return Action::make('editLocation')
             ->modalHeading('Location')
-            ->modalWidth(Width::Large)
+            ->modalWidth(Width::FourExtraLarge)
             ->modalSubmitActionLabel('Save')
             ->fillForm(fn (Farm $record): array => [
                 'latitude' => $record->latitude,
                 'longitude' => $record->longitude,
+                'update_address' => true,
+                'suggested_barangay' => null,
+                'suggested_municipality' => null,
+                'suggested_address' => null,
             ])
             ->schema(FarmLocationPicker::fields())
             ->extraModalFooterActions([
@@ -260,10 +274,26 @@ class EditFarm extends EditRecord
                     ->cancelParentActions(),
             ])
             ->action(function (Farm $record, array $data): void {
-                $record->update([
+                $payload = [
                     'latitude' => $this->coordinate($data['latitude'] ?? null),
                     'longitude' => $this->coordinate($data['longitude'] ?? null),
-                ]);
+                ];
+
+                $suggestion = [
+                    'barangay' => $this->clip($data['suggested_barangay'] ?? null, 100),
+                    'municipality' => $this->clip($data['suggested_municipality'] ?? null, 100),
+                    'address' => $this->clip($data['suggested_address'] ?? null, 255),
+                ];
+                $hasSuggestion = collect($suggestion)->contains(fn (?string $value): bool => filled($value));
+
+                if ($this->wantsAddressUpdate($data['update_address'] ?? false) && $hasSuggestion) {
+                    $payload = [
+                        ...$payload,
+                        ...$suggestion,
+                    ];
+                }
+
+                $record->update($payload);
             });
     }
 
@@ -335,22 +365,35 @@ class EditFarm extends EditRecord
     public function editStatusAction(): Action
     {
         return Action::make('editStatus')
-            ->modalHeading('Status')
-            ->modalSubmitActionLabel('Save')
+            ->label(fn (): string => $this->getRecord()->is_active ? 'Set inactive' : 'Set active')
+            ->modalHeading(fn (): string => $this->getRecord()->is_active ? 'Set this farm inactive?' : 'Set this farm active?')
+            ->modalSubmitActionLabel(fn (): string => $this->getRecord()->is_active ? 'Set inactive' : 'Set active')
+            ->requiresConfirmation()
             ->visible(fn (): bool => $this->canManageStatus())
             ->authorize(fn (): bool => $this->canManageStatus())
             ->fillForm(fn (Farm $record): array => [
-                'is_active' => $record->is_active,
+                'is_active' => ! $record->is_active,
             ])
             ->schema([
-                Toggle::make('is_active')
-                    ->label('Active'),
+                Hidden::make('is_active'),
             ])
             ->action(function (Farm $record, array $data): void {
                 $record->update([
-                    'is_active' => (bool) ($data['is_active'] ?? false),
+                    'is_active' => array_key_exists('is_active', $data)
+                        ? (bool) $data['is_active']
+                        : ! $record->is_active,
                 ]);
             });
+    }
+
+    /**
+     * @return array{barangay: ?string, municipality: ?string, province: ?string, address: ?string, label: ?string, message: ?string}
+     */
+    public function reverseFarmPlace(float $latitude, float $longitude): array
+    {
+        $this->authorizeFarmUpdate();
+
+        return app(NominatimPlaceSearch::class)->reverse($latitude, $longitude, (int) auth()->id());
     }
 
     private function authorizeFarmUpdate(): void
@@ -363,7 +406,7 @@ class EditFarm extends EditRecord
         );
     }
 
-    private function canManageOrganic(): bool
+    public function canManageOrganic(): bool
     {
         $user = auth()->user();
         $farm = $this->getRecord();
@@ -394,6 +437,26 @@ class EditFarm extends EditRecord
         }
 
         return is_numeric($value) ? (string) $value : null;
+    }
+
+    private function clip(mixed $value, int $max): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $value = trim($value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        return mb_substr($value, 0, $max);
+    }
+
+    private function wantsAddressUpdate(mixed $value): bool
+    {
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 
     /**

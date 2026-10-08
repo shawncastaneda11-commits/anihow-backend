@@ -59,7 +59,7 @@ Route::prefix('auth')->group(function (): void {
         Route::post('reset-password', ResetPasswordController::class)->name('auth.reset-password');
     });
 
-    Route::middleware('auth:sanctum')->group(function (): void {
+    Route::middleware(['auth:sanctum', 'password.changed'])->group(function (): void {
         Route::post('logout', LogoutController::class)->name('auth.logout');
         Route::get('user', MeController::class)->name('auth.user');
         Route::patch('user', UpdateProfileController::class)->name('auth.user.update');
@@ -89,7 +89,7 @@ Route::prefix('auth')->group(function (): void {
  * that every authenticated actor reads. Crop-care is read-only here: it is
  * written by each farm's Content Editor in the CMS.
  */
-Route::middleware('auth:sanctum')->group(function (): void {
+Route::middleware(['auth:sanctum', 'password.changed'])->group(function (): void {
     Route::get('crop-types', CropTypeController::class)->name('crop-types.index');
 
     Route::get('crop-care', [CropCareArticleController::class, 'index'])->name('crop-care.index');
@@ -144,6 +144,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
 Route::middleware([
     'auth:sanctum',
+    'password.changed',
     RoleMiddleware::using(Role::SuperAdmin, 'sanctum'),
 ])->prefix('admin')->group(function (): void {
     Route::post('farmer-sellers', CreateFarmerSellerController::class)
@@ -152,6 +153,7 @@ Route::middleware([
 
 Route::middleware([
     'auth:sanctum',
+    'password.changed',
     RoleMiddleware::using(Role::FarmerSeller, 'sanctum'),
 ])->prefix('farmer')->group(function (): void {
     Route::get('listings', [ListingController::class, 'index'])->name('farmer.listings.index');
@@ -204,6 +206,7 @@ Route::middleware([
 
 Route::middleware([
     'auth:sanctum',
+    'password.changed',
     RoleMiddleware::using(Role::Buyer, 'sanctum'),
 ])->prefix('buyer')->group(function (): void {
     Route::get('marketplace', [MarketplaceController::class, 'index'])->name('buyer.marketplace.index');

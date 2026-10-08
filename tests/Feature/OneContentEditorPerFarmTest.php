@@ -139,8 +139,6 @@ class OneContentEditorPerFarmTest extends TestCase
             'roles' => $this->roleId($role),
             'farm_id' => $farm->id,
             'status' => UserStatus::Active->value,
-            'password' => 'new-password-1',
-            'password_confirmation' => 'new-password-1',
         ];
     }
 

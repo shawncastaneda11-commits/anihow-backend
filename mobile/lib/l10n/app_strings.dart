@@ -128,6 +128,13 @@ class AppStrings {
     'Enter your current password, then choose a new one.',
     'Ilagay ang kasalukuyang password, tapos pumili ng bago.',
   );
+  String get setYourOwnPassword =>
+      t('Set your own password', 'Itakda ang sarili mong password');
+  String get temporaryPasswordExplanation => t(
+    'You signed in with a temporary password from the administrator. Choose a new one to continue.',
+    'Nag-sign in ka gamit ang pansamantalang password mula sa administrator. Pumili ng bago para magpatuloy.',
+  );
+  String get signOut => t('Sign out', 'Mag-sign out');
   String get myData => t('My data', 'Aking datos');
   String get saveProfile => t('Save profile', 'I-save ang profile');
   String get profileUpdated =>

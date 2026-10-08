@@ -6,6 +6,7 @@ import 'screens/admin_gate_screen.dart';
 import 'screens/buyer/buyer_shell.dart';
 import 'screens/farmer/farmer_shell.dart';
 import 'screens/login_screen.dart';
+import 'screens/profile/change_password_screen.dart';
 import 'screens/misconfigured_build_screen.dart';
 import 'navigation/route_observer.dart';
 import 'state/auth_controller.dart';
@@ -82,12 +83,19 @@ class _AniHowAppState extends State<AniHowApp> {
             themeMode: theme.mode,
             scaffoldMessengerKey: anihowScaffoldMessengerKey,
             navigatorObservers: [anihowRouteObserver],
-            home: const _RoleGate(),
+            home: const RoleGate(),
           );
         },
       ),
     );
   }
+}
+
+class RoleGate extends StatelessWidget {
+  const RoleGate({super.key});
+
+  @override
+  Widget build(BuildContext context) => const _RoleGate();
 }
 
 class _RoleGate extends StatelessWidget {
@@ -102,6 +110,9 @@ class _RoleGate extends StatelessWidget {
     final user = auth.user;
     if (user == null) {
       return const LoginScreen();
+    }
+    if (user.mustChangePassword) {
+      return const ChangePasswordScreen(forced: true);
     }
     if (user.isFarmerSeller) {
       return const FarmerShell();

@@ -107,15 +107,25 @@ class UserForm
                 TextInput::make('password')
                     ->password()
                     ->revealable()
-                    ->required(fn (string $operation): bool => $operation === 'create')
-                    ->dehydrated(fn (?string $state): bool => filled($state))
+                    ->visible(fn (string $operation, mixed $record): bool => self::showsOwnPassword($operation, $record))
+                    ->formatStateUsing(fn (): ?string => null)
+                    ->dehydrated(fn (string $operation, mixed $state, mixed $record): bool => self::showsOwnPassword($operation, $record) && filled($state))
                     ->confirmed(),
                 TextInput::make('password_confirmation')
                     ->password()
                     ->revealable()
-                    ->required(fn (string $operation): bool => $operation === 'create')
+                    ->visible(fn (string $operation, mixed $record): bool => self::showsOwnPassword($operation, $record))
+                    ->required(fn (Get $get): bool => filled($get('password')))
                     ->dehydrated(false),
             ]);
+    }
+
+    private static function showsOwnPassword(string $operation, mixed $record): bool
+    {
+        return $operation === 'edit'
+            && $record instanceof User
+            && $record->exists
+            && auth()->id() === $record->getKey();
     }
 
     private static function canManageAccounts(): bool

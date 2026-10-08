@@ -56,6 +56,7 @@ return [
     'auth' => [
         'remember_days' => (int) env('AUTH_REMEMBER_DAYS', 30),
         'session_hours' => (int) env('AUTH_SESSION_HOURS', 12),
+        'temporary_password_days' => (int) env('ANIHOW_TEMP_PASSWORD_DAYS', 7),
     ],
 
 ];

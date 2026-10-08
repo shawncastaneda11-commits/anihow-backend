@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Api\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\Password;
 
 class StoreFarmerSellerRequest extends FormRequest
 {
@@ -20,7 +19,6 @@ class StoreFarmerSellerRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'confirmed', Password::defaults()],
             'phone' => ['nullable', 'string', 'max:30'],
             'location' => ['nullable', 'string', 'max:255'],
             'shop_name' => ['nullable', 'string', 'max:255'],

@@ -26,6 +26,12 @@ class LoginUserAction
             ]);
         }
 
+        if ($user->hasExpiredTemporaryPassword()) {
+            throw ValidationException::withMessages([
+                'email' => User::EXPIRED_TEMPORARY_PASSWORD_MESSAGE,
+            ]);
+        }
+
         if (! $user->status->canAuthenticate()) {
             throw ValidationException::withMessages([
                 'email' => match ($user->status) {

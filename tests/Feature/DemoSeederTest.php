@@ -26,6 +26,10 @@ class DemoSeederTest extends TestCase
     public function test_demo_seeder_is_idempotent_and_keeps_farm_isolation(): void
     {
         $this->seed(DemoSeeder::class);
+
+        $this->assertSame(0, User::query()->where('must_change_password', true)->count());
+        $this->assertSame(0, User::query()->whereNotNull('temporary_password_expires_at')->count());
+
         $first = $this->snapshot();
 
         $this->seed(DemoSeeder::class);

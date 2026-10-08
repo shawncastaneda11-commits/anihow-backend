@@ -28,10 +28,13 @@ class PagedItems<T> {
 }
 
 class MarketplaceFeed {
-  const MarketplaceFeed({required this.items, this.mixDay});
+  const MarketplaceFeed({required this.items, this.mixDay, this.total});
 
   final List<ListingItem> items;
   final String? mixDay;
+
+  /// `meta.total` from the marketplace page, or null when the body omits it.
+  final int? total;
 }
 
 const _datesClearedAsEmpty = {
@@ -331,10 +334,17 @@ class ApiClient {
       final body = _asMap(response.data);
       final meta = _asMap(body['meta']);
       final mix = meta['mix_day'];
+      final rawTotal = meta['total'];
+      final total = switch (rawTotal) {
+        final num value => value.toInt(),
+        final String value => int.tryParse(value),
+        _ => null,
+      };
 
       return MarketplaceFeed(
         items: _parseList(response.data, ListingItem.fromJson),
         mixDay: mix is String && mix.isNotEmpty ? mix : null,
+        total: total,
       );
     } on DioException catch (error) {
       throw ApiException(_messageFrom(error));

@@ -1512,13 +1512,29 @@ class FarmProfile {
   final String? organicCertifier;
   final String? organicCertifiedUntil;
 
-  bool get isCertified {
-    if (isOrganicCertified) {
-      return true;
+  bool get isCertified => isOrganicCertified;
+
+  /// A pin opens turn-by-turn maps. A barangay or municipality opens search.
+  bool get canGetDirections => hasPin || placeLabel.isNotEmpty;
+
+  Uri? get directionsUri {
+    if (hasPin) {
+      return Uri.parse(
+        'https://www.google.com/maps/dir/?api=1&destination=$latitude,$longitude',
+      );
     }
-    final certifier = organicCertifier?.trim() ?? '';
-    final until = organicCertifiedUntil?.trim() ?? '';
-    return certifier.isNotEmpty && until.isNotEmpty;
+    if (placeLabel.isEmpty) {
+      return null;
+    }
+    final parts = <String>[
+      if (name.trim().isNotEmpty) name.trim(),
+      if ((barangay?.trim() ?? '').isNotEmpty) barangay!.trim(),
+      if ((municipality?.trim() ?? '').isNotEmpty) municipality!.trim(),
+      'Cavite',
+    ];
+    return Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(parts.join(', '))}',
+    );
   }
 
   bool get hasCoverPhoto => coverPhotoUrl != null && coverPhotoUrl!.isNotEmpty;

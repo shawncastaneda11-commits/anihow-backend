@@ -185,7 +185,7 @@ void main() {
     await tester.pumpWidget(_app(const FarmPageScreen(farmId: 1), api));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('farm-directions')), findsNothing);
+    expect(find.byKey(const Key('farm-directions')), findsOneWidget);
     await tester.tap(find.byKey(const Key('farm-follow')));
     await tester.pumpAndSettle();
 

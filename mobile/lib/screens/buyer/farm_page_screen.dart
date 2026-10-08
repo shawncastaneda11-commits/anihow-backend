@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -18,8 +19,33 @@ import '../../widgets/profile_avatar_button.dart';
 import 'listing_detail_screen.dart';
 import 'shop_profile_screen.dart';
 
-/// Keeps the first row of a tab clear of the pinned tab bar.
-const double _tabScrollTop = 56;
+/// Space under the tab divider once pinned chrome is already cleared.
+const double _tabScrollTop = AniHowSpace.cardGap;
+
+/// The pinned toolbar covers the body only during the last part of the
+/// header scroll. Add that overlap on top of the 12px gap.
+double _tabClearance(BuildContext context) {
+  final toolbar = MediaQuery.paddingOf(context).top + kToolbarHeight;
+  final nested = context.findAncestorStateOfType<NestedScrollViewState>();
+  final controller = nested?.outerController;
+  if (controller == null ||
+      !controller.hasClients ||
+      !controller.position.hasContentDimensions) {
+    return _tabScrollTop;
+  }
+  final uncovered =
+      controller.position.maxScrollExtent - controller.position.pixels;
+  final covered = (toolbar - uncovered).clamp(0.0, toolbar);
+  return _tabScrollTop + covered;
+}
+
+/// Cover body plus the half of the logo that hangs below it.
+const double _expandedBody = 240 + 42;
+
+/// Opens a farm directions link outside the app. Tests replace this.
+Future<bool> Function(Uri uri) launchFarmDirections = (Uri uri) {
+  return launchUrl(uri, mode: LaunchMode.externalApplication);
+};
 
 /// Review-weighted rating across a farm's shops.
 ///
@@ -82,6 +108,7 @@ class _FarmPageScreenState extends State<FarmPageScreen>
   bool? _followed;
   bool _followBusy = false;
   final List<ListingItem> _products = [];
+  int? _productsTotal;
   int _productsPage = 0;
   int _productToken = 0;
   bool _productsBusy = false;
@@ -192,11 +219,15 @@ class _FarmPageScreenState extends State<FarmPageScreen>
       final feed = await context.read<AuthController>().api.marketplace(
         farmId: widget.farmId,
         page: page,
+        sort: 'freshest',
       );
       if (!mounted || token != _productToken) {
         return;
       }
       setState(() {
+        if (reset) {
+          _productsTotal = feed.total;
+        }
         if (feed.items.isEmpty) {
           _productsHasMore = false;
           if (reset) {
@@ -223,6 +254,16 @@ class _FarmPageScreenState extends State<FarmPageScreen>
       }
       setState(() {
         _productsError = error.message;
+        _productsLoading = false;
+        _productsLoadingMore = false;
+        _productsBusy = false;
+      });
+    } catch (_) {
+      if (!mounted || token != _productToken) {
+        return;
+      }
+      setState(() {
+        _productsError = AppStrings.read(context).somethingWentWrong;
         _productsLoading = false;
         _productsLoadingMore = false;
         _productsBusy = false;
@@ -325,11 +366,11 @@ class _FarmPageScreenState extends State<FarmPageScreen>
   }
 
   Future<void> _directions(FarmProfile farm) async {
-    if (!farm.hasPin) {
+    final uri = farm.directionsUri;
+    if (uri == null) {
       return;
     }
-    final uri = Uri.parse(FarmMapCard.urlFor(farm.latitude!, farm.longitude!));
-    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    final opened = await launchFarmDirections(uri);
     if (!opened && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppStrings.read(context).couldNotOpenLink)),
@@ -374,14 +415,22 @@ class _FarmPageScreenState extends State<FarmPageScreen>
     return 2;
   }
 
-  double _productExtent(BuildContext context, int columns) {
+  bool _tabsScroll(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
     final scale = MediaQuery.textScalerOf(context).scale(1);
-    final base = columns == 1 ? 390.0 : 340.0;
-    return base + math.max(0, scale - 1) * 200;
+    return width < 360 || scale >= 1.15;
   }
 
-  double _expandedHeight(BuildContext context) {
-    return MediaQuery.paddingOf(context).top + 240 + 42;
+  Tab _farmTab(Key key, String label) {
+    return Tab(
+      key: key,
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        softWrap: false,
+      ),
+    );
   }
 
   @override
@@ -404,7 +453,9 @@ class _FarmPageScreenState extends State<FarmPageScreen>
   }
 
   Widget _page(AppStrings s, FarmProfile farm) {
-    final expanded = _expandedHeight(context);
+    final top = MediaQuery.paddingOf(context).top;
+    final scrollTabs = _tabsScroll(context);
+    final theme = Theme.of(context);
     return RefreshIndicator(
       onRefresh: _reload,
       child: NestedScrollView(
@@ -414,13 +465,13 @@ class _FarmPageScreenState extends State<FarmPageScreen>
               pinned: true,
               elevation: 0,
               scrolledUnderElevation: 0,
-              expandedHeight: expanded,
-              backgroundColor: Theme.of(context).colorScheme.surface,
+              expandedHeight: _expandedBody,
+              backgroundColor: theme.colorScheme.surface,
               surfaceTintColor: Colors.transparent,
               leading: const _CircleBackButton(),
               flexibleSpace: _FarmFlexibleHeader(
                 farm: farm,
-                maxHeight: expanded,
+                maxHeight: top + _expandedBody,
               ),
             ),
             SliverToBoxAdapter(child: _belowHeader(s, farm)),
@@ -431,29 +482,25 @@ class _FarmPageScreenState extends State<FarmPageScreen>
                 delegate: _FarmTabHeader(
                   TabBar(
                     controller: _tabs,
-                    isScrollable: true,
-                    tabAlignment: TabAlignment.start,
+                    isScrollable: scrollTabs,
+                    tabAlignment: scrollTabs
+                        ? TabAlignment.center
+                        : TabAlignment.fill,
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 4),
                     indicatorColor: AniHowColors.brand,
                     indicatorWeight: 3,
+                    dividerColor: theme.dividerColor,
+                    dividerHeight: 1,
                     labelColor: AniHowColors.brand,
                     tabs: [
-                      Tab(
-                        key: const Key('farm-tab-products'),
-                        text: s.farmProductsTab,
+                      _farmTab(
+                        const Key('farm-tab-products'),
+                        s.farmProductsTab,
                       ),
-                      Tab(
-                        key: const Key('farm-tab-shops'),
-                        text: s.farmShopsTab,
-                      ),
-                      Tab(key: const Key('farm-tab-about'), text: s.about),
-                      Tab(
-                        key: const Key('farm-tab-updates'),
-                        text: s.farmUpdates,
-                      ),
-                      Tab(
-                        key: const Key('farm-tab-photos'),
-                        text: s.farmPhotos,
-                      ),
+                      _farmTab(const Key('farm-tab-shops'), s.farmShopsTab),
+                      _farmTab(const Key('farm-tab-about'), s.about),
+                      _farmTab(const Key('farm-tab-updates'), s.farmUpdates),
+                      _farmTab(const Key('farm-tab-photos'), s.farmPhotos),
                     ],
                   ),
                 ),
@@ -537,11 +584,12 @@ class _FarmPageScreenState extends State<FarmPageScreen>
               overflow: TextOverflow.ellipsis,
             ),
           );
+    final showDirections = farm.canGetDirections;
     return Row(
       children: [
         if (buyer) Expanded(child: follow),
-        if (buyer && farm.hasPin) const SizedBox(width: AniHowSpace.cardGap),
-        if (farm.hasPin)
+        if (buyer && showDirections) const SizedBox(width: AniHowSpace.cardGap),
+        if (showDirections)
           Expanded(
             child: OutlinedButton.icon(
               key: const Key('farm-directions'),
@@ -562,7 +610,6 @@ class _FarmPageScreenState extends State<FarmPageScreen>
     return Builder(
       builder: (context) {
         final columns = _productColumns(context);
-        final extent = _productExtent(context, columns);
         return NotificationListener<ScrollNotification>(
           onNotification: _onProductsScroll,
           child: CustomScrollView(
@@ -577,7 +624,7 @@ class _FarmPageScreenState extends State<FarmPageScreen>
               if (_productsLoading && _products.isEmpty)
                 SliverPadding(
                   padding: AniHowSpace.screenPadding,
-                  sliver: _placeholderGrid(columns, extent),
+                  sliver: _placeholderGrid(columns),
                 )
               else if (_productsError != null && _products.isEmpty)
                 SliverFillRemaining(
@@ -593,16 +640,17 @@ class _FarmPageScreenState extends State<FarmPageScreen>
                   ),
                 )
               else ...[
+                const SliverToBoxAdapter(child: _PinnedTabClearance()),
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(
                       AniHowSpace.screen,
-                      _tabScrollTop,
+                      0,
                       AniHowSpace.screen,
                       AniHowSpace.cardGap,
                     ),
                     child: Text(
-                      s.productsFromFarm(_products.length),
+                      s.productsFromFarm(_productsTotal ?? _products.length),
                       key: const Key('farm-products-count'),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -626,25 +674,23 @@ class _FarmPageScreenState extends State<FarmPageScreen>
                       AniHowSpace.screen,
                       AniHowSpace.screen,
                     ),
-                    sliver: SliverGrid(
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: columns,
-                        mainAxisExtent: extent,
-                        crossAxisSpacing: AniHowSpace.cardGap,
-                        mainAxisSpacing: AniHowSpace.cardGap,
-                      ),
-                      delegate: SliverChildBuilderDelegate((context, index) {
-                        final listing = _products[index];
-                        return ProduceCard(
-                          listing: listing,
-                          style: ProduceCardStyle.poster,
-                          showSeller: true,
-                          onTap: () => _openListing(listing),
-                          onSellerTap: listing.sellerId == null
-                              ? null
-                              : () => openBuyerShop(context, listing.sellerId!),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate((context, row) {
+                        final start = row * columns;
+                        return Padding(
+                          padding: const EdgeInsets.only(
+                            bottom: AniHowSpace.cardGap,
+                          ),
+                          child: _ShareRowHeight(
+                            children: [
+                              for (var column = 0; column < columns; column++)
+                                start + column < _products.length
+                                    ? _productCard(_products[start + column])
+                                    : const SizedBox.shrink(),
+                            ],
+                          ),
                         );
-                      }, childCount: _products.length),
+                      }, childCount: (_products.length / columns).ceil()),
                     ),
                   ),
                 if (_productsLoadingMore)
@@ -668,17 +714,37 @@ class _FarmPageScreenState extends State<FarmPageScreen>
     );
   }
 
-  Widget _placeholderGrid(int columns, double extent) {
-    return SliverGrid(
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: columns,
-        mainAxisExtent: extent * 0.72,
-        crossAxisSpacing: AniHowSpace.cardGap,
-        mainAxisSpacing: AniHowSpace.cardGap,
-      ),
+  Widget _productCard(ListingItem listing) {
+    return ProduceCard(
+      listing: listing,
+      style: ProduceCardStyle.poster,
+      showSeller: true,
+      stackCropAndSeller: true,
+      expandPhoto: true,
+      onTap: () => _openListing(listing),
+      onSellerTap: listing.sellerId == null
+          ? null
+          : () => openBuyerShop(context, listing.sellerId!),
+    );
+  }
+
+  Widget _placeholderGrid(int columns) {
+    return SliverList(
       delegate: SliverChildBuilderDelegate(
-        (context, index) => const _GreyBlock(),
-        childCount: 4,
+        (context, row) => Padding(
+          padding: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
+          child: Row(
+            children: [
+              for (var column = 0; column < columns; column++) ...[
+                if (column > 0) const SizedBox(width: AniHowSpace.cardGap),
+                const Expanded(
+                  child: AspectRatio(aspectRatio: 4 / 3, child: _GreyBlock()),
+                ),
+              ],
+            ],
+          ),
+        ),
+        childCount: 2,
       ),
     );
   }
@@ -702,10 +768,11 @@ class _FarmPageScreenState extends State<FarmPageScreen>
           SliverOverlapInjector(
             handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
           ),
+          const SliverToBoxAdapter(child: _PinnedTabClearance()),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(
               AniHowSpace.screen,
-              _tabScrollTop,
+              0,
               AniHowSpace.screen,
               AniHowSpace.screen,
             ),
@@ -766,10 +833,11 @@ class _FarmPageScreenState extends State<FarmPageScreen>
           SliverOverlapInjector(
             handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
           ),
+          const SliverToBoxAdapter(child: _PinnedTabClearance()),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(
               AniHowSpace.screen,
-              _tabScrollTop,
+              0,
               AniHowSpace.screen,
               AniHowSpace.screen,
             ),
@@ -790,7 +858,7 @@ class _FarmPageScreenState extends State<FarmPageScreen>
                     body: pickup,
                   ),
                 ],
-                if (farm.hasPin) ...[
+                if (farm.canGetDirections) ...[
                   const SizedBox(height: AniHowSpace.cardGap),
                   _SurfaceCard(
                     child: Column(
@@ -801,10 +869,13 @@ class _FarmPageScreenState extends State<FarmPageScreen>
                           title: s.location,
                         ),
                         const SizedBox(height: AniHowSpace.cardGap),
-                        FarmMapCard(
-                          latitude: farm.latitude!,
-                          longitude: farm.longitude!,
-                        ),
+                        if (farm.hasPin)
+                          FarmMapCard(
+                            latitude: farm.latitude!,
+                            longitude: farm.longitude!,
+                          )
+                        else
+                          Text(farm.placeLabel),
                         const SizedBox(height: AniHowSpace.cardGap),
                         OutlinedButton.icon(
                           onPressed: () => _directions(farm),
@@ -862,10 +933,11 @@ class _FarmPageScreenState extends State<FarmPageScreen>
           SliverOverlapInjector(
             handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
           ),
+          const SliverToBoxAdapter(child: _PinnedTabClearance()),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(
               AniHowSpace.screen,
-              _tabScrollTop,
+              0,
               AniHowSpace.screen,
               AniHowSpace.screen,
             ),
@@ -900,10 +972,11 @@ class _FarmPageScreenState extends State<FarmPageScreen>
           SliverOverlapInjector(
             handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
           ),
+          const SliverToBoxAdapter(child: _PinnedTabClearance()),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(
               AniHowSpace.screen,
-              _tabScrollTop,
+              0,
               AniHowSpace.screen,
               AniHowSpace.screen,
             ),
@@ -1593,6 +1666,87 @@ class _IconTile extends StatelessWidget {
       ),
       child: Icon(icon, color: accent, size: 22),
     );
+  }
+}
+
+/// Lays each card out at its own height, then again at the row's tallest
+/// height, so the two cards line up and spare space stays in the photo.
+class _PinnedTabClearance extends StatelessWidget {
+  const _PinnedTabClearance();
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = context
+        .findAncestorStateOfType<NestedScrollViewState>()
+        ?.outerController;
+    if (controller == null) {
+      return const SizedBox(height: _tabScrollTop);
+    }
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) => SizedBox(height: _tabClearance(context)),
+    );
+  }
+}
+
+class _ShareRowHeight extends MultiChildRenderObjectWidget {
+  const _ShareRowHeight({required super.children});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    return _RenderShareRowHeight();
+  }
+}
+
+class _ShareRowParentData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderShareRowHeight extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _ShareRowParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _ShareRowParentData> {
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _ShareRowParentData) {
+      child.parentData = _ShareRowParentData();
+    }
+  }
+
+  @override
+  void performLayout() {
+    final children = getChildrenAsList();
+    if (children.isEmpty) {
+      size = constraints.constrain(Size.zero);
+      return;
+    }
+    final gap = AniHowSpace.cardGap;
+    final width =
+        (constraints.maxWidth - gap * (children.length - 1)) / children.length;
+    var rowHeight = 0.0;
+    final loose = BoxConstraints(minWidth: width, maxWidth: width);
+    for (final child in children) {
+      child.layout(loose, parentUsesSize: true);
+      if (child.size.height > rowHeight) {
+        rowHeight = child.size.height;
+      }
+    }
+    final tight = BoxConstraints.tightFor(width: width, height: rowHeight);
+    var x = 0.0;
+    for (final child in children) {
+      child.layout(tight);
+      (child.parentData! as _ShareRowParentData).offset = Offset(x, 0);
+      x += width + gap;
+    }
+    size = constraints.constrain(Size(constraints.maxWidth, rowHeight));
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    defaultPaint(context, offset);
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    return defaultHitTestChildren(result, position: position);
   }
 }
 

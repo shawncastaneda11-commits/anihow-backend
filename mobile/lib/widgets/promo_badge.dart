@@ -64,10 +64,18 @@ String? _quantity(String? raw) {
 }
 
 class PromoBadge extends StatelessWidget {
-  const PromoBadge({super.key, required this.rule, this.unit});
+  const PromoBadge({
+    super.key,
+    required this.rule,
+    this.unit,
+    this.onPhoto = false,
+  });
 
   final TawadRule? rule;
   final String? unit;
+
+  /// Solid fill so the label stays readable on a produce photo.
+  final bool onPhoto;
 
   @override
   Widget build(BuildContext context) {
@@ -76,10 +84,14 @@ class PromoBadge extends StatelessWidget {
       return const SizedBox.shrink();
     }
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final background = dark
-        ? AniHowColors.sage.withValues(alpha: 0.22)
-        : AniHowColors.brand.withValues(alpha: 0.12);
-    final foreground = dark ? AniHowColors.sage : AniHowColors.brand;
+    final background = onPhoto
+        ? (dark ? const Color(0xFF2E7D55) : AniHowColors.brand)
+        : (dark
+              ? AniHowColors.sage.withValues(alpha: 0.22)
+              : AniHowColors.brand.withValues(alpha: 0.12));
+    final foreground = onPhoto
+        ? Colors.white
+        : (dark ? AniHowColors.sage : AniHowColors.brand);
     return Align(
       alignment: Alignment.centerLeft,
       child: DecoratedBox(
@@ -87,12 +99,21 @@ class PromoBadge extends StatelessWidget {
         decoration: BoxDecoration(
           color: background,
           borderRadius: BorderRadius.circular(999),
+          boxShadow: onPhoto
+              ? const [
+                  BoxShadow(
+                    color: Color(0x40000000),
+                    blurRadius: 4,
+                    offset: Offset(0, 1),
+                  ),
+                ]
+              : null,
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: Text(
             label,
-            maxLines: 2,
+            maxLines: onPhoto ? 1 : 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: foreground,

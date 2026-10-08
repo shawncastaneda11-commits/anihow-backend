@@ -51,6 +51,8 @@ class ProduceCard extends StatelessWidget {
     this.showSeller = true,
     this.showStock = false,
     this.showPromo = true,
+    this.stackCropAndSeller = false,
+    this.expandPhoto = false,
     this.placeholderColor,
     this.style = ProduceCardStyle.row,
   });
@@ -62,6 +64,13 @@ class ProduceCard extends StatelessWidget {
   final bool showSeller;
   final bool showStock;
   final bool showPromo;
+
+  /// Crop and seller each get their own line. The market keeps one line.
+  final bool stackCropAndSeller;
+
+  /// Extra cell height grows the photo so the price block stays at the bottom.
+  final bool expandPhoto;
+
   final Color? placeholderColor;
   final ProduceCardStyle style;
 
@@ -100,7 +109,11 @@ class ProduceCard extends StatelessWidget {
             left: 8,
             right: 8,
             bottom: 8,
-            child: PromoBadge(rule: listing.tawad, unit: listing.unit),
+            child: PromoBadge(
+              rule: listing.tawad,
+              unit: listing.unit,
+              onPhoto: true,
+            ),
           ),
         if (trailing != null)
           Positioned(
@@ -116,7 +129,7 @@ class ProduceCard extends StatelessWidget {
     );
 
     final details = Padding(
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -150,6 +163,15 @@ class ProduceCard extends StatelessWidget {
         onTap: onTap,
         child: LayoutBuilder(
           builder: (context, constraints) {
+            if (constraints.maxHeight.isFinite && expandPhoto) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: photo),
+                  details,
+                ],
+              );
+            }
             if (constraints.maxHeight.isFinite) {
               final idealPhotoHeight = constraints.maxWidth * 3 / 4;
               return Column(
@@ -209,6 +231,23 @@ class ProduceCard extends StatelessWidget {
             ),
           )
         : null;
+
+    if (stackCropAndSeller) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (crop.isNotEmpty)
+            Text(
+              crop,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: muted,
+            ),
+          if (crop.isNotEmpty && seller != null) const SizedBox(height: 2),
+          ?seller,
+        ],
+      );
+    }
 
     if (crop.isEmpty) {
       return seller ?? const SizedBox.shrink();
@@ -328,7 +367,11 @@ class ProduceCard extends StatelessWidget {
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: _photoChip(
-                          PromoBadge(rule: listing.tawad, unit: listing.unit),
+                          PromoBadge(
+                            rule: listing.tawad,
+                            unit: listing.unit,
+                            onPhoto: true,
+                          ),
                         ),
                       ),
                     ),

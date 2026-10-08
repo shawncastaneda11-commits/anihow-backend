@@ -6,7 +6,7 @@ umask 077
 install -d -m 700 /var/backups/anihow
 
 stamp="$(date +%Y%m%d)"
-mysqldump --defaults-extra-file=/root/anihow-mysqldump.cnf --single-transaction anihow \
+mysqldump --defaults-extra-file=/root/anihow-mysqldump.cnf --single-transaction --no-tablespaces anihow \
     | gzip > "/var/backups/anihow/db-${stamp}.sql.gz"
 
 find /var/backups/anihow -type f -name 'db-*.sql.gz' -mtime +14 -delete

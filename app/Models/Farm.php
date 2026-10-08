@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\Validator;
     'municipality',
     'pickup_point',
     'cover_photo_path',
+    'logo_path',
     'is_active',
     'organic_certifier',
     'organic_certificate_no',
@@ -251,14 +252,22 @@ class Farm extends Model
         });
 
         static::updating(function (Farm $farm): void {
-            if ($farm->isDirty('cover_photo_path')) {
-                $previous = $farm->getOriginal('cover_photo_path');
-                app(ImageVariants::class)->delete(is_string($previous) ? $previous : null);
+            $images = app(ImageVariants::class);
+
+            foreach (['cover_photo_path', 'logo_path'] as $column) {
+                if (! $farm->isDirty($column)) {
+                    continue;
+                }
+
+                $previous = $farm->getOriginal($column);
+                $images->delete(is_string($previous) ? $previous : null);
             }
         });
 
         static::deleting(function (Farm $farm): void {
-            app(ImageVariants::class)->delete($farm->cover_photo_path);
+            $images = app(ImageVariants::class);
+            $images->delete($farm->cover_photo_path);
+            $images->delete($farm->logo_path);
         });
     }
 
@@ -270,6 +279,16 @@ class Farm extends Model
     public function coverThumbnailUrl(): ?string
     {
         return app(ImageVariants::class)->thumbnailUrl($this->cover_photo_path);
+    }
+
+    public function logoUrl(): ?string
+    {
+        return app(ImageVariants::class)->url($this->logo_path);
+    }
+
+    public function logoThumbnailUrl(): ?string
+    {
+        return app(ImageVariants::class)->thumbnailUrl($this->logo_path);
     }
 
     /**

@@ -412,7 +412,11 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
               farmName != null &&
               farmName.isNotEmpty &&
               shop.farmIsActive)
-            FarmLinkChip(farmId: farmId, label: s.farmLine(farmName))
+            FarmLinkChip(
+              farmId: farmId,
+              logoUrl: shop.farmLogoUrl,
+              label: s.farmLine(farmName),
+            )
           else if (farmName != null && farmName.isNotEmpty)
             OrderMetaRow(
               icon: Icons.agriculture_outlined,

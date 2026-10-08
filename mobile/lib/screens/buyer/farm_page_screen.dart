@@ -678,7 +678,7 @@ class _FarmLogo extends StatelessWidget {
       ),
       child: AniHowAvatar(
         name: farm.name,
-        imageUrl: farm.coverPhotoUrl,
+        imageUrl: farm.logoImageUrl,
         radius: 32,
         backgroundColor: AniHowColors.brand,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,

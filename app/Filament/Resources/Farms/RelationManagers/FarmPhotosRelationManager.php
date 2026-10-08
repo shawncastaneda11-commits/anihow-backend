@@ -25,7 +25,7 @@ class FarmPhotosRelationManager extends RelationManager
 {
     protected static string $relationship = 'photos';
 
-    protected static ?string $title = 'Farm photos';
+    protected static ?string $title = 'Photos';
 
     public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
     {

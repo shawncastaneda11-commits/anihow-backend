@@ -527,8 +527,9 @@ class FarmFeatureSwitchTest extends TestCase
 
         Livewire::actingAs($editor)
             ->test(EditFarm::class, ['record' => $own->getKey()])
-            ->fillForm(['value_added_enabled' => false])
-            ->call('save')
+            ->callAction('editFeatures', data: [
+                'value_added_enabled' => false,
+            ])
             ->assertHasNoFormErrors();
 
         $this->assertFalse($own->fresh()->value_added_enabled);
@@ -548,8 +549,9 @@ class FarmFeatureSwitchTest extends TestCase
 
         Livewire::actingAs($admin)
             ->test(EditFarm::class, ['record' => $other->getKey()])
-            ->fillForm(['walk_in_enabled' => false])
-            ->call('save')
+            ->callAction('editFeatures', data: [
+                'walk_in_enabled' => false,
+            ])
             ->assertHasNoFormErrors();
 
         $this->assertFalse($other->fresh()->walk_in_enabled);

@@ -49,6 +49,12 @@ class AdminPanelProvider extends PanelProvider
                 fn (): string => Blade::render('@include(\'filament.brand-styles\')'),
             )
             ->renderHook(
+                PanelsRenderHook::HEAD_END,
+                fn (): string => request()->routeIs('filament.admin.resources.farms.edit')
+                    ? view('filament.farms.leaflet-assets')->render()
+                    : '',
+            )
+            ->renderHook(
                 PanelsRenderHook::GLOBAL_SEARCH_AFTER,
                 fn (): string => Blade::render('@include(\'filament.topbar-theme-switcher\')'),
             )

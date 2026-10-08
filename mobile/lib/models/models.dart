@@ -1198,6 +1198,7 @@ class ShopProfile {
     this.farmIsFavorited = false,
     this.farmFavoritesCount = 0,
     this.farmCoverUrl,
+    this.farmLogoUrl,
     this.acceptsOnlinePayment = true,
     this.isFavorited = false,
     this.distanceKm,
@@ -1222,6 +1223,7 @@ class ShopProfile {
   final bool farmIsFavorited;
   final int farmFavoritesCount;
   final String? farmCoverUrl;
+  final String? farmLogoUrl;
   final bool acceptsOnlinePayment;
   final bool isFavorited;
   final double? distanceKm;
@@ -1263,6 +1265,14 @@ class ShopProfile {
       farmFavoritesCount:
           ListingItem._asCount(farmMap?['favorites_count']) ?? 0,
       farmCoverUrl: ApiConfig.mediaUrl(farmMap?['cover_photo_url'] as String?),
+      farmLogoUrl: ApiConfig.mediaUrl(
+        () {
+          final thumbnail = farmMap?['logo_thumbnail_url'];
+          final logo = farmMap?['logo_url'];
+          final chosen = thumbnail ?? logo;
+          return chosen is String ? chosen : null;
+        }(),
+      ),
       acceptsOnlinePayment: ListingItem._acceptsOnline(
         json['accepts_online_payment'],
       ),
@@ -1292,6 +1302,7 @@ class ShopProfile {
       farmIsFavorited: farmIsFavorited,
       farmFavoritesCount: farmFavoritesCount,
       farmCoverUrl: farmCoverUrl,
+      farmLogoUrl: farmLogoUrl,
       acceptsOnlinePayment: acceptsOnlinePayment,
       isFavorited: isFavorited ?? this.isFavorited,
       distanceKm: distanceKm,
@@ -1460,6 +1471,8 @@ class FarmProfile {
     this.municipality,
     this.pickupPoint,
     this.coverPhotoUrl,
+    this.logoUrl,
+    this.logoThumbnailUrl,
     this.isActive = true,
     this.photos = const [],
     this.farmerSellersCount = 0,
@@ -1481,6 +1494,8 @@ class FarmProfile {
   final String? municipality;
   final String? pickupPoint;
   final String? coverPhotoUrl;
+  final String? logoUrl;
+  final String? logoThumbnailUrl;
   final bool isActive;
   final List<FarmPhotoItem> photos;
   final int farmerSellersCount;
@@ -1492,6 +1507,16 @@ class FarmProfile {
   final int favoritesCount;
 
   bool get hasCoverPhoto => coverPhotoUrl != null && coverPhotoUrl!.isNotEmpty;
+
+  String? get logoImageUrl {
+    for (final candidate in [logoUrl, logoThumbnailUrl]) {
+      final value = candidate?.trim();
+      if (value != null && value.isNotEmpty) {
+        return value;
+      }
+    }
+    return null;
+  }
 
   bool get hasPin => latitude != null && longitude != null;
 
@@ -1515,6 +1540,8 @@ class FarmProfile {
       municipality: json['municipality'] as String?,
       pickupPoint: json['pickup_point'] as String?,
       coverPhotoUrl: ApiConfig.mediaUrl(json['cover_photo_url'] as String?),
+      logoUrl: ApiConfig.mediaUrl(json['logo_url'] as String?),
+      logoThumbnailUrl: ApiConfig.mediaUrl(json['logo_thumbnail_url'] as String?),
       isActive:
           json['is_active'] == true ||
           json['is_active'] == 1 ||

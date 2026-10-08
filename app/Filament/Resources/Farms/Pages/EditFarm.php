@@ -279,17 +279,16 @@ class EditFarm extends EditRecord
                     'longitude' => $this->coordinate($data['longitude'] ?? null),
                 ];
 
-                $suggestion = [
+                $suggestion = collect([
                     'barangay' => $this->clip($data['suggested_barangay'] ?? null, 100),
                     'municipality' => $this->clip($data['suggested_municipality'] ?? null, 100),
                     'address' => $this->clip($data['suggested_address'] ?? null, 255),
-                ];
-                $hasSuggestion = collect($suggestion)->contains(fn (?string $value): bool => filled($value));
+                ])->filter(fn (?string $value): bool => filled($value));
 
-                if ($this->wantsAddressUpdate($data['update_address'] ?? false) && $hasSuggestion) {
+                if ($this->wantsAddressUpdate($data['update_address'] ?? false) && $suggestion->isNotEmpty()) {
                     $payload = [
                         ...$payload,
-                        ...$suggestion,
+                        ...$suggestion->all(),
                     ];
                 }
 

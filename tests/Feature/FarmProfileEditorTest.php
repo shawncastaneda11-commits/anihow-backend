@@ -605,6 +605,35 @@ class FarmProfileEditorTest extends TestCase
         $this->assertSame('Old hall', $pinned->pickup_point);
     }
 
+    public function test_a_partial_address_suggestion_keeps_fields_the_lookup_did_not_find(): void
+    {
+        $farm = Farm::factory()->create([
+            'pickup_point' => 'Barangay hall',
+            'address' => 'Old road',
+            'barangay' => 'Manggahan',
+            'municipality' => 'Old Town',
+        ]);
+        $editor = $this->staff(Role::ContentEditor, $farm);
+
+        Livewire::actingAs($editor)
+            ->test(EditFarm::class, ['record' => $farm->id])
+            ->callAction('editLocation', data: [
+                'latitude' => '14.38690',
+                'longitude' => '120.88030',
+                'update_address' => true,
+                'suggested_barangay' => null,
+                'suggested_municipality' => 'General Trias',
+                'suggested_address' => 'Farm road, General Trias',
+            ])
+            ->assertHasNoFormErrors();
+
+        $fresh = $farm->fresh();
+        $this->assertSame('Manggahan', $fresh->barangay);
+        $this->assertSame('General Trias', $fresh->municipality);
+        $this->assertSame('Farm road, General Trias', $fresh->address);
+        $this->assertSame('Barangay hall', $fresh->pickup_point);
+    }
+
     private function staff(Role $role, ?Farm $farm = null): User
     {
         $user = User::factory()->create(['farm_id' => $farm?->id]);

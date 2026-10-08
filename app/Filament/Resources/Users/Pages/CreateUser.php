@@ -2,10 +2,12 @@
 
 namespace App\Filament\Resources\Users\Pages;
 
+use App\Filament\Resources\Users\Actions\TemporaryPasswordAction;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
-use Filament\Notifications\Notification;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\CreateRecord;
+use Filament\Support\Facades\FilamentView;
 use Illuminate\Support\Str;
 
 class CreateUser extends CreateRecord
@@ -30,11 +32,25 @@ class CreateUser extends CreateRecord
 
         $plain = $user->issueTemporaryPassword();
 
-        Notification::make()
-            ->title('Temporary password')
-            ->body($user->temporaryPasswordNotice($plain))
-            ->persistent()
-            ->success()
-            ->send();
+        $this->getCreatedNotification()?->send();
+
+        $this->mountAction('temporaryPassword', [
+            'password' => $plain,
+            'email' => $user->email,
+        ]);
+
+        $this->halt();
+    }
+
+    public function temporaryPasswordAction(): Action
+    {
+        return TemporaryPasswordAction::make();
+    }
+
+    public function finishTemporaryPassword(): void
+    {
+        $redirectUrl = $this->getRedirectUrl();
+
+        $this->redirect($redirectUrl, navigate: FilamentView::hasSpaMode($redirectUrl));
     }
 }

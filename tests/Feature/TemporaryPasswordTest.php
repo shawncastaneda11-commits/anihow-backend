@@ -8,14 +8,18 @@ use App\Filament\Auth\Login;
 use App\Filament\Pages\ChangePassword;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
+use App\Filament\Resources\Users\UserResource;
 use App\Models\Farm;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Database\Seeders\SuperAdminSeeder;
+use Filament\Actions\Action;
 use Filament\Facades\Filament;
+use Filament\Support\Enums\Alignment;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role as RoleModel;
 use Tests\TestCase;
@@ -37,16 +41,17 @@ class TemporaryPasswordTest extends TestCase
         $admin = $this->staff(Role::SuperAdmin);
         $farm = Farm::factory()->create();
 
-        Livewire::actingAs($admin)
+        $component = Livewire::actingAs($admin)
             ->test(CreateUser::class)
             ->assertFormFieldHidden('password')
             ->assertFormFieldHidden('password_confirmation')
             ->fillForm($this->accountForm($farm, Role::ContentEditor, 'editor.temp@example.com'))
             ->call('create')
-            ->assertHasNoFormErrors();
+            ->assertHasNoFormErrors()
+            ->assertActionMounted('temporaryPassword');
 
         $editor = User::query()->where('email', 'editor.temp@example.com')->first();
-        $plain = $this->temporaryPasswordFromSession();
+        $plain = $this->mountedTemporaryPassword($component);
 
         $this->assertNotNull($editor);
         $this->assertTrue($editor->must_change_password);
@@ -56,13 +61,27 @@ class TemporaryPasswordTest extends TestCase
             $editor->temporary_password_expires_at->getTimestamp(),
             60,
         );
-        $this->assertNotNull($plain);
         $this->assertTrue(Hash::check($plain, $editor->password));
         $this->assertFalse(Hash::check('new-password-1', $editor->password));
-        $this->assertTrue($this->notificationBodyContains(
-            $editor->email,
-            'Give this to the user in person. It expires in 7 days and must be changed at first sign-in.',
-        ));
+        $this->assertTemporaryPasswordModal($component, $plain, $editor->email);
+        $this->assertPasswordWasNotNotified($plain);
+        $this->assertTrue($this->notificationTitleExists('Created'));
+
+        $component
+            ->callMountedAction()
+            ->assertRedirect(UserResource::getUrl('view', ['record' => $editor]));
+
+        auth()->logout();
+
+        Livewire::test(Login::class)
+            ->fillForm([
+                'email' => $editor->email,
+                'password' => $plain,
+            ])
+            ->call('authenticate')
+            ->assertHasNoFormErrors();
+
+        $this->assertAuthenticatedAs($editor);
     }
 
     public function test_reset_temporary_password_is_hidden_for_self_and_super_admins_and_revokes_tokens(): void
@@ -82,19 +101,34 @@ class TemporaryPasswordTest extends TestCase
             ->assertActionHidden('resetTemporaryPassword')
             ->assertFormFieldHidden('password');
 
-        Livewire::actingAs($admin)
+        $component = Livewire::actingAs($admin)
             ->test(EditUser::class, ['record' => $editor->getKey()])
             ->assertActionVisible('resetTemporaryPassword')
             ->assertFormFieldHidden('password')
-            ->callAction('resetTemporaryPassword');
+            ->callAction('resetTemporaryPassword')
+            ->assertActionMounted('temporaryPassword');
 
         $editor->refresh();
-        $plain = $this->temporaryPasswordFromSession();
+        $plain = $this->mountedTemporaryPassword($component);
 
         $this->assertTrue($editor->must_change_password);
-        $this->assertNotNull($plain);
         $this->assertTrue(Hash::check($plain, $editor->password));
+        $this->assertTemporaryPasswordModal($component, $plain, $editor->email);
+        $this->assertPasswordWasNotNotified($plain);
         $this->assertSame(0, $editor->tokens()->count());
+
+        auth()->logout();
+
+        Livewire::test(Login::class)
+            ->fillForm([
+                'email' => $editor->email,
+                'password' => $plain,
+            ])
+            ->call('authenticate')
+            ->assertHasNoFormErrors();
+
+        $this->assertAuthenticatedAs($editor);
+        $this->app['auth']->forgetGuards();
 
         $this->flushSession();
         $this->app['auth']->forgetGuards();
@@ -264,49 +298,52 @@ class TemporaryPasswordTest extends TestCase
         return array_values(array_filter($notifications, is_array(...)));
     }
 
-    private function temporaryPasswordFromSession(): ?string
+    private function mountedTemporaryPassword(Testable $component): string
     {
-        $notifications = $this->sessionNotifications();
+        $arguments = $component->instance()->mountedActions[0]['arguments'] ?? [];
+        $password = $arguments['password'] ?? null;
 
-        if (! is_array($notifications)) {
-            return null;
-        }
+        $this->assertIsString($password);
+        $this->assertNotSame('', $password);
 
-        foreach ($notifications as $notification) {
-            if (! is_array($notification) || ($notification['title'] ?? null) !== 'Temporary password') {
-                continue;
-            }
-
-            return $this->temporaryPasswordFromText((string) ($notification['body'] ?? ''));
-        }
-
-        return null;
+        return $password;
     }
 
-    private function temporaryPasswordFromText(string $text): ?string
+    private function assertTemporaryPasswordModal(Testable $component, string $password, string $email): void
     {
-        if (preg_match('/[abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}-[abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}-[abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789]{4}/', $text, $matches) === 1) {
-            return $matches[0];
-        }
+        $action = $component->instance()->getMountedAction();
 
-        return null;
+        $this->assertInstanceOf(Action::class, $action);
+        $this->assertFalse($action->isModalClosedByClickingAway());
+        $this->assertFalse($action->hasModalCloseButton());
+        $this->assertSame(Alignment::Center, $action->getModalAlignment());
+
+        $component
+            ->assertMountedActionModalSee('Temporary password')
+            ->assertMountedActionModalSee($password)
+            ->assertMountedActionModalSee($email)
+            ->assertMountedActionModalSee(User::temporaryPasswordGuidance())
+            ->assertMountedActionModalSee('Copy password')
+            ->assertMountedActionModalSee('Done')
+            ->assertMountedActionModalDontSee('Cancel');
     }
 
-    private function notificationBodyContains(string ...$needles): bool
+    private function assertPasswordWasNotNotified(string $password): void
     {
         foreach ($this->sessionNotifications() as $notification) {
-            if (! is_array($notification) || ($notification['title'] ?? null) !== 'Temporary password') {
-                continue;
-            }
+            $this->assertNotSame('Temporary password', $notification['title'] ?? null);
 
-            $body = (string) ($notification['body'] ?? '');
-            $matches = true;
+            $encoded = json_encode($notification);
 
-            foreach ($needles as $needle) {
-                $matches = $matches && str_contains($body, $needle);
-            }
+            $this->assertIsString($encoded);
+            $this->assertStringNotContainsString($password, $encoded);
+        }
+    }
 
-            if ($matches) {
+    private function notificationTitleExists(string $title): bool
+    {
+        foreach ($this->sessionNotifications() as $notification) {
+            if (($notification['title'] ?? null) === $title) {
                 return true;
             }
         }

@@ -158,11 +158,16 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             && $this->temporary_password_expires_at->isPast();
     }
 
-    public function temporaryPasswordNotice(#[SensitiveParameter] string $plainPassword): string
+    public static function temporaryPasswordGuidance(): string
     {
         $days = (int) config('anihow.auth.temporary_password_days', 7);
 
-        return $plainPassword."\n\n".$this->email."\n\nGive this to the user in person. It expires in {$days} days and must be changed at first sign-in.";
+        return "Give this to the user in person. It expires in {$days} days and must be changed at first sign-in.";
+    }
+
+    public function temporaryPasswordNotice(#[SensitiveParameter] string $plainPassword): string
+    {
+        return $plainPassword."\n\n".$this->email."\n\n".self::temporaryPasswordGuidance();
     }
 
     private function generateTemporaryPassword(): string

@@ -3,11 +3,11 @@
 namespace App\Filament\Resources\Users\Pages;
 
 use App\Enums\Permission;
+use App\Filament\Resources\Users\Actions\TemporaryPasswordAction;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
-use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 
 class EditUser extends EditRecord
@@ -43,16 +43,19 @@ class EditUser extends EditRecord
 
                     $plain = $record->issueTemporaryPassword();
 
-                    Notification::make()
-                        ->title('Temporary password')
-                        ->body($record->temporaryPasswordNotice($plain))
-                        ->persistent()
-                        ->success()
-                        ->send();
+                    $this->replaceMountedAction('temporaryPassword', [
+                        'password' => $plain,
+                        'email' => $record->email,
+                    ]);
                 }),
             DeleteAction::make()
                 ->visible(fn (): bool => ! $this->record->isSuperAdmin()),
         ];
+    }
+
+    public function temporaryPasswordAction(): Action
+    {
+        return TemporaryPasswordAction::make();
     }
 
     /**

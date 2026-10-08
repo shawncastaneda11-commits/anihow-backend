@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\GrowingMethod;
 use App\Enums\ListingStatus;
 use App\Enums\ListingUnit;
+use App\Enums\ProductCategory;
 use App\Enums\ReservationStatus;
 use App\Enums\UserStatus;
 use App\Support\ImageVariants;
@@ -126,6 +127,24 @@ class Listing extends Model
     public function activeTawadRule(): HasOne
     {
         return $this->hasOne(TawadRule::class)->where('is_active', true);
+    }
+
+    /**
+     * The discount buyers and new orders actually get. A farm with tawad
+     * turned off pauses the rule without deleting it. A listing with no farm
+     * keeps the rule.
+     */
+    public function effectiveTawadRule(): ?TawadRule
+    {
+        if ($this->farm_id !== null && ! ($this->farm?->allowsTawad() ?? true)) {
+            return null;
+        }
+
+        if ($this->relationLoaded('activeTawadRule')) {
+            return $this->activeTawadRule;
+        }
+
+        return $this->activeTawadRule()->first();
     }
 
     public function favorites(): HasMany
@@ -424,6 +443,28 @@ class Listing extends Model
             ->notExpired()
             ->whereHas('farmerSeller', fn (Builder $seller): Builder => $seller->where('status', UserStatus::Active))
             ->whereHas('cropType', fn (Builder $cropType): Builder => $cropType->where('is_active', true));
+    }
+
+    /**
+     * Hide value-added listings when that farm has the switch off. A listing
+     * with no farm stays visible. Do not fold this into listedForBuyers:
+     * opening due reservations uses that scope to decide a listing was removed.
+     *
+     * @param  Builder<Listing>  $query
+     * @return Builder<Listing>
+     */
+    public function scopeAllowedByFarmFeatures(Builder $query): Builder
+    {
+        return $query->where(function (Builder $query): void {
+            $query->whereDoesntHave(
+                'cropType',
+                fn (Builder $cropType): Builder => $cropType->where('category', ProductCategory::ValueAdded->value),
+            )->orWhereDoesntHave('farm')
+                ->orWhereHas(
+                    'farm',
+                    fn (Builder $farm): Builder => $farm->where('value_added_enabled', true),
+                );
+        });
     }
 
     /**

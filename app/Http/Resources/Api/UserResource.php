@@ -34,6 +34,12 @@ class UserResource extends JsonResource
                         'id' => $this->farm->id,
                         'name' => $this->farm->name,
                         'is_organic_certified' => $this->farm->isOrganicCertified(),
+                        'features' => [
+                            'value_added' => $this->farm->allowsValueAdded(),
+                            'reservations' => $this->farm->allowsReservations(),
+                            'tawad' => $this->farm->allowsTawad(),
+                            'walk_in' => $this->farm->allowsWalkIn(),
+                        ],
                     ],
             ),
             'permissions' => $this->getAllPermissions()->pluck('name')->values(),

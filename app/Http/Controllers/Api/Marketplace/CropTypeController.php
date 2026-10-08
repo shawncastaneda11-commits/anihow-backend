@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Marketplace;
 
+use App\Enums\ProductCategory;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Marketplace\CropTypeIndexRequest;
 use App\Http\Resources\Api\CropTypeResource;
@@ -22,11 +23,15 @@ class CropTypeController extends Controller
         $cropTypes = CropType::query()
             ->active()
             ->withCount([
-                'listings as listings_count' => fn ($query) => $query->buyerVisible(),
+                'listings as listings_count' => fn ($query) => $query->buyerVisible()->allowedByFarmFeatures(),
             ])
             ->when(
                 $seller?->isFarmerSeller(),
                 fn ($query) => $query->forFarm($seller->farm_id),
+            )
+            ->when(
+                $seller?->isFarmerSeller() && $seller->farm !== null && ! $seller->farm->allowsValueAdded(),
+                fn ($query) => $query->where('category', '!=', ProductCategory::ValueAdded->value),
             )
             ->when(
                 $seller?->isFarmerSeller() && $seller->farmerCropTypes()->exists(),

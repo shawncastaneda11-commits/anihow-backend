@@ -12,6 +12,7 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Str;
 
@@ -92,6 +93,16 @@ class FarmForm
                 Toggle::make('is_active')
                     ->label('Active')
                     ->default(true),
+
+                Section::make('Farm features')
+                    ->schema(collect(Farm::featureSwitches())
+                        ->map(fn (array $switch, string $column): Toggle => Toggle::make($column)
+                            ->label($switch['label'])
+                            ->helperText($switch['helper'])
+                            ->default(true))
+                        ->values()
+                        ->all())
+                    ->columnSpanFull(),
 
                 TextInput::make('organic_certifier')
                     ->label('Organic certifier')

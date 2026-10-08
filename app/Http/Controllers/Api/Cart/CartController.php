@@ -59,6 +59,12 @@ class CartController extends Controller
             abort(404);
         }
 
+        if (! Listing::query()->allowedByFarmFeatures()->whereKey($listing->id)->exists()) {
+            throw ValidationException::withMessages([
+                'listing_id' => "{$listing->title} is no longer available.",
+            ]);
+        }
+
         if ($listing->isUpcoming() || $listing->isExpired()) {
             throw ValidationException::withMessages([
                 'listing_id' => $listing->isExpired()
@@ -107,6 +113,12 @@ class CartController extends Controller
 
             throw ValidationException::withMessages([
                 'quantity' => 'This listing is no longer available.',
+            ]);
+        }
+
+        if (! Listing::query()->allowedByFarmFeatures()->whereKey($listing->id)->exists()) {
+            throw ValidationException::withMessages([
+                'quantity' => "{$listing->title} is no longer available.",
             ]);
         }
 

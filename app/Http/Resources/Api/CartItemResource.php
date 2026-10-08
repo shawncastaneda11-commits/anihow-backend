@@ -36,9 +36,7 @@ class CartItemResource extends JsonResource
         }
 
         $subtotal = $this->lineSubtotal();
-        $rule = $listing->relationLoaded('activeTawadRule')
-            ? $listing->activeTawadRule
-            : null;
+        $rule = $listing->effectiveTawadRule();
         $tawad = $rule?->discountFor($quantity) ?? 0.0;
 
         return [

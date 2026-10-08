@@ -459,7 +459,7 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
             icon: const Icon(Icons.edit_outlined),
             label: Text(s.editShopProfile),
           ),
-          if (user?.canRecordWalkInSales ?? false) ...[
+          if ((user?.canRecordWalkInSales ?? false) && user!.farmFeatures.walkIn) ...[
             const SizedBox(height: AniHowSpace.cardGap),
             OutlinedButton.icon(
               onPressed: _openWalkIn,

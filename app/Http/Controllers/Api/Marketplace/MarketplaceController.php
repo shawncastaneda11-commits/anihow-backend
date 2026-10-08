@@ -18,6 +18,7 @@ class MarketplaceController extends Controller
     {
         $listings = Listing::query()
             ->buyerVisible()
+            ->allowedByFarmFeatures()
             ->with($this->relations())
             ->when(
                 $request->validated('crop_type_id'),
@@ -100,6 +101,7 @@ class MarketplaceController extends Controller
     {
         $visible = Listing::query()
             ->buyerVisible()
+            ->allowedByFarmFeatures()
             ->with($this->relations())
             ->find($listing->id);
 

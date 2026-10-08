@@ -699,6 +699,8 @@ class AppStrings {
   String reserveFrom(String date) =>
       t('Reserve · from $date', 'I-reserve · mula $date');
   String get reserveOnly => t('Reserve', 'I-reserve');
+  String get comingSoon => t('Coming soon', 'Malapit na');
+  String get discountPaused => t('Paused', 'Naka-pause');
   String get availabilityAvailable => t('Available', 'Nabibili');
   String get availabilityUpcoming => t('Upcoming', 'Paparating');
   String get availabilityExpired => t('Expired', 'Paso na');

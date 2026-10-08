@@ -41,6 +41,12 @@ class FarmResource extends JsonResource
                 ),
             ),
             'is_active' => $this->is_active,
+            'features' => [
+                'value_added' => $this->allowsValueAdded(),
+                'reservations' => $this->allowsReservations(),
+                'tawad' => $this->allowsTawad(),
+                'walk_in' => $this->allowsWalkIn(),
+            ],
             'cover_photo_url' => $this->coverPhotoUrl(),
             'thumbnail_url' => $this->coverThumbnailUrl(),
             'photos' => FarmPhotoResource::collection($this->whenLoaded('photos')),

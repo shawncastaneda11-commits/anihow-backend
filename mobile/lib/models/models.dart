@@ -2,6 +2,34 @@ import '../config/api_config.dart';
 import '../support/crop_language.dart';
 import '../theme/anihow_space.dart';
 
+class FarmFeatures {
+  const FarmFeatures({
+    this.valueAdded = true,
+    this.reservations = true,
+    this.tawad = true,
+    this.walkIn = true,
+  });
+
+  final bool valueAdded;
+  final bool reservations;
+  final bool tawad;
+  final bool walkIn;
+
+  factory FarmFeatures.fromJson(Object? json) {
+    if (json is! Map) {
+      return const FarmFeatures();
+    }
+    final map = Map<String, dynamic>.from(json);
+    bool on(String key) => map.containsKey(key) ? map[key] == true : true;
+    return FarmFeatures(
+      valueAdded: on('value_added'),
+      reservations: on('reservations'),
+      tawad: on('tawad'),
+      walkIn: on('walk_in'),
+    );
+  }
+}
+
 class UserAccount {
   const UserAccount({
     required this.id,
@@ -17,6 +45,7 @@ class UserAccount {
     this.farmId,
     this.farmName,
     this.farmIsOrganicCertified = false,
+    this.farmFeatures = const FarmFeatures(),
     this.mustChangePassword = false,
   });
 
@@ -33,6 +62,7 @@ class UserAccount {
   final int? farmId;
   final String? farmName;
   final bool farmIsOrganicCertified;
+  final FarmFeatures farmFeatures;
   final bool mustChangePassword;
 
   UserAccount withMustChangePassword(bool value) {
@@ -50,6 +80,7 @@ class UserAccount {
       farmId: farmId,
       farmName: farmName,
       farmIsOrganicCertified: farmIsOrganicCertified,
+      farmFeatures: farmFeatures,
       mustChangePassword: value,
     );
   }
@@ -77,6 +108,7 @@ class UserAccount {
       farmId: ListingItem._asCount(farmMap?['id']),
       farmName: farmMap?['name'] as String?,
       farmIsOrganicCertified: farmMap?['is_organic_certified'] == true,
+      farmFeatures: FarmFeatures.fromJson(farmMap?['features']),
       mustChangePassword: json['must_change_password'] == true,
     );
   }
@@ -305,6 +337,8 @@ class ListingItem {
     this.orderStep = 1,
     this.sellableQuantity,
     this.acceptsOnlinePayment = true,
+    this.canReserve,
+    this.tawadPaused = false,
   });
 
   final int id;
@@ -341,6 +375,12 @@ class ListingItem {
   final double orderStep;
   final String? sellableQuantity;
   final bool acceptsOnlinePayment;
+  final bool? canReserve;
+  final bool tawadPaused;
+
+  bool get showReserveButton => isUpcoming && canReserve != false;
+
+  bool get showComingSoon => isUpcoming && canReserve == false;
 
   String get name => title;
 
@@ -407,6 +447,8 @@ class ListingItem {
       orderStep: orderStep,
       sellableQuantity: sellableQuantity,
       acceptsOnlinePayment: acceptsOnlinePayment,
+      canReserve: canReserve,
+      tawadPaused: tawadPaused,
     );
   }
 
@@ -457,6 +499,8 @@ class ListingItem {
       availableUntil: _asDate(json['available_until']),
       harvestedOn: _asDate(json['harvested_on']),
       isUpcoming: json['is_upcoming'] == true,
+      canReserve: json.containsKey('can_reserve') ? json['can_reserve'] == true : null,
+      tawadPaused: json['tawad_paused'] == true,
       availabilityState: json['availability_state'] as String?,
       growingMethod: json['growing_method'] as String?,
       organicBadge: json['organic_badge'] as String?,

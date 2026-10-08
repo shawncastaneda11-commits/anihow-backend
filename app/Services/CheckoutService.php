@@ -306,6 +306,12 @@ class CheckoutService
             ]);
         }
 
+        if (! Listing::query()->allowedByFarmFeatures()->whereKey($listing->id)->exists()) {
+            throw ValidationException::withMessages([
+                'cart' => "{$listing->title} is no longer available.",
+            ]);
+        }
+
         $quantity = (float) $item->quantity;
 
         if (! $listing->allowsOrderQuantity($quantity)) {

@@ -84,7 +84,7 @@ class FlagStrandedListingsAction
                 continue;
             }
 
-            $rule = $listing->activeTawadRule;
+            $rule = $listing->effectiveTawadRule();
 
             if ($price >= PriceGuard::centavos($newFloor)
                 && $rule !== null
@@ -121,7 +121,7 @@ class FlagStrandedListingsAction
             }
 
             $seller = $listing->farmerSeller;
-            $rule = $listing->activeTawadRule;
+            $rule = $listing->effectiveTawadRule();
 
             if ($seller === null || $rule === null) {
                 continue;
@@ -194,7 +194,7 @@ class FlagStrandedListingsAction
             ->forFarm($farm->getKey())
             ->where('listings.crop_type_id', $cropType->getKey())
             ->whereNull('listings.taken_down_at')
-            ->with(['farmerSeller', 'activeTawadRule', 'cropType'])
+            ->with(['farmerSeller', 'farm', 'activeTawadRule', 'cropType'])
             ->get();
     }
 }

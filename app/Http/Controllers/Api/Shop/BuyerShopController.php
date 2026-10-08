@@ -59,6 +59,7 @@ class BuyerShopController extends Controller
             'farm' => fn ($query) => $this->loadFarmFavoriteState($query, $request),
             'listings' => fn ($query) => $query
                 ->buyerVisible()
+                ->allowedByFarmFeatures()
                 ->with(['cropType', 'farm', 'activeTawadRule'])
                 ->latest(),
         ]);

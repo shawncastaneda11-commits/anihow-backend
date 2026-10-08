@@ -228,7 +228,9 @@ class ProduceCard extends StatelessWidget {
     final s = AppStrings.of(context);
     final upcoming = listing.isUpcoming;
     final from = listing.availableFrom;
-    final label = upcoming
+    final label = listing.showComingSoon
+        ? s.comingSoon
+        : upcoming
         ? (from == null
               ? s.reserveOnly
               : s.reserveFrom(s.shortDate(from.toLocal())))

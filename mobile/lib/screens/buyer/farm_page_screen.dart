@@ -1669,8 +1669,8 @@ class _IconTile extends StatelessWidget {
   }
 }
 
-/// Lays each card out at its own height, then again at the row's tallest
-/// height, so the two cards line up and spare space stays in the photo.
+/// Keeps the first line of a tab 12px under the tab divider while the
+/// pinned toolbar covers part of the body.
 class _PinnedTabClearance extends StatelessWidget {
   const _PinnedTabClearance();
 
@@ -1689,6 +1689,8 @@ class _PinnedTabClearance extends StatelessWidget {
   }
 }
 
+/// Lays each card out at its own height, then again at the row's tallest
+/// height, so the two cards line up and spare space stays in the photo.
 class _ShareRowHeight extends MultiChildRenderObjectWidget {
   const _ShareRowHeight({required super.children});
 

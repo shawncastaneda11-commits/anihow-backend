@@ -29,13 +29,22 @@ class ImageVariantsTest extends TestCase
         parent::setUp();
 
         $this->originalMemoryLimit = (string) ini_get('memory_limit');
+
+        $this->raiseMemoryLimitTo('512M');
+
         $this->seed(RolePermissionSeeder::class);
         Storage::fake(ListingStorage::diskName());
     }
 
     protected function tearDown(): void
     {
-        ini_set('memory_limit', $this->originalMemoryLimit);
+        set_error_handler(static fn (): bool => true);
+
+        try {
+            ini_set('memory_limit', $this->originalMemoryLimit);
+        } finally {
+            restore_error_handler();
+        }
 
         parent::tearDown();
     }
@@ -179,7 +188,7 @@ class ImageVariantsTest extends TestCase
 
     public function test_exif_orientation_six_is_rotated_after_resize(): void
     {
-        ini_set('memory_limit', '256M');
+        $this->raiseMemoryLimitTo('512M');
         $tmp = tempnam(sys_get_temp_dir(), 'exif').'.jpg';
 
         try {
@@ -274,10 +283,17 @@ class ImageVariantsTest extends TestCase
         }
     }
 
-    public function test_memory_limit_128m_is_raised_to_256m_then_restored(): void
+    public function test_memory_limit_below_256m_is_raised_to_256m_then_restored(): void
     {
-        ini_set('memory_limit', '128M');
-        $this->assertSame('128M', ini_get('memory_limit'));
+        $mb = max(128, (int) ceil(memory_get_usage(true) / 1048576) + 32);
+
+        if ($mb >= 256) {
+            $this->markTestSkipped('Process already uses too much memory to test a sub-256M limit.');
+        }
+
+        $limit = "{$mb}M";
+        $this->assertNotFalse(ini_set('memory_limit', $limit));
+        $this->assertSame($limit, ini_get('memory_limit'));
 
         $during = null;
         $this->invokeWithRaisedMemoryLimit(function () use (&$during): void {
@@ -285,7 +301,7 @@ class ImageVariantsTest extends TestCase
         });
 
         $this->assertSame('256M', $during);
-        $this->assertSame('128M', ini_get('memory_limit'));
+        $this->assertSame($limit, ini_get('memory_limit'));
     }
 
     public function test_memory_limit_512m_is_not_lowered(): void
@@ -353,6 +369,35 @@ class ImageVariantsTest extends TestCase
         $info = getimagesizefromstring($bytes);
         $this->assertIsArray($info);
         $this->assertLessThanOrEqual($max, max((int) $info[0], (int) $info[1]));
+    }
+
+    private function raiseMemoryLimitTo(string $target): void
+    {
+        $currentBytes = $this->memoryLimitToBytes((string) ini_get('memory_limit'));
+        $targetBytes = $this->memoryLimitToBytes($target);
+
+        if ($currentBytes === null || $targetBytes === null || $currentBytes >= $targetBytes) {
+            return;
+        }
+
+        ini_set('memory_limit', $target);
+    }
+
+    private function memoryLimitToBytes(string $limit): ?int
+    {
+        if ($limit === '-1') {
+            return null;
+        }
+
+        $unit = strtolower(substr($limit, -1));
+        $value = (int) $limit;
+
+        return match ($unit) {
+            'g' => $value * 1024 * 1024 * 1024,
+            'm' => $value * 1024 * 1024,
+            'k' => $value * 1024,
+            default => $value,
+        };
     }
 
     /**

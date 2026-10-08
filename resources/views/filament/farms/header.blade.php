@@ -13,13 +13,130 @@
     $logo = $farm->logoUrl();
 @endphp
 
-<div class="mb-2">
-    <div class="relative h-[220px] overflow-hidden rounded-xl bg-primary-600">
+<style>
+    .farm-cover {
+        position: relative;
+        height: 220px;
+        overflow: hidden;
+        border-radius: 0.75rem;
+        background: #166534;
+    }
+
+    .farm-cover img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .farm-cover-shade {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: 4rem;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.45), transparent);
+        pointer-events: none;
+    }
+
+    .farm-cover-edit {
+        position: absolute;
+        right: 12px;
+        bottom: 12px;
+    }
+
+    .farm-identity {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 16px;
+        padding: 0 4px;
+    }
+
+    .farm-logo-wrap {
+        position: relative;
+        flex: 0 0 auto;
+        margin-top: -60px;
+    }
+
+    .farm-logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 120px;
+        height: 120px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #166534;
+        color: #fff;
+        font-size: 2rem;
+        font-weight: 700;
+        box-shadow: 0 0 0 4px #f8fafc;
+    }
+
+    html.dark .farm-logo {
+        box-shadow: 0 0 0 4px #111827;
+    }
+
+    .farm-logo img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .farm-logo-edit {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+    }
+
+    .farm-identity-copy {
+        min-width: 0;
+        flex: 1 1 16rem;
+        padding: 12px 0 4px;
+    }
+
+    .farm-name-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .farm-name {
+        margin: 0;
+        color: #030712;
+        font-size: 1.5rem;
+        line-height: 2rem;
+        font-weight: 700;
+    }
+
+    html.dark .farm-name {
+        color: #f9fafb;
+    }
+
+    .farm-place {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin: 4px 0 0;
+        color: #4b5563;
+        font-size: 0.875rem;
+    }
+
+    html.dark .farm-place {
+        color: #d1d5db;
+    }
+</style>
+
+<div>
+    <div class="farm-cover">
         @if ($cover)
-            <img src="{{ $cover }}" alt="" class="h-full w-full object-cover">
+            <img src="{{ $cover }}" alt="">
         @endif
-        <div class="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/45 to-transparent"></div>
-        <div class="absolute bottom-3 right-3">
+        <div class="farm-cover-shade"></div>
+        <div class="farm-cover-edit">
             <x-filament::icon-button
                 color="gray"
                 size="sm"
@@ -30,16 +147,16 @@
         </div>
     </div>
 
-    <div class="flex flex-wrap items-end gap-4 px-1 sm:px-2">
-        <div class="relative -mt-[60px] shrink-0">
-            <div class="flex size-[120px] items-center justify-center overflow-hidden rounded-full bg-primary-600 text-3xl font-bold text-white ring-4 ring-gray-50 dark:ring-gray-950">
+    <div class="farm-identity">
+        <div class="farm-logo-wrap">
+            <div class="farm-logo">
                 @if ($logo)
-                    <img src="{{ $logo }}" alt="" class="h-full w-full object-cover">
+                    <img src="{{ $logo }}" alt="">
                 @else
                     {{ \Illuminate\Support\Str::of($farm->name)->substr(0, 1)->upper() }}
                 @endif
             </div>
-            <div class="absolute bottom-0 right-0">
+            <div class="farm-logo-edit">
                 <x-filament::icon-button
                     color="gray"
                     size="sm"
@@ -50,9 +167,9 @@
             </div>
         </div>
 
-        <div class="min-w-0 flex-1 pb-1 pt-3">
-            <div class="flex flex-wrap items-center gap-2">
-                <h2 class="text-2xl font-bold text-gray-950 dark:text-white">{{ $farm->name }}</h2>
+        <div class="farm-identity-copy">
+            <div class="farm-name-row">
+                <h2 class="farm-name">{{ $farm->name }}</h2>
                 <x-filament::icon-button
                     color="gray"
                     size="sm"
@@ -80,7 +197,7 @@
                 @endif
             </div>
             @if ($place !== '')
-                <p class="mt-1 flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300">
+                <p class="farm-place">
                     <x-filament::icon :icon="Heroicon::OutlinedMapPin" class="h-4 w-4" />
                     <span>{{ $place }}</span>
                 </p>

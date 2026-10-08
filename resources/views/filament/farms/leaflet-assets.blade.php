@@ -26,6 +26,63 @@
         height: 320px;
     }
 
+    .farm-muted {
+        color: #4b5563;
+    }
+
+    html.dark .farm-muted {
+        color: #d1d5db;
+    }
+
+    .farm-picker-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .farm-picker-input {
+        flex: 1 1 12rem;
+        min-width: 12rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        background: #fff;
+        color: #030712;
+        padding: 8px 10px;
+        font-size: 0.875rem;
+    }
+
+    html.dark .farm-picker-input {
+        border-color: #4b5563;
+        background: #111827;
+        color: #f9fafb;
+    }
+
+    .farm-picker-results {
+        display: grid;
+        gap: 6px;
+    }
+
+    .farm-picker-result {
+        border: 0;
+        border-radius: 0.5rem;
+        background: transparent;
+        color: inherit;
+        padding: 8px 10px;
+        text-align: left;
+        box-shadow: inset 0 0 0 1px #e5e7eb;
+        cursor: pointer;
+    }
+
+    html.dark .farm-picker-result {
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    }
+
+    .farm-picker-stack {
+        display: grid;
+        gap: 12px;
+    }
+
     @media (min-width: 640px) {
         .farm-leaflet-picker {
             height: 420px;

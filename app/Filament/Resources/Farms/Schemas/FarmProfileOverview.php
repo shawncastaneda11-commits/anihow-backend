@@ -40,7 +40,7 @@ class FarmProfileOverview
             ->schema([
                 TextEntry::make('description')
                     ->hiddenLabel()
-                    ->extraAttributes(['class' => 'whitespace-pre-wrap'])
+                    ->extraAttributes(['style' => 'white-space:pre-wrap'])
                     ->state(function () use ($page): string {
                         $description = self::farm($page)->description;
 

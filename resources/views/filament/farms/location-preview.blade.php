@@ -25,11 +25,11 @@
         <x-filament::link :href="$farm->mapsUrl()" target="_blank">
             Open in Google Maps
         </x-filament::link>
-        <p class="text-sm text-gray-600 dark:text-gray-300">
+        <p class="farm-muted" style="margin:0;font-size:0.875rem">
             Lat {{ number_format((float) $farm->latitude, 5, '.', '') }}, Lng {{ number_format((float) $farm->longitude, 5, '.', '') }}
         </p>
     @else
-        <p class="text-sm text-gray-600 dark:text-gray-300">No location set yet</p>
+        <p class="farm-muted" style="margin:0;font-size:0.875rem">No location set yet</p>
         <div>
             <x-filament::button type="button" size="sm" color="gray" outlined wire:click="mountAction('editLocation')">
                 Set location

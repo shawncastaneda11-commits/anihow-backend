@@ -52,7 +52,7 @@ class EditFarm extends EditRecord
                     ->schema(FarmProfileOverview::components($this)),
                 Group::make([
                     $this->getRelationManagersContentComponent(),
-                ])->extraAttributes(['class' => 'mt-6']),
+                ])->extraAttributes(['style' => 'margin-top:1.5rem']),
             ]);
     }
 

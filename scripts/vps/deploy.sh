@@ -27,6 +27,11 @@ php artisan filament:optimize
 php artisan queue:restart
 
 sudo systemctl reload php8.4-fpm
-sudo supervisorctl restart anihow-reverb
+# `status anihow-reverb` is not in sudoers; bare `status` is.
+if sudo supervisorctl status | grep -q 'anihow-reverb'; then
+    sudo supervisorctl restart anihow-reverb
+else
+    echo "anihow-reverb not loaded yet; skipped"
+fi
 
 printf 'Deployed %s\n' "$(git log -1 --format='%h %s')"

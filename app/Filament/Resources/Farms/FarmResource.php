@@ -13,6 +13,7 @@ use App\Filament\Resources\Farms\Schemas\FarmForm;
 use App\Filament\Resources\Farms\Tables\FarmsTable;
 use App\Models\Farm;
 use BackedEnum;
+use Filament\Navigation\NavigationItem;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -52,10 +53,35 @@ class FarmResource extends Resource
     public static function getRelations(): array
     {
         return [
-            'crop-types' => SellerCropTypesRelationManager::class,
-            'price-guards' => CropTypeOverridesRelationManager::class,
             'photos' => FarmPhotosRelationManager::class,
+            'price-guards' => CropTypeOverridesRelationManager::class,
+            'crop-types' => SellerCropTypesRelationManager::class,
         ];
+    }
+
+    /**
+     * A Content Editor opens their own farm. A Super Admin keeps the farm list.
+     *
+     * @return array<NavigationItem>
+     */
+    public static function getNavigationItems(): array
+    {
+        $user = auth()->user();
+
+        if ($user !== null && ! $user->can(Permission::ManageFarms->value)) {
+            return [
+                NavigationItem::make('My Farm')
+                    ->icon(static::getNavigationIcon())
+                    ->group(static::getNavigationGroup())
+                    ->sort(static::getNavigationSort())
+                    ->isActiveWhen(fn (): bool => request()->routeIs(static::getRouteBaseName().'.*'))
+                    ->url($user->farm_id
+                        ? static::getUrl('edit', ['record' => $user->farm_id])
+                        : static::getUrl('index')),
+            ];
+        }
+
+        return parent::getNavigationItems();
     }
 
     public static function getPages(): array

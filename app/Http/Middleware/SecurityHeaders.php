@@ -19,7 +19,7 @@ class SecurityHeaders
         $response->headers->set('X-Frame-Options', 'DENY');
         $response->headers->set('Referrer-Policy', 'no-referrer');
         $response->headers->set('X-XSS-Protection', '0');
-        $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+        $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
 
         if ($request->secure() || (bool) config('anihow.force_https')) {
             $response->headers->set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');

@@ -49,6 +49,8 @@ class FarmResource extends JsonResource
             ],
             'cover_photo_url' => $this->coverPhotoUrl(),
             'thumbnail_url' => $this->coverThumbnailUrl(),
+            'logo_url' => $this->logoUrl(),
+            'logo_thumbnail_url' => $this->logoThumbnailUrl(),
             'photos' => FarmPhotoResource::collection($this->whenLoaded('photos')),
             'announcements' => FarmAnnouncementResource::collection($this->whenLoaded('announcements')),
             'farmer_sellers_count' => $this->whenCounted('farmerSellers'),

@@ -22,6 +22,7 @@ class BackfillImageThumbnails extends Command
         $paths = collect()
             ->merge(Listing::query()->withTrashed()->whereNotNull('image_path')->pluck('image_path'))
             ->merge(Farm::query()->whereNotNull('cover_photo_path')->pluck('cover_photo_path'))
+            ->merge(Farm::query()->whereNotNull('logo_path')->pluck('logo_path'))
             ->merge(FarmPhoto::query()->whereNotNull('path')->pluck('path'))
             ->merge(CropCareArticle::query()->withTrashed()->whereNotNull('image_path')->pluck('image_path'))
             ->filter()

@@ -27,6 +27,7 @@ class _FarmRow {
     required this.name,
     required this.place,
     required this.sellers,
+    this.logoUrl,
     this.distanceKm,
   });
 
@@ -34,6 +35,7 @@ class _FarmRow {
   final String name;
   final String place;
   final List<ShopProfile> sellers;
+  final String? logoUrl;
   final double? distanceKm;
 }
 
@@ -145,11 +147,15 @@ class _ShopsScreenState extends State<ShopsScreen> {
       final place = sellers
           .map(_place)
           .firstWhere((value) => value.isNotEmpty, orElse: () => '');
+      final logo = sellers
+          .map((shop) => shop.farmLogoUrl?.trim() ?? '')
+          .firstWhere((value) => value.isNotEmpty, orElse: () => '');
       return _FarmRow(
         id: entry.key,
         name: name,
         place: place,
         sellers: sellers,
+        logoUrl: logo.isEmpty ? null : logo,
         distanceKm: sellers
             .map((shop) => shop.distanceKm)
             .whereType<double>()
@@ -446,7 +452,12 @@ class _FarmCard extends StatelessWidget {
           padding: AniHowSpace.cardPadding,
           child: Row(
             children: [
-              AniHowAvatar(name: farm.name, radius: 26),
+              AniHowAvatar(
+                key: Key('farm-card-logo-${farm.id}'),
+                name: farm.name,
+                imageUrl: farm.logoUrl,
+                radius: 26,
+              ),
               const SizedBox(width: AniHowSpace.cardGap),
               Expanded(
                 child: Column(

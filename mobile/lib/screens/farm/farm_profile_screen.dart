@@ -25,11 +25,13 @@ class FarmLinkChip extends StatelessWidget {
     super.key,
     required this.farmId,
     this.label,
+    this.logoUrl,
     this.openCombinedPage = false,
   });
 
   final int farmId;
   final String? label;
+  final String? logoUrl;
 
   /// Buyer storefronts open the farm page. The seller's own chip stays on
   /// [FarmProfileScreen].
@@ -38,12 +40,19 @@ class FarmLinkChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = label ?? AppStrings.of(context).farm;
+    final logo = logoUrl?.trim();
     return Align(
       alignment: Alignment.centerLeft,
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 48),
         child: ActionChip(
-          avatar: const Icon(Icons.agriculture_outlined, size: 18),
+          avatar: logo != null && logo.isNotEmpty
+              ? CircleAvatar(
+                  key: const Key('farm-chip-logo'),
+                  radius: 12,
+                  backgroundImage: NetworkImage(logo),
+                )
+              : const Icon(Icons.agriculture_outlined, size: 18),
           label: Text(text),
           onPressed: () => openCombinedPage
               ? openBuyerFarmPage(context, farmId)

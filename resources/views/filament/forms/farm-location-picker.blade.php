@@ -1,6 +1,10 @@
 @php
     $latitudePath = is_string($latitudePath ?? null) ? $latitudePath : '';
     $longitudePath = is_string($longitudePath ?? null) ? $longitudePath : '';
+    $updateAddressPath = is_string($updateAddressPath ?? null) ? $updateAddressPath : '';
+    $suggestedBarangayPath = is_string($suggestedBarangayPath ?? null) ? $suggestedBarangayPath : '';
+    $suggestedMunicipalityPath = is_string($suggestedMunicipalityPath ?? null) ? $suggestedMunicipalityPath : '';
+    $suggestedAddressPath = is_string($suggestedAddressPath ?? null) ? $suggestedAddressPath : '';
     $latitudeValue = isset($latitude) && is_numeric($latitude) ? (float) $latitude : null;
     $longitudeValue = isset($longitude) && is_numeric($longitude) ? (float) $longitude : null;
 @endphp
@@ -13,28 +17,60 @@
         'interactive' => true,
         'latitudePath' => $latitudePath,
         'longitudePath' => $longitudePath,
+        'updateAddressPath' => $updateAddressPath,
+        'suggestedBarangayPath' => $suggestedBarangayPath,
+        'suggestedMunicipalityPath' => $suggestedMunicipalityPath,
+        'suggestedAddressPath' => $suggestedAddressPath,
     ]))"
     x-init="bootMap()"
-    style="display:grid;gap:12px"
+    class="farm-picker-stack"
 >
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <input x-model="query" type="text" placeholder="Search a place" style="flex:1;min-width:180px;border:1px solid #d1d5db;border-radius:8px;padding:8px 10px">
-        <button type="button" x-on:click="search()" x-bind:disabled="searching" style="border-radius:8px;padding:8px 12px;background:#166534;color:white">Search</button>
-        <button type="button" x-on:click="useCurrent()" style="border-radius:8px;padding:8px 12px">Use my current location</button>
+    <div class="farm-picker-row">
+        <input x-model="query" type="text" placeholder="Search a place" class="farm-picker-input">
+        <x-filament::button type="button" size="sm" color="primary" x-on:click="search()" x-bind:disabled="searching">
+            Search
+        </x-filament::button>
+        <x-filament::button type="button" size="sm" color="gray" outlined icon="heroicon-o-map-pin" x-on:click="useCurrent()">
+            Use my current location
+        </x-filament::button>
     </div>
+
     <template x-if="places.length">
-        <div style="display:grid;gap:6px">
+        <div class="farm-picker-results">
             <template x-for="place in places" :key="place.label + place.latitude">
-                <button type="button" x-on:click="choose(place)" x-text="place.label" style="text-align:left;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px"></button>
+                <button type="button" x-on:click="choose(place)" x-text="place.label" class="farm-picker-result"></button>
             </template>
-            <p style="font-size:12px;color:#6b7280;margin:0">Search by Nominatim · © OpenStreetMap</p>
+            <p class="farm-muted" style="font-size:0.75rem;margin:0">Search by Nominatim · © OpenStreetMap</p>
         </div>
     </template>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <input x-model="link" type="url" placeholder="Paste a Google Maps link" style="flex:1;min-width:180px;border:1px solid #d1d5db;border-radius:8px;padding:8px 10px">
-        <button type="button" x-on:click="pasteLink()" style="border-radius:8px;padding:8px 12px">Use this link</button>
+
+    <div class="farm-picker-row">
+        <input x-model="link" type="url" placeholder="Paste a Google Maps link" class="farm-picker-input">
+        <x-filament::button type="button" size="sm" color="gray" x-on:click="pasteLink()">
+            Use this link
+        </x-filament::button>
     </div>
-    <p x-show="message" x-text="message" style="margin:0;font-size:13px;color:#92400e"></p>
-    <div wire:ignore x-ref="canvas" style="height:320px;border-radius:12px;overflow:hidden"></div>
-    <p x-show="label" x-text="label" style="margin:0;font-size:12px;color:#4b5563"></p>
+
+    <p x-show="message" x-text="message" class="farm-muted" style="margin:0;font-size:0.875rem"></p>
+
+    <p class="farm-muted" style="margin:0;font-size:0.875rem">Click the map or drag the pin to the spot where buyers pick up their orders.</p>
+
+    <div
+        wire:ignore
+        x-ref="canvas"
+        class="farm-leaflet farm-leaflet-picker"
+        style="position:relative;z-index:0;isolation:isolate;width:100%;max-width:100%;overflow:hidden;border-radius:0.75rem;"
+    ></div>
+
+    <p x-show="label" x-text="label" class="farm-muted" style="margin:0;font-size:0.875rem"></p>
+
+    <div x-show="suggestionLabel" class="farm-picker-stack">
+        <p x-text="suggestionLabel" style="margin:0;font-size:0.875rem"></p>
+        <label style="display:flex;align-items:center;gap:8px;font-size:0.875rem">
+            <input type="checkbox" x-model="updateAddress" x-on:change="writeSuggestion(updateAddress)">
+            Update the farm's address to match the pin
+        </label>
+    </div>
+
+    <p x-show="lookupMessage" x-text="lookupMessage" class="farm-muted" style="margin:0;font-size:0.875rem"></p>
 </div>

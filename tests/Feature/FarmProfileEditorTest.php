@@ -8,15 +8,19 @@ use App\Filament\Resources\Farms\Pages\EditFarm;
 use App\Filament\Resources\Farms\Pages\ListFarms;
 use App\Models\Farm;
 use App\Models\User;
+use App\Support\FarmPin;
 use App\Support\GoogleMapsLinkResolver;
 use App\Support\ImageVariants;
 use App\Support\ListingStorage;
 use App\Support\NominatimPlaceSearch;
 use Database\Seeders\RolePermissionSeeder;
 use Filament\Facades\Filament;
+use Filament\Support\Enums\Width;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use ReflectionMethod;
@@ -68,7 +72,9 @@ class FarmProfileEditorTest extends TestCase
             ->assertSee('Price guards')
             ->assertSee('Crop types')
             ->assertActionHidden('editOrganic')
-            ->assertActionHidden('editStatus');
+            ->assertActionHidden('editStatus')
+            ->assertDontSee('Set inactive')
+            ->assertDontSee('Set active');
 
         Livewire::actingAs($editor)
             ->test(EditFarm::class, ['record' => $other->id])
@@ -199,6 +205,13 @@ class FarmProfileEditorTest extends TestCase
         $this->assertStringContainsString('wire:ignore', $html);
         $this->assertStringContainsString('latitudePath\u0022:\u0022mountedActions.0.data.latitude', $html);
         $this->assertStringContainsString('longitudePath\u0022:\u0022mountedActions.0.data.longitude', $html);
+        $this->assertStringContainsString('type="hidden"', $html);
+        $this->assertStringContainsString('isolation:isolate', $html);
+        $this->assertStringContainsString('Click the map or drag the pin to the spot where buyers pick up their orders.', $html);
+        $this->assertStringNotContainsString(FarmPin::HELPER, $html);
+        $this->assertStringNotContainsString('>Latitude<', $html);
+        $this->assertStringNotContainsString('>Longitude<', $html);
+        $this->assertSame(Width::FourExtraLarge, $preview->instance()->getAction('editLocation')->getModalWidth());
 
         Livewire::actingAs($admin)
             ->test(EditFarm::class, ['record' => $farm->id])
@@ -307,8 +320,8 @@ class FarmProfileEditorTest extends TestCase
         $this->assertSame('General Trias, Cavite', $first['places'][0]['label']);
         $this->assertNull($first['message']);
 
-        $this->travel(2)->seconds();
         $second = $page->searchFarmPlaces('General Trias');
+        $this->assertNull($second['message']);
         $this->assertSame($first['places'], $second['places']);
         Http::assertSentCount(1);
         Http::assertSent(function ($request): bool {
@@ -419,6 +432,206 @@ class FarmProfileEditorTest extends TestCase
         $this->assertStringContainsString('geolocation=(self)', $policy);
         $this->assertStringContainsString('camera=()', $policy);
         $this->assertStringContainsString('microphone=()', $policy);
+    }
+
+    public function test_set_active_is_a_super_admin_confirmation(): void
+    {
+        $farm = Farm::factory()->create(['is_active' => true, 'name' => 'Status Farm']);
+        $admin = $this->staff(Role::SuperAdmin);
+        $editor = $this->staff(Role::ContentEditor, $farm);
+
+        Livewire::actingAs($editor)
+            ->test(EditFarm::class, ['record' => $farm->id])
+            ->assertActionHidden('editStatus')
+            ->assertDontSee('Set inactive');
+
+        Livewire::actingAs($admin)
+            ->test(EditFarm::class, ['record' => $farm->id])
+            ->assertSee('Set inactive')
+            ->assertActionVisible('editStatus')
+            ->callAction('editStatus', data: [
+                'is_active' => false,
+            ])
+            ->assertHasNoFormErrors();
+
+        $this->assertFalse($farm->fresh()->is_active);
+
+        Livewire::actingAs($admin)
+            ->test(EditFarm::class, ['record' => $farm->id])
+            ->assertSee('Set active');
+    }
+
+    public function test_address_line_skips_barangay_and_municipality_already_in_the_address(): void
+    {
+        $repeated = Farm::factory()->create([
+            'address' => 'Farm road, Manggahan, General Trias',
+            'barangay' => 'Manggahan',
+            'municipality' => 'General Trias',
+        ]);
+        $separate = Farm::factory()->create([
+            'address' => 'Farm road',
+            'barangay' => 'Manggahan',
+            'municipality' => 'General Trias',
+        ]);
+
+        $line = $repeated->addressLine();
+        $this->assertSame('Farm road, Manggahan, General Trias', $line);
+        $this->assertSame(1, substr_count(mb_strtolower($line), 'manggahan'));
+        $this->assertSame(1, substr_count(mb_strtolower($line), 'general trias'));
+        $this->assertSame('Farm road, Manggahan, General Trias', $separate->addressLine());
+    }
+
+    public function test_reverse_geocoding_maps_caches_and_rate_limits(): void
+    {
+        Cache::flush();
+        RateLimiter::clear('nominatim-search');
+
+        $farm = Farm::factory()->create();
+        $editor = $this->staff(Role::ContentEditor, $farm);
+        $buyer = $this->buyer();
+        RateLimiter::clear('nominatim-search-user-'.$editor->id);
+        RateLimiter::clear('nominatim-search-user-'.$buyer->id);
+
+        Http::fake([
+            'nominatim.openstreetmap.org/*' => Http::response([
+                'address' => [
+                    'road' => 'Manggahan Road',
+                    'quarter' => 'Manggahan',
+                    'town' => 'General Trias',
+                    'state' => 'Cavite',
+                    'city' => 'Should not win',
+                    'village' => 'Should not win',
+                ],
+            ]),
+        ]);
+
+        $this->actingAs($buyer);
+        $denied = new EditFarm;
+        $denied->record = $farm;
+
+        try {
+            $denied->reverseFarmPlace(14.38691, 120.88031);
+            $this->fail('A buyer looked up a pin.');
+        } catch (HttpException $exception) {
+            $this->assertSame(403, $exception->getStatusCode());
+        }
+
+        Http::assertNothingSent();
+
+        $page = Livewire::actingAs($editor)
+            ->test(EditFarm::class, ['record' => $farm->id])
+            ->instance();
+
+        $mapped = $page->reverseFarmPlace(14.38691, 120.88031);
+        $this->assertSame('Manggahan', $mapped['barangay']);
+        $this->assertSame('General Trias', $mapped['municipality']);
+        $this->assertSame('Cavite', $mapped['province']);
+        $this->assertSame('Manggahan Road, Manggahan, General Trias', $mapped['address']);
+        $this->assertSame('📍 Manggahan, General Trias, Cavite', $mapped['label']);
+        $this->assertNull($mapped['message']);
+        Http::assertSent(function ($request): bool {
+            return $request->hasHeader('User-Agent', NominatimPlaceSearch::USER_AGENT)
+                && str_contains($request->url(), 'format=jsonv2')
+                && str_contains($request->url(), 'zoom=18')
+                && str_contains($request->url(), 'addressdetails=1');
+        });
+
+        $this->travel(2)->seconds();
+        $cached = $page->reverseFarmPlace(14.38694, 120.88034);
+        $this->assertSame($mapped, $cached);
+        $this->assertNull($cached['message']);
+        Http::assertSentCount(1);
+
+        $elsewhere = $page->reverseFarmPlace(15.11111, 121.22221);
+        $this->assertNull($elsewhere['message']);
+        Http::assertSentCount(2);
+
+        $limited = $page->reverseFarmPlace(16.22222, 122.33331);
+        $this->assertSame(NominatimPlaceSearch::LOOKUP_FAILED, $limited['message']);
+        $this->assertNull($limited['label']);
+        Http::assertSentCount(2);
+    }
+
+    public function test_saving_a_pin_updates_the_address_only_when_asked(): void
+    {
+        $farm = Farm::factory()->create([
+            'pickup_point' => 'Old hall',
+            'address' => 'Old road',
+            'barangay' => 'Old',
+            'municipality' => 'Old Town',
+        ]);
+        $editor = $this->staff(Role::ContentEditor, $farm);
+        $longAddress = str_repeat('A', 300);
+
+        Livewire::actingAs($editor)
+            ->test(EditFarm::class, ['record' => $farm->id])
+            ->callAction('editLocation', data: [
+                'latitude' => '14.38690',
+                'longitude' => '120.88030',
+                'update_address' => true,
+                'suggested_barangay' => 'Manggahan',
+                'suggested_municipality' => 'General Trias',
+                'suggested_address' => $longAddress,
+            ])
+            ->assertHasNoFormErrors();
+
+        $fresh = $farm->fresh();
+        $this->assertEquals(14.3869, (float) $fresh->latitude);
+        $this->assertEquals(120.8803, (float) $fresh->longitude);
+        $this->assertSame('Manggahan', $fresh->barangay);
+        $this->assertSame('General Trias', $fresh->municipality);
+        $this->assertSame(255, mb_strlen((string) $fresh->address));
+        $this->assertSame(str_repeat('A', 255), $fresh->address);
+        $this->assertSame('Old hall', $fresh->pickup_point);
+
+        Livewire::actingAs($editor)
+            ->test(EditFarm::class, ['record' => $farm->id])
+            ->callAction('editLocation', data: [
+                'latitude' => '14.40000',
+                'longitude' => '120.90000',
+                'update_address' => false,
+                'suggested_barangay' => 'Tanza',
+                'suggested_municipality' => 'Tanza',
+                'suggested_address' => 'New road',
+            ])
+            ->assertHasNoFormErrors();
+
+        $pinned = $farm->fresh();
+        $this->assertEquals(14.4, (float) $pinned->latitude);
+        $this->assertEquals(120.9, (float) $pinned->longitude);
+        $this->assertSame('Manggahan', $pinned->barangay);
+        $this->assertSame('General Trias', $pinned->municipality);
+        $this->assertSame(str_repeat('A', 255), $pinned->address);
+        $this->assertSame('Old hall', $pinned->pickup_point);
+    }
+
+    public function test_a_partial_address_suggestion_keeps_fields_the_lookup_did_not_find(): void
+    {
+        $farm = Farm::factory()->create([
+            'pickup_point' => 'Barangay hall',
+            'address' => 'Old road',
+            'barangay' => 'Manggahan',
+            'municipality' => 'Old Town',
+        ]);
+        $editor = $this->staff(Role::ContentEditor, $farm);
+
+        Livewire::actingAs($editor)
+            ->test(EditFarm::class, ['record' => $farm->id])
+            ->callAction('editLocation', data: [
+                'latitude' => '14.38690',
+                'longitude' => '120.88030',
+                'update_address' => true,
+                'suggested_barangay' => null,
+                'suggested_municipality' => 'General Trias',
+                'suggested_address' => 'Farm road, General Trias',
+            ])
+            ->assertHasNoFormErrors();
+
+        $fresh = $farm->fresh();
+        $this->assertSame('Manggahan', $fresh->barangay);
+        $this->assertSame('General Trias', $fresh->municipality);
+        $this->assertSame('Farm road, General Trias', $fresh->address);
+        $this->assertSame('Barangay hall', $fresh->pickup_point);
     }
 
     private function staff(Role $role, ?Farm $farm = null): User

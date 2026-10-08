@@ -3,7 +3,7 @@
 namespace App\Filament\Forms;
 
 use App\Support\FarmPin;
-use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\ViewField;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Utilities\Get;
@@ -11,16 +11,20 @@ use Filament\Schemas\Components\Utilities\Get;
 class FarmLocationPicker
 {
     /**
-     * Hidden coordinate inputs plus the Leaflet picker. The inputs stay in the
-     * form so FarmPin bounds and "required together" still run on save.
+     * Coordinate fields stay in the form so FarmPin bounds still run on save.
+     * They are hidden: the map is the only control the editor sees.
      *
-     * @return list<TextInput|ViewField>
+     * @return list<Hidden|ViewField>
      */
     public static function fields(): array
     {
         return [
-            self::coordinate('latitude', 'Latitude', 4, 22),
-            self::coordinate('longitude', 'Longitude', 116, 127),
+            self::coordinate('latitude'),
+            self::coordinate('longitude'),
+            Hidden::make('update_address')->default(true),
+            Hidden::make('suggested_barangay'),
+            Hidden::make('suggested_municipality'),
+            Hidden::make('suggested_address'),
             ViewField::make('picker')
                 ->hiddenLabel()
                 ->dehydrated(false)
@@ -33,25 +37,17 @@ class FarmLocationPicker
                         'longitude' => $get('longitude'),
                         'latitudePath' => $base !== '' ? $base.'.latitude' : '',
                         'longitudePath' => $base !== '' ? $base.'.longitude' : '',
+                        'updateAddressPath' => $base !== '' ? $base.'.update_address' : '',
+                        'suggestedBarangayPath' => $base !== '' ? $base.'.suggested_barangay' : '',
+                        'suggestedMunicipalityPath' => $base !== '' ? $base.'.suggested_municipality' : '',
+                        'suggestedAddressPath' => $base !== '' ? $base.'.suggested_address' : '',
                     ];
                 }),
         ];
     }
 
-    private static function coordinate(string $name, string $label, int $min, int $max): TextInput
+    private static function coordinate(string $name): Hidden
     {
-        $partner = $name === 'latitude' ? 'longitude' : 'latitude';
-
-        return TextInput::make($name)
-            ->label($label)
-            ->numeric()
-            ->minValue($min)
-            ->maxValue($max)
-            ->nullable()
-            ->rules(['required_with:'.$partner])
-            ->helperText(FarmPin::HELPER)
-            ->extraInputAttributes([
-                'style' => 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);',
-            ]);
+        return Hidden::make($name)->rules(FarmPin::rules()[$name]);
     }
 }

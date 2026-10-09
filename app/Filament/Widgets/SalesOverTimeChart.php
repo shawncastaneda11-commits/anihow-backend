@@ -19,6 +19,8 @@ class SalesOverTimeChart extends ChartWidget
 
     protected ?string $heading = 'Sales over time';
 
+    protected ?string $maxHeight = '300px';
+
     protected ?string $emptyStateHeading = 'No completed sales in this period.';
 
     public function getDescription(): ?string

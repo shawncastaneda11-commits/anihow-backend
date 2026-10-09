@@ -37,7 +37,10 @@ class HarvestSummaryStats extends StatsOverviewWidget
 
         if ($harvest['records'] === 0) {
             return [
-                Stat::make('Harvest', 'No harvests recorded in this period.'),
+                Stat::make('Earned so far', $this->peso(0.0))
+                    ->description('No harvests recorded in this period.'),
+                Stat::make('Expected income', $this->peso(0.0)),
+                Stat::make('Harvests recorded', '0'),
             ];
         }
 

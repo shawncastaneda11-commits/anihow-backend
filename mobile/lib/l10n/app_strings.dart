@@ -1689,6 +1689,102 @@ class AppStrings {
     'Walang naitalang ani sa panahong ito.',
   );
   String get showAllCrops => t('Show all', 'Ipakita lahat');
+  String get showSheet => t('Show', 'Ipakita');
+  String get aWholeYear => t('A whole year', 'Isang buong taon');
+  String get customDates => t('Custom dates', 'Pasadyang petsa');
+  String get pickYearBelow => t('Pick the year below', 'Piliin ang taon sa ibaba');
+  String get upTo366Days => t('Up to 366 days', 'Hanggang 366 araw');
+  String get showResults => t('Show results', 'Ipakita ang resulta');
+  String get productType => t('Product type', 'Uri ng produkto');
+  String byGrouping(String grouping) => switch (grouping) {
+    'week' => t('by week', 'ayon sa linggo'),
+    'month' => t('by month', 'ayon sa buwan'),
+    _ => t('by day', 'ayon sa araw'),
+  };
+  String get shareOfSales => t(
+    'Share of sales, after tawad',
+    'Bahagi ng benta, pagkatapos ng tawad',
+  );
+  String cropCount(int count) => count == 1
+      ? t('1 crop', '1 pananim')
+      : t('$count crops', '$count pananim');
+  String othersWithCount(int count) =>
+      t('Others ($count crops)', 'Iba pa ($count pananim)');
+  String yearTotalLabel(int year) => t('$year total', 'Kabuuan ng $year');
+  String bestMonthLine(String month, String peso) =>
+      t('Best month: $month · $peso', 'Pinakamabentang buwan: $month · $peso');
+  String get avgOrderShort => t('avg. order', 'avg. na order');
+  String get avgTawadShort => t('avg. tawad', 'avg. na tawad');
+  String get earnedSoFar => t('Earned so far', 'Kita sa ngayon');
+  String get expectedShort => t('Expected', 'Inaasahan');
+  String get profitSoFar => t('Profit so far', 'Tubo sa ngayon');
+  String get waitingShort => t('Waiting', 'Naghihintay');
+  String harvestSummaryLine({
+    required int? percent,
+    required int harvests,
+    required int crops,
+  }) {
+    final harvestText = harvests == 1
+        ? t('1 harvest', '1 ani')
+        : t('$harvests harvests', '$harvests ani');
+    final cropText = cropCount(crops);
+    if (percent == null) {
+      return '$harvestText · $cropText';
+    }
+    return t(
+      '$percent% of expected · $harvestText · $cropText',
+      '$percent% ng inaasahan · $harvestText · $cropText',
+    );
+  }
+
+  String harvestedAmount(String quantity, String unit) => unit.isEmpty
+      ? t('$quantity harvested', '$quantity ang naani')
+      : t('$quantity $unit harvested', '$quantity $unit ang naani');
+  String rejectedReasons(String reasons) =>
+      t('Rejected: $reasons', 'Tinanggihan: $reasons');
+  String removedReasons(String reasons) =>
+      t('Removed: $reasons', 'Tinanggal: $reasons');
+
+  String compactRange(String startIso, String endIso) {
+    final start = _calendarDate(startIso);
+    final end = _calendarDate(endIso);
+    if (start == null || end == null) {
+      return '$startIso – $endIso';
+    }
+    if (start.year == end.year && start.month == end.month) {
+      return '${monthName(start)} ${start.day} – ${end.day}';
+    }
+    if (start.year == end.year) {
+      return '${shortDate(start)} – ${shortDate(end)}';
+    }
+    return '${shortDate(start)}, ${start.year} – ${shortDate(end)}, ${end.year}';
+  }
+
+  String unitWord(String unit, double quantity) {
+    final trimmed = unit.trim();
+    if (trimmed.isEmpty || filipino || quantity == 1) {
+      return trimmed;
+    }
+    return switch (trimmed.toLowerCase()) {
+      'bundle' => 'bundles',
+      'piece' => 'pieces',
+      'sack' => 'sacks',
+      'tray' => 'trays',
+      'pack' => 'packs',
+      'bottle' => 'bottles',
+      _ => trimmed,
+    };
+  }
+
+  String quantitiesSold(List<(String, String, double)> parts) {
+    final bits = <String>[];
+    for (final part in parts) {
+      final unit = unitWord(part.$2, part.$3);
+      bits.add(unit.isEmpty ? part.$1 : '${part.$1} $unit');
+    }
+    final joined = bits.join(' · ');
+    return t('$joined sold', '$joined ang nabenta');
+  }
   String salesWindow(String startIso, String endIso) {
     final start = DateTime.tryParse(startIso);
     final end = DateTime.tryParse(endIso);

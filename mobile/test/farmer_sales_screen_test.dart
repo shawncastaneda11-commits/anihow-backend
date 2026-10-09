@@ -84,12 +84,12 @@ void main() {
     expect(find.byKey(const Key('sales-empty')), findsOneWidget);
     expect(find.byKey(const Key('sales-window')), findsOneWidget);
     expect(
-      find.text(s.salesRangeLine('2026-09-18', '2026-09-24')),
+      find.text(s.compactRange('2026-09-18', '2026-09-24')),
       findsOneWidget,
     );
     expect(find.text(s.mySalesEmpty), findsOneWidget);
     expect(find.byKey(const Key('sales-chart')), findsNothing);
-    expect(tester.getSize(find.byKey(const Key('sales-period-week'))).height, 48);
+    expect(tester.getSize(find.byKey(const Key('sales-filter'))).height, 48);
   });
 
   testWidgets('sales screen populated state shows tiles, bars, and crops', (tester) async {
@@ -105,15 +105,15 @@ void main() {
     expect(find.byKey(const Key('sales-empty')), findsNothing);
     expect(find.byKey(const Key('sales-window')), findsOneWidget);
     expect(
-      find.text(s.salesRangeLine('2026-09-18', '2026-09-24')),
+      find.text(s.compactRange('2026-09-18', '2026-09-24')),
       findsOneWidget,
     );
     expect(find.byKey(const Key('sales-chart')), findsOneWidget);
-    expect(find.text(s.completedOrders), findsOneWidget);
+    expect(find.text(s.ordersCount(2)), findsOneWidget);
     expect(find.text(s.totalSales), findsOneWidget);
     expect(find.text(AniHowMoney.peso(120)), findsWidgets);
     expect(find.text('Kamatis'), findsWidgets);
-    expect(find.text(s.topCrops), findsOneWidget);
+    expect(find.text(s.bestSellers), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text(s.walkInSales),
       200,
@@ -148,30 +148,28 @@ void main() {
     expect(api.calls.single.from, isNull);
     expect(api.calls.single.year, isNull);
 
-    await tester.tap(find.byKey(const Key('sales-period-week')));
-    await tester.pumpAndSettle();
+    await _apply(tester, const Key('sales-range-week'));
     expect(api.calls.last.range, 'week');
     expect(api.calls.last.from, isNull);
     expect(api.calls.last.to, isNull);
     expect(api.calls.last.year, isNull);
 
-    await tester.ensureVisible(find.byKey(const Key('sales-range-year')));
-    await tester.tap(find.byKey(const Key('sales-range-year')));
-    await tester.pumpAndSettle();
+    await _apply(tester, const Key('sales-range-year'));
     expect(api.calls.last.range, 'year');
 
-    await tester.ensureVisible(find.byKey(const Key('sales-range-yearly')));
+    await tester.tap(find.byKey(const Key('sales-filter')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('sales-range-yearly')));
     await tester.pumpAndSettle();
-    expect(find.text('Choose a year'), findsOneWidget);
     expect(find.text('2025'), findsOneWidget);
     expect(find.text('2026'), findsOneWidget);
     await tester.tap(find.byKey(const Key('sales-year-2026')));
+    await tester.tap(find.byKey(const Key('sales-apply')));
     await tester.pumpAndSettle();
     expect(api.calls.last.range, 'yearly');
     expect(api.calls.last.year, 2026);
     expect(api.calls.last.from, isNull);
-    expect(find.text('Yearly · 2026'), findsOneWidget);
+    expect(find.text('2026'), findsWidgets);
   });
 
   testWidgets('custom range over 366 days is blocked before the request', (
@@ -191,14 +189,14 @@ void main() {
     await tester.pumpAndSettle();
     final before = api.calls.length;
 
-    await tester.ensureVisible(find.byKey(const Key('sales-range-custom')));
+    await tester.tap(find.byKey(const Key('sales-filter')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('sales-range-custom')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
 
     expect(find.text(AppStrings(false).pickAtMost366), findsOneWidget);
     expect(api.calls.length, before);
-    expect(find.text(AppStrings(false).thisMonth), findsOneWidget);
+    expect(find.text(AppStrings(false).thisMonth), findsWidgets);
   });
 
   testWidgets('a 422 keeps the previous range and shows the server message', (
@@ -218,15 +216,18 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.byKey(const Key('sales-range-custom')));
+    await tester.tap(find.byKey(const Key('sales-filter')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('sales-range-custom')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sales-apply')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.text('Pick at most 366 days.'), findsOneWidget);
     expect(api.calls.last.range, 'custom');
     expect(
-      find.text(AppStrings(false).salesRangeLine('2026-10-01', '2026-10-09', 'day')),
+      find.text(AppStrings(false).compactRange('2026-10-01', '2026-10-09')),
       findsOneWidget,
     );
   });
@@ -238,8 +239,11 @@ void main() {
     final hidden = _AnalyticsApi(_base(range: _monthRange, sales: _paidSales));
     await tester.pumpWidget(_live(api: hidden, user: _freshOnly));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sales-filter')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('sales-category-fresh')), findsNothing);
-    await tester.tap(find.byKey(const Key('sales-period-week')));
+    await tester.tap(find.byKey(const Key('sales-range-week')));
+    await tester.tap(find.byKey(const Key('sales-apply')));
     await tester.pumpAndSettle();
     expect(hidden.calls.last.category, 'all');
   });
@@ -249,8 +253,11 @@ void main() {
     final shown = _AnalyticsApi(_base(range: _monthRange, sales: _paidSales));
     await tester.pumpWidget(_live(api: shown));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sales-filter')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('sales-category-fresh')), findsOneWidget);
     await tester.tap(find.byKey(const Key('sales-category-fresh')));
+    await tester.tap(find.byKey(const Key('sales-apply')));
     await tester.pumpAndSettle();
     expect(shown.calls.last.category, 'fresh');
     expect(shown.calls.last.range, 'month');
@@ -266,8 +273,14 @@ void main() {
     for (final crop in ['Tomato', 'Pechay', 'Okra', 'Eggplant', 'Carrot']) {
       expect(find.text(crop), findsOneWidget);
     }
-    expect(find.text('Others'), findsOneWidget);
+    expect(find.text('Others (2 crops)'), findsOneWidget);
+    expect(find.text('12 bundles sold'), findsOneWidget);
     expect(find.text('10%'), findsWidgets);
+    await tester.ensureVisible(find.text('Others (2 crops)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Others (2 crops)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mango'), findsOneWidget);
   });
 
   testWidgets('future months render as outlines', (tester) async {
@@ -292,8 +305,8 @@ void main() {
 
     final s = AppStrings(false);
     expect(find.byKey(const Key('sales-harvest-note')), findsOneWidget);
-    expect(find.text(s.harvestNote), findsOneWidget);
-    expect(find.text(s.estimatedHarvests(1)), findsOneWidget);
+    expect(find.textContaining(s.harvestNote), findsOneWidget);
+    expect(find.textContaining(s.estimatedHarvests(1)), findsOneWidget);
   });
 
   testWidgets('no cost recorded and a negative profit stay distinct', (
@@ -311,6 +324,16 @@ void main() {
     await tester.pump();
     await tester.tap(find.text(s.harvestTab));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('sales-crop-bar-Pechay-bundle')),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.byKey(const Key('sales-crop-bar-Pechay-bundle')), findsOneWidget);
+    expect(find.text('Sold 4 bundles'), findsOneWidget);
+    expect(find.text('Left 3 bundles'), findsOneWidget);
+    expect(find.textContaining('Removed 0'), findsNothing);
+    expect(find.textContaining('Rejected:'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text(s.noCostRecorded),
       200,
@@ -352,11 +375,13 @@ void main() {
       _app(home: const Scaffold(body: FarmerSalesScreen(preview: _emptyBoth))),
     );
     await tester.pump();
+    expect(find.byKey(const Key('sales-filter')), findsOneWidget);
     expect(find.text(s.mySalesEmpty), findsOneWidget);
     expect(find.byKey(const Key('sales-chart')), findsNothing);
 
     await tester.tap(find.text(s.harvestTab));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('sales-filter')), findsOneWidget);
     expect(find.text(s.noHarvests), findsOneWidget);
   });
 
@@ -378,6 +403,47 @@ void main() {
     expect(find.textContaining('—'), findsWidgets);
     expect(find.text(AniHowMoney.peso(12)), findsWidgets);
   });
+
+  testWidgets('changing the filter on Harvest keeps the Harvest tab', (tester) async {
+    await _surface(tester);
+    await tester.pumpWidget(
+      _app(home: Scaffold(body: FarmerSalesScreen(preview: _harvestPreview(1)))),
+    );
+    await tester.pump();
+    await tester.tap(find.text('Harvest'));
+    await tester.pumpAndSettle();
+    await _apply(tester, const Key('sales-range-week'));
+    expect(find.textContaining(AppStrings(false).harvestNote), findsOneWidget);
+    expect(find.byKey(const Key('sales-chart')), findsNothing);
+  });
+
+  testWidgets('yearly summary shows the best month', (tester) async {
+    await _surface(tester);
+    final s = AppStrings(false);
+    await tester.pumpWidget(
+      _app(home: Scaffold(body: FarmerSalesScreen(preview: _futurePreview))),
+    );
+    await tester.pump();
+    await _apply(tester, const Key('sales-range-yearly'), year: 2026);
+    expect(
+      find.text(s.bestMonthLine('Jun', AniHowMoney.peso(40))),
+      findsOneWidget,
+    );
+    expect(find.text(s.yearTotalLabel(2026)), findsOneWidget);
+  });
+}
+
+Future<void> _apply(WidgetTester tester, Key rangeKey, {int? year}) async {
+  await tester.tap(find.byKey(const Key('sales-filter')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(rangeKey));
+  await tester.pumpAndSettle();
+  if (year != null) {
+    await tester.tap(find.byKey(Key('sales-year-$year')));
+    await tester.pumpAndSettle();
+  }
+  await tester.tap(find.byKey(const Key('sales-apply')));
+  await tester.pumpAndSettle();
 }
 
 Future<void> _surface(WidgetTester tester) async {
@@ -558,7 +624,10 @@ final _piePreview = _base(
       ],
       others: FarmerPieOthers(crops: 2, sales: 10, percent: 10),
     ),
-    topCrops: const [],
+    topCrops: const [
+      FarmerTopCrop(crop: 'Tomato', unit: 'bundle', quantity: 12, sales: 30),
+      FarmerTopCrop(crop: 'Mango', unit: 'kg', quantity: 2, sales: 10),
+    ],
     perPeriod: const [
       FarmerSalesPeriod(
         key: '2026-10-01',

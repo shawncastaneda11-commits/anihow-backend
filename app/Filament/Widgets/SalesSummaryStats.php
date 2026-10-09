@@ -36,13 +36,11 @@ class SalesSummaryStats extends StatsOverviewWidget
     {
         $sales = $this->sales();
 
-        if ($sales['totals']['orders'] === 0) {
-            return [
-                Stat::make('Sales', 'No completed sales in this period.'),
-            ];
-        }
-
         $total = Stat::make('Total sales', $this->peso((float) $sales['totals']['sales']));
+
+        if ($sales['totals']['orders'] === 0) {
+            $total->description('No completed sales in this period.');
+        }
         $best = $sales['year_total']['best_month'] ?? null;
 
         if ($this->dashboardRange()->key === 'yearly' && is_array($best)) {

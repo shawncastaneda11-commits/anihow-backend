@@ -19,6 +19,8 @@ class BestSellersChart extends ChartWidget
 
     protected ?string $heading = 'Best sellers';
 
+    protected ?string $maxHeight = '260px';
+
     protected ?string $emptyStateHeading = 'No completed sales in this period.';
 
     /**

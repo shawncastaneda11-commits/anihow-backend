@@ -30,12 +30,6 @@ class PaymentSplitStats extends StatsOverviewWidget
     {
         $sales = $this->sales();
 
-        if ($sales['totals']['orders'] === 0) {
-            return [
-                Stat::make('Sales', 'No completed sales in this period.'),
-            ];
-        }
-
         $total = (float) $sales['totals']['sales'];
         $online = $sales['payment_split']['online'];
         $cash = $sales['payment_split']['cash'];

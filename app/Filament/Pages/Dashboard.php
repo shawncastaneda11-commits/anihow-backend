@@ -37,12 +37,14 @@ class Dashboard extends BaseDashboard
                     'custom' => 'Custom',
                 ])
                 ->default('month')
+                ->selectablePlaceholder(false)
                 ->live()
                 ->native(false),
             Select::make('year')
                 ->label('Year')
                 ->options(fn (Get $get): array => $this->yearOptions($this->chosenFarmId($get('farm_id'))))
                 ->default((int) now()->year)
+                ->selectablePlaceholder(false)
                 ->visible(fn (Get $get): bool => $get('range') === 'yearly')
                 ->native(false),
             DatePicker::make('from')
@@ -63,6 +65,7 @@ class Dashboard extends BaseDashboard
                     'value_added' => 'Value-added',
                 ])
                 ->default('all')
+                ->selectablePlaceholder(false)
                 ->visible(fn (): bool => $this->showCategoryFilter())
                 ->native(false),
             Select::make('farm_id')
@@ -106,6 +109,8 @@ class Dashboard extends BaseDashboard
                 }),
             Action::make('yearlyCsv')
                 ->label('Yearly CSV')
+                ->icon(Heroicon::OutlinedCalendarDays)
+                ->modalSubmitActionLabel('Download CSV')
                 ->visible(fn (): bool => $this->canDownloadYearly())
                 ->schema(fn (): array => $this->yearlyCsvSchema())
                 ->action(function (array $data, ExportYearlyAnalyticsAction $export): StreamedResponse {
@@ -140,6 +145,7 @@ class Dashboard extends BaseDashboard
                 })
                 ->default((int) now()->year)
                 ->required()
+                ->selectablePlaceholder(false)
                 ->native(false),
         ];
 
@@ -161,6 +167,7 @@ class Dashboard extends BaseDashboard
                     'value_added' => 'Value-added',
                 ])
                 ->default('all')
+                ->selectablePlaceholder(false)
                 ->native(false);
         }
 

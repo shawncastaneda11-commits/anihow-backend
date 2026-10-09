@@ -947,7 +947,7 @@ class AppStrings {
   String get availabilityUpcoming => t('Upcoming', 'Paparating');
   String get availabilityExpired => t('Expired', 'Paso na');
 
-  String shortDate(DateTime date) {
+  String monthName(DateTime date) {
     const english = [
       'Jan',
       'Feb',
@@ -977,8 +977,10 @@ class AppStrings {
       'Dis',
     ];
     final months = this.filipino ? filipino : english;
-    return '${months[date.month - 1]} ${date.day}';
+    return months[date.month - 1];
   }
+
+  String shortDate(DateTime date) => '${monthName(date)} ${date.day}';
 
   String availabilityChip(String? state) => switch (state) {
     'upcoming' => availabilityUpcoming,
@@ -1550,8 +1552,8 @@ class AppStrings {
   String get sales => t('Sales', 'Benta');
   String get mySales => t('My Sales', 'Aking Benta');
   String get mySalesEmpty => t(
-    'No completed sales yet. Completed orders and walk-ins will show here.',
-    'Wala pang tapos na benta. Dito lalabas ang completed na order at walk-in.',
+    'No completed sales in this period.',
+    'Walang tapos na benta sa panahong ito.',
   );
   String get completedOrders => t('Completed orders', 'Tapos na order');
   String get unitsSold => t('Units sold', 'Nabentang yunit');
@@ -1565,6 +1567,224 @@ class AppStrings {
   String get appSales => t('App sales', 'Benta sa app');
   String get periodWeek => t('Week', 'Linggo');
   String get periodMonth => t('Month', 'Buwan');
+  String get thisWeek => t('This week', 'Ngayong linggo');
+  String get thisMonth => t('This month', 'Ngayong buwan');
+  String get thisYear => t('This year', 'Ngayong taon');
+  String get yearly => t('Yearly', 'Taunan');
+  String yearlyChip(int year) => t('Yearly · $year', 'Taunan · $year');
+  String get customRange => t('Custom', 'Pasadya');
+  String get chooseYear => t('Choose a year', 'Pumili ng taon');
+  String get pickAtMost366 =>
+      t('Pick at most 366 days.', 'Hanggang 366 araw lang.');
+  String get salesCategoryAll => t('All', 'Lahat');
+  String get salesCategoryFresh => t('Fresh', 'Sariwa');
+  String get salesCategoryValueAdded => t('Value-added', 'Prosesong produkto');
+  String groupedBy(String grouping) => switch (grouping) {
+    'week' => t('grouped by week', 'pinagsama-sama ayon sa linggo'),
+    'month' => t('grouped by month', 'pinagsama-sama ayon sa buwan'),
+    _ => t('grouped by day', 'pinagsama-sama ayon sa araw'),
+  };
+  String salesRangeLine(String startIso, String endIso, [String? grouping]) {
+    final dates = _salesRangeDates(startIso, endIso);
+    if (grouping == null || grouping.isEmpty) {
+      return dates;
+    }
+    return '$dates · ${groupedBy(grouping)}';
+  }
+
+  String _salesRangeDates(String startIso, String endIso) {
+    final start = _calendarDate(startIso);
+    final end = _calendarDate(endIso);
+    if (start == null || end == null) {
+      return '$startIso – $endIso';
+    }
+    final sameYear = start.year == end.year;
+    final startText = sameYear
+        ? shortDate(start)
+        : '${shortDate(start)}, ${start.year}';
+    return '$startText – ${shortDate(end)}, ${end.year}';
+  }
+
+  DateTime? _calendarDate(String iso) {
+    final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch(iso);
+    if (match == null) {
+      return null;
+    }
+    return DateTime(
+      int.parse(match.group(1)!),
+      int.parse(match.group(2)!),
+      int.parse(match.group(3)!),
+    );
+  }
+
+  String get totalSales => t('Total sales', 'Kabuuang benta');
+  String get salesOverTime => t('Sales over time', 'Benta sa paglipas ng panahon');
+  String get averageOrder => t('Average order', 'Karaniwang order');
+  String get harvestTab => t('Harvest', 'Ani');
+  String get othersSlice => t('Others', 'Iba pa');
+  String get howBuyersPaid =>
+      t('How buyers paid', 'Paano nagbayad ang mamimili');
+  String get onlinePay => t('Online', 'Online');
+  String get cashPay => t('Cash', 'Cash');
+  String get cashIncludesWalkIn => t(
+    'Cash includes walk-in sales.',
+    'Kasama sa cash ang mga walk-in.',
+  );
+  String quantitySold(String quantity, String unit) => unit.isEmpty
+      ? t('$quantity sold', '$quantity ang nabenta')
+      : t('$quantity $unit sold', '$quantity $unit ang nabenta');
+  String get yearTotalTitle => t('This year', 'Ngayong taon');
+  String get bestMonth => t('Best month', 'Pinakamabentang buwan');
+  String ordersCount(int count) => count == 1
+      ? t('1 order', '1 order')
+      : t('$count orders', '$count order');
+  String get harvestNote => t(
+    'Harvests recorded in this period, and what those listings have sold so far.',
+    'Mga ani na naitala sa panahong ito, at ang nabenta na ng mga listing na iyon.',
+  );
+  String estimatedHarvests(int count) => count == 1
+      ? t('Includes 1 estimated harvest.', 'May 1 tantiyang ani.')
+      : t(
+          'Includes $count estimated harvests.',
+          'May $count tantiyang ani.',
+        );
+  String get harvestsRecorded => t('Harvests recorded', 'Naitalang ani');
+  String get cropsHarvested => t('Crops harvested', 'Naani na pananim');
+  String get expectedIncome => t('Expected income', 'Inaasahang kita');
+  String get actualIncomeSoFar =>
+      t('Actual income so far', 'Aktwal na kita sa ngayon');
+  String get harvestedLabel => t('Harvested', 'Naani');
+  String get soldLabel => t('Sold', 'Nabenta');
+  String get goodLabel => t('Good', 'Maganda');
+  String get rejectedLabel => t('Rejected', 'Tinanggihan');
+  String whyRejected(String reasons) =>
+      t('Why rejected: $reasons', 'Bakit tinanggihan: $reasons');
+  String get whereGoodWent =>
+      t('Where the good harvest went', 'Saan napunta ang magandang ani');
+  String get waitingForPickup =>
+      t('Waiting for pickup', 'Hinihintay ang pickup');
+  String get removedLabel => t('Removed', 'Tinanggal');
+  String get leftLabel => t('Left', 'Natira');
+  String get nothingRemoved => t('Nothing removed.', 'Walang tinanggal.');
+  String get expectedVsActual =>
+      t('Expected vs actual income', 'Inaasahan laban sa aktwal na kita');
+  String get incomeCaption => t(
+    'Expected = good harvest × the price when it was recorded. Actual = completed sales from these harvests so far.',
+    'Inaasahan = magandang ani × ang presyo noong naitala. Aktwal = tapos na benta mula sa mga ani na ito sa ngayon.',
+  );
+  String get noCostHint => t(
+    'Add a cost when you record a harvest to see profit.',
+    'Maglagay ng gastos kapag nagtatala ng ani para makita ang tubo.',
+  );
+  String get costLabel => t('Cost', 'Gastos');
+  String get expectedProfit => t('Expected profit', 'Inaasahang tubo');
+  String get actualProfitSoFar =>
+      t('Actual profit so far', 'Aktwal na tubo sa ngayon');
+  String costCoverage(int withCost, int total) => t(
+    'Based on $withCost of $total harvests with a cost.',
+    'Batay sa $withCost sa $total ani na may gastos.',
+  );
+  String get noHarvests => t(
+    'No harvests recorded in this period.',
+    'Walang naitalang ani sa panahong ito.',
+  );
+  String get showAllCrops => t('Show all', 'Ipakita lahat');
+  String get showSheet => t('Show', 'Ipakita');
+  String get aWholeYear => t('A whole year', 'Isang buong taon');
+  String get customDates => t('Custom dates', 'Pasadyang petsa');
+  String get pickYearBelow => t('Pick the year below', 'Piliin ang taon sa ibaba');
+  String get upTo366Days => t('Up to 366 days', 'Hanggang 366 araw');
+  String get showResults => t('Show results', 'Ipakita ang resulta');
+  String get productType => t('Product type', 'Uri ng produkto');
+  String byGrouping(String grouping) => switch (grouping) {
+    'week' => t('by week', 'ayon sa linggo'),
+    'month' => t('by month', 'ayon sa buwan'),
+    _ => t('by day', 'ayon sa araw'),
+  };
+  String get shareOfSales => t(
+    'Share of sales, after tawad',
+    'Bahagi ng benta, pagkatapos ng tawad',
+  );
+  String cropCount(int count) => count == 1
+      ? t('1 crop', '1 pananim')
+      : t('$count crops', '$count pananim');
+  String othersWithCount(int count) =>
+      t('Others ($count crops)', 'Iba pa ($count pananim)');
+  String yearTotalLabel(int year) => t('$year total', 'Kabuuan ng $year');
+  String bestMonthLine(String month, String peso) =>
+      t('Best month: $month · $peso', 'Pinakamabentang buwan: $month · $peso');
+  String get avgOrderShort => t('avg. order', 'avg. na order');
+  String get avgTawadShort => t('avg. tawad', 'avg. na tawad');
+  String get earnedSoFar => t('Earned so far', 'Kita sa ngayon');
+  String get expectedShort => t('Expected', 'Inaasahan');
+  String get profitSoFar => t('Profit so far', 'Tubo sa ngayon');
+  String get waitingShort => t('Waiting', 'Naghihintay');
+  String harvestSummaryLine({
+    required int? percent,
+    required int harvests,
+    required int crops,
+  }) {
+    final harvestText = harvests == 1
+        ? t('1 harvest', '1 ani')
+        : t('$harvests harvests', '$harvests ani');
+    final cropText = cropCount(crops);
+    if (percent == null) {
+      return '$harvestText · $cropText';
+    }
+    return t(
+      '$percent% of expected · $harvestText · $cropText',
+      '$percent% ng inaasahan · $harvestText · $cropText',
+    );
+  }
+
+  String harvestedAmount(String quantity, String unit) => unit.isEmpty
+      ? t('$quantity harvested', '$quantity ang naani')
+      : t('$quantity $unit harvested', '$quantity $unit ang naani');
+  String rejectedReasons(String reasons) =>
+      t('Rejected: $reasons', 'Tinanggihan: $reasons');
+  String removedReasons(String reasons) =>
+      t('Removed: $reasons', 'Tinanggal: $reasons');
+
+  String compactRange(String startIso, String endIso) {
+    final start = _calendarDate(startIso);
+    final end = _calendarDate(endIso);
+    if (start == null || end == null) {
+      return '$startIso – $endIso';
+    }
+    if (start.year == end.year && start.month == end.month) {
+      return '${monthName(start)} ${start.day} – ${end.day}';
+    }
+    if (start.year == end.year) {
+      return '${shortDate(start)} – ${shortDate(end)}';
+    }
+    return '${shortDate(start)}, ${start.year} – ${shortDate(end)}, ${end.year}';
+  }
+
+  String unitWord(String unit, double quantity) {
+    final trimmed = unit.trim();
+    if (trimmed.isEmpty || filipino || quantity == 1) {
+      return trimmed;
+    }
+    return switch (trimmed.toLowerCase()) {
+      'bundle' => 'bundles',
+      'piece' => 'pieces',
+      'sack' => 'sacks',
+      'tray' => 'trays',
+      'pack' => 'packs',
+      'bottle' => 'bottles',
+      _ => trimmed,
+    };
+  }
+
+  String quantitiesSold(List<(String, String, double)> parts) {
+    final bits = <String>[];
+    for (final part in parts) {
+      final unit = unitWord(part.$2, part.$3);
+      bits.add(unit.isEmpty ? part.$1 : '${part.$1} $unit');
+    }
+    final joined = bits.join(' · ');
+    return t('$joined sold', '$joined ang nabenta');
+  }
   String salesWindow(String startIso, String endIso) {
     final start = DateTime.tryParse(startIso);
     final end = DateTime.tryParse(endIso);

@@ -67,6 +67,7 @@ enum Permission: string
     case ViewFarmAnalytics = 'view_farm_analytics';
     case ViewOwnAnalytics = 'view_own_analytics';
     case GenerateExports = 'generate_exports';
+    case ExportFarmAnalytics = 'export_farm_analytics';
 
     // Data-subject rights for app users (buyers and farmer-sellers)
     case ExportOwnData = 'export_own_data';
@@ -106,6 +107,7 @@ enum Permission: string
             self::ViewFarmAnalytics => 'View farm analytics',
             self::ViewOwnAnalytics => 'View own analytics',
             self::GenerateExports => 'Generate exports',
+            self::ExportFarmAnalytics => 'Export own farm\'s yearly analytics',
             self::ExportOwnData => 'Export own data',
             self::RequestAccountDeletion => 'Request account deletion',
         };
@@ -163,6 +165,7 @@ enum Permission: string
                 self::ManageOwnFarmAnnouncements,
                 self::ManageOwnFarmFaq,
                 self::ViewFarmAnalytics,
+                self::ExportFarmAnalytics,
             ],
 
             Role::FarmerSeller => [

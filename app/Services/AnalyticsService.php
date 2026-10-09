@@ -225,7 +225,7 @@ class AnalyticsService
 
     /**
      * Completed-order headline figures. Gross sales is the sum of order
-     * totals, the same cash figure SalesOverviewWidget charts.
+     * totals, the same cash figure the dashboard charts.
      *
      * @return array{completed_orders: int, units_sold: float, gross_sales: float, average_discount: float}
      */
@@ -333,14 +333,19 @@ class AnalyticsService
      *
      * @return list<int>
      */
-    public function availableYears(?User $viewer): array
+    public function availableYears(?User $viewer, ?int $farmId = null): array
     {
-        $completedAt = $this->orderQuery($viewer)->min('orders.completed_at');
-        $harvestedOn = $this->scopeAnalytics(
+        $orders = $this->orderQuery($viewer);
+        $this->scopeChosenFarm($orders, $viewer, $farmId, 'orders');
+        $completedAt = $orders->min('orders.completed_at');
+
+        $harvests = $this->scopeAnalytics(
             HarvestRecord::query()->where('harvest_records.kind', '!=', HarvestRecordKind::Opening->value),
             $viewer,
             'harvest_records',
-        )->min('harvest_records.harvested_on');
+        );
+        $this->scopeChosenFarm($harvests, $viewer, $farmId, 'harvest_records');
+        $harvestedOn = $harvests->min('harvest_records.harvested_on');
 
         $current = (int) now()->year;
         $found = [];

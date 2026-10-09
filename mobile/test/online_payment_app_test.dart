@@ -16,6 +16,7 @@ import 'package:anihow/state/auth_controller.dart';
 import 'package:anihow/state/preferences_controller.dart';
 import 'package:anihow/support/qr_gallery.dart';
 import 'package:anihow/theme/anihow_theme.dart';
+import 'package:anihow/widgets/chat_message_bubble.dart';
 import 'package:anihow/widgets/status_pill.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -38,12 +39,13 @@ OrderRecord _order({
   PaymentProofRecord? proof,
   List<String> allowedNext = const [],
   DateTime? due,
+  List<OrderItemRow> items = const [],
 }) {
   return OrderRecord(
     id: 9,
     status: status,
     total: '30.00',
-    items: const [],
+    items: items,
     orderNumber: 'AH-9',
     shopName: 'Nena Stall',
     paymentMethod: 'online_transfer',
@@ -225,6 +227,13 @@ void main() {
     await _pump(tester, ShopEditScreen(key: UniqueKey(), shop: shop), api);
     expect(find.byKey(const ValueKey('add-qr-code')), findsNothing);
     expect(find.byKey(const ValueKey('qr-row-1')), findsOneWidget);
+    final thumb = tester.widget<AuthorizedChatImage>(
+      find.descendant(
+        of: find.byKey(const ValueKey('qr-row-1')),
+        matching: find.byType(AuthorizedChatImage),
+      ),
+    );
+    expect(thumb.fit, BoxFit.contain);
 
     final empty = ShopProfile(id: 4, shopName: 'Nena', name: 'Nena');
     await _pump(tester, ShopEditScreen(key: UniqueKey(), shop: empty), api);
@@ -262,6 +271,17 @@ void main() {
     await tester.tap(find.text('Save shop profile'));
     await tester.pump();
     expect(api.shopBody?['payment_time_limit_hours'], 3);
+    expect(find.text('On · buyers can choose Online payment'), findsOneWidget);
+
+    final off = ShopProfile(
+      id: 4,
+      shopName: 'Nena',
+      name: 'Nena',
+      paymentQrs: [_qr(1)],
+      acceptsOnlinePayment: false,
+    );
+    await _pump(tester, ShopEditScreen(key: UniqueKey(), shop: off), api);
+    expect(find.text('Off · buyers pay cash only'), findsOneWidget);
   });
 
   testWidgets('pay screen shows the amount, deadline, and account', (tester) async {
@@ -277,8 +297,8 @@ void main() {
     expect(find.byKey(const ValueKey('pay-amount')), findsOneWidget);
     expect(find.text('Pay before 3:40 PM, Oct 9'), findsOneWidget);
     expect(find.byKey(const ValueKey('pay-qr')), findsOneWidget);
-    expect(find.text('Nena V'), findsOneWidget);
-    expect(find.text('•••• 1234'), findsOneWidget);
+    expect(find.textContaining('Nena V'), findsOneWidget);
+    expect(find.textContaining('•••• 1234'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('pay-save-qr')));
     await tester.pump();
     expect(saved, isTrue);
@@ -321,7 +341,10 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
     expect(api.submittedReference, 'AB12CD');
-    expect(find.text('Payment sent — waiting for the seller to check'), findsOneWidget);
+    expect(find.text('Payment sent'), findsWidgets);
+    expect(find.textContaining('Waiting for Nena Stall to check it'), findsOneWidget);
+    expect(find.byKey(const ValueKey('pay-qr')), findsNothing);
+    expect(find.byKey(const ValueKey('pay-reference')), findsNothing);
   });
 
   testWidgets('a rejected proof offers send again', (tester) async {
@@ -340,10 +363,12 @@ void main() {
     );
     await _pump(tester, PayNowScreen(order: order), api);
     expect(find.byKey(const ValueKey('pay-rejected')), findsOneWidget);
-    expect(find.text('Wrong amount'), findsOneWidget);
+    expect(find.textContaining('Wrong amount'), findsOneWidget);
+    expect(find.byKey(const ValueKey('pay-qr')), findsNothing);
     await tester.tap(find.byKey(const ValueKey('pay-send-again')));
     await tester.pump();
     expect(find.byKey(const ValueKey('pay-reference')), findsOneWidget);
+    expect(find.byKey(const ValueKey('pay-qr')), findsOneWidget);
   });
 
   testWidgets('buyer cancel hides after proof and a report uses the order target', (tester) async {
@@ -393,6 +418,14 @@ void main() {
     api.order = _order(
       status: 'confirmed',
       paymentStatus: 'payment_sent',
+      items: const [
+        OrderItemRow(
+          listingName: 'Pechay',
+          quantity: '1',
+          listedPrice: '30',
+          lineSubtotal: '30',
+        ),
+      ],
       proof: const PaymentProofRecord(
         id: 5,
         reference: 'AB12CD',
@@ -410,9 +443,21 @@ void main() {
     await tester.pump();
     await tester.ensureVisible(find.text('Waiting for payment'));
     expect(find.text('Waiting for payment'), findsWidgets);
-    expect(find.byKey(const ValueKey('proof-amount-differs')), findsOneWidget);
+    expect(find.text('Check this payment'), findsOneWidget);
+    final cardTop = tester.getTopLeft(find.byKey(const ValueKey('order-payment-card'))).dy;
+    final itemsTop = tester.getTopLeft(find.text('Items')).dy;
+    expect(cardTop, lessThan(itemsTop));
+    expect(find.byKey(const ValueKey('proof-amount-differs')), findsNothing);
     await tester.ensureVisible(find.byKey(const ValueKey('payment-received')));
     await tester.tap(find.byKey(const ValueKey('payment-received')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('proof-amount-differs')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('payment-received-cancel')));
+    await tester.pumpAndSettle();
+    expect(api.reviewDecision, isNull);
+    await tester.tap(find.byKey(const ValueKey('payment-received')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('payment-received-yes')));
     await tester.pump();
     expect(api.reviewDecision, 'accept');
 
@@ -472,7 +517,7 @@ void main() {
 
     api.payments = [api.order];
     await _pump(tester, const FarmerPaymentsScreen(), api);
-    expect(find.text('To check'), findsOneWidget);
+    expect(find.textContaining('To check'), findsOneWidget);
     expect(find.text('Confirmed'), findsOneWidget);
     expect(find.text('Refund due'), findsWidgets);
     expect(find.byKey(const ValueKey('payment-order-9')), findsOneWidget);
@@ -543,9 +588,124 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('removal-sold_outside')));
     await tester.pump();
     expect(find.byKey(const ValueKey('walk-in-nudge')), findsOneWidget);
+    final hint = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(const ValueKey('walk-in-nudge')),
+        matching: find.byType(Text),
+      ).first,
+    );
+    expect(hint.style?.fontWeight, isNot(FontWeight.w700));
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('walk-in-nudge')),
+        matching: find.byType(OutlinedButton),
+      ),
+      findsOneWidget,
+    );
     await tester.tap(find.byKey(const ValueKey('record-walk-in-from-stock')));
     await tester.pumpAndSettle();
     final screen = tester.widget<WalkInSaleScreen>(find.byType(WalkInSaleScreen));
     expect(screen.listingId, 44);
+  });
+
+  testWidgets('payment tabs stay readable on the green app bar', (tester) async {
+    final api = _Api();
+    await _pump(tester, const FarmerPaymentsScreen(), api);
+    final bar = tester.widget<TabBar>(find.byType(TabBar));
+    expect(bar.labelColor, Colors.white);
+    expect(bar.labelColor, isNot(AniHowColors.brand));
+  });
+
+  testWidgets('a deadline under an hour uses the amber chip', (tester) async {
+    final api = _Api();
+    final soon = _order(
+      qrs: [_qr(7)],
+      due: DateTime.now().add(const Duration(minutes: 20)),
+    );
+    await _pump(tester, PayNowScreen(order: soon), api);
+    final chip = tester.widget<DecoratedBox>(find.byKey(const ValueKey('pay-deadline')));
+    expect((chip.decoration as BoxDecoration).color, const Color(0xFFFFF4D6));
+
+    final later = _order(
+      qrs: [_qr(7)],
+      due: DateTime.now().add(const Duration(hours: 5)),
+    );
+    await _pump(tester, PayNowScreen(key: UniqueKey(), order: later), api);
+    final calm = tester.widget<DecoratedBox>(find.byKey(const ValueKey('pay-deadline')));
+    expect((calm.decoration as BoxDecoration).color, AniHowColors.inStockBg);
+  });
+
+  testWidgets('a paid order shows the confirmation card without the QR form', (tester) async {
+    final api = _Api();
+    final order = _order(
+      paymentStatus: 'paid',
+      proof: PaymentProofRecord(
+        id: 3,
+        reference: 'AB12CD',
+        amount: '30.00',
+        status: 'accepted',
+        wallet: 'gcash',
+        reviewedAt: DateTime(2026, 10, 8, 16, 10),
+      ),
+    );
+    await _pump(tester, PayNowScreen(order: order), api);
+    expect(find.byKey(const ValueKey('pay-paid-card')), findsOneWidget);
+    expect(find.text('Payment confirmed'), findsOneWidget);
+    expect(find.byKey(const ValueKey('pay-qr')), findsNothing);
+    expect(find.byKey(const ValueKey('pay-reference')), findsNothing);
+  });
+
+  testWidgets('each payments tab shows its own row and an empty state', (tester) async {
+    final api = _Api();
+    api.payments = [
+      OrderRecord(
+        id: 9,
+        status: 'cancelled',
+        total: '20.00',
+        items: const [
+          OrderItemRow(
+            listingName: 'Pechay',
+            quantity: '1',
+            listedPrice: '20',
+            lineSubtotal: '20',
+          ),
+        ],
+        orderNumber: 'AH-1',
+        counterpartyName: 'Maria',
+        cancellationLabel: 'Buyer changed mind',
+        paymentStatus: 'refund_due',
+        paidAt: DateTime(2026, 10, 8, 16, 10),
+        cancelledAt: DateTime(2026, 10, 7),
+        latestProof: PaymentProofRecord(
+          reference: 'AB12CD34',
+          amount: '20.00',
+          wallet: 'gcash',
+          status: 'pending',
+          sentAt: DateTime.now().subtract(const Duration(minutes: 4)),
+        ),
+      ),
+    ];
+    await _pump(tester, const FarmerPaymentsScreen(), api);
+    await tester.pump();
+    expect(find.textContaining('To check (1)'), findsOneWidget);
+    expect(find.text('Maria'), findsOneWidget);
+    expect(find.text('Check now'), findsOneWidget);
+    expect(find.text('GCash · ref AB12CD34'), findsOneWidget);
+    expect(find.textContaining('Sent'), findsWidgets);
+
+    await tester.tap(find.text('Confirmed'));
+    await tester.pumpAndSettle();
+    expect(find.text('Paid'), findsOneWidget);
+    expect(find.text('Paid Oct 8, 4:10 PM'), findsOneWidget);
+
+    await tester.tap(find.text('Refund due').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Since Oct 7'), findsOneWidget);
+    expect(find.textContaining('Buyer changed mind'), findsOneWidget);
+
+    api.payments = const [];
+    await _pump(tester, FarmerPaymentsScreen(key: UniqueKey()), api);
+    await tester.pump();
+    expect(find.text('Nothing here right now.'), findsWidgets);
   });
 }

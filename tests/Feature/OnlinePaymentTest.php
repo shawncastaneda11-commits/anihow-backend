@@ -195,11 +195,15 @@ class OnlinePaymentTest extends TestCase
         $order = $this->placeOnline($farmer);
         $buyer = User::query()->findOrFail($order->buyer_id);
 
-        $this->asUser($buyer)->post("/api/buyer/orders/{$order->id}/payment-proofs", [
+        $sent = $this->asUser($buyer)->post("/api/buyer/orders/{$order->id}/payment-proofs", [
             'reference_number' => 'ab 12-cd',
             'amount' => 30,
             'qr_id' => $first->id,
         ])->assertOk();
+        $sent->assertJsonPath('data.latest_proof.reference_number', 'AB12CD');
+        $sent->assertJsonPath('data.latest_proof.reviewed_at', null);
+        $sent->assertJsonPath('data.latest_proof.account_last4', '1234');
+        $this->assertNotNull($sent->json('data.latest_proof.sent_at'));
 
         $proof = PaymentProof::query()->firstOrFail();
         $this->assertSame('AB12CD', $proof->reference_number);
@@ -241,10 +245,12 @@ class OnlinePaymentTest extends TestCase
     {
         [$farmer, $order, $proof] = $this->sentProof();
 
-        $this->asUser($farmer)->patchJson("/api/farmer/orders/{$order->id}/payment-proofs/{$proof->id}", [
+        $accepted = $this->asUser($farmer)->patchJson("/api/farmer/orders/{$order->id}/payment-proofs/{$proof->id}", [
             'decision' => 'accept',
         ])->assertOk()
             ->assertJsonPath('data.payment_status', OrderPaymentStatus::Paid->value);
+        $this->assertNotNull($accepted->json('data.latest_proof.sent_at'));
+        $this->assertNotNull($accepted->json('data.latest_proof.reviewed_at'));
 
         $this->assertNotNull($order->fresh()->paid_at);
         $this->assertSame('Payment received. Thank you!', StallMessage::query()->latest('id')->value('body'));

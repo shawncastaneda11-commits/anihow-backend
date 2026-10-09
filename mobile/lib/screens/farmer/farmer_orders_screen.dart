@@ -726,6 +726,14 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
             ),
           ),
         ),
+        if (order.isPaymentSent || order.paymentIsPaid) ...[
+          const SizedBox(height: AniHowSpace.cardGap),
+          OrderPaymentSummary(
+            order: order,
+            forSeller: true,
+            onChanged: (updated) => setState(() => _order = updated),
+          ),
+        ],
         if (order.isReady && order.paymentMethod == 'online_transfer') ...[
           const SizedBox(height: AniHowSpace.cardGap),
           AniHowHintCard(
@@ -866,7 +874,7 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
             style: theme.textTheme.labelSmall,
           ),
         ],
-        if (order.isPaymentTracked) ...[
+        if (order.isPaymentTracked && !order.isPaymentSent && !order.paymentIsPaid) ...[
           const SizedBox(height: AniHowSpace.cardGap),
           OrderPaymentSummary(
             order: order,
@@ -931,6 +939,19 @@ class OrderAdvanceButtons extends StatelessWidget {
             onPressed: onConfirm,
             busy: busy,
           ),
+          if (order.isPaymentTracked &&
+              !order.paymentIsPaid &&
+              order.paymentStatus != 'refunded')
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                s.confirmWhileUnpaid,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.62),
+                ),
+              ),
+            ),
         ],
         if (showReady) ...[
           const SizedBox(height: AniHowSpace.cardGap),

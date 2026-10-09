@@ -10,12 +10,14 @@ class AniHowHintCard extends StatelessWidget {
     required this.icon,
     required this.title,
     this.body,
+    this.footer,
     this.tone = AniHowHintTone.neutral,
   });
 
   final IconData icon;
   final String title;
   final String? body;
+  final Widget? footer;
   final AniHowHintTone tone;
 
   @override
@@ -30,37 +32,47 @@ class AniHowHintCard extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: colors.iconWash,
-                shape: BoxShape.circle,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Icon(icon, size: 20, color: colors.icon),
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: colors.iconWash,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Icon(icon, size: 20, color: colors.icon),
+                  ),
+                ),
+                const SizedBox(width: AniHowSpace.cardGap),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (title.isNotEmpty)
+                        Text(title, style: theme.textTheme.titleMedium),
+                      if (body != null && body!.isNotEmpty) ...[
+                        if (title.isNotEmpty) const SizedBox(height: 4),
+                        Text(
+                          body!,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: AniHowSpace.cardGap),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: theme.textTheme.titleMedium),
-                  if (body != null && body!.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      body!,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+            if (footer != null) ...[
+              const SizedBox(height: 8),
+              footer!,
+            ],
           ],
         ),
       ),

@@ -679,22 +679,28 @@ class PaymentProofRecord {
     this.reference,
     this.amount,
     this.wallet,
+    this.accountLast4,
     this.status,
     this.rejectionReason,
     this.rejectionNote,
     this.hasScreenshot = false,
     this.screenshotUrl,
+    this.sentAt,
+    this.reviewedAt,
   });
 
   final int? id;
   final String? reference;
   final String? amount;
   final String? wallet;
+  final String? accountLast4;
   final String? status;
   final String? rejectionReason;
   final String? rejectionNote;
   final bool hasScreenshot;
   final String? screenshotUrl;
+  final DateTime? sentAt;
+  final DateTime? reviewedAt;
 
   bool get isPending => status == 'pending';
   bool get isRejected => status == 'rejected';
@@ -708,8 +714,11 @@ class PaymentProofRecord {
       status: json['status'] as String?,
       rejectionReason: json['rejection_reason'] as String?,
       rejectionNote: json['rejection_note'] as String?,
+      accountLast4: json['account_last4']?.toString(),
       hasScreenshot: json['has_screenshot'] == true || json['has_screenshot'] == 1,
       screenshotUrl: json['screenshot_url'] as String?,
+      sentAt: OrderRecord._asDate(json['sent_at']),
+      reviewedAt: OrderRecord._asDate(json['reviewed_at']),
     );
   }
 }
@@ -735,6 +744,7 @@ class OrderRecord {
     this.confirmedAt,
     this.readyAt,
     this.completedAt,
+    this.cancelledAt,
     this.canBeReviewed = false,
     this.reviewRating,
     this.cancellationReason,
@@ -782,6 +792,7 @@ class OrderRecord {
   final String? confirmedAt;
   final String? readyAt;
   final String? completedAt;
+  final DateTime? cancelledAt;
   final bool canBeReviewed;
   final int? reviewRating;
   final String? cancellationReason;
@@ -853,6 +864,7 @@ class OrderRecord {
       confirmedAt: json['confirmed_at'] as String?,
       readyAt: json['ready_at'] as String?,
       completedAt: json['completed_at'] as String?,
+      cancelledAt: _asDate(json['cancelled_at']),
       canBeReviewed: json['can_be_reviewed'] == true,
       reviewRating: reviewMap == null
           ? null
@@ -1028,6 +1040,7 @@ class OrderRecord {
       confirmedAt: confirmedAt,
       readyAt: readyAt,
       completedAt: completedAt,
+      cancelledAt: cancelledAt,
       canBeReviewed: canBeReviewed ?? this.canBeReviewed,
       reviewRating: reviewRating ?? this.reviewRating,
       cancellationReason: cancellationReason ?? this.cancellationReason,

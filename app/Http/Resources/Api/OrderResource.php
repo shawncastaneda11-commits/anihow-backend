@@ -152,6 +152,9 @@ class OrderResource extends JsonResource
             'status' => $proof->status->value,
             'rejection_reason' => $proof->rejection_reason?->value,
             'rejection_note' => $proof->rejection_note,
+            'account_last4' => $proof->paymentQr?->account_last4,
+            'sent_at' => $proof->created_at?->toIso8601String(),
+            'reviewed_at' => $proof->reviewed_at?->toIso8601String(),
             'has_screenshot' => $proof->hasScreenshot(),
             'screenshot_url' => $proof->hasScreenshot()
                 ? route('payment-proofs.screenshot', $proof)

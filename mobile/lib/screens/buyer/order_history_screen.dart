@@ -8,6 +8,7 @@ import '../../support/relative_time.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/async_view.dart';
+import '../../widgets/brand_tab_bar.dart';
 import '../../widgets/buyer_cancel_order_button.dart';
 import '../../widgets/notification_bell.dart';
 import '../../widgets/order_look.dart';
@@ -102,14 +103,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
         appBar: AppBar(
           title: Text(s.orderHistory),
           actions: const [NotificationBellButton()],
-          bottom: TabBar(
-            labelColor: Colors.white,
-            labelStyle: const TextStyle(fontWeight: FontWeight.w700),
-            unselectedLabelColor: Colors.white.withValues(alpha: 0.75),
-            indicator: const UnderlineTabIndicator(
-              borderSide: BorderSide(color: Colors.white, width: 3),
-            ),
-            dividerColor: Colors.transparent,
+          bottom: onBrandTabBar(
             tabs: [
               Tab(text: s.ordersTab),
               Tab(text: s.reservationsTab),

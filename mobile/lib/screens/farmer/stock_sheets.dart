@@ -373,12 +373,13 @@ class _RemoveSheetState extends State<_RemoveSheet> {
             AniHowHintCard(
               key: const ValueKey('walk-in-nudge'),
               icon: Icons.point_of_sale_outlined,
-              title: s.soldOutsideHint,
-            ),
-            TextButton(
-              key: const ValueKey('record-walk-in-from-stock'),
-              onPressed: () => Navigator.of(context).pop('walk_in'),
-              child: Text(s.recordWalkInSale),
+              title: '',
+              body: s.soldOutsideHint,
+              footer: OutlinedButton(
+                key: const ValueKey('record-walk-in-from-stock'),
+                onPressed: () => Navigator.of(context).pop('walk_in'),
+                child: Text(s.recordWalkInSale),
+              ),
             ),
           ],
           if (_reason == 'correction') ...[

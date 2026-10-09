@@ -1,11 +1,28 @@
 import 'package:anihow/l10n/app_strings.dart';
+import 'package:anihow/models/models.dart';
+import 'package:anihow/screens/auth/seller_info_screen.dart';
 import 'package:anihow/screens/login_screen.dart';
+import 'package:anihow/services/api_client.dart';
 import 'package:anihow/state/auth_controller.dart';
 import 'package:anihow/state/preferences_controller.dart';
 import 'package:anihow/theme/anihow_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+
+class _QuietApi extends ApiClient {
+  _QuietApi() : super(onUnauthorized: () {});
+
+  @override
+  Future<SellerHelp> sellerHelp() async {
+    return const SellerHelp(
+      office: 'LPU ICTD',
+      email: 'desk@example.com',
+      temporaryPasswordDays: 7,
+      farms: [],
+    );
+  }
+}
 
 class _ExpiredAuth extends AuthController {
   @override
@@ -99,5 +116,24 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('want to be a seller card opens the info screen', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(412, 915));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(_app(AuthController(api: _QuietApi())..restoring = false));
+    await tester.pump();
+
+    final card = find.byKey(const Key('want-to-be-seller'));
+    expect(card, findsOneWidget);
+    expect(tester.getSize(card).height, greaterThanOrEqualTo(56));
+    expect(find.text('Want to be a seller?'), findsOneWidget);
+
+    await tester.ensureVisible(card);
+    await tester.tap(card);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SellerInfoScreen), findsOneWidget);
   });
 }

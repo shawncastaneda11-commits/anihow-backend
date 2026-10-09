@@ -1178,6 +1178,11 @@ class ApiClient {
     return FarmProfile.fromJson(_asMap(response['data'] ?? response));
   }
 
+  Future<SellerHelp> sellerHelp() async {
+    final response = await _get('/seller-help');
+    return SellerHelp.fromJson(_asMap(response['data'] ?? response));
+  }
+
   Future<List<FarmAnnouncement>> farmerAnnouncements() {
     return _list('/farmer/announcements', parse: FarmAnnouncement.fromJson);
   }

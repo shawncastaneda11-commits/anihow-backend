@@ -3212,3 +3212,72 @@ class FaqAnswer {
     );
   }
 }
+
+class SellerHelpFarm {
+  const SellerHelpFarm({
+    required this.id,
+    required this.name,
+    this.municipality,
+    this.contactPerson,
+    this.contactNumber,
+  });
+
+  final int id;
+  final String name;
+  final String? municipality;
+  final String? contactPerson;
+  final String? contactNumber;
+
+  factory SellerHelpFarm.fromJson(Map<String, dynamic> json) {
+    return SellerHelpFarm(
+      id: ListingItem._asCount(json['id']) ?? 0,
+      name: json['name'] as String? ?? '',
+      municipality: _blankToNull(json['municipality']),
+      contactPerson: _blankToNull(json['contact_person']),
+      contactNumber: _blankToNull(json['contact_number']),
+    );
+  }
+}
+
+class SellerHelp {
+  const SellerHelp({
+    required this.office,
+    required this.email,
+    required this.temporaryPasswordDays,
+    required this.farms,
+    this.phone,
+  });
+
+  final String office;
+  final String email;
+  final String? phone;
+  final int temporaryPasswordDays;
+  final List<SellerHelpFarm> farms;
+
+  factory SellerHelp.fromJson(Map<String, dynamic> json) {
+    final contact = json['contact'] is Map
+        ? Map<String, dynamic>.from(json['contact'] as Map)
+        : const <String, dynamic>{};
+    return SellerHelp(
+      office: _blankToNull(contact['office']) ?? '',
+      email: _blankToNull(contact['email']) ?? '',
+      phone: _blankToNull(contact['phone']),
+      temporaryPasswordDays:
+          ListingItem._asCount(json['temporary_password_days']) ?? 0,
+      farms: ((json['farms'] as List?) ?? const [])
+          .whereType<Map>()
+          .map(
+            (item) => SellerHelpFarm.fromJson(Map<String, dynamic>.from(item)),
+          )
+          .toList(),
+    );
+  }
+}
+
+String? _blankToNull(Object? value) {
+  if (value == null) {
+    return null;
+  }
+  final text = value.toString().trim();
+  return text.isEmpty ? null : text;
+}

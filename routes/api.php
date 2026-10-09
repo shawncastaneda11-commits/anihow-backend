@@ -59,12 +59,17 @@ use App\Http\Controllers\Api\Reports\SubmitReportController;
 use App\Http\Controllers\Api\Reservations\BuyerReservationController;
 use App\Http\Controllers\Api\Reservations\FarmerReservationController;
 use App\Http\Controllers\Api\Reviews\ReviewController;
+use App\Http\Controllers\Api\SellerHelpController;
 use App\Http\Controllers\Api\Shop\BuyerShopController;
 use App\Http\Controllers\Api\Shop\DeleteShopCoverController;
 use App\Http\Controllers\Api\Shop\FarmerShopController;
 use App\Http\Controllers\Api\Shop\StoreShopCoverController;
 use Illuminate\Support\Facades\Route;
 use Spatie\Permission\Middleware\RoleMiddleware;
+
+Route::get('seller-help', SellerHelpController::class)
+    ->middleware('throttle:public')
+    ->name('seller-help');
 
 Route::prefix('auth')->group(function (): void {
     Route::middleware('throttle:auth')->group(function (): void {

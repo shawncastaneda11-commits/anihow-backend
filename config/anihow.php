@@ -59,4 +59,14 @@ return [
         'temporary_password_days' => (int) env('ANIHOW_TEMP_PASSWORD_DAYS', 7),
     ],
 
+    /*
+    | Who a farmer or a farm emails when they want an account. Phone is
+    | optional; an empty value is stored as null so the app can hide Call.
+    */
+    'seller_help' => [
+        'email' => env('ANIHOW_SELLER_HELP_EMAIL', 'ict@lpu.edu.ph'),
+        'phone' => env('ANIHOW_SELLER_HELP_PHONE') ?: null,
+        'office' => env('ANIHOW_SELLER_HELP_OFFICE', 'LPU ICTD'),
+    ],
+
 ];

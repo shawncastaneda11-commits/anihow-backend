@@ -2,15 +2,18 @@
 
 namespace App\Services;
 
+use App\Enums\HarvestRecordKind;
 use App\Enums\OrderSource;
 use App\Enums\OrderStatus;
-use App\Enums\Permission;
+use App\Models\HarvestRecord;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\User;
+use App\Services\Concerns\ScopesAnalytics;
 use App\Support\Pricing\UnitConverter;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -30,6 +33,8 @@ use Illuminate\Support\Facades\DB;
  */
 class AnalyticsService
 {
+    use ScopesAnalytics;
+
     /**
      * Units sold per crop type, converted into each line's family base unit
      * and grouped by that base. Grams and kilograms add up as kilograms.
@@ -224,20 +229,20 @@ class AnalyticsService
      *
      * @return array{completed_orders: int, units_sold: float, gross_sales: float, average_discount: float}
      */
-    public function completedSummary(?User $viewer = null, ?int $days = null, ?CarbonInterface $since = null): array
+    public function completedSummary(?User $viewer = null, ?int $days = null, ?CarbonInterface $since = null, ?CarbonInterface $until = null): array
     {
-        $query = $this->applyCompletedSince($this->orderQuery($viewer), $days, $since);
+        $query = $this->applyCompletedSince($this->orderQuery($viewer), $days, $since, $until);
 
         $orders = (clone $query)->count();
         $gross = (float) (clone $query)->sum('orders.total');
         $childDays = $since !== null ? null : $days;
-        $units = (float) $this->unitsSoldPerCropType($viewer, $childDays, $since)->sum('units');
+        $units = (float) $this->unitsSoldPerCropType($viewer, $childDays, $since, $until)->sum('units');
 
         return [
             'completed_orders' => $orders,
             'units_sold' => round($units, 2),
             'gross_sales' => round($gross, 2),
-            'average_discount' => $this->averageDiscount($viewer, $childDays, $since)['average'],
+            'average_discount' => $this->averageDiscount($viewer, $childDays, $since, $until)['average'],
         ];
     }
 
@@ -246,9 +251,9 @@ class AnalyticsService
      *
      * @return array{walk_in_orders: int, walk_in_sales: float, app_orders: int, app_sales: float}
      */
-    public function walkInShare(?User $viewer = null, ?int $days = null, ?CarbonInterface $since = null): array
+    public function walkInShare(?User $viewer = null, ?int $days = null, ?CarbonInterface $since = null, ?CarbonInterface $until = null): array
     {
-        $query = $this->applyCompletedSince($this->orderQuery($viewer), $days, $since);
+        $query = $this->applyCompletedSince($this->orderQuery($viewer), $days, $since, $until);
 
         $walkInOrders = 0;
         $walkInSales = 0.0;
@@ -284,7 +289,7 @@ class AnalyticsService
     {
         $query = Order::query()->where('orders.status', OrderStatus::Completed);
 
-        return $this->scope($query, $viewer, 'orders');
+        return $this->scopeAnalytics($query, $viewer, 'orders');
     }
 
     /**
@@ -298,7 +303,7 @@ class AnalyticsService
 
         $this->applyCompletedSince($query, $days, $since, $until);
 
-        return $this->scope($query, $viewer, 'orders');
+        return $this->scopeAnalytics($query, $viewer, 'orders');
     }
 
     /**
@@ -323,23 +328,37 @@ class AnalyticsService
     }
 
     /**
-     * System-wide, farm-scoped, or own, decided by what the viewer holds.
+     * Earliest year with a completed order or a non-opening harvest in scope,
+     * through the current year. The current year alone when there is neither.
      *
-     * @template TModel of \Illuminate\Database\Eloquent\Model
-     *
-     * @param  Builder<TModel>  $query
-     * @return Builder<TModel>
+     * @return list<int>
      */
-    private function scope(Builder $query, ?User $viewer, string $table): Builder
+    public function availableYears(?User $viewer): array
     {
-        if ($viewer === null || $viewer->can(Permission::ViewSystemAnalytics->value)) {
-            return $query;
+        $completedAt = $this->orderQuery($viewer)->min('orders.completed_at');
+        $harvestedOn = $this->scopeAnalytics(
+            HarvestRecord::query()->where('harvest_records.kind', '!=', HarvestRecordKind::Opening->value),
+            $viewer,
+            'harvest_records',
+        )->min('harvest_records.harvested_on');
+
+        $current = (int) now()->year;
+        $found = [];
+
+        if ($completedAt !== null) {
+            $found[] = Carbon::parse($completedAt)->year;
         }
 
-        if ($viewer->can(Permission::ViewFarmAnalytics->value) && $viewer->farm_id !== null) {
-            return $query->where($table.'.farm_id', $viewer->farm_id);
+        if ($harvestedOn !== null) {
+            $found[] = Carbon::parse($harvestedOn)->year;
         }
 
-        return $query->where($table.'.farmer_seller_id', $viewer->id);
+        $start = $found === [] ? $current : min($found);
+
+        if ($start > $current) {
+            $start = $current;
+        }
+
+        return range($start, $current);
     }
 }

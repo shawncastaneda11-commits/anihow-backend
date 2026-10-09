@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Release builds shrink resources that look unused. The notification icon is
+  only named from Dart, so keep it, or push setup fails silently.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_anihow" />

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../navigation/route_observer.dart';
+import '../push/push_runtime.dart';
 import '../screens/notifications/notifications_screen.dart';
 import '../state/auth_controller.dart';
-import '../state/preferences_controller.dart';
 
 class NotificationBellButton extends StatefulWidget {
   const NotificationBellButton({super.key});
@@ -16,13 +16,17 @@ class NotificationBellButton extends StatefulWidget {
 class _NotificationBellButtonState extends State<NotificationBellButton>
     with WidgetsBindingObserver, RouteAware {
   int _unread = 0;
-  bool? _lastEnabled;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    PushRuntime.inbox.addListener(_onInbox);
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
+  }
+
+  void _onInbox() {
+    _refresh();
   }
 
   @override
@@ -38,6 +42,7 @@ class _NotificationBellButtonState extends State<NotificationBellButton>
   @override
   void dispose() {
     anihowRouteObserver.unsubscribe(this);
+    PushRuntime.inbox.removeListener(_onInbox);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -59,12 +64,13 @@ class _NotificationBellButtonState extends State<NotificationBellButton>
     if (!mounted) {
       return;
     }
-    if (!context.read<PreferencesController>().notificationsEnabled) {
+    final auth = context.read<AuthController>();
+    if (auth.user == null) {
       setState(() => _unread = 0);
       return;
     }
     try {
-      final count = await context.read<AuthController>().api.unreadNotificationCount();
+      final count = await auth.api.unreadNotificationCount();
       if (mounted) {
         setState(() => _unread = count);
       }
@@ -82,16 +88,7 @@ class _NotificationBellButtonState extends State<NotificationBellButton>
 
   @override
   Widget build(BuildContext context) {
-    final enabled = context.watch<PreferencesController>().notificationsEnabled;
-    if (_lastEnabled != enabled) {
-      _lastEnabled = enabled;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _refresh();
-        }
-      });
-    }
-    final unread = enabled ? _unread : 0;
+    final unread = _unread;
     final label = unread > 99 ? '99+' : '$unread';
     return IconButton(
       tooltip: 'Notifications',

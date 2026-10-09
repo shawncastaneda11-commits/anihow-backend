@@ -88,6 +88,7 @@ class AnonymizeUserAction
         $user->favorites()->delete();
         $user->shopFavorites()->delete();
         $user->inAppNotifications()->delete();
+        $user->deviceTokens()->delete();
         $user->tokens()->delete();
 
         $user->forceFill([

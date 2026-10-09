@@ -11,6 +11,7 @@ import '../../widgets/form_label.dart';
 import '../../widgets/hint_card.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/promo_badge.dart';
+import '../../push/push_permission.dart';
 import '../../state/auth_controller.dart';
 import '../../state/preferences_controller.dart';
 import '../../support/order_quantity.dart';
@@ -235,6 +236,9 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
           imagePath: _imagePath,
           confirmCancelReservations: confirmed,
         );
+      }
+      if (mounted) {
+        await offerPushPermission(context);
       }
       if (mounted) {
         Navigator.of(context).pop(true);

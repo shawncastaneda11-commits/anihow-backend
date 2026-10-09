@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/app_strings.dart';
+import '../../push/push_preferences.dart';
+import '../../push/push_runtime.dart';
 import '../../state/auth_controller.dart';
 import '../../state/preferences_controller.dart';
 import '../../state/theme_controller.dart';
@@ -85,21 +87,7 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           _SectionTitle(s.preferences),
-          _SettingsCard(
-            children: [
-              _SettingsRow(
-                icon: Icons.notifications_outlined,
-                label: s.notifications,
-                trailing: Transform.scale(
-                  scale: AniHowSpace.switchScale,
-                  child: Switch(
-                    value: prefs.notificationsEnabled,
-                    onChanged: prefs.setNotificationsEnabled,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          const _PushSettings(),
           _SectionTitle(s.language),
           _SettingsCard(
             child: Padding(
@@ -242,6 +230,126 @@ class SettingsScreen extends StatelessWidget {
               minimumSize: const Size.fromHeight(48),
             ),
             child: Text(s.logOut),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PushSettings extends StatefulWidget {
+  const _PushSettings();
+
+  @override
+  State<_PushSettings> createState() => _PushSettingsState();
+}
+
+class _PushSettingsState extends State<_PushSettings> {
+  Map<String, bool> _categories = defaultPushPreferences();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    if (!mounted) {
+      return;
+    }
+    final auth = context.read<AuthController>();
+    if (auth.user == null) {
+      return;
+    }
+    try {
+      final next = await auth.api.pushPreferences();
+      if (mounted) {
+        setState(() => _categories = next);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _setMaster(bool enabled) async {
+    final preferences = context.read<PreferencesController>();
+    final api = context.read<AuthController>().api;
+    await preferences.setNotificationsEnabled(enabled);
+    if (!enabled) {
+      await PushRuntime.forgetDevice(api);
+      if (mounted) {
+        setState(() {});
+      }
+      return;
+    }
+    try {
+      await PushRuntime.device?.requestPermission();
+      await PushRuntime.register(api);
+    } catch (_) {}
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _setCategory(String key, bool enabled) async {
+    final previous = _categories[key] ?? true;
+    setState(() => _categories[key] = enabled);
+    try {
+      final next = await context.read<AuthController>().api.updatePushPreferences({
+        key: enabled,
+      });
+      if (mounted) {
+        setState(() => _categories = next);
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _categories[key] = previous);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final prefs = context.watch<PreferencesController>();
+    final strings = AppStrings.of(context);
+    final master = prefs.notificationsEnabled;
+    final device = PushRuntime.device;
+    final rows = [
+      (key: 'orders', label: strings.pushOrders),
+      (key: 'payments', label: strings.pushPayments),
+      (key: 'chats', label: strings.pushChats),
+      (key: 'farm_updates', label: strings.pushFarmUpdates),
+    ];
+    return _SettingsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SwitchListTile(
+            key: const ValueKey('push-master'),
+            secondary: const Icon(Icons.notifications_outlined),
+            title: Text(strings.pushOnThisPhone),
+            value: master,
+            onChanged: (value) => _setMaster(value),
+          ),
+          if (device?.permissionDenied == true)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () => device!.openSystemSettings(),
+                child: Text(strings.turnOnInPhoneSettings),
+              ),
+            ),
+          for (final row in rows)
+            SwitchListTile(
+              key: ValueKey('push-${row.key}'),
+              title: Text(row.label),
+              value: _categories[row.key] ?? true,
+              onChanged: master ? (value) => _setCategory(row.key, value) : null,
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Text(
+              strings.pushAlwaysOn,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           ),
         ],
       ),

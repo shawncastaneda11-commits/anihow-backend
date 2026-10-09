@@ -1,10 +1,17 @@
 import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
+import '../push/push_runtime.dart';
 import '../services/api_client.dart';
 
 class AuthController extends ChangeNotifier {
   AuthController({ApiClient? api}) {
+    PushRuntime.onToken = (token) async {
+      try {
+        PushRuntime.device?.remember(token);
+        await this.api.registerDeviceToken(token);
+      } catch (_) {}
+    };
     if (api != null) {
       this.api = api;
       return;
@@ -39,6 +46,9 @@ class AuthController extends ChangeNotifier {
         return;
       }
       user = await api.currentUser();
+      if (user != null) {
+        await PushRuntime.register(api);
+      }
     } catch (_) {
       user = null;
       await api.clearToken();
@@ -64,6 +74,7 @@ class AuthController extends ChangeNotifier {
       );
       user = result.user;
       notifyListeners();
+      await PushRuntime.register(api);
       return true;
     } on ApiException catch (e) {
       error = e.message;
@@ -130,7 +141,9 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    await api.logout();
+    final token = PushRuntime.device?.rememberedToken;
+    await api.logout(deviceToken: token);
+    PushRuntime.device?.remember(null);
     user = null;
     pendingEmailVerification = false;
     pendingVerificationCode = null;

@@ -80,6 +80,32 @@ enum NotificationType: string
         };
     }
 
+    /**
+     * Push category, or null when the notice is always sent (account and safety).
+     */
+    public function pushCategory(): ?string
+    {
+        if ($this === self::OrderMessage) {
+            return 'chats';
+        }
+
+        if (str_starts_with($this->value, 'order_')
+            || str_starts_with($this->value, 'reservation_')
+            || in_array($this, [self::ListingLowStock, self::HarvestReminder, self::ExpiredStockLeft], true)) {
+            return 'orders';
+        }
+
+        if (str_starts_with($this->value, 'payment_') || str_starts_with($this->value, 'refund_')) {
+            return 'payments';
+        }
+
+        if ($this === self::FarmAnnouncement) {
+            return 'farm_updates';
+        }
+
+        return null;
+    }
+
     public static function forOrderStatus(OrderStatus $status): ?self
     {
         return match ($status) {

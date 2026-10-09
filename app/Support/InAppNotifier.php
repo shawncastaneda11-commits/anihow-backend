@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Enums\NotificationType;
 use App\Enums\OrderStatus;
+use App\Jobs\SendPushNotification;
 use App\Mail\ListingLowStockMail;
 use App\Models\AccountDeletionRequest;
 use App\Models\Farm;
@@ -24,7 +25,6 @@ class InAppNotifier
     /**
      * Persist an in-app notification, then queue email as an additional channel.
      *
-     * TODO(push-notifications): no push provider yet.
      * TODO(order-emails): OrderPlacedMail and OrderStatusChangedMail replace
      * the deleted reservation mailables and still need their blade views. In-app
      * records stay the source of truth for the mobile inbox, so order email is
@@ -46,6 +46,7 @@ class InAppNotifier
         ]);
 
         $this->queueEmail($user, $type, $related);
+        SendPushNotification::dispatch($notification->id);
 
         return $notification;
     }

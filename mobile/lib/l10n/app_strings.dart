@@ -52,6 +52,30 @@ class AppStrings {
   String get system => t('System', 'Sistema');
   String get preferences => t('Preferences', 'Mga kagustuhan');
   String get notifications => t('Notifications', 'Mga abiso');
+  String get pushOnThisPhone => t(
+    'Push notifications on this phone',
+    'Mga push notification sa phone na ito',
+  );
+  String get pushOrders => t('Orders & reservations', 'Mga order at reserbasyon');
+  String get pushPayments => t('Payments', 'Mga bayad');
+  String get pushChats => t('Chats', 'Mga chat');
+  String get pushFarmUpdates => t('Farm updates', 'Mga update sa bukid');
+  String get pushAlwaysOn => t(
+    'Account and safety notices always come through.',
+    'Ang mga abiso sa account at kaligtasan ay laging dumarating.',
+  );
+  String get turnOnInPhoneSettings =>
+      t('Turn on in phone settings', 'I-on sa settings ng phone');
+  String get pushExplainerTitle => t(
+    'Get notified about orders and payments',
+    'Maabisuhan tungkol sa mga order at bayad',
+  );
+  String get pushExplainerBody => t(
+    'AniHow can alert this phone when an order, payment, chat, or farm update needs you.',
+    'Maaaring magpaalala ang AniHow sa phone na ito kapag may order, bayad, chat, o update sa bukid.',
+  );
+  String get allowNotifications => t('Allow', 'Payagan');
+  String get notNow => t('Not now', 'Hindi muna');
   String get language => t('Language', 'Wika');
   String get english => 'English';
   String get filipinoLabel => 'Filipino';

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'config/api_config.dart';
+import 'push/firebase_push.dart';
+import 'push/push_open.dart';
 import 'screens/admin_gate_screen.dart';
 import 'screens/buyer/buyer_shell.dart';
 import 'screens/farmer/farmer_shell.dart';
@@ -18,6 +20,7 @@ import 'theme/anihow_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await startPush();
   final problem = ApiConfig.configurationProblem();
   if (problem != null) {
     runApp(MisconfiguredBuildApp(reason: problem));
@@ -103,7 +106,7 @@ class _AniHowAppState extends State<AniHowApp> with WidgetsBindingObserver {
             themeMode: theme.mode,
             scaffoldMessengerKey: anihowScaffoldMessengerKey,
             navigatorObservers: [anihowRouteObserver],
-            home: const RoleGate(),
+            home: const PushOpenBinder(child: RoleGate()),
           );
         },
       ),

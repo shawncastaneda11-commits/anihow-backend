@@ -16,6 +16,7 @@ use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -46,6 +47,7 @@ use Spatie\Permission\Traits\HasRoles;
     'contact',
     'accepts_online_payment',
     'payment_time_limit_hours',
+    'push_preferences',
     'avatar_path',
     'cover_photo_path',
     'password',
@@ -330,6 +332,50 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     public function inAppNotifications(): HasMany
     {
         return $this->hasMany(InAppNotification::class);
+    }
+
+    public function deviceTokens(): HasMany
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+
+    /**
+     * Missing keys stay on. A null column is the default set.
+     *
+     * @return Attribute<array{orders: bool, payments: bool, chats: bool, farm_updates: bool}, array<string, bool>>
+     */
+    protected function pushPreferences(): Attribute
+    {
+        return Attribute::make(
+            get: function (mixed $value): array {
+                $stored = is_string($value) ? json_decode($value, true) : $value;
+                $stored = is_array($stored) ? $stored : [];
+
+                return [
+                    'orders' => (bool) ($stored['orders'] ?? true),
+                    'payments' => (bool) ($stored['payments'] ?? true),
+                    'chats' => (bool) ($stored['chats'] ?? true),
+                    'farm_updates' => (bool) ($stored['farm_updates'] ?? true),
+                ];
+            },
+            set: function (array $value): string {
+                return json_encode([
+                    'orders' => (bool) ($value['orders'] ?? true),
+                    'payments' => (bool) ($value['payments'] ?? true),
+                    'chats' => (bool) ($value['chats'] ?? true),
+                    'farm_updates' => (bool) ($value['farm_updates'] ?? true),
+                ], JSON_THROW_ON_ERROR);
+            },
+        );
+    }
+
+    public function allowsPushCategory(?string $category): bool
+    {
+        if ($category === null || $category === 'general') {
+            return true;
+        }
+
+        return $this->push_preferences[$category] ?? true;
     }
 
     public function reviewsWritten(): HasMany

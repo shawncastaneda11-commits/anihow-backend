@@ -37,6 +37,8 @@ use App\Http\Controllers\Api\Listings\TawadRuleController;
 use App\Http\Controllers\Api\Listings\ToggleListingActiveController;
 use App\Http\Controllers\Api\Marketplace\CropTypeController;
 use App\Http\Controllers\Api\Marketplace\MarketplaceController;
+use App\Http\Controllers\Api\Me\DeviceTokenController;
+use App\Http\Controllers\Api\Me\PushPreferenceController;
 use App\Http\Controllers\Api\Notifications\NotificationController;
 use App\Http\Controllers\Api\Orders\BuyerOrderController;
 use App\Http\Controllers\Api\Orders\CheckoutController;
@@ -108,6 +110,11 @@ Route::middleware(['auth:sanctum', 'password.changed'])->group(function (): void
     Route::get('crop-care', [CropCareArticleController::class, 'index'])->name('crop-care.index');
     Route::get('crop-care/{cropCareArticle}', [CropCareArticleController::class, 'show'])
         ->name('crop-care.show');
+
+    Route::post('me/device-tokens', [DeviceTokenController::class, 'store'])->name('me.device-tokens.store');
+    Route::delete('me/device-tokens', [DeviceTokenController::class, 'destroy'])->name('me.device-tokens.destroy');
+    Route::get('me/push-preferences', [PushPreferenceController::class, 'show'])->name('me.push-preferences.show');
+    Route::patch('me/push-preferences', [PushPreferenceController::class, 'update'])->name('me.push-preferences.update');
 
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount'])

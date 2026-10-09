@@ -92,6 +92,13 @@ class ExportOwnDataAction
                     'converted_at' => $reservation->converted_at?->toIso8601String(),
                     'cancelled_at' => $reservation->cancelled_at?->toIso8601String(),
                 ])->all(),
+            'device_tokens' => $user->deviceTokens()->orderBy('id')->get()
+                ->map(fn ($device): array => [
+                    'platform' => $device->platform,
+                    'last_seen_at' => $device->last_seen_at?->toIso8601String(),
+                    'created_at' => $device->created_at?->toIso8601String(),
+                    'updated_at' => $device->updated_at?->toIso8601String(),
+                ])->all(),
             'cart' => $user->cartItems()->with('listing:id,title')->get()
                 ->map(fn ($item): array => [
                     'id' => $item->id,

@@ -5,6 +5,7 @@ import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../services/cart_requests.dart';
+import '../../push/push_permission.dart';
 import '../../state/auth_controller.dart';
 import '../../state/cart_controller.dart';
 import '../../state/preferences_controller.dart';
@@ -98,6 +99,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             if (sheetContext.mounted) {
               Navigator.of(sheetContext).pop();
             }
+            if (!mounted) {
+              return;
+            }
+            await offerPushPermission(context);
             if (!mounted) {
               return;
             }

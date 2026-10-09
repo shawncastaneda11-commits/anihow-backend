@@ -105,16 +105,26 @@ void main() {
 
     expect(find.text('Mga setting'), findsOneWidget);
     expect(find.text('Mga tanong'), findsOneWidget);
-    expect(find.text('Hindi pa'), findsOneWidget);
     expect(find.text('Bilingual'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('English'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('English'), findsOneWidget);
     expect(find.text('Filipino'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Hindi pa'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Hindi pa'), findsOneWidget);
   });
 
   testWidgets(
     'a verified email shows a snackbar instead of the verify screen',
     (tester) async {
-      await tester.binding.setSurfaceSize(const Size(360, 800));
+      await tester.binding.setSurfaceSize(const Size(360, 1400));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       final auth = AuthController()

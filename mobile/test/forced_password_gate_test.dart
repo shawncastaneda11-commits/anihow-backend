@@ -39,7 +39,7 @@ class _QuietApi extends ApiClient {
   Future<UserAccount> currentUser() async => account;
 
   @override
-  Future<void> logout() async {}
+  Future<void> logout({String? deviceToken}) async {}
 }
 
 Widget _gate(AuthController auth, {PreferencesController? preferences}) {

@@ -5,6 +5,7 @@ import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../services/cart_requests.dart';
+import '../../push/push_permission.dart';
 import '../../state/cart_controller.dart';
 import '../../state/preferences_controller.dart';
 import '../../support/crop_language.dart';
@@ -81,6 +82,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         _placed = orders;
         _busy = false;
       });
+      await offerPushPermission(context);
+      if (!mounted) {
+        return;
+      }
       if (online.length == 1) {
         await Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => PayNowScreen(order: online.first)),

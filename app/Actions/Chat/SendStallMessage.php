@@ -9,13 +9,16 @@ use App\Models\Order;
 use App\Models\StallConversation;
 use App\Models\StallMessage;
 use App\Models\User;
+use App\Support\FcmPush;
 use App\Support\ImageVariants;
 use App\Support\InAppNotifier;
 use Illuminate\Broadcasting\BroadcastException;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class SendStallMessage
 {
@@ -58,6 +61,8 @@ class SendStallMessage
                     : (string) ($message->attachment_name ?: 'Attachment');
                 $this->notifier->orderMessage($counterpart, $order, $sender, $preview);
             }
+        } else {
+            $this->pushUntaggedStallMessage($sender, $conversation);
         }
 
         $this->broadcast($message, $order !== null);
@@ -212,6 +217,36 @@ class SendStallMessage
                 event(new OrderMessageCreated($message));
             }
         } catch (BroadcastException $exception) {
+            report($exception);
+        }
+    }
+
+    /**
+     * A stall message with no order tag has no in-app row. One push per
+     * conversation every two minutes, and a push failure stays in this method.
+     */
+    private function pushUntaggedStallMessage(User $sender, StallConversation $conversation): void
+    {
+        $counterpart = (int) $conversation->buyer_id === (int) $sender->id
+            ? $conversation->farmerSeller
+            : $conversation->buyer;
+
+        if ($counterpart === null) {
+            return;
+        }
+
+        $lock = Cache::lock('stall-chat-push:'.$conversation->id, 120);
+        if (! $lock->get()) {
+            return;
+        }
+
+        try {
+            app(FcmPush::class)->send($counterpart, 'chats', 'New message', 'Open AniHow to see it.', [
+                'type' => 'stall_message',
+                'conversation_id' => (string) $conversation->id,
+                'seller_id' => (string) $conversation->farmer_seller_id,
+            ]);
+        } catch (Throwable $exception) {
             report($exception);
         }
     }

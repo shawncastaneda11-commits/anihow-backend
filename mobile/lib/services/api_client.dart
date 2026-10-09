@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../config/api_config.dart';
 import '../models/models.dart';
+import '../push/push_preferences.dart';
 import 'cart_requests.dart';
 import 'tawad_requests.dart';
 
@@ -322,13 +323,49 @@ class ApiClient {
   Future<void> cancelAccountDeletion() =>
       _delete('/auth/user/deletion-request');
 
-  Future<void> logout() async {
+  Future<void> logout({String? deviceToken}) async {
     try {
-      await _post('/auth/logout', {});
+      await _post('/auth/logout', {
+        if (deviceToken != null && deviceToken.isNotEmpty)
+          'device_token': deviceToken,
+      });
     } catch (_) {
       // Token is cleared locally even if the API call fails.
     } finally {
       await clearToken();
+    }
+  }
+
+  Future<void> registerDeviceToken(String token) =>
+      _post('/me/device-tokens', {'token': token});
+
+  Future<void> deleteDeviceToken(String token) async {
+    try {
+      await _dio.delete('/me/device-tokens', data: {'token': token});
+    } on DioException catch (error) {
+      throw ApiException(_messageFrom(error));
+    }
+  }
+
+  Future<Map<String, bool>> pushPreferences() async {
+    if (!await _hasSavedSession()) {
+      return defaultPushPreferences();
+    }
+    final response = await _get('/me/push-preferences');
+    return parsePushPreferences(response['data'] ?? response);
+  }
+
+  Future<Map<String, bool>> updatePushPreferences(Map<String, bool> patch) async {
+    final response = await _patchJson('/me/push-preferences', patch);
+    return parsePushPreferences(response['data'] ?? response);
+  }
+
+  Future<bool> _hasSavedSession() async {
+    try {
+      final token = await readToken();
+      return token != null && token.isNotEmpty;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -1193,6 +1230,9 @@ class ApiClient {
   }
 
   Future<int> unreadNotificationCount() async {
+    if (!await _hasSavedSession()) {
+      return 0;
+    }
     final response = await _get('/notifications/unread-count');
     final data = _asMap(response['data'] ?? response);
     final count = data['unread_count'];

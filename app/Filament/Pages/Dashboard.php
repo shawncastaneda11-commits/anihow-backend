@@ -67,8 +67,8 @@ class Dashboard extends BaseDashboard
                 ->native(false),
             Select::make('farm_id')
                 ->label('Farm')
-                ->options(fn (): array => ['' => 'All farms'] + Farm::query()->orderBy('name')->pluck('name', 'id')->all())
-                ->default('')
+                ->placeholder('All farms')
+                ->options(fn (): array => Farm::query()->orderBy('name')->pluck('name', 'id')->all())
                 ->live()
                 ->visible(fn (): bool => auth()->user()?->can(Permission::ViewSystemAnalytics->value) ?? false)
                 ->native(false),
@@ -146,8 +146,8 @@ class Dashboard extends BaseDashboard
         if ($canChooseFarm) {
             $fields[] = Select::make('farm_id')
                 ->label('Farm')
-                ->options(fn (): array => ['' => 'All farms'] + Farm::query()->orderBy('name')->pluck('name', 'id')->all())
-                ->default('')
+                ->placeholder('All farms')
+                ->options(fn (): array => Farm::query()->orderBy('name')->pluck('name', 'id')->all())
                 ->live()
                 ->native(false);
         }

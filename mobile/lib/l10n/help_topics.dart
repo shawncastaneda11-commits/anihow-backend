@@ -40,8 +40,12 @@ extension HelpTopics on AppStrings {
     HelpTopic(t('Paying online', 'Pagbabayad online'), [
       t('Tap Pay now.', 'Pindutin ang Magbayad na.'),
       t(
-        'Send your proof of payment and tap Submit.',
-        'Ipadala ang patunay ng bayad at pindutin ang I-submit.',
+        'Pay to the seller\'s QR in GCash, Maya or your bank app.',
+        'Magbayad sa QR ng seller gamit ang GCash, Maya o app ng bangko mo.',
+      ),
+      t(
+        'Enter the reference number (a screenshot is optional) and tap Submit.',
+        'Ilagay ang reference number (puwedeng walang screenshot) at pindutin ang I-submit.',
       ),
       t(
         'The seller confirms the payment from their payments list.',
@@ -72,8 +76,12 @@ extension HelpTopics on AppStrings {
         'Nakikita ng seller ang reserbasyon sa tab na Mga reserbasyon.',
       ),
       t(
-        'Send proof within the seller\'s Payment time limit, or the order is cancelled.',
-        'Magpadala ng patunay sa loob ng Limit ng oras ng bayad ng seller, kung hindi ay kakanselahin ang order.',
+        'Reservations are paid first, online only. Tap Pay now and send proof within the seller\'s Payment time limit, or the reservation is cancelled.',
+        'Bayad muna ang reserbasyon, online lang. Pindutin ang Magbayad na at magpadala ng patunay sa loob ng Limit ng oras ng bayad ng seller, kung hindi ay kakanselahin ang reserbasyon.',
+      ),
+      t(
+        'If the seller cancels or the harvest falls short after you paid, the seller sends a refund.',
+        'Kung kinansela ng seller o kulang ang ani pagkatapos mong magbayad, magpapadala ang seller ng refund.',
       ),
     ]),
     HelpTopic(t('Tawad', 'Tawad'), [
@@ -128,6 +136,10 @@ extension HelpTopics on AppStrings {
       t(
         'That screen shows the account details AniHow stores for you.',
         'Ipinapakita ng screen na iyon ang detalye ng account na iniimbak ng AniHow para sa iyo.',
+      ),
+      t(
+        'From there you can download your data or ask to delete your account.',
+        'Doon mo rin puwedeng i-download ang datos mo o humiling na burahin ang account mo.',
       ),
     ]),
   ];

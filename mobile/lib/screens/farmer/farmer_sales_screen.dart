@@ -808,7 +808,7 @@ class _Panel extends StatelessWidget {
       key: panelKey,
       elevation: 0,
       margin: EdgeInsets.zero,
-      color: Theme.of(context).colorScheme.surface,
+      color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surfaceContainerLow,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: Padding(padding: const EdgeInsets.all(16), child: child),
@@ -1913,7 +1913,13 @@ String? _reasonBits(AppStrings s, Map<String, double> reasons, String unit) {
   return parts.join(', ');
 }
 
-String _optionalPeso(double? amount) => amount == null ? '—' : AniHowMoney.peso(amount);
+/// Null stays a dash, never ₱0.00. A loss reads "−₱1,633.33", not "₱-1,633.33".
+String _optionalPeso(double? amount) {
+  if (amount == null) {
+    return '—';
+  }
+  return amount < 0 ? '\u2212${AniHowMoney.peso(-amount)}' : AniHowMoney.peso(amount);
+}
 
 String _percent(double value) {
   if ((value - value.roundToDouble()).abs() < 0.05) {

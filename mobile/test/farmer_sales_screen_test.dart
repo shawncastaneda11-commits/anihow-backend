@@ -362,7 +362,7 @@ void main() {
       scrollable: find.byType(Scrollable).last,
     );
     expect(find.text(s.noCostRecorded), findsNothing);
-    expect(find.textContaining(AniHowMoney.peso(-40)), findsOneWidget);
+    expect(find.textContaining('\u2212${AniHowMoney.peso(40)}'), findsOneWidget);
     expect(find.text(s.costCoverage(2, 3)), findsOneWidget);
   });
 

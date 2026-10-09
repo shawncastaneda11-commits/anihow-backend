@@ -834,20 +834,44 @@ class _SalesBars extends StatelessWidget {
             const SizedBox(height: 8),
             SizedBox(
               height: 140,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: periods.length,
-                itemBuilder: (context, index) {
-                  final point = periods[index];
-                  return SizedBox(
-                    width: 44,
-                    child: _BarColumn(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  Widget column(FarmerSalesPeriod point, double width) {
+                    return _BarColumn(
                       point: point,
                       label: _barLabel(s, point),
-                      heightFactor: maxSales <= 0
-                          ? 0.08
-                          : (point.sales / maxSales).clamp(0.08, 1),
+                      barWidth: math.min(22.0, width * 0.6),
+                      heightFactor: maxSales <= 0 || point.sales <= 0
+                          ? 0
+                          : (point.sales / maxSales).clamp(0.06, 1).toDouble(),
+                      selected: point.key == selected?.key,
                       onTap: () => onSelect(point.key),
+                    );
+                  }
+
+                  final minWidth = grouping == 'week' ? 48.0 : _minBarColumnWidth;
+                  final fitWidth = periods.isEmpty
+                      ? constraints.maxWidth
+                      : constraints.maxWidth / periods.length;
+                  if (fitWidth >= minWidth) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (final point in periods)
+                          Expanded(child: column(point, fitWidth)),
+                      ],
+                    );
+                  }
+
+                  // Too many bars to fit: scroll, starting at the newest.
+                  return ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    reverse: true,
+                    itemCount: periods.length,
+                    itemExtent: minWidth,
+                    itemBuilder: (context, index) => column(
+                      periods[periods.length - 1 - index],
+                      minWidth,
                     ),
                   );
                 },
@@ -889,21 +913,28 @@ class _SalesBars extends StatelessWidget {
   }
 }
 
+const double _minBarColumnWidth = 24;
+
 class _BarColumn extends StatelessWidget {
   const _BarColumn({
     required this.point,
     required this.label,
+    required this.barWidth,
     required this.heightFactor,
+    required this.selected,
     required this.onTap,
   });
 
   final FarmerSalesPeriod point;
   final String label;
+  final double barWidth;
   final double heightFactor;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final color = _chartColor(context, selected: selected);
     return InkWell(
       onTap: onTap,
       child: Column(
@@ -914,21 +945,27 @@ class _BarColumn extends StatelessWidget {
               child: point.future
                   ? CustomPaint(
                       key: Key('sales-future-${point.key}'),
-                      painter: const _DashedOutlinePainter(),
-                      child: const SizedBox(width: 22, height: 72),
+                      painter: _DashedOutlinePainter(Theme.of(context).colorScheme.outline),
+                      child: SizedBox(width: barWidth, height: 72),
                     )
-                  : FractionallySizedBox(
-                      heightFactor: heightFactor,
-                      child: const SizedBox(
-                        width: 22,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: AniHowColors.brand,
-                            borderRadius: BorderRadius.all(Radius.circular(6)),
+                  : heightFactor <= 0
+                      ? SizedBox(
+                          width: barWidth,
+                          height: 2,
+                          child: ColoredBox(color: color.withValues(alpha: 0.35)),
+                        )
+                      : FractionallySizedBox(
+                          heightFactor: heightFactor,
+                          child: SizedBox(
+                            width: barWidth,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: color,
+                                borderRadius: const BorderRadius.all(Radius.circular(6)),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
             ),
           ),
           const SizedBox(height: 4),
@@ -945,7 +982,9 @@ class _BarColumn extends StatelessWidget {
 }
 
 class _DashedOutlinePainter extends CustomPainter {
-  const _DashedOutlinePainter();
+  const _DashedOutlinePainter(this.color);
+
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -956,7 +995,7 @@ class _DashedOutlinePainter extends CustomPainter {
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5
-      ..color = AniHowColors.brand;
+      ..color = color;
     for (final metric in path.computeMetrics()) {
       var distance = 0.0;
       while (distance < metric.length) {
@@ -968,7 +1007,16 @@ class _DashedOutlinePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _DashedOutlinePainter oldDelegate) => false;
+  bool shouldRepaint(covariant _DashedOutlinePainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// Bar color that stays readable on both the light and the dark card.
+Color _chartColor(BuildContext context, {bool selected = false}) {
+  final dark = Theme.of(context).brightness == Brightness.dark;
+  if (dark) {
+    return selected ? const Color(0xFFA8D5BA) : AniHowColors.sage;
+  }
+  return selected ? AniHowColors.brand : AniHowColors.sage;
 }
 
 class _YearCard extends StatelessWidget {
@@ -1055,6 +1103,8 @@ class _PaidCard extends StatelessWidget {
               rightLabel: s.cashPay,
               left: online,
               right: cash,
+              leftColor: _onlineColor,
+              rightColor: _cashColor,
             ),
             const SizedBox(height: 4),
             Text(s.cashIncludesWalkIn, style: Theme.of(context).textTheme.bodySmall),
@@ -1064,6 +1114,8 @@ class _PaidCard extends StatelessWidget {
               rightLabel: s.walkInSales,
               left: source.app,
               right: source.walkIn,
+              leftColor: _appColor,
+              rightColor: _walkInColor,
             ),
           ],
         ),
@@ -1078,40 +1130,117 @@ class _SplitBar extends StatelessWidget {
     required this.rightLabel,
     required this.left,
     required this.right,
+    required this.leftColor,
+    required this.rightColor,
   });
 
   final String leftLabel;
   final String rightLabel;
   final FarmerSalesBucket left;
   final FarmerSalesBucket right;
+  final Color leftColor;
+  final Color rightColor;
 
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
-    final total = left.sales + right.sales;
-    final leftFlex = total <= 0 ? 1 : math.max(1, (left.sales / total * 100).round());
-    final rightFlex = total <= 0 ? 1 : math.max(1, (right.sales / total * 100).round());
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          height: 10,
-          child: Row(
-            children: [
-              Expanded(flex: leftFlex, child: const ColoredBox(color: AniHowColors.brand)),
-              Expanded(flex: rightFlex, child: const ColoredBox(color: AniHowColors.sage)),
-            ],
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(leftLabel),
-        Text('${AniHowMoney.peso(left.sales)} · ${s.ordersCount(left.orders)}'),
-        Text(rightLabel),
-        Text('${AniHowMoney.peso(right.sales)} · ${s.ordersCount(right.orders)}'),
+        _Segments(parts: [(left.sales, leftColor), (right.sales, rightColor)]),
+        const SizedBox(height: 6),
+        _LegendLine(color: leftColor, text: leftLabel),
+        _amountLine(context, s, left),
+        _LegendLine(color: rightColor, text: rightLabel),
+        _amountLine(context, s, right),
       ],
     );
   }
 }
+
+Widget _amountLine(BuildContext context, AppStrings s, FarmerSalesBucket bucket) {
+  return Padding(
+    padding: const EdgeInsets.only(left: 18),
+    child: Text(
+      '${AniHowMoney.peso(bucket.sales)} · ${s.ordersCount(bucket.orders)}',
+      style: Theme.of(context).textTheme.bodySmall,
+    ),
+  );
+}
+
+/// One horizontal bar split into colored parts by size. Zero parts are left
+/// out; an all-zero bar shows an empty track.
+class _Segments extends StatelessWidget {
+  const _Segments({required this.parts});
+
+  final List<(double, Color)> parts;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = parts.fold<double>(0, (sum, part) => sum + (part.$1 > 0 ? part.$1 : 0));
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: SizedBox(
+        height: 12,
+        width: double.infinity,
+        child: total <= 0
+            ? ColoredBox(color: Theme.of(context).colorScheme.surfaceContainerHighest)
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final part in parts)
+                    if (part.$1 > 0)
+                      Expanded(
+                        flex: math.max(1, (part.$1 / total * 1000).round()),
+                        child: ColoredBox(color: part.$2),
+                      ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class _LegendLine extends StatelessWidget {
+  const _LegendLine({required this.color, required this.text});
+
+  final Color color;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 3),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 10,
+            height: 10,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: const BorderRadius.all(Radius.circular(3)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: Theme.of(context).textTheme.bodySmall)),
+        ],
+      ),
+    );
+  }
+}
+
+const Color _onlineColor = Color(0xFF378ADD);
+const Color _cashColor = Color(0xFFE2A24A);
+const Color _appColor = AniHowColors.sage;
+const Color _walkInColor = Color(0xFFA8D5BA);
+const Color _goodColor = AniHowColors.sage;
+const Color _rejectedColor = Color(0xFFE8A87C);
+const Color _soldColor = Color(0xFF2E8B57);
+const Color _waitingColor = Color(0xFF378ADD);
+const Color _removedColor = AniHowColors.fruit;
+const Color _leftColor = Color(0xFFA8D5BA);
 
 class _HarvestCropCard extends StatelessWidget {
   const _HarvestCropCard({required this.crop});
@@ -1122,8 +1251,8 @@ class _HarvestCropCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     final unit = crop.unit.isEmpty ? '' : ' ${crop.unit}';
-    final rejected = _reasonLine(s, crop.rejectedByReason);
-    final removed = _reasonLine(s, crop.removedByReason);
+    final rejected = _reasonLine(s, crop.rejectedByReason, unit);
+    final removed = _reasonLine(s, crop.removedByReason, unit);
     final nothingRemoved = crop.removedByReason.values.every((value) => value == 0);
 
     return Card(
@@ -1138,36 +1267,44 @@ class _HarvestCropCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text('${s.harvestedLabel} ${_qty(crop.harvested)}$unit'),
-            _Meter(value: crop.harvested, max: math.max(crop.harvested, crop.sold), color: AniHowColors.brand),
+            _Meter(value: crop.harvested, max: math.max(crop.harvested, crop.sold), color: _leftColor),
             Text('${s.soldLabel} ${_qty(crop.sold)}$unit'),
-            _Meter(value: crop.sold, max: math.max(crop.harvested, crop.sold), color: AniHowColors.sage),
+            _Meter(value: crop.sold, max: math.max(crop.harvested, crop.sold), color: _soldColor),
             const SizedBox(height: 8),
             Text('${s.goodLabel} / ${s.rejectedLabel}'),
-            _StackBar(
+            const SizedBox(height: 6),
+            _Segments(
               parts: [
-                (crop.good, AniHowColors.sage),
-                (crop.rejected, AniHowColors.root),
+                (crop.good, _goodColor),
+                (crop.rejected, _rejectedColor),
               ],
             ),
-            if (rejected != null) Text(s.whyRejected(rejected)),
-            const SizedBox(height: 8),
+            _LegendLine(color: _goodColor, text: '${s.goodLabel} ${_qty(crop.good)}$unit'),
+            _LegendLine(color: _rejectedColor, text: '${s.rejectedLabel} ${_qty(crop.rejected)}$unit'),
+            if (rejected != null) ...[
+              const SizedBox(height: 4),
+              Text(s.whyRejected(rejected), style: Theme.of(context).textTheme.bodySmall),
+            ],
+            const SizedBox(height: 12),
             Text(s.whereGoodWent),
-            _StackBar(
+            const SizedBox(height: 6),
+            _Segments(
               parts: [
-                (crop.sold, AniHowColors.brand),
-                (crop.waiting, AniHowColors.eggplant),
-                (crop.removed, AniHowColors.root),
-                (crop.remaining, AniHowColors.sage),
+                (crop.sold, _soldColor),
+                (crop.waiting, _waitingColor),
+                (crop.removed, _removedColor),
+                (crop.remaining, _leftColor),
               ],
             ),
+            _LegendLine(color: _soldColor, text: '${s.soldLabel} ${_qty(crop.sold)}$unit'),
+            _LegendLine(color: _waitingColor, text: '${s.waitingForPickup} ${_qty(crop.waiting)}$unit'),
+            _LegendLine(color: _removedColor, text: '${s.removedLabel} ${_qty(crop.removed)}$unit'),
+            _LegendLine(color: _leftColor, text: '${s.leftLabel} ${_qty(crop.remaining)}$unit'),
+            const SizedBox(height: 4),
             Text(
-              '${s.soldLabel} · ${s.waitingForPickup} · ${s.removedLabel} · ${s.leftLabel}',
+              nothingRemoved ? s.nothingRemoved : (removed ?? s.nothingRemoved),
               style: Theme.of(context).textTheme.bodySmall,
             ),
-            if (nothingRemoved)
-              Text(s.nothingRemoved)
-            else if (removed != null)
-              Text(removed),
           ],
         ),
       ),
@@ -1204,37 +1341,6 @@ class _Meter extends StatelessWidget {
   }
 }
 
-class _StackBar extends StatelessWidget {
-  const _StackBar({required this.parts});
-
-  final List<(double, Color)> parts;
-
-  @override
-  Widget build(BuildContext context) {
-    final total = parts.fold<double>(0, (sum, part) => sum + part.$1);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: SizedBox(
-        height: 12,
-        child: total <= 0
-            ? const DecoratedBox(
-                decoration: BoxDecoration(color: Color(0xFFE7E2D8)),
-              )
-            : Row(
-                children: [
-                  for (final part in parts)
-                    if (part.$1 > 0)
-                      Expanded(
-                        flex: math.max(1, (part.$1 / total * 1000).round()),
-                        child: ColoredBox(color: part.$2),
-                      ),
-                ],
-              ),
-      ),
-    );
-  }
-}
-
 class _IncomeBars extends StatelessWidget {
   const _IncomeBars({required this.income});
 
@@ -1260,15 +1366,15 @@ class _IncomeBars extends StatelessWidget {
                   _VerticalMoney(
                     label: s.expectedIncome,
                     amount: income.potential,
-                    factor: max <= 0 ? 0.08 : (income.potential / max).clamp(0.08, 1),
-                    color: AniHowColors.brand,
+                    factor: max <= 0 ? 0.02 : (income.potential / max).clamp(0.02, 1).toDouble(),
+                    color: _leftColor,
                   ),
                   const SizedBox(width: 16),
                   _VerticalMoney(
                     label: s.actualIncomeSoFar,
                     amount: income.actual,
-                    factor: max <= 0 ? 0.08 : (income.actual / max).clamp(0.08, 1),
-                    color: AniHowColors.sage,
+                    factor: max <= 0 ? 0.02 : (income.actual / max).clamp(0.02, 1).toDouble(),
+                    color: _soldColor,
                   ),
                 ],
               ),
@@ -1400,13 +1506,13 @@ String? _monthCaption(AppStrings s, List<FarmerSalesPeriod> periods) {
   return labels.join(' · ');
 }
 
-String? _reasonLine(AppStrings s, Map<String, double> reasons) {
+String? _reasonLine(AppStrings s, Map<String, double> reasons, String unit) {
   final parts = <String>[];
   for (final entry in reasons.entries) {
     if (entry.value <= 0) {
       continue;
     }
-    parts.add('${s.rejectionReasonLabel(entry.key)} ${_qty(entry.value)}');
+    parts.add('${s.rejectionReasonLabel(entry.key)} ${_qty(entry.value)}$unit');
   }
   if (parts.isEmpty) {
     return null;

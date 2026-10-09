@@ -20,12 +20,85 @@ import '../../widgets/report_sheet.dart';
 import '../chat/order_chat_screen.dart';
 import 'buyer_order_detail_screen.dart';
 
+class _PayTarget {
+  const _PayTarget({
+    required this.amount,
+    required this.peerName,
+    required this.paymentQrs,
+    required this.isReservation,
+    this.orderNumber,
+    this.listingName,
+    this.paymentStatus,
+    this.paymentDueAt,
+    this.latestProof,
+    this.order,
+  });
+
+  final String amount;
+  final String peerName;
+  final String? orderNumber;
+  final String? listingName;
+  final String? paymentStatus;
+  final DateTime? paymentDueAt;
+  final PaymentProofRecord? latestProof;
+  final List<PaymentQrCode> paymentQrs;
+  final bool isReservation;
+  final OrderRecord? order;
+
+  bool get isAwaitingPayment => paymentStatus == 'awaiting_payment';
+
+  bool get isPaymentSent => paymentStatus == 'payment_sent';
+
+  bool get paymentIsPaid => paymentStatus == 'paid';
+
+  factory _PayTarget.fromOrder(OrderRecord order) {
+    return _PayTarget(
+      amount: order.total,
+      peerName: order.stallName,
+      orderNumber: order.orderNumber,
+      paymentStatus: order.paymentStatus,
+      paymentDueAt: order.paymentDueAt,
+      latestProof: order.latestProof,
+      paymentQrs: order.paymentQrs,
+      isReservation: false,
+      order: order,
+    );
+  }
+
+  factory _PayTarget.fromReservation(ReservationRecord reservation) {
+    return _PayTarget(
+      amount: reservation.amountLabel,
+      peerName: reservation.buyerName ?? '',
+      listingName: reservation.listingName,
+      paymentStatus: reservation.paymentStatus,
+      paymentDueAt: reservation.paymentDueAt,
+      latestProof: reservation.latestProof,
+      paymentQrs: reservation.paymentQrs,
+      isReservation: true,
+    );
+  }
+}
+
 class PayNowScreen extends StatefulWidget {
-  const PayNowScreen({super.key, this.order, this.orderId})
-    : assert(order != null || orderId != null);
+  const PayNowScreen({
+    super.key,
+    this.order,
+    this.orderId,
+    this.reservation,
+    this.reservationId,
+  }) : assert(
+         order != null ||
+             orderId != null ||
+             reservation != null ||
+             reservationId != null,
+       );
 
   final OrderRecord? order;
   final int? orderId;
+  final ReservationRecord? reservation;
+  final int? reservationId;
+
+  bool get paysReservation => reservation != null || reservationId != null;
 
   @override
   State<PayNowScreen> createState() => _PayNowScreenState();
@@ -33,6 +106,7 @@ class PayNowScreen extends StatefulWidget {
 
 class _PayNowScreenState extends State<PayNowScreen> with WidgetsBindingObserver {
   OrderRecord? _order;
+  ReservationRecord? _reservation;
   bool _loading = false;
   bool _sending = false;
   bool _savingQr = false;
@@ -42,18 +116,33 @@ class _PayNowScreenState extends State<PayNowScreen> with WidgetsBindingObserver
   late final TextEditingController _reference;
   late final TextEditingController _amount;
 
+  bool get _paysReservation => widget.paysReservation;
+
+  _PayTarget? get _target {
+    if (_paysReservation) {
+      final reservation = _reservation;
+      return reservation == null ? null : _PayTarget.fromReservation(reservation);
+    }
+    final order = _order;
+    return order == null ? null : _PayTarget.fromOrder(order);
+  }
+
   @override
   void initState() {
     super.initState();
     _order = widget.order;
+    _reservation = widget.reservation;
     _reference = TextEditingController();
-    _amount = TextEditingController(text: widget.order?.total ?? '');
-    _qrId = widget.order?.paymentQrs.isNotEmpty == true
-        ? widget.order!.paymentQrs.first.id
-        : null;
-    _showForm = widget.order != null && _startsWithForm(widget.order!);
+    _amount = TextEditingController(
+      text: widget.order?.total ?? widget.reservation?.amountLabel ?? '',
+    );
+    final qrs = widget.order?.paymentQrs ?? widget.reservation?.paymentQrs ?? const [];
+    _qrId = qrs.isNotEmpty ? qrs.first.id : null;
+    final starting = _target;
+    _showForm = starting != null && _startsWithForm(starting);
     WidgetsBinding.instance.addObserver(this);
-    if (widget.order == null) {
+    if ((_paysReservation && widget.reservation == null) ||
+        (!_paysReservation && widget.order == null)) {
       _loading = true;
       _load();
     }
@@ -66,11 +155,15 @@ class _PayNowScreenState extends State<PayNowScreen> with WidgetsBindingObserver
     }
   }
 
-  bool _startsWithForm(OrderRecord order) {
-    return order.isAwaitingPayment && order.latestProof?.isRejected != true;
+  bool _startsWithForm(_PayTarget target) {
+    return target.isAwaitingPayment && target.latestProof?.isRejected != true;
   }
 
   Future<void> _load() async {
+    if (_paysReservation) {
+      await _loadReservation();
+      return;
+    }
     try {
       final order = await context.read<AuthController>().api.buyerOrder(
         widget.orderId ?? widget.order!.id,
@@ -91,7 +184,47 @@ class _PayNowScreenState extends State<PayNowScreen> with WidgetsBindingObserver
         // typed and the open form unless the payment itself moved on.
         if (paymentChanged) {
           _amount.text = order.total;
-          _showForm = _startsWithForm(order);
+          _showForm = _startsWithForm(_PayTarget.fromOrder(order));
+        }
+      });
+    } on ApiException catch (error) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    }
+  }
+
+  Future<void> _loadReservation() async {
+    try {
+      final id = widget.reservationId ?? widget.reservation!.id;
+      final rows = await context.read<AuthController>().api.buyerReservations();
+      ReservationRecord? reservation;
+      for (final row in rows) {
+        if (row.id == id) {
+          reservation = row;
+        }
+      }
+      if (!mounted) {
+        return;
+      }
+      final loaded = reservation;
+      if (loaded == null) {
+        setState(() => _loading = false);
+        return;
+      }
+      final previous = _reservation;
+      final paymentChanged = previous == null ||
+          previous.paymentStatus != loaded.paymentStatus ||
+          previous.latestProof?.id != loaded.latestProof?.id ||
+          previous.latestProof?.status != loaded.latestProof?.status;
+      setState(() {
+        _reservation = loaded;
+        _loading = false;
+        _qrId ??= loaded.paymentQrs.isNotEmpty ? loaded.paymentQrs.first.id : null;
+        if (paymentChanged) {
+          _amount.text = loaded.amountLabel;
+          _showForm = _startsWithForm(_PayTarget.fromReservation(loaded));
         }
       });
     } on ApiException catch (error) {
@@ -110,13 +243,13 @@ class _PayNowScreenState extends State<PayNowScreen> with WidgetsBindingObserver
     super.dispose();
   }
 
-  PaymentQrCode? _selected(OrderRecord order) {
-    for (final qr in order.paymentQrs) {
+  PaymentQrCode? _selected(_PayTarget target) {
+    for (final qr in target.paymentQrs) {
       if (qr.id == _qrId) {
         return qr;
       }
     }
-    return order.paymentQrs.isEmpty ? null : order.paymentQrs.first;
+    return target.paymentQrs.isEmpty ? null : target.paymentQrs.first;
   }
 
   Future<void> _saveQr(PaymentQrCode qr) async {
@@ -180,22 +313,41 @@ class _PayNowScreenState extends State<PayNowScreen> with WidgetsBindingObserver
     }
   }
 
-  Future<void> _submit(OrderRecord order) async {
+  Future<void> _submit(_PayTarget target) async {
     final s = AppStrings.read(context);
     if (_reference.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s.referenceRequired)));
       return;
     }
-    final qr = _selected(order);
+    final qr = _selected(target);
     if (qr == null) {
       return;
     }
     setState(() => _sending = true);
+    final amount = _amount.text.trim().isEmpty ? target.amount : _amount.text.trim();
     try {
+      if (target.isReservation) {
+        final updated = await context.read<AuthController>().api.submitReservationProof(
+          _reservation!.id,
+          referenceNumber: _reference.text.trim(),
+          amount: amount,
+          qrId: qr.id,
+          screenshotPath: _screenshotPath,
+        );
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _reservation = updated;
+          _sending = false;
+          _showForm = false;
+        });
+        return;
+      }
       final updated = await context.read<AuthController>().api.submitPaymentProof(
-        order.id,
+        _order!.id,
         referenceNumber: _reference.text.trim(),
-        amount: _amount.text.trim().isEmpty ? order.total : _amount.text.trim(),
+        amount: amount,
         qrId: qr.id,
         screenshotPath: _screenshotPath,
       );
@@ -222,44 +374,44 @@ class _PayNowScreenState extends State<PayNowScreen> with WidgetsBindingObserver
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
-    final order = _order;
-    final rejected = order?.latestProof?.isRejected == true;
-    final showPayTools = order != null &&
+    final target = _target;
+    final rejected = target?.latestProof?.isRejected == true;
+    final showPayTools = target != null &&
         _showForm &&
-        (order.isAwaitingPayment || rejected);
+        (target.isAwaitingPayment || rejected);
     return Scaffold(
       appBar: AppBar(title: Text(s.payNow)),
-      body: _loading || order == null
+      body: _loading || target == null
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               padding: AniHowSpace.screenPadding,
               children: [
-                _AmountCard(order: order, dueSoon: _dueSoon),
+                _AmountCard(target: target, dueSoon: _dueSoon),
                 const SizedBox(height: AniHowSpace.cardGap),
                 if (rejected && !_showForm) _RejectedCard(
-                  order: order,
+                  target: target,
                   onSendAgain: () => setState(() => _showForm = true),
                 ),
-                if (order.isPaymentSent && !rejected)
-                  _SentCard(order: order),
-                if (order.paymentIsPaid) _PaidCard(order: order),
+                if (target.isPaymentSent && !rejected)
+                  _SentCard(target: target),
+                if (target.paymentIsPaid) _PaidCard(target: target),
                 if (showPayTools) ...[
                   const _PaySteps(),
                   const SizedBox(height: AniHowSpace.cardGap),
-                  if (order.paymentQrs.length > 1)
+                  if (target.paymentQrs.length > 1)
                     Wrap(
                       spacing: 8,
                       children: [
-                        for (final qr in order.paymentQrs)
+                        for (final qr in target.paymentQrs)
                           ChoiceChip(
                             key: ValueKey('pay-wallet-${qr.id}'),
                             label: Text(s.walletLabel(qr.wallet)),
-                            selected: (_selected(order)?.id ?? 0) == qr.id,
+                            selected: (_selected(target)?.id ?? 0) == qr.id,
                             onSelected: (_) => setState(() => _qrId = qr.id),
                           ),
                       ],
                     ),
-                  if (_selected(order) case final qr?) ...[
+                  if (_selected(target) case final qr?) ...[
                     const SizedBox(height: AniHowSpace.cardGap),
                     _QrCard(
                       qr: qr,
@@ -275,7 +427,7 @@ class _PayNowScreenState extends State<PayNowScreen> with WidgetsBindingObserver
                     sending: _sending,
                     onPick: _pickScreenshot,
                     onClearShot: () => setState(() => _screenshotPath = null),
-                    onSubmit: () => _submit(order),
+                    onSubmit: () => _submit(target),
                   ),
                 ],
               ],
@@ -285,16 +437,16 @@ class _PayNowScreenState extends State<PayNowScreen> with WidgetsBindingObserver
 }
 
 class _AmountCard extends StatelessWidget {
-  const _AmountCard({required this.order, required this.dueSoon});
+  const _AmountCard({required this.target, required this.dueSoon});
 
-  final OrderRecord order;
+  final _PayTarget target;
   final bool Function(DateTime due) dueSoon;
 
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     final theme = Theme.of(context);
-    final due = order.paymentDueAt;
+    final due = target.paymentDueAt;
     final urgent = due != null && dueSoon(due);
     final (label, fg, bg) = _chip(s, urgent);
     return DecoratedBox(
@@ -306,7 +458,7 @@ class _AmountCard extends StatelessWidget {
           children: [
             Text(s.amountToPay, style: theme.textTheme.bodyMedium),
             Text(
-              AniHowMoney.peso(order.total),
+              AniHowMoney.peso(target.amount),
               key: const ValueKey('pay-amount'),
               style: theme.textTheme.displaySmall?.copyWith(
                 fontSize: 40,
@@ -316,7 +468,9 @@ class _AmountCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              s.shopOrderLine(order.stallName, order.orderNumber),
+              target.isReservation
+                  ? s.reservationPayLine(target.listingName ?? '')
+                  : s.shopOrderLine(target.peerName, target.orderNumber),
               key: const ValueKey('pay-seller'),
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
@@ -347,18 +501,18 @@ class _AmountCard extends StatelessWidget {
   }
 
   (String, Color, Color) _chip(AppStrings s, bool urgent) {
-    final due = order.paymentDueAt;
-    if (order.paymentIsPaid) {
+    final due = target.paymentDueAt;
+    if (target.paymentIsPaid) {
       return (s.paymentStatusLabel('paid'), AniHowColors.inStock, AniHowColors.inStockBg);
     }
-    if (order.isPaymentSent && order.latestProof?.isRejected != true) {
+    if (target.isPaymentSent && target.latestProof?.isRejected != true) {
       return (
         s.paymentSentChip,
         AniHowColors.confirmedBlue,
         const Color(0xFFDBEAFE),
       );
     }
-    if (order.latestProof?.isRejected == true) {
+    if (target.latestProof?.isRejected == true) {
       return (
         due == null ? s.sendAgain : s.sendAgainChip(due),
         AniHowColors.root,
@@ -588,14 +742,14 @@ class _PaidForm extends StatelessWidget {
 }
 
 class _SentCard extends StatelessWidget {
-  const _SentCard({required this.order});
+  const _SentCard({required this.target});
 
-  final OrderRecord order;
+  final _PayTarget target;
 
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
-    final proof = order.latestProof;
+    final proof = target.latestProof;
     final wallet = s.walletLabel(proof?.wallet);
     final last4 = proof?.accountLast4;
     final paidTo = last4 == null || last4.isEmpty ? wallet : '$wallet ${s.maskedLast4(last4)}';
@@ -620,7 +774,12 @@ class _SentCard extends StatelessWidget {
                         s.paymentStatusLabel('payment_sent'),
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      Text(s.waitingForShop(order.stallName), style: muted),
+                      Text(
+                        target.isReservation
+                            ? s.waitingForSeller
+                            : s.waitingForShop(target.peerName),
+                        style: muted,
+                      ),
                     ],
                   ),
                 ),
@@ -628,7 +787,7 @@ class _SentCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text('${s.referenceNumber}  ${proof?.reference ?? ''}'),
-            Text('${s.proofAmount}  ${AniHowMoney.peso(proof?.amount ?? order.total)}'),
+            Text('${s.proofAmount}  ${AniHowMoney.peso(proof?.amount ?? target.amount)}'),
             Text('${s.paidTo}  $paidTo'),
             if (proof?.sentAt != null) Text('${s.sentLabel}  ${s.agoPhrase(proof!.sentAt!)}'),
             const SizedBox(height: 10),
@@ -642,34 +801,38 @@ class _SentCard extends StatelessWidget {
                 child: Text(s.paymentSentNote),
               ),
             ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => OrderChatScreen(order: order)),
-                );
-              },
-              child: Text(s.chatWithSeller),
-            ),
-            const SizedBox(height: 8),
-            PrimaryButton(
-              label: s.viewOrder,
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => BuyerOrderDetailScreen(order: order),
-                  ),
-                );
-              },
-            ),
-            TextButton(
-              onPressed: () => showReportSheet(
-                context,
-                targetType: 'order',
-                targetId: order.id,
+            if (target.order != null) ...[
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => OrderChatScreen(order: target.order!),
+                    ),
+                  );
+                },
+                child: Text(s.chatWithSeller),
               ),
-              child: Text(s.reportPaymentLink),
-            ),
+              const SizedBox(height: 8),
+              PrimaryButton(
+                label: s.viewOrder,
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => BuyerOrderDetailScreen(order: target.order),
+                    ),
+                  );
+                },
+              ),
+              TextButton(
+                onPressed: () => showReportSheet(
+                  context,
+                  targetType: 'order',
+                  targetId: target.order!.id,
+                ),
+                child: Text(s.reportPaymentLink),
+              ),
+            ],
           ],
         ),
       ),
@@ -678,16 +841,16 @@ class _SentCard extends StatelessWidget {
 }
 
 class _RejectedCard extends StatelessWidget {
-  const _RejectedCard({required this.order, required this.onSendAgain});
+  const _RejectedCard({required this.target, required this.onSendAgain});
 
-  final OrderRecord order;
+  final _PayTarget target;
   final VoidCallback onSendAgain;
 
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
-    final proof = order.latestProof;
-    final due = order.paymentDueAt;
+    final proof = target.latestProof;
+    final due = target.paymentDueAt;
     return DecoratedBox(
       key: const ValueKey('pay-rejected'),
       decoration: paymentCardDecoration(context, borderColor: AniHowColors.lowStockBg)
@@ -732,14 +895,14 @@ class _RejectedCard extends StatelessWidget {
 }
 
 class _PaidCard extends StatelessWidget {
-  const _PaidCard({required this.order});
+  const _PaidCard({required this.target});
 
-  final OrderRecord order;
+  final _PayTarget target;
 
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
-    final proof = order.latestProof;
+    final proof = target.latestProof;
     final when = proof?.reviewedAt;
     return DecoratedBox(
       key: const ValueKey('pay-paid-card'),
@@ -756,22 +919,29 @@ class _PaidCard extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            Text(s.shopReceived(order.stallName, AniHowMoney.peso(order.total))),
+            Text(
+              target.isReservation
+                  ? s.reservationSecured
+                  : s.shopReceived(target.peerName, AniHowMoney.peso(target.amount)),
+            ),
             Text('${s.referenceNumber}  ${proof?.reference ?? ''}'),
             if (when != null) Text('${s.confirmedLabel}  ${s.monthDayClock(when)}'),
-            const SizedBox(height: 8),
-            Text(s.paidNextNote),
-            const SizedBox(height: 8),
-            PrimaryButton(
-              label: s.viewOrder,
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => BuyerOrderDetailScreen(order: order),
-                  ),
-                );
-              },
-            ),
+            if (!target.isReservation) ...[
+              const SizedBox(height: 8),
+              Text(s.paidNextNote),
+              const SizedBox(height: 8),
+              if (target.order != null)
+                PrimaryButton(
+                  label: s.viewOrder,
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => BuyerOrderDetailScreen(order: target.order),
+                      ),
+                    );
+                  },
+                ),
+            ],
           ],
         ),
       ),

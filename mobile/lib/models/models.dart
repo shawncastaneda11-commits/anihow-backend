@@ -1876,6 +1876,13 @@ class ReservationRecord {
     this.cancellationReason,
     this.buyerName,
     this.createdAt,
+    this.paymentStatus,
+    this.paymentDueAt,
+    this.paidAt,
+    this.refundReference,
+    this.refundedAt,
+    this.latestProof,
+    this.paymentQrs = const [],
   });
 
   final int id;
@@ -1891,10 +1898,41 @@ class ReservationRecord {
   final String? cancellationReason;
   final String? buyerName;
   final DateTime? createdAt;
+  final String? paymentStatus;
+  final DateTime? paymentDueAt;
+  final DateTime? paidAt;
+  final String? refundReference;
+  final DateTime? refundedAt;
+  final PaymentProofRecord? latestProof;
+  final List<PaymentQrCode> paymentQrs;
 
   bool get isActive => status == 'active';
 
   bool get isConverted => status == 'converted' && orderId != null;
+
+  bool get isPaymentTracked {
+    final payment = paymentStatus;
+    return payment != null && payment.isNotEmpty && payment != 'not_tracked';
+  }
+
+  bool get isAwaitingPayment => paymentStatus == 'awaiting_payment';
+
+  bool get isPaymentSent => paymentStatus == 'payment_sent';
+
+  bool get paymentIsPaid => paymentStatus == 'paid';
+
+  bool get canBuyerCancel {
+    if (!isActive) {
+      return false;
+    }
+    final payment = paymentStatus;
+    return payment == null ||
+        payment.isEmpty ||
+        payment == 'awaiting_payment' ||
+        payment == 'not_tracked';
+  }
+
+  String get amountLabel => lineTotal.toStringAsFixed(2);
 
   factory ReservationRecord.fromJson(Map<String, dynamic> json) {
     final buyer = json['buyer'];
@@ -1913,6 +1951,109 @@ class ReservationRecord {
       cancellationReason: json['cancellation_reason'] as String?,
       buyerName: buyerMap?['name'] as String?,
       createdAt: ListingItem._asDate(json['created_at']),
+      paymentStatus: json['payment_status'] as String?,
+      paymentDueAt: OrderRecord._asDate(json['payment_due_at']),
+      paidAt: OrderRecord._asDate(json['paid_at']),
+      refundReference: json['refund_reference'] as String?,
+      refundedAt: OrderRecord._asDate(json['refunded_at']),
+      latestProof: json['latest_proof'] is Map
+          ? PaymentProofRecord.fromJson(
+              Map<String, dynamic>.from(json['latest_proof'] as Map),
+            )
+          : null,
+      paymentQrs: ((json['payment_qrs'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((item) => PaymentQrCode.fromJson(Map<String, dynamic>.from(item)))
+          .toList(),
+    );
+  }
+
+  ReservationRecord copyWith({
+    String? paymentStatus,
+    DateTime? paymentDueAt,
+    DateTime? paidAt,
+    String? refundReference,
+    DateTime? refundedAt,
+    PaymentProofRecord? latestProof,
+    List<PaymentQrCode>? paymentQrs,
+    String? status,
+  }) {
+    return ReservationRecord(
+      id: id,
+      listingName: listingName,
+      quantity: quantity,
+      lineTotal: lineTotal,
+      status: status ?? this.status,
+      listingId: listingId,
+      unit: unit,
+      unitPrice: unitPrice,
+      orderId: orderId,
+      fulfillmentPreference: fulfillmentPreference,
+      cancellationReason: cancellationReason,
+      buyerName: buyerName,
+      createdAt: createdAt,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
+      paymentDueAt: paymentDueAt ?? this.paymentDueAt,
+      paidAt: paidAt ?? this.paidAt,
+      refundReference: refundReference ?? this.refundReference,
+      refundedAt: refundedAt ?? this.refundedAt,
+      latestProof: latestProof ?? this.latestProof,
+      paymentQrs: paymentQrs ?? this.paymentQrs,
+    );
+  }
+}
+
+class PaymentListItem {
+  const PaymentListItem({
+    required this.kind,
+    required this.id,
+    required this.buyerName,
+    required this.title,
+    required this.amount,
+    this.items = const [],
+    this.wallet,
+    this.reference,
+    this.sentAt,
+    this.paidAt,
+    this.statusAt,
+    this.orderId,
+    this.reservationId,
+  });
+
+  final String kind;
+  final int id;
+  final String buyerName;
+  final String title;
+  final List<String> items;
+  final String amount;
+  final String? wallet;
+  final String? reference;
+  final DateTime? sentAt;
+  final DateTime? paidAt;
+  final DateTime? statusAt;
+  final int? orderId;
+  final int? reservationId;
+
+  bool get isReservation => kind == 'reservation';
+
+  factory PaymentListItem.fromJson(Map<String, dynamic> json) {
+    final names = json['items'];
+    return PaymentListItem(
+      kind: json['kind'] as String? ?? 'order',
+      id: ListingItem._asCount(json['id']) ?? 0,
+      buyerName: json['buyer_name'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      items: names is List
+          ? names.map((item) => item.toString()).toList()
+          : const [],
+      amount: '${json['amount'] ?? '0'}',
+      wallet: json['wallet'] as String?,
+      reference: json['reference'] as String?,
+      sentAt: OrderRecord._asDate(json['sent_at']),
+      paidAt: OrderRecord._asDate(json['paid_at']),
+      statusAt: OrderRecord._asDate(json['status_at']),
+      orderId: ListingItem._asCount(json['order_id']),
+      reservationId: ListingItem._asCount(json['reservation_id']),
     );
   }
 }
@@ -1988,7 +2129,15 @@ class AppNotification {
         type == 'refund_completed';
   }
 
+  bool get pointsToReservation {
+    final related = relatedType ?? '';
+    return related == 'reservation' || related.endsWith('Reservation');
+  }
+
   bool get pointsToOrder {
+    if (pointsToReservation) {
+      return false;
+    }
     final related = relatedType ?? '';
     return type == 'order_placed' ||
         type == 'order_awaiting_confirmation' ||
@@ -2379,12 +2528,15 @@ class StockSummary {
     required this.held,
     required this.hasEstimated,
     required this.recordsWithoutCost,
+    this.starting = '0',
+    this.harvestsWithoutCost,
     this.costTotal,
     this.unit,
   });
 
   final String? trackedSince;
   final String? unit;
+  final String starting;
   final String harvested;
   final String good;
   final String sold;
@@ -2394,10 +2546,16 @@ class StockSummary {
   final bool hasEstimated;
   final String? costTotal;
   final int recordsWithoutCost;
+  final int? harvestsWithoutCost;
+
+  int get harvestsMissingCost => harvestsWithoutCost ?? recordsWithoutCost;
 
   factory StockSummary.fromJson(Map<String, dynamic> json) {
+    final harvests = ListingItem._asCount(json['harvests_without_cost']);
+    final records = ListingItem._asCount(json['records_without_cost']) ?? 0;
     return StockSummary(
       trackedSince: json['tracked_since']?.toString(),
+      starting: '${json['starting'] ?? '0'}',
       harvested: '${json['harvested'] ?? '0'}',
       good: '${json['good'] ?? '0'}',
       sold: '${json['sold'] ?? '0'}',
@@ -2406,8 +2564,8 @@ class StockSummary {
       held: '${json['held'] ?? '0'}',
       hasEstimated: json['has_estimated'] == true,
       costTotal: json['cost_total']?.toString(),
-      recordsWithoutCost:
-          ListingItem._asCount(json['records_without_cost']) ?? 0,
+      recordsWithoutCost: records,
+      harvestsWithoutCost: harvests ?? records,
       unit: json['unit'] as String?,
     );
   }

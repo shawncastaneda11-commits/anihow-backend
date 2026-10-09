@@ -59,7 +59,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Pay cash on handover after harvest'), findsOneWidget);
+    expect(
+      find.text("Pay with the seller's QR before the deadline."),
+      findsOneWidget,
+    );
     expect(find.text('Locked price: ₱40.00 / kg'), findsOneWidget);
     expect(find.textContaining('Estimated total'), findsOneWidget);
   });

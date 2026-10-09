@@ -19,6 +19,8 @@ import '../../widgets/status_pill.dart';
 import '../../widgets/unverified_email_banner.dart';
 import '../chat/order_chat_screen.dart';
 import 'buyer_order_detail_screen.dart';
+import 'pay_now_screen.dart';
+import 'reservation_detail_screen.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({super.key, this.active = true});
@@ -396,7 +398,16 @@ class BuyerReservationsList extends StatelessWidget {
         for (final reservation in active)
           _ReservationTile(
             reservation: reservation,
-            onCancel: onCancel == null ? null : () => onCancel!(reservation),
+            onCancel: onCancel == null || !reservation.canBuyerCancel
+                ? null
+                : () => onCancel!(reservation),
+            onOpen: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ReservationDetailScreen(reservation: reservation),
+                ),
+              );
+            },
           ),
         if (history.isNotEmpty) ...[
           const SizedBox(height: 12),
@@ -457,26 +468,93 @@ class _ReservationTile extends StatelessWidget {
         : reservation.quantity.toString();
 
     return Card(
-      child: ListTile(
+      child: InkWell(
         onTap: onOpen,
-        title: Row(
-          children: [
-            Expanded(child: Text(reservation.listingName)),
-            const SizedBox(width: 8),
-            _reservationStatus(s, reservation),
-          ],
-        ),
-        subtitle: Text(
-          '$quantity $unit · ${AniHowMoney.peso(reservation.lineTotal)}',
-        ),
-        trailing: onCancel == null
-            ? null
-            : TextButton(
-                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-                onPressed: onCancel,
-                child: Text(s.cancelReservation),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(reservation.listingName, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  PaymentTrackingPill(status: reservation.paymentStatus),
+                  _reservationStatus(s, reservation),
+                ],
               ),
+              const SizedBox(height: 4),
+              Text('$quantity $unit · ${AniHowMoney.peso(reservation.lineTotal)}'),
+              if (reservation.isAwaitingPayment && reservation.paymentDueAt != null)
+                Text(s.payBefore(reservation.paymentDueAt!)),
+              if (reservation.refundReference != null &&
+                  reservation.refundReference!.isNotEmpty &&
+                  (reservation.paymentStatus == 'refund_due' ||
+                      reservation.paymentStatus == 'refunded'))
+                Text('${s.refundReference}: ${reservation.refundReference}'),
+              _ReservationActions(reservation: reservation, onCancel: onCancel),
+            ],
+          ),
+        ),
       ),
+    );
+  }
+}
+
+class _ReservationActions extends StatelessWidget {
+  const _ReservationActions({required this.reservation, this.onCancel});
+
+  final ReservationRecord reservation;
+  final VoidCallback? onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final payNow = reservation.isAwaitingPayment;
+    final viewPayment = reservation.isPaymentTracked && !reservation.isAwaitingPayment;
+    if (!payNow && !viewPayment && onCancel == null) {
+      return const SizedBox.shrink();
+    }
+    return Wrap(
+      spacing: 4,
+      children: [
+        if (payNow)
+          TextButton(
+            key: ValueKey('reservation-pay-now-${reservation.id}'),
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => PayNowScreen(reservation: reservation),
+                ),
+              );
+            },
+            child: Text(s.payNow),
+          ),
+        if (viewPayment)
+          TextButton(
+            key: ValueKey('reservation-view-payment-${reservation.id}'),
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => PayNowScreen(reservation: reservation),
+                ),
+              );
+            },
+            child: Text(s.viewPayment),
+          ),
+        if (onCancel != null)
+          TextButton(
+            key: ValueKey('reservation-cancel-${reservation.id}'),
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: onCancel,
+            child: Text(s.cancelReservation),
+          ),
+      ],
     );
   }
 }

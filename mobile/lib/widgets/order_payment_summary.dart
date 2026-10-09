@@ -348,7 +348,7 @@ class OrderPaymentSummary extends StatelessWidget {
     final choice = await showModalBottomSheet<({String reason, String? note})>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => const _RejectProofSheet(),
+      builder: (_) => const RejectPaymentProofSheet(),
     );
     if (choice == null || !context.mounted) {
       return;
@@ -360,7 +360,7 @@ class OrderPaymentSummary extends StatelessWidget {
     final reference = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => const _RefundSheet(),
+      builder: (_) => const RefundReferenceSheet(),
     );
     if (reference == null || !context.mounted) {
       return;
@@ -387,14 +387,14 @@ class OrderPaymentSummary extends StatelessWidget {
   }
 }
 
-class _RejectProofSheet extends StatefulWidget {
-  const _RejectProofSheet();
+class RejectPaymentProofSheet extends StatefulWidget {
+  const RejectPaymentProofSheet({super.key});
 
   @override
-  State<_RejectProofSheet> createState() => _RejectProofSheetState();
+  State<RejectPaymentProofSheet> createState() => _RejectProofSheetState();
 }
 
-class _RejectProofSheetState extends State<_RejectProofSheet> {
+class _RejectProofSheetState extends State<RejectPaymentProofSheet> {
   String _reason = 'not_received';
   final _note = TextEditingController();
 
@@ -452,14 +452,14 @@ class _RejectProofSheetState extends State<_RejectProofSheet> {
   }
 }
 
-class _RefundSheet extends StatefulWidget {
-  const _RefundSheet();
+class RefundReferenceSheet extends StatefulWidget {
+  const RefundReferenceSheet({super.key});
 
   @override
-  State<_RefundSheet> createState() => _RefundSheetState();
+  State<RefundReferenceSheet> createState() => _RefundSheetState();
 }
 
-class _RefundSheetState extends State<_RefundSheet> {
+class _RefundSheetState extends State<RefundReferenceSheet> {
   final _reference = TextEditingController();
 
   @override

@@ -9,6 +9,7 @@ import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/brand_tab_bar.dart';
 import '../../widgets/payment_card.dart';
+import '../buyer/reservation_detail_screen.dart';
 import 'farmer_orders_screen.dart';
 
 class FarmerPaymentsScreen extends StatefulWidget {
@@ -81,7 +82,7 @@ class _PaymentList extends StatefulWidget {
 }
 
 class _PaymentListState extends State<_PaymentList> {
-  final List<OrderRecord> _items = [];
+  final List<PaymentListItem> _items = [];
   int _page = 1;
   bool _loading = true;
   bool _complete = false;
@@ -142,6 +143,52 @@ class _PaymentListState extends State<_PaymentList> {
     widget.onCount(_items.length);
   }
 
+  Future<void> _open(PaymentListItem item) async {
+    if (item.isReservation) {
+      final id = item.reservationId ?? item.id;
+      final found = await context.read<AuthController>().api.farmerReservation(id);
+      if (!mounted) {
+        return;
+      }
+      final reservation = found ??
+          ReservationRecord(
+            id: id,
+            listingName: item.title,
+            quantity: 0,
+            lineTotal: double.tryParse(item.amount) ?? 0,
+            status: widget.status == 'refund_due' ? 'cancelled' : 'active',
+            buyerName: item.buyerName,
+            paymentStatus: switch (widget.status) {
+              'confirmed' => 'paid',
+              'refund_due' => 'refund_due',
+              _ => 'payment_sent',
+            },
+            latestProof: item.reference == null
+                ? null
+                : PaymentProofRecord(
+                    reference: item.reference,
+                    amount: item.amount,
+                    wallet: item.wallet,
+                    status: 'pending',
+                  ),
+          );
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ReservationDetailScreen(
+            reservation: reservation,
+            forSeller: true,
+          ),
+        ),
+      );
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => FarmerOrderDetailScreen(orderId: item.orderId ?? item.id),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
@@ -177,17 +224,11 @@ class _PaymentListState extends State<_PaymentList> {
                     child: Text(s.payments),
                   );
                 }
-                final order = _items[index];
+                final item = _items[index];
                 return _PaymentRow(
-                  order: order,
+                  item: item,
                   tab: widget.status,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => FarmerOrderDetailScreen(order: order),
-                      ),
-                    );
-                  },
+                  onTap: () => _open(item),
                 );
               },
             ),
@@ -197,12 +238,12 @@ class _PaymentListState extends State<_PaymentList> {
 
 class _PaymentRow extends StatelessWidget {
   const _PaymentRow({
-    required this.order,
+    required this.item,
     required this.tab,
     required this.onTap,
   });
 
-  final OrderRecord order;
+  final PaymentListItem item;
   final String tab;
   final VoidCallback onTap;
 
@@ -213,22 +254,15 @@ class _PaymentRow extends StatelessWidget {
     final muted = theme.textTheme.bodyMedium?.copyWith(
       color: theme.colorScheme.onSurface.withValues(alpha: 0.62),
     );
-    final proof = order.latestProof;
-    final items = order.items.map((item) => item.listingName).where((name) => name.isNotEmpty);
-    final detail = [
-      if (order.orderNumber != null && order.orderNumber!.isNotEmpty) order.orderNumber!,
-      if (items.isNotEmpty) items.join(', '),
-      if (tab == 'refund_due' &&
-          order.cancellationLabel != null &&
-          order.cancellationLabel!.isNotEmpty)
-        order.cancellationLabel!,
-    ].join(' · ');
-    final wallet = s.walletLabel(proof?.wallet);
-    final reference = proof?.reference;
+    final wallet = s.walletLabel(item.wallet);
+    final reference = item.reference;
+    final detail = item.isReservation ? item.title : item.title;
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        key: ValueKey('payment-order-${order.id}'),
+        key: ValueKey(
+          item.isReservation ? 'payment-reservation-${item.id}' : 'payment-order-${item.id}',
+        ),
         borderRadius: BorderRadius.circular(paymentCardRadius),
         onTap: onTap,
         child: Ink(
@@ -245,14 +279,14 @@ class _PaymentRow extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            order.buyerName,
+                            item.buyerName,
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
                         Text(
-                          AniHowMoney.peso(order.total),
+                          AniHowMoney.peso(item.amount),
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
@@ -263,6 +297,16 @@ class _PaymentRow extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(detail, style: muted),
                     ],
+                    if (item.isReservation)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: PaymentTonePill(
+                          key: ValueKey('reservation-badge-${item.id}'),
+                          label: s.reservationBadge,
+                          foreground: AniHowColors.brand,
+                          background: AniHowColors.inStockBg,
+                        ),
+                      ),
                     if (wallet.isNotEmpty && reference != null && reference.isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Text(s.walletRef(wallet, reference), style: muted),
@@ -310,9 +354,9 @@ class _PaymentRow extends StatelessWidget {
 
   String? _when(AppStrings s) {
     return switch (tab) {
-      'confirmed' => order.paidAt == null ? null : s.paidOn(order.paidAt!),
-      'refund_due' => order.cancelledAt == null ? null : s.sinceDate(order.cancelledAt!),
-      _ => order.latestProof?.sentAt == null ? null : s.sentAgo(order.latestProof!.sentAt!),
+      'confirmed' => item.paidAt == null ? null : s.paidOn(item.paidAt!),
+      'refund_due' => item.statusAt == null ? null : s.sinceDate(item.statusAt!),
+      _ => item.sentAt == null ? null : s.sentAgo(item.sentAt!),
     };
   }
 }

@@ -13,6 +13,7 @@ import '../buyer/listing_detail_screen.dart';
 import '../buyer/marketplace_screen.dart';
 import '../buyer/buyer_order_detail_screen.dart';
 import '../buyer/pay_now_screen.dart';
+import '../buyer/reservation_detail_screen.dart';
 import '../buyer/order_history_screen.dart';
 import '../farmer/farmer_orders_screen.dart';
 import '../chat/order_chat_screen.dart';
@@ -373,6 +374,36 @@ Future<void> openNotificationTarget(
     }
   }
 
+  if (item.pointsToReservation && item.relatedId != null) {
+    try {
+      final reservation = isFarmer
+          ? await api.farmerReservation(item.relatedId!)
+          : await _buyerReservation(api, item.relatedId!);
+      if (!context.mounted) {
+        return;
+      }
+      if (reservation != null) {
+        final openPay = !isFarmer &&
+            (reservation.isAwaitingPayment || reservation.latestProof?.isRejected == true);
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => openPay
+                ? PayNowScreen(reservation: reservation)
+                : ReservationDetailScreen(
+                    reservation: reservation,
+                    forSeller: isFarmer,
+                  ),
+          ),
+        );
+        return;
+      }
+    } on ApiException {
+      if (!context.mounted) {
+        return;
+      }
+    }
+  }
+
   if (!isFarmer && item.pointsToOrder) {
     if (!context.mounted) {
       return;
@@ -445,6 +476,16 @@ Future<void> openNotificationTarget(
 
   await Navigator.of(context)
       .push(MaterialPageRoute(builder: (_) => const OrderHistoryScreen()));
+}
+
+Future<ReservationRecord?> _buyerReservation(ApiClient api, int id) async {
+  final rows = await api.buyerReservations();
+  for (final row in rows) {
+    if (row.id == id) {
+      return row;
+    }
+  }
+  return null;
 }
 
 Future<void> _pushList(

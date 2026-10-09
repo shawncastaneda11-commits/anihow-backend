@@ -22,6 +22,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+PaymentListItem _paymentRow(OrderRecord order) {
+  return PaymentListItem(
+    kind: 'order',
+    id: order.id,
+    buyerName: order.buyerName,
+    title: order.itemSummary,
+    amount: order.total,
+    wallet: order.latestProof?.wallet,
+    reference: order.latestProof?.reference,
+    sentAt: order.latestProof?.sentAt,
+    paidAt: order.paidAt,
+    statusAt: order.cancelledAt ?? order.paidAt ?? order.latestProof?.sentAt,
+    orderId: order.id,
+  );
+}
+
 PaymentQrCode _qr(int id) {
   return PaymentQrCode(
     id: id,
@@ -72,7 +88,7 @@ class _Api extends ApiClient {
   String? reportReason;
   Object? deleteError;
   OrderRecord order = _order();
-  List<OrderRecord> payments = const [];
+  List<PaymentListItem> payments = const [];
 
   @override
   Future<ShopProfile> updateFarmerShop(Map<String, dynamic> body) async {
@@ -168,7 +184,7 @@ class _Api extends ApiClient {
   }
 
   @override
-  Future<PagedItems<OrderRecord>> farmerPayments({
+  Future<PagedItems<PaymentListItem>> farmerPayments({
     required String status,
     int page = 1,
   }) async {
@@ -515,7 +531,7 @@ void main() {
     await tester.pump();
     expect(api.refundReference, 'RF9901');
 
-    api.payments = [api.order];
+    api.payments = [_paymentRow(api.order)];
     await _pump(tester, const FarmerPaymentsScreen(), api);
     expect(find.textContaining('To check'), findsOneWidget);
     expect(find.text('Confirmed'), findsOneWidget);
@@ -658,31 +674,19 @@ void main() {
   testWidgets('each payments tab shows its own row and an empty state', (tester) async {
     final api = _Api();
     api.payments = [
-      OrderRecord(
+      PaymentListItem(
+        kind: 'order',
         id: 9,
-        status: 'cancelled',
-        total: '20.00',
-        items: const [
-          OrderItemRow(
-            listingName: 'Pechay',
-            quantity: '1',
-            listedPrice: '20',
-            lineSubtotal: '20',
-          ),
-        ],
-        orderNumber: 'AH-1',
-        counterpartyName: 'Maria',
-        cancellationLabel: 'Buyer changed mind',
-        paymentStatus: 'refund_due',
+        buyerName: 'Maria',
+        title: 'Pechay',
+        items: const ['Pechay'],
+        amount: '20.00',
+        wallet: 'gcash',
+        reference: 'AB12CD34',
+        sentAt: DateTime.now().subtract(const Duration(minutes: 4)),
         paidAt: DateTime(2026, 10, 8, 16, 10),
-        cancelledAt: DateTime(2026, 10, 7),
-        latestProof: PaymentProofRecord(
-          reference: 'AB12CD34',
-          amount: '20.00',
-          wallet: 'gcash',
-          status: 'pending',
-          sentAt: DateTime.now().subtract(const Duration(minutes: 4)),
-        ),
+        statusAt: DateTime(2026, 10, 7),
+        orderId: 9,
       ),
     ];
     await _pump(tester, const FarmerPaymentsScreen(), api);
@@ -701,7 +705,7 @@ void main() {
     await tester.tap(find.text('Refund due').first);
     await tester.pumpAndSettle();
     expect(find.text('Since Oct 7'), findsOneWidget);
-    expect(find.textContaining('Buyer changed mind'), findsOneWidget);
+    expect(find.text('Pechay'), findsOneWidget);
 
     api.payments = const [];
     await _pump(tester, FarmerPaymentsScreen(key: UniqueKey()), api);

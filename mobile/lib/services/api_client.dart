@@ -10,6 +10,22 @@ import '../models/models.dart';
 import 'cart_requests.dart';
 import 'tawad_requests.dart';
 
+Map<String, dynamic> buyerReservationBody({
+  required int listingId,
+  required String quantity,
+  required String fulfillmentPreference,
+  String? fulfillmentNote,
+}) {
+  return {
+    'listing_id': listingId,
+    'quantity': quantity,
+    'fulfillment_preference': fulfillmentPreference,
+    'payment_flow': 'proof',
+    if (fulfillmentNote != null && fulfillmentNote.isNotEmpty)
+      'fulfillment_note': fulfillmentNote,
+  };
+}
+
 class ApiException implements Exception {
   ApiException(this.message, {this.statusCode, this.body});
   final String message;
@@ -601,13 +617,15 @@ class ApiClient {
     required String fulfillmentPreference,
     String? fulfillmentNote,
   }) async {
-    final response = await _post('/buyer/reservations', {
-      'listing_id': listingId,
-      'quantity': quantity,
-      'fulfillment_preference': fulfillmentPreference,
-      if (fulfillmentNote != null && fulfillmentNote.isNotEmpty)
-        'fulfillment_note': fulfillmentNote,
-    });
+    final response = await _post(
+      '/buyer/reservations',
+      buyerReservationBody(
+        listingId: listingId,
+        quantity: quantity,
+        fulfillmentPreference: fulfillmentPreference,
+        fulfillmentNote: fulfillmentNote,
+      ),
+    );
     return ReservationRecord.fromJson(_asMap(response['data'] ?? response));
   }
 
@@ -626,14 +644,83 @@ class ApiClient {
     );
   }
 
-  Future<void> cancelFarmerReservation(
+  Future<String> cancelFarmerReservation(
     int listingId,
     int reservationId, {
     String? note,
-  }) {
-    return _patch('/farmer/listings/$listingId/reservations/$reservationId', {
-      if (note != null && note.isNotEmpty) 'note': note,
-    });
+  }) async {
+    final response = await _patchJson(
+      '/farmer/listings/$listingId/reservations/$reservationId',
+      {if (note != null && note.isNotEmpty) 'note': note},
+    );
+    return response['message']?.toString() ?? '';
+  }
+
+  Future<ReservationRecord> submitReservationProof(
+    int reservationId, {
+    required String referenceNumber,
+    required String amount,
+    required int qrId,
+    String? screenshotPath,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/buyer/reservations/$reservationId/payment-proofs',
+        data: FormData.fromMap({
+          'reference_number': referenceNumber,
+          'amount': amount,
+          'qr_id': qrId,
+          if (screenshotPath != null && screenshotPath.isNotEmpty)
+            'screenshot': await MultipartFile.fromFile(screenshotPath),
+        }),
+      );
+      final data = _asMap(response.data);
+      return ReservationRecord.fromJson(_asMap(data['data'] ?? data));
+    } on DioException catch (error) {
+      throw ApiException(_messageFrom(error), statusCode: error.response?.statusCode);
+    }
+  }
+
+  Future<ReservationRecord> reviewReservationProof(
+    int reservationId,
+    int proofId, {
+    required String decision,
+    String? reason,
+    String? note,
+  }) async {
+    final response = await _patchJson(
+      '/farmer/reservations/$reservationId/payment-proofs/$proofId',
+      {
+        'decision': decision,
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+        if (note != null && note.isNotEmpty) 'note': note,
+      },
+    );
+    return ReservationRecord.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<ReservationRecord> refundReservation(
+    int reservationId, {
+    required String refundReference,
+  }) async {
+    final response = await _patchJson(
+      '/farmer/reservations/$reservationId/refund',
+      {'refund_reference': refundReference},
+    );
+    return ReservationRecord.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<ReservationRecord?> farmerReservation(int id) async {
+    final listings = await farmerListings();
+    for (final listing in listings) {
+      final rows = await farmerListingReservations(listing.id);
+      for (final row in rows) {
+        if (row.id == id) {
+          return row;
+        }
+      }
+    }
+    return null;
   }
 
   Future<void> openListingNow(int listingId) async {
@@ -888,7 +975,7 @@ class ApiClient {
     return OrderRecord.fromJson(_asMap(response['data'] ?? response));
   }
 
-  Future<PagedItems<OrderRecord>> farmerPayments({
+  Future<PagedItems<PaymentListItem>> farmerPayments({
     required String status,
     int page = 1,
   }) async {
@@ -901,7 +988,7 @@ class ApiClient {
       final meta = body is Map ? _asMap(body['meta']) : <String, dynamic>{};
       final lastPage = _asInt(meta['last_page'], 1);
       return PagedItems(
-        items: _parseList(body, OrderRecord.fromJson),
+        items: _parseList(body, PaymentListItem.fromJson),
         complete: page >= lastPage,
       );
     } on DioException catch (error) {

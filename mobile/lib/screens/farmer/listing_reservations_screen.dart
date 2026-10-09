@@ -8,6 +8,8 @@ import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/form_label.dart';
+import '../../widgets/status_pill.dart';
+import '../buyer/reservation_detail_screen.dart';
 
 class ListingReservationsScreen extends StatefulWidget {
   const ListingReservationsScreen({super.key, required this.listing});
@@ -72,11 +74,14 @@ class _ListingReservationsScreenState extends State<ListingReservationsScreen> {
       return;
     }
     try {
-      await context.read<AuthController>().api.cancelFarmerReservation(
+      final message = await context.read<AuthController>().api.cancelFarmerReservation(
         widget.listing.id,
         reservation.id,
         note: reason,
       );
+      if (mounted && message.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      }
       await _reload();
     } on ApiException catch (error) {
       if (mounted) {
@@ -164,17 +169,47 @@ class _ListingReservationsScreenState extends State<ListingReservationsScreen> {
                         ? reservation.quantity.toStringAsFixed(0)
                         : reservation.quantity.toString();
                     return Card(
-                      child: ListTile(
-                        title: Text(reservation.buyerName ?? reservation.listingName),
-                        subtitle: Text(
-                          '$quantity ${reservation.unit ?? ''} · ${AniHowMoney.peso(reservation.lineTotal)}',
-                        ),
-                        trailing: TextButton(
-                          style: TextButton.styleFrom(
-                            minimumSize: const Size(48, 48),
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => ReservationDetailScreen(
+                                reservation: reservation,
+                                forSeller: true,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(reservation.buyerName ?? reservation.listingName),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  Text(
+                                    '$quantity ${reservation.unit ?? ''} · ${AniHowMoney.peso(reservation.lineTotal)}',
+                                  ),
+                                  PaymentTrackingPill(status: reservation.paymentStatus),
+                                ],
+                              ),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: TextButton(
+                                  style: TextButton.styleFrom(
+                                    minimumSize: const Size(48, 48),
+                                  ),
+                                  onPressed: () => _cancel(reservation),
+                                  child: Text(s.cancelReservation),
+                                ),
+                              ),
+                            ],
                           ),
-                          onPressed: () => _cancel(reservation),
-                          child: Text(s.cancelReservation),
                         ),
                       ),
                     );

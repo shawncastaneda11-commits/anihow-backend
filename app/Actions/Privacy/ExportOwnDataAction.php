@@ -2,11 +2,13 @@
 
 namespace App\Actions\Privacy;
 
+use App\Models\HarvestRecord;
 use App\Models\Listing;
 use App\Models\Order;
 use App\Models\Reservation;
 use App\Models\Review;
 use App\Models\StallMessage;
+use App\Models\StockRemoval;
 use App\Models\TawadRule;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -141,6 +143,38 @@ class ExportOwnDataAction
                     'is_active' => $listing->is_active,
                     'status' => $listing->status->value,
                     'created_at' => $listing->created_at?->toIso8601String(),
+                ])->all(),
+            'harvest_records' => HarvestRecord::query()
+                ->where('farmer_seller_id', $user->id)
+                ->orderBy('id')
+                ->get()
+                ->map(fn (HarvestRecord $record): array => [
+                    'id' => $record->id,
+                    'listing_id' => $record->listing_id,
+                    'harvested_on' => $record->harvested_on?->toDateString(),
+                    'quantity_harvested' => $record->quantity_harvested,
+                    'quantity_rejected' => $record->quantity_rejected,
+                    'quantity_good' => $record->quantity_good,
+                    'rejection_reason' => $record->rejection_reason?->value,
+                    'rejection_note' => $record->rejection_note,
+                    'price_per_unit' => $record->price_per_unit,
+                    'production_cost' => $record->production_cost,
+                    'cost_breakdown' => $record->cost_breakdown,
+                    'kind' => $record->kind?->value,
+                    'created_at' => $record->created_at?->toIso8601String(),
+                ])->all(),
+            'stock_removals' => StockRemoval::query()
+                ->where('farmer_seller_id', $user->id)
+                ->orderBy('id')
+                ->get()
+                ->map(fn (StockRemoval $removal): array => [
+                    'id' => $removal->id,
+                    'listing_id' => $removal->listing_id,
+                    'quantity' => $removal->quantity,
+                    'reason' => $removal->reason?->value,
+                    'note' => $removal->note,
+                    'price_per_unit' => $removal->price_per_unit,
+                    'created_at' => $removal->created_at?->toIso8601String(),
                 ])->all(),
             'tawad_rules' => TawadRule::query()
                 ->whereIn('listing_id', $listingIds)

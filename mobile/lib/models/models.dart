@@ -175,6 +175,7 @@ class CategoryItem {
     this.effectiveFloorPrice,
     this.effectiveMaxDiscount,
     this.allowedUnits = const [],
+    this.productCategory,
   });
 
   final int id;
@@ -189,6 +190,9 @@ class CategoryItem {
   final String? effectiveFloorPrice;
   final String? effectiveMaxDiscount;
   final List<AllowedListingUnit> allowedUnits;
+  final String? productCategory;
+
+  bool get isValueAdded => productCategory == 'value_added';
 
   factory CategoryItem.fromJson(Map<String, dynamic> json) {
     return CategoryItem(
@@ -215,6 +219,9 @@ class CategoryItem {
           })
           .where((unit) => unit.value.isNotEmpty)
           .toList(),
+      productCategory: json['category'] is Map
+          ? (json['category'] as Map)['value']?.toString()
+          : json['category']?.toString(),
     );
   }
 
@@ -339,6 +346,9 @@ class ListingItem {
     this.acceptsOnlinePayment = true,
     this.canReserve,
     this.tawadPaused = false,
+    this.needsActualHarvest = false,
+    this.expiredWithStock = false,
+    this.hasHarvestRecords = false,
   });
 
   final int id;
@@ -377,6 +387,29 @@ class ListingItem {
   final bool acceptsOnlinePayment;
   final bool? canReserve;
   final bool tawadPaused;
+  final bool needsActualHarvest;
+  final bool expiredWithStock;
+  final bool hasHarvestRecords;
+
+  bool get harvestDueSoon {
+    if (!needsActualHarvest || availableFrom == null) {
+      return false;
+    }
+    final opening = availableFrom!.toLocal();
+    final now = DateTime.now();
+    return !opening.isBefore(now) &&
+        opening.difference(now) <= const Duration(hours: 24);
+  }
+
+  double? get heldQuantity {
+    final available = double.tryParse(quantityAvailable);
+    final sellable = double.tryParse(sellableQuantity ?? '');
+    if (available == null || sellable == null) {
+      return null;
+    }
+    final held = available - sellable;
+    return held < 0 ? 0 : held;
+  }
 
   bool get showReserveButton => isUpcoming && canReserve != false;
 
@@ -449,6 +482,9 @@ class ListingItem {
       acceptsOnlinePayment: acceptsOnlinePayment,
       canReserve: canReserve,
       tawadPaused: tawadPaused,
+      needsActualHarvest: needsActualHarvest,
+      expiredWithStock: expiredWithStock,
+      hasHarvestRecords: hasHarvestRecords,
     );
   }
 
@@ -520,6 +556,9 @@ class ListingItem {
       acceptsOnlinePayment: _acceptsOnline(
         sellerMap?['accepts_online_payment'],
       ),
+      needsActualHarvest: json['needs_actual_harvest'] == true,
+      expiredWithStock: json['expired_with_stock'] == true,
+      hasHarvestRecords: json['has_harvest_records'] == true,
     );
   }
 
@@ -1753,9 +1792,14 @@ class AppNotification {
     );
   }
 
+  bool get pointsToStockHistory =>
+      type == 'harvest_reminder' || type == 'expired_stock_left';
+
   bool get pointsToListing {
     final related = relatedType ?? '';
     return type == 'listing_low_stock' ||
+        type == 'harvest_reminder' ||
+        type == 'expired_stock_left' ||
         related == 'listing' ||
         related.endsWith('Listing');
   }
@@ -2113,6 +2157,139 @@ class FarmerAnalytics {
             ? Map<String, dynamic>.from(json['walk_in_share'] as Map)
             : <String, dynamic>{},
       ),
+    );
+  }
+}
+
+class StockHistoryPage {
+  const StockHistoryPage({
+    required this.events,
+    required this.summary,
+    required this.currentPage,
+    required this.lastPage,
+  });
+
+  final List<StockEvent> events;
+  final StockSummary summary;
+  final int currentPage;
+  final int lastPage;
+
+  bool get hasMore => currentPage < lastPage;
+
+  factory StockHistoryPage.fromJson(Map<String, dynamic> json) {
+    final meta = json['meta'] is Map
+        ? Map<String, dynamic>.from(json['meta'] as Map)
+        : const <String, dynamic>{};
+    final summary = json['summary'] is Map
+        ? Map<String, dynamic>.from(json['summary'] as Map)
+        : const <String, dynamic>{};
+    return StockHistoryPage(
+      events: ((json['data'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((row) => StockEvent.fromJson(Map<String, dynamic>.from(row)))
+          .toList(),
+      summary: StockSummary.fromJson(summary),
+      currentPage: ListingItem._asCount(meta['current_page']) ?? 1,
+      lastPage: ListingItem._asCount(meta['last_page']) ?? 1,
+    );
+  }
+}
+
+class StockSummary {
+  const StockSummary({
+    required this.trackedSince,
+    required this.harvested,
+    required this.good,
+    required this.sold,
+    required this.removed,
+    required this.available,
+    required this.held,
+    required this.hasEstimated,
+    required this.recordsWithoutCost,
+    this.costTotal,
+    this.unit,
+  });
+
+  final String? trackedSince;
+  final String? unit;
+  final String harvested;
+  final String good;
+  final String sold;
+  final String removed;
+  final String available;
+  final String held;
+  final bool hasEstimated;
+  final String? costTotal;
+  final int recordsWithoutCost;
+
+  factory StockSummary.fromJson(Map<String, dynamic> json) {
+    return StockSummary(
+      trackedSince: json['tracked_since']?.toString(),
+      harvested: '${json['harvested'] ?? '0'}',
+      good: '${json['good'] ?? '0'}',
+      sold: '${json['sold'] ?? '0'}',
+      removed: '${json['removed'] ?? '0'}',
+      available: '${json['available'] ?? '0'}',
+      held: '${json['held'] ?? '0'}',
+      hasEstimated: json['has_estimated'] == true,
+      costTotal: json['cost_total']?.toString(),
+      recordsWithoutCost:
+          ListingItem._asCount(json['records_without_cost']) ?? 0,
+      unit: json['unit'] as String?,
+    );
+  }
+}
+
+class StockEvent {
+  const StockEvent({
+    required this.type,
+    required this.id,
+    this.kind,
+    this.harvestedOn,
+    this.quantityHarvested,
+    this.quantityRejected,
+    this.quantityGood,
+    this.quantity,
+    this.reason,
+    this.note,
+    this.productionCost,
+    this.createdAt,
+  });
+
+  final String type;
+  final int id;
+  final String? kind;
+  final String? harvestedOn;
+  final String? quantityHarvested;
+  final String? quantityRejected;
+  final String? quantityGood;
+  final String? quantity;
+  final String? reason;
+  final String? note;
+  final String? productionCost;
+  final String? createdAt;
+
+  bool get isOpening => kind == 'opening';
+  bool get isEstimated => kind == 'estimated';
+  bool get hasCost =>
+      productionCost != null &&
+      productionCost!.isNotEmpty &&
+      productionCost != 'null';
+
+  factory StockEvent.fromJson(Map<String, dynamic> json) {
+    return StockEvent(
+      type: json['type'] as String? ?? 'harvest',
+      id: ListingItem._asCount(json['id']) ?? 0,
+      kind: json['kind'] as String?,
+      harvestedOn: json['harvested_on']?.toString(),
+      quantityHarvested: json['quantity_harvested']?.toString(),
+      quantityRejected: json['quantity_rejected']?.toString(),
+      quantityGood: json['quantity_good']?.toString(),
+      quantity: json['quantity']?.toString(),
+      reason: json['reason'] as String?,
+      note: json['note'] as String?,
+      productionCost: json['production_cost']?.toString(),
+      createdAt: json['created_at']?.toString(),
     );
   }
 }

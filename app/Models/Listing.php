@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\GrowingMethod;
+use App\Enums\HarvestRecordKind;
 use App\Enums\ListingStatus;
 use App\Enums\ListingUnit;
 use App\Enums\ProductCategory;
@@ -47,6 +48,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'available_until',
     'harvested_on',
     'growing_method',
+    'needs_actual_harvest',
+    'stock_tracked_since',
+    'harvest_reminded_at',
+    'expired_stock_notified_at',
 ])]
 class Listing extends Model
 {
@@ -69,6 +74,10 @@ class Listing extends Model
             'available_until' => 'datetime',
             'harvested_on' => 'date',
             'growing_method' => GrowingMethod::class,
+            'needs_actual_harvest' => 'boolean',
+            'stock_tracked_since' => 'datetime',
+            'harvest_reminded_at' => 'datetime',
+            'expired_stock_notified_at' => 'datetime',
         ];
     }
 
@@ -155,6 +164,32 @@ class Listing extends Model
     public function reservations(): HasMany
     {
         return $this->hasMany(Reservation::class);
+    }
+
+    public function harvestRecords(): HasMany
+    {
+        return $this->hasMany(HarvestRecord::class);
+    }
+
+    public function stockRemovals(): HasMany
+    {
+        return $this->hasMany(StockRemoval::class);
+    }
+
+    public function activeReservedQuantity(): string
+    {
+        $sum = $this->reservations()
+            ->where('status', ReservationStatus::Active)
+            ->sum('quantity');
+
+        return bcadd((string) $sum, '0', 2);
+    }
+
+    public function hasNonOpeningHarvestRecord(): bool
+    {
+        return $this->harvestRecords()
+            ->where('kind', '!=', HarvestRecordKind::Opening->value)
+            ->exists();
     }
 
     /**

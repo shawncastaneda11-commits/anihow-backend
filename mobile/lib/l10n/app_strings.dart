@@ -740,6 +740,136 @@ class AppStrings {
   String get availableFromLabel => t('Available from', 'Available simula');
   String get availableUntilLabel => t('Available until', 'Available hanggang');
   String get harvestedOnLabel => t('Harvested on', 'Araw ng ani');
+  String get harvestSection => t('Harvest', 'Ani');
+  String get harvestDate => t('Harvest date', 'Araw ng ani');
+  String get dateMade => t('Date made', 'Araw na ginawa');
+  String get harvestedQuantity => t('Harvested quantity', 'Dami ng ani');
+  String get quantityMade => t('Quantity made', 'Dami na ginawa');
+  String get expectedQuantity => t('Expected quantity', 'Inaasahang dami');
+  String get expectedQuantityHint => t(
+    "You'll record the actual harvest before it opens.",
+    'Itatala mo ang tunay na ani bago ito magbukas.',
+  );
+  String get rejectedQuantity => t('Rejected', 'Tinanggihan');
+  String get defectiveQuantity => t('Defective', 'Depektibo');
+  String get rejectionReason => t('Reason', 'Dahilan');
+  String get rejectionNote => t('Note', 'Tala');
+  String goodToSell(String quantity, String unit) {
+    final amount = unit.trim().isEmpty ? quantity : '$quantity ${unit.trim()}';
+    return t('Good to sell: $amount', 'Mabebenta: $amount');
+  }
+
+  String get chooseReason => t('Choose a reason', 'Pumili ng dahilan');
+  String get productionCost =>
+      t('Production cost (optional)', 'Gastos sa produksyon (opsyonal)');
+  String get costHint => t(
+    "Leave blank if you don't track costs.",
+    'Iwanang blangko kung hindi mo tinututukan ang gastos.',
+  );
+  String get breakDownCosts => t('Break it down', 'Hatiin ang gastos');
+  String get costTotal => t('Total', 'Kabuuan');
+  String get addStock => t('Add stock', 'Dagdagan ang stock');
+  String get removeStock => t('Remove stock', 'Bawasan ang stock');
+  String get recordActualHarvest =>
+      t('Record actual harvest', 'Itala ang tunay na ani');
+  String get recordHarvest => t('Record harvest', 'Itala ang ani');
+  String removeStockLimit(String sellable, String held, String unit) => t(
+    'Up to $sellable $unit ($held held by orders)',
+    'Hanggang $sellable $unit ($held ang hawak ng mga order)',
+  );
+  String leftAfterExpiry(String quantity, String unit) =>
+      t('$quantity $unit left', 'May natitirang $quantity $unit');
+  String get removeAsSpoiled => t('Remove as spoiled', 'Alisin bilang sira');
+  String get extendListing => t('Extend', 'Palawigin');
+  String get stockHistory => t('Stock history', 'Kasaysayan ng stock');
+  String trackedSince(DateTime date) => t(
+    'Tracked since ${shortDate(date)}, ${date.year}',
+    'Sinusubaybayan mula ${shortDate(date)}, ${date.year}',
+  );
+  String get openingStock => t('Opening stock', 'Panimulang stock');
+  String get addedStockLabel => t('Added stock', 'Dinagdag na stock');
+  String get actualHarvestLabel => t('Actual harvest', 'Tunay na ani');
+  String startingStock(String quantity) =>
+      t('Starting stock $quantity', 'Panimulang stock $quantity');
+  String removedQuantity(String quantity) =>
+      t('Removed $quantity', 'Inalis ang $quantity');
+  String harvestRecordLine({
+    required String harvested,
+    required String rejected,
+    required String good,
+    String? reason,
+  }) {
+    if (reason == null || reason.isEmpty) {
+      return t(
+        'Harvested $harvested · Rejected $rejected · Good $good',
+        'Ani $harvested · Tinanggihan $rejected · Mabuti $good',
+      );
+    }
+    return t(
+      'Harvested $harvested · Rejected $rejected ($reason) · Good $good',
+      'Ani $harvested · Tinanggihan $rejected ($reason) · Mabuti $good',
+    );
+  }
+
+  String costRecorded(String amount) => t('₱$amount cost', '₱$amount gastos');
+  String get statHarvested => t('Harvested', 'Naani');
+  String get statGood => t('Good', 'Mabuti');
+  String get statSold => t('Sold', 'Nabenta');
+  String get statLeft => t('Left', 'Natira');
+  String get statRemoved => t('Removed', 'Inalis');
+  String get statCost => t('Cost', 'Gastos');
+  String recordsWithoutCost(int count) =>
+      t('$count records without cost', '$count rekord na walang gastos');
+  String harvestKind(String? kind) => switch (kind) {
+    'added' => addedStockLabel,
+    'actual' => actualHarvestLabel,
+    'opening' => openingStock,
+    'estimated' => estimatedHarvest,
+    _ => harvestSection,
+  };
+  String get estimatedHarvest => t('Estimated', 'Tantya');
+  String get noCostRecorded => t('No cost recorded', 'Walang naitalang gastos');
+  String get loadMore => t('Load more', 'Magpakita pa');
+  String get stockHistoryEmpty =>
+      t('No stock records yet.', 'Wala pang tala ng stock.');
+  String get confirmShortfallTitle =>
+      t('Reserved quantity is higher', 'Mas mataas ang nakareserba');
+  String confirmShortfallBody(String reserved, String unit) => t(
+    '$reserved $unit is already reserved. Recording less cancels the shortfall when the listing opens.',
+    '$reserved $unit ang nakareserba na. Kapag mas maliit ang itinala, kakanselahin ang kulang pagbukas ng listing.',
+  );
+  String get confirmHarvest => t('Record harvest', 'Itala ang ani');
+  String stockSummary({
+    required String harvested,
+    required String good,
+    required String sold,
+    required String left,
+    required String removed,
+  }) => t(
+    'Harvested $harvested · Good $good · Sold $sold · Left $left · Removed $removed',
+    'Ani $harvested · Mabuti $good · Nabenta $sold · Natira $left · Inalis $removed',
+  );
+  String costCategory(String value) => switch (value) {
+    'seeds' => t('Seeds', 'Buto'),
+    'fertilizer' => t('Fertilizer', 'Pataba'),
+    'pesticide' => t('Pesticide', 'Pestisidyo'),
+    'labor' => t('Labor', 'Lakas-paggawa'),
+    'transport' => t('Transport', 'Transportasyon'),
+    'packaging' => t('Packaging', 'Packaging'),
+    _ => t('Other', 'Iba pa'),
+  };
+  String rejectionReasonLabel(String value) => switch (value) {
+    'pests' => t('Pests', 'Peste'),
+    'bruised_damaged' => t('Bruised or damaged', 'Bugbog o sira'),
+    'undersized' => t('Undersized', 'Maliit'),
+    'spoiled' => t('Spoiled', 'Sira'),
+    'defective' => t('Defective', 'Depektibo'),
+    'packaging_damaged' => t('Packaging damaged', 'Sira ang packaging'),
+    'sold_outside' => t('Sold outside the app', 'Nabenta sa labas ng app'),
+    'damaged' => t('Damaged', 'Nasira'),
+    'correction' => t('Correction', 'Korekson'),
+    _ => t('Other', 'Iba pa'),
+  };
   String get dateNotSet => t('Not set', 'Hindi nakatakda');
   String get clearDate => t('Clear', 'Alisin');
   String harvestedLine(String date) =>
@@ -1191,6 +1321,14 @@ class AppStrings {
     'reservation_cancelled' => t(
       'Reservation cancelled',
       'Kinansela ang reserbasyon',
+    ),
+    'harvest_reminder' => t(
+      'Record the actual harvest',
+      'Itala ang tunay na ani',
+    ),
+    'expired_stock_left' => t(
+      'Stock left after the listing ended',
+      'May natirang stock pagkatapos magtapos ang listing',
     ),
     _ => fallback,
   };

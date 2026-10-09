@@ -3,12 +3,14 @@
 namespace App\Actions\Testing;
 
 use App\Actions\Listings\CreateListingAction;
+use App\Actions\Listings\WriteHarvestRecord;
 use App\Actions\Privacy\RequestAccountDeletionAction;
 use App\Actions\Reports\SubmitReportAction;
 use App\Actions\Reservations\ReserveListing;
 use App\Enums\AccountDeletionStatus;
 use App\Enums\AnnouncementAudience;
 use App\Enums\FulfillmentPreference;
+use App\Enums\HarvestRecordKind;
 use App\Enums\ListingUnit;
 use App\Enums\OrderStatus;
 use App\Enums\ReportReason;
@@ -30,6 +32,7 @@ use App\Models\TawadRule;
 use App\Models\User;
 use App\Services\CheckoutService;
 use App\Services\OrderStateMachine;
+use App\Support\HarvestInput;
 use App\Support\Pricing\PriceGuardResolver;
 use App\Support\Pricing\UnitConverter;
 use Illuminate\Database\Eloquent\Builder;
@@ -54,6 +57,7 @@ class CreateTestFixtures
         private SubmitReportAction $reports,
         private RequestAccountDeletionAction $deletionRequests,
         private CreateListingAction $createListing,
+        private WriteHarvestRecord $harvestRecords,
         private PriceGuardResolver $priceGuards,
         private UnitConverter $units,
     ) {}
@@ -281,6 +285,7 @@ class CreateTestFixtures
             if ($existing !== null) {
                 $this->record($item, 'exists');
                 $live = $existing->trashed() ? null : $existing;
+                $this->ensureFixtureHarvest($live);
                 $this->tawad($live, $title, $tawad);
 
                 return $live;
@@ -337,10 +342,52 @@ class CreateTestFixtures
             'is_active' => true,
             'available_from' => $availableInDays === null ? null : now()->addDays($availableInDays),
         ]);
+        $this->ensureFixtureHarvest($listing);
         $this->record($item, 'created');
         $this->tawad($listing, $title, $tawad, $tawadProblem);
 
         return $listing;
+    }
+
+    /**
+     * Available fixtures start with an Initial record equal to their stock.
+     * Upcoming fixtures wait for the actual harvest. Nothing else is invented.
+     */
+    private function ensureFixtureHarvest(?Listing $listing): void
+    {
+        if ($listing === null || $this->dryRun) {
+            return;
+        }
+
+        if ($listing->stock_tracked_since === null) {
+            $listing->stock_tracked_since = now();
+        }
+
+        if ($listing->isUpcoming()) {
+            $listing->needs_actual_harvest = true;
+            $listing->save();
+
+            return;
+        }
+
+        $listing->needs_actual_harvest = false;
+        $listing->save();
+
+        if ($listing->harvestRecords()->exists()) {
+            return;
+        }
+
+        $quantity = HarvestInput::scale($listing->quantity_available);
+        $this->harvestRecords->write($listing, HarvestRecordKind::Initial, [
+            'harvested_on' => $listing->harvested_on?->toDateString() ?? now()->toDateString(),
+            'quantity_harvested' => $quantity,
+            'quantity_rejected' => '0.00',
+            'quantity_good' => $quantity,
+            'rejection_reason' => null,
+            'rejection_note' => null,
+            'production_cost' => null,
+            'cost_breakdown' => null,
+        ], $listing->farmer_seller_id);
     }
 
     /**

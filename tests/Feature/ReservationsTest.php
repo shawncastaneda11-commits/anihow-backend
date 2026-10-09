@@ -718,10 +718,11 @@ class ReservationsTest extends TestCase
         $this->assertArrayNotHasKey('active_reservations_count', $market);
     }
 
-    public function test_lowering_quantity_below_the_reserved_amount_warns_without_blocking_the_save(): void
+    public function test_expected_quantity_can_change_while_upcoming_but_not_below_what_is_reserved(): void
     {
         $farmer = $this->farmer();
         $listing = $this->upcoming($farmer, quantity: 10);
+        $listing->forceFill(['needs_actual_harvest' => true])->save();
         $this->reserve($this->buyer(), $listing, 6)->assertCreated();
 
         $quiet = $this->asUser($farmer)->patchJson("/api/farmer/listings/{$listing->id}", [
@@ -730,12 +731,19 @@ class ReservationsTest extends TestCase
 
         $this->assertArrayNotHasKey('warning', $quiet->json());
 
-        $warned = $this->asUser($farmer)->patchJson("/api/farmer/listings/{$listing->id}", [
-            'quantity_available' => 2,
+        $this->asUser($farmer)->patchJson("/api/farmer/listings/{$listing->id}", [
+            'quantity_available' => 8,
         ])->assertOk();
 
-        $this->assertSame(2.0, (float) $listing->fresh()->quantity_available);
-        $this->assertNotEmpty($warned->json('warning'));
+        $this->assertSame(8.0, (float) $listing->fresh()->quantity_available);
+
+        $this->asUser($farmer)->patchJson("/api/farmer/listings/{$listing->id}", [
+            'quantity_available' => 2,
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('quantity_available')
+            ->assertJsonPath('errors.quantity_available.0', '6.00 kg is already reserved.');
+
+        $this->assertSame(8.0, (float) $listing->fresh()->quantity_available);
     }
 
     public function test_a_converted_order_records_that_it_came_from_a_reservation(): void

@@ -15,6 +15,9 @@ import '../../state/auth_controller.dart';
 import '../../state/preferences_controller.dart';
 import '../../support/order_quantity.dart';
 import 'cancel_reservations_dialog.dart';
+import 'harvest_form.dart';
+import 'stock_history_screen.dart';
+import 'stock_sheets.dart';
 import 'tawad_form_screen.dart';
 import 'walk_in_sale_screen.dart';
 
@@ -34,6 +37,18 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   final _name = TextEditingController();
   final _price = TextEditingController();
   final _quantity = TextEditingController();
+  final _harvestedQty = TextEditingController();
+  final _rejected = TextEditingController(text: '0');
+  final _rejectionNote = TextEditingController();
+  final _productionCost = TextEditingController();
+  final _costs = {
+    for (final category in costCategories) category: TextEditingController(),
+  };
+  String? _rejectionReason;
+  bool _breakdown = false;
+  String? _formError;
+  bool _showReasonError = false;
+  DateTime _harvestDate = DateTime.now();
   final _minOrder = TextEditingController(text: '1');
   final _orderStep = TextEditingController(text: '1');
   final _description = TextEditingController();
@@ -80,6 +95,13 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     _name.dispose();
     _price.dispose();
     _quantity.dispose();
+    _harvestedQty.dispose();
+    _rejected.dispose();
+    _rejectionNote.dispose();
+    _productionCost.dispose();
+    for (final controller in _costs.values) {
+      controller.dispose();
+    }
     _minOrder.dispose();
     _orderStep.dispose();
     _description.dispose();
@@ -89,12 +111,13 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   Future<void> _pickDate({
     required DateTime? current,
     required ValueChanged<DateTime> onPicked,
+    DateTime? firstDate,
     DateTime? lastDate,
   }) async {
     final picked = await showDatePicker(
       context: context,
       initialDate: current ?? DateTime.now(),
-      firstDate: DateTime(2020),
+      firstDate: firstDate ?? DateTime(2020),
       lastDate: lastDate ?? DateTime.now().add(const Duration(days: 365 * 3)),
     );
     if (picked != null) {
@@ -143,6 +166,10 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   }
 
   Future<void> _save({bool confirmed = false}) async {
+    if (_harvestReasonMissing()) {
+      setState(() => _showReasonError = true);
+      return;
+    }
     if (_cropTypeId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppStrings.read(context).chooseCrop)),
@@ -177,18 +204,23 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
         context.read<AuthController>().user?.farmIsOrganicCertified == true;
     final keepStoredClaim =
         !farmCertified && _growingMethod == 'certified_organic';
+    final editing = listing != null;
+    final upcoming = _isUpcoming;
     final body = {
       'title': _name.text.trim(),
       'crop_type_id': _cropTypeId,
       'unit': _unit,
       'price_per_unit': _price.text.trim(),
-      'quantity_available': _quantity.text.trim(),
+      if (editing && listing.needsActualHarvest)
+        'quantity_available': _quantity.text.trim(),
+      if (!editing && upcoming) 'quantity_available': _quantity.text.trim(),
+      if (!editing && !upcoming) ..._harvestBody(),
       'min_order_quantity': _minOrder.text.trim(),
       'order_step': _orderStep.text.trim(),
       'description': _description.text.trim(),
       'available_from': _dayStart(_availableFrom),
       'available_until': _dayEnd(_availableUntil),
-      'harvested_on': _dayOnly(_harvestedOn),
+      if (editing) 'harvested_on': _dayOnly(_harvestedOn),
       if (!keepStoredClaim)
         'growing_method': _growingMethod.isEmpty ? null : _growingMethod,
       if (listing != null && !listing.isTakenDown) 'is_active': _isActive,
@@ -224,14 +256,69 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
         return;
       }
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.message)));
+        setState(() => _formError = error.message);
       }
     } finally {
       if (mounted) {
         setState(() => _busy = false);
       }
     }
+  }
+
+  bool _harvestReasonMissing() {
+    if (widget.listing != null || _isUpcoming) {
+      return false;
+    }
+    final rejected = double.tryParse(_rejected.text.trim()) ?? 0;
+    return rejected > 0 &&
+        (_rejectionReason == null || _rejectionReason!.isEmpty);
+  }
+
+  bool get _isUpcoming {
+    final from = _availableFrom;
+    if (from == null) {
+      return false;
+    }
+    final start = DateTime(from.year, from.month, from.day);
+    final today = DateTime.now();
+    return start.isAfter(DateTime(today.year, today.month, today.day));
+  }
+
+  Map<String, dynamic> _harvestBody() {
+    final rejected = double.tryParse(_rejected.text.trim()) ?? 0;
+    final breakdown = <String, String>{};
+    if (_breakdown) {
+      for (final entry in _costs.entries) {
+        if (entry.value.text.trim().isNotEmpty) {
+          breakdown[entry.key] = entry.value.text.trim();
+        }
+      }
+    }
+    return {
+      'harvested_on': _dayOnly(_harvestDate),
+      'quantity_harvested': _harvestedQty.text.trim(),
+      'quantity_rejected': _rejected.text.trim().isEmpty
+          ? '0'
+          : _rejected.text.trim(),
+      if (rejected > 0 && _rejectionReason != null)
+        'rejection_reason': _rejectionReason,
+      if (rejected > 0 && _rejectionReason == 'other')
+        'rejection_note': _rejectionNote.text.trim(),
+      if (!_breakdown && _productionCost.text.trim().isNotEmpty)
+        'production_cost': _productionCost.text.trim(),
+      if (_breakdown && breakdown.isNotEmpty) 'cost_breakdown': breakdown,
+    };
+  }
+
+  void _syncCost() {
+    if (!_breakdown) {
+      return;
+    }
+    if (!breakdownHasAmount(_costs)) {
+      _productionCost.text = '';
+      return;
+    }
+    _productionCost.text = breakdownTotal(_costs).toStringAsFixed(2);
   }
 
   Future<void> _deleteListing({bool confirmed = false}) async {
@@ -567,7 +654,9 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     final features =
         context.watch<AuthController>().user?.farmFeatures ??
         const FarmFeatures();
-    return features.tawad || _listing?.tawad != null || _listing?.tawadPaused == true;
+    return features.tawad ||
+        _listing?.tawad != null ||
+        _listing?.tawadPaused == true;
   }
 
   bool _walkInAllowed(BuildContext context) {
@@ -595,6 +684,21 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       appBar: AppBar(
         title: Text(widget.listing == null ? s.newListing : s.editListing),
         actions: [
+          if (widget.listing != null)
+            IconButton(
+              tooltip: s.stockHistory,
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => StockHistoryScreen(
+                      listingId: widget.listing!.id,
+                      listingTitle: widget.listing!.title,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.history),
+            ),
           if (widget.listing != null)
             IconButton(
               tooltip: s.deleteListing,
@@ -784,20 +888,73 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                                 ),
                               ),
                               const SizedBox(width: AniHowSpace.cardGap),
-                              Expanded(
-                                child: AniHowField(
-                                  label: s.quantity,
-                                  child: TextField(
-                                    controller: _quantity,
-                                    keyboardType:
-                                        const TextInputType.numberWithOptions(
-                                          decimal: true,
-                                        ),
+                              if (widget.listing != null || _isUpcoming)
+                                Expanded(
+                                  child: AniHowField(
+                                    label: _isUpcoming && widget.listing == null
+                                        ? s.expectedQuantity
+                                        : s.quantity,
+                                    child: TextField(
+                                      key: const ValueKey('listing-quantity'),
+                                      controller: _quantity,
+                                      readOnly:
+                                          widget.listing != null &&
+                                          !widget.listing!.needsActualHarvest,
+                                      keyboardType:
+                                          const TextInputType.numberWithOptions(
+                                            decimal: true,
+                                          ),
+                                    ),
                                   ),
                                 ),
-                              ),
                             ],
                           ),
+                          if (widget.listing == null && _isUpcoming)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(s.expectedQuantityHint),
+                            ),
+                          if (widget.listing != null &&
+                              widget.listing!.needsActualHarvest)
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton(
+                                key: const ValueKey('record-actual-harvest'),
+                                onPressed: () => showAddStockSheet(
+                                  context,
+                                  widget.listing!,
+                                  actual: true,
+                                ),
+                                child: Text(s.recordActualHarvest),
+                              ),
+                            ),
+                          if (widget.listing != null &&
+                              !widget.listing!.needsActualHarvest)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    key: const ValueKey('add-stock'),
+                                    onPressed: () => showAddStockSheet(
+                                      context,
+                                      widget.listing!,
+                                    ),
+                                    child: Text(s.addStock),
+                                  ),
+                                ),
+                                const SizedBox(width: AniHowSpace.cardGap),
+                                Expanded(
+                                  child: OutlinedButton(
+                                    key: const ValueKey('remove-stock'),
+                                    onPressed: () => showRemoveStockSheet(
+                                      context,
+                                      widget.listing!,
+                                    ),
+                                    child: Text(s.removeStock),
+                                  ),
+                                ),
+                              ],
+                            ),
                           if (floor != null && floor.isNotEmpty) ...[
                             const SizedBox(height: AniHowSpace.cardGap),
                             Text(
@@ -852,23 +1009,58 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                             onClear: () =>
                                 setState(() => _availableUntil = null),
                           ),
-                          const SizedBox(height: AniHowSpace.fieldGap),
-                          _DateField(
-                            label: s.harvestedOnLabel,
-                            value: _harvestedOn,
-                            clearLabel: s.clearDate,
-                            emptyLabel: s.dateNotSet,
-                            formatted: _harvestedOn == null
-                                ? null
-                                : s.shortDate(_harvestedOn!),
-                            onPick: () => _pickDate(
-                              current: _harvestedOn,
-                              lastDate: DateTime.now(),
-                              onPicked: (date) =>
-                                  setState(() => _harvestedOn = date),
+                          if (widget.listing == null && !_isUpcoming) ...[
+                            const SizedBox(height: AniHowSpace.section),
+                            HarvestFields(
+                              valueAdded: selectedCrop?.isValueAdded == true,
+                              unit: _unit ?? selectedCrop?.unit ?? '',
+                              harvestedOnLabel: s.shortDate(_harvestDate),
+                              harvested: _harvestedQty,
+                              rejected: _rejected,
+                              reason: _rejectionReason,
+                              note: _rejectionNote,
+                              cost: _productionCost,
+                              costs: _costs,
+                              breakdownOpen: _breakdown,
+                              showReasonError: _showReasonError,
+                              onChanged: () => setState(_syncCost),
+                              onPickDate: () => _pickDate(
+                                current: _harvestDate,
+                                firstDate: DateTime.now().subtract(
+                                  const Duration(days: 365),
+                                ),
+                                lastDate: DateTime.now(),
+                                onPicked: (date) =>
+                                    setState(() => _harvestDate = date),
+                              ),
+                              onReason: (value) =>
+                                  setState(() => _rejectionReason = value),
+                              onToggleBreakdown: () => setState(() {
+                                _breakdown = !_breakdown;
+                                _syncCost();
+                              }),
                             ),
-                            onClear: () => setState(() => _harvestedOn = null),
-                          ),
+                          ],
+                          if (widget.listing != null) ...[
+                            const SizedBox(height: AniHowSpace.fieldGap),
+                            _DateField(
+                              label: s.harvestedOnLabel,
+                              value: _harvestedOn,
+                              clearLabel: s.clearDate,
+                              emptyLabel: s.dateNotSet,
+                              formatted: _harvestedOn == null
+                                  ? null
+                                  : s.shortDate(_harvestedOn!),
+                              onPick: () => _pickDate(
+                                current: _harvestedOn,
+                                lastDate: DateTime.now(),
+                                onPicked: (date) =>
+                                    setState(() => _harvestedOn = date),
+                              ),
+                              onClear: () =>
+                                  setState(() => _harvestedOn = null),
+                            ),
+                          ],
                           const SizedBox(height: AniHowSpace.fieldGap),
                           if (_listing != null && !_listing!.isTakenDown) ...[
                             SwitchListTile(
@@ -903,9 +1095,8 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                       const SizedBox(height: AniHowSpace.section),
                       Card(
                         child: Theme(
-                          data: Theme.of(context).copyWith(
-                            dividerColor: Colors.transparent,
-                          ),
+                          data: Theme.of(context)
+                              .copyWith(dividerColor: Colors.transparent),
                           child: ExpansionTile(
                             key: const ValueKey('discount-section'),
                             initiallyExpanded: _discountOpen,
@@ -1022,10 +1213,26 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                     AniHowSpace.screen,
                     AniHowSpace.screen,
                   ),
-                  child: PrimaryButton(
-                    label: s.saveListing,
-                    busy: _busy,
-                    onPressed: _save,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (_formError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text(
+                            _formError!,
+                            key: const ValueKey('listing-form-error'),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        ),
+                      PrimaryButton(
+                        label: s.saveListing,
+                        busy: _busy,
+                        onPressed: _save,
+                      ),
+                    ],
                   ),
                 ),
               ),

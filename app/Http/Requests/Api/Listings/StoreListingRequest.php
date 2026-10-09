@@ -4,9 +4,11 @@ namespace App\Http\Requests\Api\Listings;
 
 use App\Enums\GrowingMethod;
 use App\Enums\ListingUnit;
+use App\Enums\ProductCategory;
 use App\Models\CropType;
 use App\Models\Farm;
 use App\Models\Listing;
+use App\Support\HarvestInput;
 use App\Support\Pricing\PriceGuardResolver;
 use App\Support\Pricing\UnitConverter;
 use Illuminate\Contracts\Validation\Validator;
@@ -19,6 +21,14 @@ class StoreListingRequest extends FormRequest
     public function authorize(): bool
     {
         return $this->user()?->can('create', Listing::class) ?? false;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return HarvestInput::messages();
     }
 
     /**
@@ -37,13 +47,13 @@ class StoreListingRequest extends FormRequest
             'title' => ['required', 'string', 'max:150'],
             'description' => ['nullable', 'string', 'max:5000'],
             'price_per_unit' => ['required', 'numeric', 'gt:0', 'decimal:0,4', 'max:99999.9999'],
-            'quantity_available' => ['required', 'numeric', 'min:0', 'max:99999.99'],
+            'quantity_available' => ['required_without:quantity_harvested', 'numeric', 'min:0', 'max:99999.99'],
+            ...HarvestInput::rules(false),
             'min_order_quantity' => ['numeric', 'gt:0', 'decimal:0,2', 'max:99999.99'],
             'order_step' => ['numeric', 'gt:0', 'decimal:0,2', 'max:99999.99'],
             'is_active' => ['sometimes', 'boolean'],
             'available_from' => ['nullable', 'date'],
             'available_until' => ['nullable', 'date'],
-            'harvested_on' => ['nullable', 'date', 'before_or_equal:today'],
             'growing_method' => ['nullable', Rule::enum(GrowingMethod::class)],
             'image' => ['nullable', 'image', 'max:5120'],
         ];
@@ -76,6 +86,14 @@ class StoreListingRequest extends FormRequest
                     $this->input('growing_method'),
                     $seller?->farm_id === null ? null : Farm::query()->find($seller->farm_id),
                 );
+
+                if (! $this->isUpcomingAvailability() && $this->exists('quantity_harvested')) {
+                    HarvestInput::check($validator, $this->cropIsValueAdded());
+                }
+
+                if ($validator->errors()->isNotEmpty()) {
+                    return;
+                }
 
                 $cropType = CropType::find($this->validated('crop_type_id'));
 
@@ -147,13 +165,43 @@ class StoreListingRequest extends FormRequest
             'title' => $this->validated('title'),
             'description' => $this->validated('description'),
             'price_per_unit' => $this->validated('price_per_unit'),
-            'quantity_available' => $this->validated('quantity_available'),
+            ...($this->exists('quantity_available') ? ['quantity_available' => $this->validated('quantity_available')] : []),
             'min_order_quantity' => $this->validated('min_order_quantity'),
             'order_step' => $this->validated('order_step'),
             'is_active' => $this->boolean('is_active', true),
             ...$this->availabilityAttributes(),
             ...($this->exists('growing_method') ? ['growing_method' => $this->validated('growing_method')] : []),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function harvestPayload(): ?array
+    {
+        if ($this->isUpcomingAvailability() || ! $this->exists('quantity_harvested')) {
+            return null;
+        }
+
+        return HarvestInput::normalize($this->validated());
+    }
+
+    public function isUpcomingAvailability(): bool
+    {
+        $from = $this->input('available_from');
+
+        if ($from === null || $from === '') {
+            return false;
+        }
+
+        return Carbon::parse((string) $from)->isFuture();
+    }
+
+    public function cropIsValueAdded(): bool
+    {
+        $crop = CropType::query()->find($this->input('crop_type_id'));
+
+        return $crop?->category === ProductCategory::ValueAdded;
     }
 
     /**
@@ -187,6 +235,8 @@ class StoreListingRequest extends FormRequest
         if ($defaults !== []) {
             $this->merge($defaults);
         }
+
+        $this->merge(HarvestInput::prepare($this->all()));
     }
 
     public static function assertAvailabilityWindow(Validator $validator, mixed $from, mixed $until): void

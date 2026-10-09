@@ -190,6 +190,14 @@ class ReservationPaymentTest extends TestCase
         $this->assertSame(OrderPaymentStatus::PaymentSent, $sent->fresh()->payment_status);
         $this->assertNull(Order::query()->where('reservation_id', $sent->id)->first());
 
+        // Opened before its deadline: the unpaid reservation keeps its quantity for
+        // at most an hour after opening, and the shortened deadline is saved.
+        $this->assertSame(ReservationStatus::Active, $awaiting->fresh()->status);
+        $this->assertTrue($awaiting->fresh()->payment_due_at->equalTo($unpaid->fresh()->available_from->copy()->addHour()));
+
+        Carbon::setTestNow(now()->addHour()->addMinute());
+        $this->artisan('reservations:open-due')->assertSuccessful();
+
         $this->assertSame(ReservationStatus::Cancelled, $awaiting->fresh()->status);
         $this->assertSame(ReservationCancellationReason::PaymentExpired, $awaiting->fresh()->cancellation_reason);
 

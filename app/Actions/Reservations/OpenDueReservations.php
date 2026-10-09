@@ -11,6 +11,7 @@ use App\Models\Listing;
 use App\Models\Reservation;
 use App\Services\CheckoutService;
 use App\Support\InAppNotifier;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -118,7 +119,20 @@ class OpenDueReservations
                 }
 
                 if ($payment === OrderPaymentStatus::AwaitingPayment) {
-                    $this->canceller->handle($reservation, ReservationCancellationReason::PaymentExpired);
+                    $deadline = $this->openingDeadline($reservation, $listing);
+
+                    if ($deadline !== null && ! now()->greaterThan($deadline) && $sellable + 0.001 >= $needed) {
+                        $spokenFor += $needed;
+
+                        continue;
+                    }
+
+                    $this->canceller->handle(
+                        $reservation,
+                        $deadline !== null && ! now()->greaterThan($deadline)
+                            ? ReservationCancellationReason::HarvestShortfall
+                            : ReservationCancellationReason::PaymentExpired,
+                    );
 
                     continue;
                 }
@@ -132,6 +146,25 @@ class OpenDueReservations
                 $this->convert($reservation);
             }
         });
+    }
+
+    /**
+     * An unpaid reservation can still be paid after opening only while its
+     * deadline holds, and never past an hour after opening. That covers a
+     * proof rejected near harvest day and a listing the seller opened early.
+     * A shortened deadline is saved so the buyer sees the real time.
+     */
+    private function openingDeadline(Reservation $reservation, Listing $listing): ?CarbonInterface
+    {
+        $deadline = $reservation->payment_due_at;
+        $graceEnds = $listing->available_from?->copy()->addHour();
+
+        if ($graceEnds !== null && ($deadline === null || $deadline->greaterThan($graceEnds))) {
+            $deadline = $graceEnds;
+            $reservation->forceFill(['payment_due_at' => $deadline])->save();
+        }
+
+        return $deadline;
     }
 
     private function convert(Reservation $reservation): void

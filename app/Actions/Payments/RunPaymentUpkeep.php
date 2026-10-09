@@ -65,6 +65,14 @@ class RunPaymentUpkeep
             ->where('payment_due_at', '<=', now()->addHour())
             ->orderBy('id')
             ->each(function (Order $order): void {
+                if ($order->created_at === null || $order->payment_due_at === null) {
+                    return;
+                }
+
+                if (! $order->created_at->lt($order->payment_due_at->copy()->subHour())) {
+                    return;
+                }
+
                 $claimed = Order::query()
                     ->whereKey($order->id)
                     ->where('payment_status', OrderPaymentStatus::AwaitingPayment)

@@ -17,8 +17,11 @@ import '../../widgets/order_progress.dart';
 import '../../widgets/order_status_poll.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
+import '../../widgets/order_payment_summary.dart';
+import '../../widgets/report_sheet.dart';
 import '../../widgets/status_pill.dart';
 import '../chat/order_chat_screen.dart';
+import 'pay_now_screen.dart';
 
 class BuyerOrderDetailScreen extends StatefulWidget {
   const BuyerOrderDetailScreen({
@@ -153,7 +156,38 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen>
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(widget.order?.stallName ?? s.order)),
+      appBar: AppBar(
+        title: Text(widget.order?.stallName ?? s.order),
+        actions: [
+          FutureBuilder<OrderRecord>(
+            future: _future,
+            builder: (context, snapshot) {
+              final order = snapshot.data;
+              if (order == null || !order.canReportPaymentProblem) {
+                return const SizedBox.shrink();
+              }
+              return PopupMenuButton<String>(
+                key: const ValueKey('order-menu'),
+                onSelected: (value) {
+                  if (value == 'report') {
+                    showReportSheet(
+                      context,
+                      targetType: 'order',
+                      targetId: order.id,
+                    );
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'report',
+                    child: Text(s.reportPaymentProblem),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
       body: AsyncView<OrderRecord>(
         future: _future,
         onRetry: _reload,
@@ -220,7 +254,7 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen>
                     ),
                   ),
                 ),
-                if (order.status == 'placed') ...[
+                if (order.status == 'placed' && !order.buyerCancelLocked) ...[
                   const SizedBox(height: AniHowSpace.cardGap),
                   BuyerCancelOrderButton(
                     order: order,
@@ -233,7 +267,22 @@ class _BuyerOrderDetailScreenState extends State<BuyerOrderDetailScreen>
                     onReload: _reload,
                   ),
                 ],
-                if (_showsPaymentHint(order) &&
+                if (order.isPaymentTracked) ...[
+                  const SizedBox(height: AniHowSpace.cardGap),
+                  OrderPaymentSummary(order: order),
+                  if (order.isAwaitingPayment)
+                    TextButton(
+                      key: const ValueKey('open-pay-now'),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => PayNowScreen(order: order),
+                          ),
+                        );
+                      },
+                      child: Text(s.payNow),
+                    ),
+                ] else if (_showsPaymentHint(order) &&
                     order.paymentMethod == 'online_transfer') ...[
                   const SizedBox(height: AniHowSpace.cardGap),
                   AniHowHintCard(

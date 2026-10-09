@@ -644,6 +644,76 @@ class OrderItemRow {
   }
 }
 
+class PaymentQrCode {
+  const PaymentQrCode({
+    required this.id,
+    required this.wallet,
+    required this.accountName,
+    required this.accountLast4,
+    this.walletLabel,
+    this.imageUrl,
+  });
+
+  final int id;
+  final String wallet;
+  final String? walletLabel;
+  final String accountName;
+  final String accountLast4;
+  final String? imageUrl;
+
+  factory PaymentQrCode.fromJson(Map<String, dynamic> json) {
+    return PaymentQrCode(
+      id: ListingItem._asCount(json['id']) ?? 0,
+      wallet: json['wallet'] as String? ?? '',
+      walletLabel: json['wallet_label'] as String?,
+      accountName: json['account_name'] as String? ?? '',
+      accountLast4: json['account_last4']?.toString() ?? '',
+      imageUrl: json['image_url'] as String?,
+    );
+  }
+}
+
+class PaymentProofRecord {
+  const PaymentProofRecord({
+    this.id,
+    this.reference,
+    this.amount,
+    this.wallet,
+    this.status,
+    this.rejectionReason,
+    this.rejectionNote,
+    this.hasScreenshot = false,
+    this.screenshotUrl,
+  });
+
+  final int? id;
+  final String? reference;
+  final String? amount;
+  final String? wallet;
+  final String? status;
+  final String? rejectionReason;
+  final String? rejectionNote;
+  final bool hasScreenshot;
+  final String? screenshotUrl;
+
+  bool get isPending => status == 'pending';
+  bool get isRejected => status == 'rejected';
+
+  factory PaymentProofRecord.fromJson(Map<String, dynamic> json) {
+    return PaymentProofRecord(
+      id: ListingItem._asCount(json['id']),
+      reference: json['reference_number'] as String?,
+      amount: json['amount']?.toString(),
+      wallet: json['wallet'] as String?,
+      status: json['status'] as String?,
+      rejectionReason: json['rejection_reason'] as String?,
+      rejectionNote: json['rejection_note'] as String?,
+      hasScreenshot: json['has_screenshot'] == true || json['has_screenshot'] == 1,
+      screenshotUrl: json['screenshot_url'] as String?,
+    );
+  }
+}
+
 class OrderRecord {
   const OrderRecord({
     required this.id,
@@ -680,6 +750,13 @@ class OrderRecord {
     this.source,
     this.isWalkIn = false,
     this.walkInBuyerName,
+    this.paymentStatus,
+    this.paymentDueAt,
+    this.paidAt,
+    this.refundReference,
+    this.refundedAt,
+    this.latestProof,
+    this.paymentQrs = const [],
   });
 
   final int id;
@@ -714,8 +791,22 @@ class OrderRecord {
   final String? source;
   final bool isWalkIn;
   final String? walkInBuyerName;
+  final String? paymentStatus;
+  final DateTime? paymentDueAt;
+  final DateTime? paidAt;
+  final String? refundReference;
+  final DateTime? refundedAt;
+  final PaymentProofRecord? latestProof;
+  final List<PaymentQrCode> paymentQrs;
   final List<String> allowedNext;
   final List<OrderItemRow> items;
+
+  static DateTime? _asDate(Object? value) {
+    if (value is! String || value.isEmpty) {
+      return null;
+    }
+    return DateTime.tryParse(value)?.toLocal();
+  }
 
   factory OrderRecord.fromJson(Map<String, dynamic> json) {
     final buyer = json['buyer'];
@@ -773,6 +864,20 @@ class OrderRecord {
       source: json['source'] as String?,
       isWalkIn: json['is_walk_in'] == true || json['is_walk_in'] == 1,
       walkInBuyerName: json['walk_in_buyer_name'] as String?,
+      paymentStatus: json['payment_status'] as String?,
+      paymentDueAt: _asDate(json['payment_due_at']),
+      paidAt: _asDate(json['paid_at']),
+      refundReference: json['refund_reference'] as String?,
+      refundedAt: _asDate(json['refunded_at']),
+      latestProof: json['latest_proof'] is Map
+          ? PaymentProofRecord.fromJson(
+              Map<String, dynamic>.from(json['latest_proof'] as Map),
+            )
+          : null,
+      paymentQrs: ((json['payment_qrs'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((item) => PaymentQrCode.fromJson(Map<String, dynamic>.from(item)))
+          .toList(),
       allowedNext: ((json['allowed_next'] as List?) ?? const [])
           .map((item) => item.toString())
           .toList(),
@@ -814,6 +919,26 @@ class OrderRecord {
   bool get isReady => status == 'ready';
   bool get isCompleted => status == 'completed';
   bool get isCancelled => status == 'cancelled';
+
+  bool get isPaymentTracked {
+    final status = paymentStatus;
+    return status != null && status.isNotEmpty && status != 'not_tracked';
+  }
+
+  bool get isAwaitingPayment => paymentStatus == 'awaiting_payment';
+
+  bool get isPaymentSent => paymentStatus == 'payment_sent';
+
+  bool get paymentIsPaid => paymentStatus == 'paid';
+
+  bool get buyerCancelLocked => isPaymentSent || paymentIsPaid;
+
+  bool get canReportPaymentProblem {
+    return paymentStatus == 'payment_sent' ||
+        paymentStatus == 'paid' ||
+        paymentStatus == 'refund_due' ||
+        paymentStatus == 'refunded';
+  }
 
   bool get hasCancellationReason =>
       isCancelled &&
@@ -873,6 +998,10 @@ class OrderRecord {
     String? cancellationLabel,
     String? cancellationNote,
     String? amountReceived,
+    String? paymentStatus,
+    DateTime? paymentDueAt,
+    PaymentProofRecord? latestProof,
+    List<PaymentQrCode>? paymentQrs,
   }) {
     return OrderRecord(
       id: id,
@@ -908,6 +1037,13 @@ class OrderRecord {
       source: source,
       isWalkIn: isWalkIn,
       walkInBuyerName: walkInBuyerName,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
+      paymentDueAt: paymentDueAt ?? this.paymentDueAt,
+      paidAt: paidAt,
+      refundReference: refundReference,
+      refundedAt: refundedAt,
+      latestProof: latestProof ?? this.latestProof,
+      paymentQrs: paymentQrs ?? this.paymentQrs,
       allowedNext: allowedNext ?? this.allowedNext,
     );
   }
@@ -1241,6 +1377,8 @@ class ShopProfile {
     this.farmCoverUrl,
     this.farmLogoUrl,
     this.acceptsOnlinePayment = true,
+    this.paymentTimeLimitHours = 24,
+    this.paymentQrs = const [],
     this.isFavorited = false,
     this.distanceKm,
   });
@@ -1266,6 +1404,8 @@ class ShopProfile {
   final String? farmCoverUrl;
   final String? farmLogoUrl;
   final bool acceptsOnlinePayment;
+  final int paymentTimeLimitHours;
+  final List<PaymentQrCode> paymentQrs;
   final bool isFavorited;
   final double? distanceKm;
 
@@ -1315,6 +1455,12 @@ class ShopProfile {
       acceptsOnlinePayment: ListingItem._acceptsOnline(
         json['accepts_online_payment'],
       ),
+      paymentTimeLimitHours:
+          ListingItem._asCount(json['payment_time_limit_hours']) ?? 24,
+      paymentQrs: ((json['payment_qrs'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((item) => PaymentQrCode.fromJson(Map<String, dynamic>.from(item)))
+          .toList(),
       isFavorited: json['is_favorited'] == true || json['is_favorited'] == 1,
       distanceKm: ListingItem._asDouble(json['distance_km']),
     );
@@ -1343,6 +1489,8 @@ class ShopProfile {
       farmCoverUrl: farmCoverUrl,
       farmLogoUrl: farmLogoUrl,
       acceptsOnlinePayment: acceptsOnlinePayment,
+      paymentTimeLimitHours: paymentTimeLimitHours,
+      paymentQrs: paymentQrs,
       isFavorited: isFavorited ?? this.isFavorited,
       distanceKm: distanceKm,
     );
@@ -1816,6 +1964,17 @@ class AppNotification {
       type == 'report_resolved' ||
       type == 'report_dismissed';
 
+  bool get isPaymentNotice {
+    return type == 'payment_proof_submitted' ||
+        type == 'payment_confirmed' ||
+        type == 'payment_rejected' ||
+        type == 'payment_due_soon' ||
+        type == 'payment_expired' ||
+        type == 'payment_check_reminder' ||
+        type == 'refund_due' ||
+        type == 'refund_completed';
+  }
+
   bool get pointsToOrder {
     final related = relatedType ?? '';
     return type == 'order_placed' ||
@@ -1825,6 +1984,7 @@ class AppNotification {
         type == 'order_completed' ||
         type == 'order_cancelled' ||
         type == 'order_message' ||
+        isPaymentNotice ||
         related == 'order' ||
         type == 'reservation_converted' ||
         related.endsWith('Order');

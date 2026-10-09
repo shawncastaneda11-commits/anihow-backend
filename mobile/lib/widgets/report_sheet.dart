@@ -123,7 +123,9 @@ class _ReportBottomSheetState extends State<ReportBottomSheet> {
               },
               child: Column(
                 children: [
-                  for (final reason in s.reportReasons)
+                  for (final reason in widget.targetType == 'order'
+                      ? [(value: 'payment_problem', label: s.paymentProblem)]
+                      : s.reportReasons)
                     RadioListTile<String>(
                       key: ValueKey('report-reason-${reason.value}'),
                       title: Text(reason.label),

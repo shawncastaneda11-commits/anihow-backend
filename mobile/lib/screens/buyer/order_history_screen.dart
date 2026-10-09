@@ -301,6 +301,10 @@ class _BuyerOrderCardState extends State<BuyerOrderCard> {
                             ),
                             const SizedBox(height: 6),
                             StatusPill.payment(order.paymentMethod, strings: s),
+                            if (order.isPaymentTracked) ...[
+                              const SizedBox(height: 6),
+                              PaymentTrackingPill(status: order.paymentStatus),
+                            ],
                           ],
                         ),
                       ),

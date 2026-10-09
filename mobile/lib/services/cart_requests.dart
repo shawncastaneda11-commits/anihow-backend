@@ -34,6 +34,7 @@ class CartRequests {
   }) {
     return {
       'fulfillment_preference': fulfillmentPreference,
+      'payment_flow': 'proof',
       if (fulfillmentNote != null && fulfillmentNote.isNotEmpty)
         'fulfillment_note': fulfillmentNote,
       if (payments.isNotEmpty) 'payments': payments,

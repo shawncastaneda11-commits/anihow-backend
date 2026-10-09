@@ -946,10 +946,15 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                                 Expanded(
                                   child: OutlinedButton(
                                     key: const ValueKey('remove-stock'),
-                                    onPressed: () => showRemoveStockSheet(
-                                      context,
-                                      widget.listing!,
-                                    ),
+                                    onPressed: () async {
+                                      final changed = await showRemoveStockSheet(
+                                        context,
+                                        widget.listing!,
+                                      );
+                                      if (changed && mounted) {
+                                        await _reloadListing();
+                                      }
+                                    },
                                     child: Text(s.removeStock),
                                   ),
                                 ),

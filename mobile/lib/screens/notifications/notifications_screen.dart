@@ -12,6 +12,7 @@ import '../../support/relative_time.dart';
 import '../buyer/listing_detail_screen.dart';
 import '../buyer/marketplace_screen.dart';
 import '../buyer/buyer_order_detail_screen.dart';
+import '../buyer/pay_now_screen.dart';
 import '../buyer/order_history_screen.dart';
 import '../farmer/farmer_orders_screen.dart';
 import '../chat/order_chat_screen.dart';
@@ -377,6 +378,27 @@ Future<void> openNotificationTarget(
       return;
     }
     if (item.relatedId != null) {
+      if (item.isPaymentNotice) {
+        try {
+          final order = await api.buyerOrder(item.relatedId!);
+          if (!context.mounted) {
+            return;
+          }
+          if (order.isAwaitingPayment) {
+            await Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => PayNowScreen(order: order)),
+            );
+            return;
+          }
+        } on ApiException {
+          if (!context.mounted) {
+            return;
+          }
+        }
+      }
+      if (!context.mounted) {
+        return;
+      }
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => BuyerOrderDetailScreen(orderId: item.relatedId),

@@ -26,6 +26,7 @@ import '../farmer/shop_reviews_screen.dart';
 import '../farmer/walk_in_sale_screen.dart';
 import '../faq/faq_bot_screen.dart';
 import '../farm/farm_profile_screen.dart';
+import 'online_payment_section.dart';
 import 'settings_screen.dart';
 import 'verify_email_screen.dart';
 
@@ -619,6 +620,8 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
   bool _busy = false;
   late String? _coverUrl;
   late bool _acceptsOnline;
+  late int _hours;
+  late List<PaymentQrCode> _qrs;
 
   @override
   void initState() {
@@ -629,6 +632,8 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
     _contact = TextEditingController(text: widget.shop.contact ?? '');
     _coverUrl = widget.shop.coverUrl;
     _acceptsOnline = widget.shop.acceptsOnlinePayment;
+    _hours = widget.shop.paymentTimeLimitHours;
+    _qrs = List<PaymentQrCode>.of(widget.shop.paymentQrs);
   }
 
   @override
@@ -660,6 +665,8 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
       farmName: widget.shop.farmName,
       farmIsActive: widget.shop.farmIsActive,
       acceptsOnlinePayment: _acceptsOnline,
+      paymentTimeLimitHours: _hours,
+      paymentQrs: _qrs,
       isFavorited: widget.shop.isFavorited,
     );
   }
@@ -732,7 +739,8 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
         'bio': _bio.text.trim(),
         'location': _location.text.trim(),
         'contact': _contact.text.trim(),
-        'accepts_online_payment': _acceptsOnline,
+        'accepts_online_payment': _qrs.isNotEmpty && _acceptsOnline,
+        'payment_time_limit_hours': _hours,
       });
       if (mounted) {
         Navigator.of(context)
@@ -793,15 +801,6 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
                   child: TextField(controller: _name),
                 ),
                 const SizedBox(height: AniHowSpace.fieldGap),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _acceptsOnline,
-                  onChanged: _busy
-                      ? null
-                      : (value) => setState(() => _acceptsOnline = value),
-                  title: Text(s.acceptOnlinePayment),
-                ),
-                const SizedBox(height: AniHowSpace.fieldGap),
                 AniHowField(
                   label: s.bio,
                   child: TextField(controller: _bio, maxLines: 4),
@@ -818,6 +817,16 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: AniHowSpace.section),
+          OnlinePaymentSection(
+            qrs: _qrs,
+            acceptsOnline: _acceptsOnline,
+            hours: _hours,
+            busy: _busy,
+            onAccepts: (value) => setState(() => _acceptsOnline = value),
+            onHours: (value) => setState(() => _hours = value),
+            onQrs: (value) => setState(() => _qrs = value),
           ),
           const SizedBox(height: AniHowSpace.section),
           PrimaryButton(

@@ -15,8 +15,10 @@ import '../../widgets/order_look.dart';
 import '../../widgets/order_status_poll.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
+import '../../widgets/order_payment_summary.dart';
 import '../../widgets/status_pill.dart';
 import '../chat/order_chat_screen.dart';
+import 'farmer_payments_screen.dart';
 import 'walk_in_sale_screen.dart';
 
 List<({String status, String label, String empty})> _orderTabs(AppStrings s) =>
@@ -178,6 +180,10 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen>
 
   Future<void> _complete(OrderRecord order) async {
     final api = context.read<AuthController>().api;
+    if (order.paymentIsPaid) {
+      await _run(order, () => api.completeOrder(order.id));
+      return;
+    }
     final amount = await askAmountReceived(context, order);
     if (!mounted || amount == null) {
       return;
@@ -225,6 +231,20 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen>
       child: Scaffold(
         body: Column(
           children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                key: const ValueKey('open-payments'),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const FarmerPaymentsScreen(),
+                    ),
+                  );
+                },
+                child: Text(s.payments),
+              ),
+            ),
             if (_walkInAllowed(context))
               Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -424,6 +444,10 @@ class _OrderCard extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             StatusPill.payment(order.paymentMethod, strings: s),
+                            if (order.isPaymentTracked) ...[
+                              const SizedBox(height: 6),
+                              PaymentTrackingPill(status: order.paymentStatus),
+                            ],
                           ],
                         ),
                       ),
@@ -590,6 +614,10 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
       return;
     }
     final api = context.read<AuthController>().api;
+    if (order.paymentIsPaid) {
+      await _run(() => api.completeOrder(_id));
+      return;
+    }
     final amount = await askAmountReceived(context, order);
     if (!mounted || amount == null) {
       return;
@@ -838,6 +866,14 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
             style: theme.textTheme.labelSmall,
           ),
         ],
+        if (order.isPaymentTracked) ...[
+          const SizedBox(height: AniHowSpace.cardGap),
+          OrderPaymentSummary(
+            order: order,
+            forSeller: true,
+            onChanged: (updated) => setState(() => _order = updated),
+          ),
+        ],
         OrderAdvanceButtons(
           order: order,
           busy: _acting,
@@ -875,7 +911,13 @@ class OrderAdvanceButtons extends StatelessWidget {
     final ready = order.canAdvanceTo('ready');
     final complete = order.canAdvanceTo('completed');
     final cancel = order.canAdvanceTo('cancelled');
-    if (!confirm && !ready && !complete && !cancel) {
+    final waiting =
+        order.isPaymentTracked && !order.paymentIsPaid && order.paymentStatus != 'refunded';
+    final readyEnabled = ready && !waiting;
+    final completeEnabled = complete && !waiting;
+    final showReady = ready || (waiting && order.isConfirmed);
+    final showComplete = complete || (waiting && order.isReady);
+    if (!confirm && !showReady && !showComplete && !cancel) {
       return const SizedBox.shrink();
     }
     final s = AppStrings.of(context);
@@ -890,17 +932,25 @@ class OrderAdvanceButtons extends StatelessWidget {
             busy: busy,
           ),
         ],
-        if (ready) ...[
-          const SizedBox(height: AniHowSpace.cardGap),
-          PrimaryButton(label: s.markReady, onPressed: onReady, busy: busy),
-        ],
-        if (complete) ...[
+        if (showReady) ...[
           const SizedBox(height: AniHowSpace.cardGap),
           PrimaryButton(
-            label: s.completeHandover,
-            onPressed: onComplete,
+            key: const ValueKey('mark-ready'),
+            label: s.markReady,
+            onPressed: readyEnabled ? onReady : null,
             busy: busy,
           ),
+          if (!readyEnabled) Text(s.waitingForPayment),
+        ],
+        if (showComplete) ...[
+          const SizedBox(height: AniHowSpace.cardGap),
+          PrimaryButton(
+            key: const ValueKey('complete-order'),
+            label: s.completeHandover,
+            onPressed: completeEnabled ? onComplete : null,
+            busy: busy,
+          ),
+          if (!completeEnabled) Text(s.waitingForPayment),
         ],
         if (cancel) ...[
           const SizedBox(height: AniHowSpace.cardGap),

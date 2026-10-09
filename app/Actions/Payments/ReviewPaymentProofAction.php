@@ -98,6 +98,7 @@ class ReviewPaymentProofAction
             $order->payment_due_at = $order->payment_due_at !== null && $order->payment_due_at->greaterThan($extended)
                 ? $order->payment_due_at
                 : $extended;
+            $order->payment_reminded_at = null;
             $order->save();
 
             $this->events->handle($order, 'proof_rejected', $seller, $reason->label());

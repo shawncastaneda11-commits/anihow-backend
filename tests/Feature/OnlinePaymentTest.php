@@ -259,7 +259,10 @@ class OnlinePaymentTest extends TestCase
     public function test_rejecting_a_proof_reopens_payment_for_at_least_an_hour(): void
     {
         [$farmer, $order, $proof] = $this->sentProof();
-        $order->forceFill(['payment_due_at' => now()->subMinutes(10)])->save();
+        $order->forceFill([
+            'payment_due_at' => now()->subMinutes(10),
+            'payment_reminded_at' => now()->subHour(),
+        ])->save();
 
         $this->asUser($farmer)->patchJson("/api/farmer/orders/{$order->id}/payment-proofs/{$proof->id}", [
             'decision' => 'reject',
@@ -268,6 +271,7 @@ class OnlinePaymentTest extends TestCase
             ->assertJsonPath('data.payment_status', OrderPaymentStatus::AwaitingPayment->value);
 
         $this->assertTrue($order->fresh()->payment_due_at->greaterThanOrEqualTo(now()->addHour()->subSeconds(5)));
+        $this->assertNull($order->fresh()->payment_reminded_at);
         $this->assertSame(PaymentProofStatus::Rejected, $proof->fresh()->status);
         $this->assertSame(1, $this->notices($order->buyer_id, NotificationType::PaymentRejected));
     }
@@ -395,10 +399,19 @@ class OnlinePaymentTest extends TestCase
         ]);
 
         $waiting = $this->placeOnline($farmer);
-        $waiting->forceFill(['payment_due_at' => now()->addMinutes(30)])->save();
+        $waiting->forceFill([
+            'created_at' => now()->subHours(5),
+            'payment_due_at' => now()->addMinutes(30),
+        ])->save();
+        $shortWindow = $this->placeOnline($farmer);
+        $shortWindow->forceFill([
+            'payment_due_at' => $shortWindow->created_at->copy()->addHour(),
+        ])->save();
         $this->artisan('payments:upkeep')->assertSuccessful();
         $this->artisan('payments:upkeep')->assertSuccessful();
         $this->assertSame(1, $this->notices($buyer->id, NotificationType::PaymentDueSoon));
+        $this->assertNotNull($waiting->fresh()->payment_reminded_at);
+        $this->assertNull($shortWindow->fresh()->payment_reminded_at);
 
         $proofOrder = $this->placeOnline($farmer);
         $this->asUser($buyer)->post("/api/buyer/orders/{$proofOrder->id}/payment-proofs", [

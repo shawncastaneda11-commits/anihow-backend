@@ -78,12 +78,21 @@ class _PayNowScreenState extends State<PayNowScreen> with WidgetsBindingObserver
       if (!mounted) {
         return;
       }
+      final previous = _order;
+      final paymentChanged = previous == null ||
+          previous.paymentStatus != order.paymentStatus ||
+          previous.latestProof?.id != order.latestProof?.id ||
+          previous.latestProof?.status != order.latestProof?.status;
       setState(() {
         _order = order;
         _loading = false;
-        _amount.text = order.total;
         _qrId ??= order.paymentQrs.isNotEmpty ? order.paymentQrs.first.id : null;
-        _showForm = _startsWithForm(order);
+        // Coming back from the wallet app reloads too. Keep what the buyer
+        // typed and the open form unless the payment itself moved on.
+        if (paymentChanged) {
+          _amount.text = order.total;
+          _showForm = _startsWithForm(order);
+        }
       });
     } on ApiException catch (error) {
       if (mounted) {

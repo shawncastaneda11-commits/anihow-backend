@@ -2422,6 +2422,444 @@ class FarmerWalkInShare {
   }
 }
 
+class FarmerAnalyticsRange {
+  const FarmerAnalyticsRange({
+    required this.key,
+    required this.from,
+    required this.to,
+    required this.grouping,
+    required this.category,
+    required this.availableYears,
+  });
+
+  final String key;
+  final String from;
+  final String to;
+  final String grouping;
+  final String category;
+  final List<int> availableYears;
+
+  factory FarmerAnalyticsRange.fromJson(Map<String, dynamic> json) {
+    return FarmerAnalyticsRange(
+      key: json['key'] as String? ?? '',
+      from: json['from'] as String? ?? '',
+      to: json['to'] as String? ?? '',
+      grouping: json['grouping'] as String? ?? 'day',
+      category: json['category'] as String? ?? 'all',
+      availableYears: ((json['available_years'] as List?) ?? const [])
+          .map((year) => ListingItem._asCount(year) ?? 0)
+          .where((year) => year > 0)
+          .toList(),
+    );
+  }
+}
+
+class FarmerSalesTotals {
+  const FarmerSalesTotals({
+    required this.sales,
+    required this.orders,
+    required this.averageOrder,
+    required this.tawadTotal,
+    required this.averageTawad,
+  });
+
+  final double sales;
+  final int orders;
+  final double averageOrder;
+  final double tawadTotal;
+  final double averageTawad;
+
+  factory FarmerSalesTotals.fromJson(Map<String, dynamic> json) {
+    return FarmerSalesTotals(
+      sales: _asDouble(json['sales']),
+      orders: ListingItem._asCount(json['orders']) ?? 0,
+      averageOrder: _asDouble(json['average_order']),
+      tawadTotal: _asDouble(json['tawad_total']),
+      averageTawad: _asDouble(json['average_tawad']),
+    );
+  }
+}
+
+class FarmerPieSlice {
+  const FarmerPieSlice({
+    required this.crop,
+    required this.sales,
+    required this.percent,
+    this.cropTypeId,
+  });
+
+  final int? cropTypeId;
+  final String crop;
+  final double sales;
+  final double percent;
+
+  factory FarmerPieSlice.fromJson(Map<String, dynamic> json) {
+    return FarmerPieSlice(
+      cropTypeId: ListingItem._asCount(json['crop_type_id']),
+      crop: json['crop'] as String? ?? '',
+      sales: _asDouble(json['sales']),
+      percent: _asDouble(json['percent']),
+    );
+  }
+}
+
+class FarmerPieOthers {
+  const FarmerPieOthers({
+    required this.crops,
+    required this.sales,
+    required this.percent,
+  });
+
+  final int crops;
+  final double sales;
+  final double percent;
+
+  factory FarmerPieOthers.fromJson(Map<String, dynamic> json) {
+    return FarmerPieOthers(
+      crops: ListingItem._asCount(json['crops']) ?? 0,
+      sales: _asDouble(json['sales']),
+      percent: _asDouble(json['percent']),
+    );
+  }
+}
+
+class FarmerSalesPie {
+  const FarmerSalesPie({required this.slices, this.others});
+
+  final List<FarmerPieSlice> slices;
+  final FarmerPieOthers? others;
+
+  factory FarmerSalesPie.fromJson(Map<String, dynamic> json) {
+    return FarmerSalesPie(
+      slices: ((json['slices'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((item) => FarmerPieSlice.fromJson(Map<String, dynamic>.from(item)))
+          .toList(),
+      others: json['others'] is Map
+          ? FarmerPieOthers.fromJson(Map<String, dynamic>.from(json['others'] as Map))
+          : null,
+    );
+  }
+}
+
+class FarmerTopCrop {
+  const FarmerTopCrop({
+    required this.crop,
+    required this.unit,
+    required this.quantity,
+    required this.sales,
+    this.cropTypeId,
+  });
+
+  final int? cropTypeId;
+  final String crop;
+  final String unit;
+  final double quantity;
+  final double sales;
+
+  factory FarmerTopCrop.fromJson(Map<String, dynamic> json) {
+    return FarmerTopCrop(
+      cropTypeId: ListingItem._asCount(json['crop_type_id']),
+      crop: json['crop'] as String? ?? '',
+      unit: json['unit'] as String? ?? '',
+      quantity: _asDouble(json['quantity']),
+      sales: _asDouble(json['sales']),
+    );
+  }
+}
+
+class FarmerSalesPeriod {
+  const FarmerSalesPeriod({
+    required this.key,
+    required this.start,
+    required this.end,
+    required this.future,
+    required this.orders,
+    required this.sales,
+  });
+
+  final String key;
+  final String start;
+  final String end;
+  final bool future;
+  final int orders;
+  final double sales;
+
+  factory FarmerSalesPeriod.fromJson(Map<String, dynamic> json) {
+    return FarmerSalesPeriod(
+      key: json['key'] as String? ?? '',
+      start: json['start'] as String? ?? '',
+      end: json['end'] as String? ?? '',
+      future: json['future'] == true,
+      orders: ListingItem._asCount(json['orders']) ?? 0,
+      sales: _asDouble(json['sales']),
+    );
+  }
+}
+
+class FarmerSalesBucket {
+  const FarmerSalesBucket({required this.orders, required this.sales});
+
+  final int orders;
+  final double sales;
+
+  factory FarmerSalesBucket.fromJson(Map<String, dynamic> json) {
+    return FarmerSalesBucket(
+      orders: ListingItem._asCount(json['orders']) ?? 0,
+      sales: _asDouble(json['sales']),
+    );
+  }
+}
+
+class FarmerPaymentSplit {
+  const FarmerPaymentSplit({required this.online, required this.cash});
+
+  final FarmerSalesBucket online;
+  final FarmerSalesBucket cash;
+
+  factory FarmerPaymentSplit.fromJson(Map<String, dynamic> json) {
+    return FarmerPaymentSplit(
+      online: FarmerSalesBucket.fromJson(_mapOf(json['online'])),
+      cash: FarmerSalesBucket.fromJson(_mapOf(json['cash'])),
+    );
+  }
+}
+
+class FarmerSourceSplit {
+  const FarmerSourceSplit({required this.app, required this.walkIn});
+
+  final FarmerSalesBucket app;
+  final FarmerSalesBucket walkIn;
+
+  factory FarmerSourceSplit.fromJson(Map<String, dynamic> json) {
+    return FarmerSourceSplit(
+      app: FarmerSalesBucket.fromJson(_mapOf(json['app'])),
+      walkIn: FarmerSalesBucket.fromJson(_mapOf(json['walk_in'])),
+    );
+  }
+}
+
+class FarmerBestMonth {
+  const FarmerBestMonth({required this.key, required this.sales});
+
+  final String key;
+  final double sales;
+
+  factory FarmerBestMonth.fromJson(Map<String, dynamic> json) {
+    return FarmerBestMonth(
+      key: json['key'] as String? ?? '',
+      sales: _asDouble(json['sales']),
+    );
+  }
+}
+
+class FarmerYearTotal {
+  const FarmerYearTotal({
+    required this.sales,
+    required this.orders,
+    this.bestMonth,
+  });
+
+  final double sales;
+  final int orders;
+  final FarmerBestMonth? bestMonth;
+
+  factory FarmerYearTotal.fromJson(Map<String, dynamic> json) {
+    return FarmerYearTotal(
+      sales: _asDouble(json['sales']),
+      orders: ListingItem._asCount(json['orders']) ?? 0,
+      bestMonth: json['best_month'] is Map
+          ? FarmerBestMonth.fromJson(
+              Map<String, dynamic>.from(json['best_month'] as Map),
+            )
+          : null,
+    );
+  }
+}
+
+class FarmerSalesReport {
+  const FarmerSalesReport({
+    required this.totals,
+    required this.pie,
+    required this.topCrops,
+    required this.perPeriod,
+    required this.paymentSplit,
+    required this.sourceSplit,
+    this.yearTotal,
+  });
+
+  final FarmerSalesTotals totals;
+  final FarmerSalesPie pie;
+  final List<FarmerTopCrop> topCrops;
+  final List<FarmerSalesPeriod> perPeriod;
+  final FarmerPaymentSplit paymentSplit;
+  final FarmerSourceSplit sourceSplit;
+  final FarmerYearTotal? yearTotal;
+
+  factory FarmerSalesReport.fromJson(Map<String, dynamic> json) {
+    return FarmerSalesReport(
+      totals: FarmerSalesTotals.fromJson(_mapOf(json['totals'])),
+      pie: FarmerSalesPie.fromJson(_mapOf(json['pie'])),
+      topCrops: ((json['top_crops'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((item) => FarmerTopCrop.fromJson(Map<String, dynamic>.from(item)))
+          .toList(),
+      perPeriod: ((json['per_period'] as List?) ?? const [])
+          .whereType<Map>()
+          .map(
+            (item) => FarmerSalesPeriod.fromJson(Map<String, dynamic>.from(item)),
+          )
+          .toList(),
+      paymentSplit: FarmerPaymentSplit.fromJson(_mapOf(json['payment_split'])),
+      sourceSplit: FarmerSourceSplit.fromJson(_mapOf(json['source_split'])),
+      yearTotal: json['year_total'] is Map
+          ? FarmerYearTotal.fromJson(
+              Map<String, dynamic>.from(json['year_total'] as Map),
+            )
+          : null,
+    );
+  }
+}
+
+class FarmerHarvestCrop {
+  const FarmerHarvestCrop({
+    required this.crop,
+    required this.unit,
+    required this.harvested,
+    required this.rejected,
+    required this.good,
+    required this.rejectedByReason,
+    required this.sold,
+    required this.waiting,
+    required this.removed,
+    required this.removedByReason,
+    required this.remaining,
+    required this.potentialIncome,
+    required this.actualIncome,
+    this.cropTypeId,
+  });
+
+  final int? cropTypeId;
+  final String crop;
+  final String unit;
+  final double harvested;
+  final double rejected;
+  final double good;
+  final Map<String, double> rejectedByReason;
+  final double sold;
+  final double waiting;
+  final double removed;
+  final Map<String, double> removedByReason;
+  final double remaining;
+  final double potentialIncome;
+  final double actualIncome;
+
+  factory FarmerHarvestCrop.fromJson(Map<String, dynamic> json) {
+    final removed = _doubleMap(json['removed_by_reason']);
+    return FarmerHarvestCrop(
+      cropTypeId: ListingItem._asCount(json['crop_type_id']),
+      crop: json['crop'] as String? ?? '',
+      unit: json['unit'] as String? ?? '',
+      harvested: _asDouble(json['harvested']),
+      rejected: _asDouble(json['rejected']),
+      good: _asDouble(json['good']),
+      rejectedByReason: _doubleMap(json['rejected_by_reason']),
+      sold: _asDouble(json['sold']),
+      waiting: _asDouble(json['waiting']),
+      removed: _asDouble(json['removed']),
+      removedByReason: {
+        'spoiled': removed['spoiled'] ?? 0,
+        'damaged': removed['damaged'] ?? 0,
+        'sold_outside': removed['sold_outside'] ?? 0,
+        'correction': removed['correction'] ?? 0,
+      },
+      remaining: _asDouble(json['remaining']),
+      potentialIncome: _asDouble(json['potential_income']),
+      actualIncome: _asDouble(json['actual_income']),
+    );
+  }
+}
+
+class FarmerHarvestIncome {
+  const FarmerHarvestIncome({required this.potential, required this.actual});
+
+  final double potential;
+  final double actual;
+
+  factory FarmerHarvestIncome.fromJson(Map<String, dynamic> json) {
+    return FarmerHarvestIncome(
+      potential: _asDouble(json['potential']),
+      actual: _asDouble(json['actual']),
+    );
+  }
+}
+
+class FarmerHarvestCost {
+  const FarmerHarvestCost({
+    required this.recordsWithCost,
+    required this.recordsWithoutCost,
+    this.costTotal,
+    this.potentialIncomeWithCost,
+    this.actualIncomeWithCost,
+    this.potentialProfit,
+    this.actualProfit,
+  });
+
+  final int recordsWithCost;
+  final int recordsWithoutCost;
+  final double? costTotal;
+  final double? potentialIncomeWithCost;
+  final double? actualIncomeWithCost;
+  final double? potentialProfit;
+  final double? actualProfit;
+
+  factory FarmerHarvestCost.fromJson(Map<String, dynamic> json) {
+    return FarmerHarvestCost(
+      recordsWithCost: ListingItem._asCount(json['records_with_cost']) ?? 0,
+      recordsWithoutCost: ListingItem._asCount(json['records_without_cost']) ?? 0,
+      costTotal: _nullableDouble(json['cost_total']),
+      potentialIncomeWithCost: _nullableDouble(json['potential_income_with_cost']),
+      actualIncomeWithCost: _nullableDouble(json['actual_income_with_cost']),
+      potentialProfit: _nullableDouble(json['potential_profit']),
+      actualProfit: _nullableDouble(json['actual_profit']),
+    );
+  }
+}
+
+class FarmerHarvestReport {
+  const FarmerHarvestReport({
+    required this.records,
+    required this.estimatedRecords,
+    required this.unlinkedRecords,
+    required this.crops,
+    required this.income,
+    required this.cost,
+  });
+
+  final int records;
+  final int estimatedRecords;
+  final int unlinkedRecords;
+  final List<FarmerHarvestCrop> crops;
+  final FarmerHarvestIncome income;
+  final FarmerHarvestCost cost;
+
+  factory FarmerHarvestReport.fromJson(Map<String, dynamic> json) {
+    return FarmerHarvestReport(
+      records: ListingItem._asCount(json['records']) ?? 0,
+      estimatedRecords: ListingItem._asCount(json['estimated_records']) ?? 0,
+      unlinkedRecords: ListingItem._asCount(json['unlinked_records']) ?? 0,
+      crops: ((json['crops'] as List?) ?? const [])
+          .whereType<Map>()
+          .map(
+            (item) => FarmerHarvestCrop.fromJson(Map<String, dynamic>.from(item)),
+          )
+          .toList(),
+      income: FarmerHarvestIncome.fromJson(_mapOf(json['income'])),
+      cost: FarmerHarvestCost.fromJson(_mapOf(json['cost'])),
+    );
+  }
+}
+
 class FarmerAnalytics {
   const FarmerAnalytics({
     required this.period,
@@ -2432,6 +2870,9 @@ class FarmerAnalytics {
     required this.walkInShare,
     this.windowStart,
     this.windowEnd,
+    this.range,
+    this.sales,
+    this.harvest,
   });
 
   final String period;
@@ -2442,8 +2883,85 @@ class FarmerAnalytics {
   final List<FarmerCropSales> unitsPerCropType;
   final List<FarmerCropSales> bestSelling;
   final FarmerWalkInShare walkInShare;
+  final FarmerAnalyticsRange? range;
+  final FarmerSalesReport? sales;
+  final FarmerHarvestReport? harvest;
 
-  bool get isEmpty => summary.isEmpty;
+  bool get isEmpty => summary.isEmpty && sales == null && harvest == null;
+
+  bool get hasCompletedSales {
+    final report = sales;
+    if (report != null) {
+      return report.totals.orders > 0 || report.totals.sales > 0;
+    }
+    return !summary.isEmpty;
+  }
+
+  FarmerSalesTotals get displayTotals {
+    final report = sales;
+    if (report != null) {
+      return report.totals;
+    }
+    final orders = summary.completedOrders;
+    return FarmerSalesTotals(
+      sales: summary.grossSales,
+      orders: orders,
+      averageOrder: orders == 0 ? 0 : summary.grossSales / orders,
+      tawadTotal: 0,
+      averageTawad: summary.averageDiscount,
+    );
+  }
+
+  List<FarmerSalesPeriod> get displayPeriods {
+    final report = sales;
+    if (report != null) {
+      return report.perPeriod;
+    }
+    return [
+      for (final point in salesPerPeriod)
+        FarmerSalesPeriod(
+          key: point.period,
+          start: point.period,
+          end: point.period,
+          future: false,
+          orders: point.orders,
+          sales: point.revenue,
+        ),
+    ];
+  }
+
+  List<FarmerTopCrop> get displayTopCrops {
+    final report = sales;
+    if (report != null) {
+      return report.topCrops;
+    }
+    return [
+      for (final row in unitsPerCropType)
+        FarmerTopCrop(
+          crop: row.crop,
+          unit: row.unit ?? '',
+          quantity: row.units,
+          sales: row.revenue,
+        ),
+    ];
+  }
+
+  FarmerSourceSplit get displaySource {
+    final report = sales;
+    if (report != null) {
+      return report.sourceSplit;
+    }
+    return FarmerSourceSplit(
+      app: FarmerSalesBucket(
+        orders: walkInShare.appOrders,
+        sales: walkInShare.appSales,
+      ),
+      walkIn: FarmerSalesBucket(
+        orders: walkInShare.walkInOrders,
+        sales: walkInShare.walkInSales,
+      ),
+    );
+  }
 
   factory FarmerAnalytics.fromJson(Map<String, dynamic> json) {
     return FarmerAnalytics(
@@ -2479,8 +2997,46 @@ class FarmerAnalytics {
             ? Map<String, dynamic>.from(json['walk_in_share'] as Map)
             : <String, dynamic>{},
       ),
+      range: json['range'] is Map
+          ? FarmerAnalyticsRange.fromJson(
+              Map<String, dynamic>.from(json['range'] as Map),
+            )
+          : null,
+      sales: json['sales'] is Map
+          ? FarmerSalesReport.fromJson(
+              Map<String, dynamic>.from(json['sales'] as Map),
+            )
+          : null,
+      harvest: json['harvest'] is Map
+          ? FarmerHarvestReport.fromJson(
+              Map<String, dynamic>.from(json['harvest'] as Map),
+            )
+          : null,
     );
   }
+}
+
+Map<String, dynamic> _mapOf(Object? value) {
+  if (value is Map) {
+    return Map<String, dynamic>.from(value);
+  }
+  return const {};
+}
+
+Map<String, double> _doubleMap(Object? value) {
+  if (value is! Map) {
+    return const {};
+  }
+  return {
+    for (final entry in value.entries) '${entry.key}': _asDouble(entry.value),
+  };
+}
+
+double? _nullableDouble(Object? value) {
+  if (value == null) {
+    return null;
+  }
+  return ListingItem._asDouble(value);
 }
 
 class StockHistoryPage {

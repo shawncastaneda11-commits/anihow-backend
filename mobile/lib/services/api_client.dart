@@ -1209,8 +1209,23 @@ class ApiClient {
     );
   }
 
-  Future<FarmerAnalytics> farmerAnalytics({String period = 'week'}) async {
-    final response = await _get('/farmer/analytics', query: {'period': period});
+  Future<FarmerAnalytics> farmerAnalytics({
+    String range = 'month',
+    String? from,
+    String? to,
+    int? year,
+    String category = 'all',
+  }) async {
+    final response = await _get(
+      '/farmer/analytics',
+      query: {
+        'range': range,
+        'category': category,
+        if (range == 'custom' && from != null) 'from': from,
+        if (range == 'custom' && to != null) 'to': to,
+        if (range == 'yearly' && year != null) 'year': year,
+      },
+    );
     return FarmerAnalytics.fromJson(_asMap(response['data'] ?? response));
   }
 

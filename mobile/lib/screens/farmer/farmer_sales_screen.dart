@@ -1,46 +1,71 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
+import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/async_view.dart';
+import '../../widgets/brand_tab_bar.dart';
 import '../../widgets/hint_card.dart';
 
+typedef SalesRangePicker = Future<DateTimeRange?> Function(BuildContext context);
+
+const Color _piePeach = Color(0xFFE8A87C);
+const Color _pieOthers = Color(0xFFC9C4B8);
+
 class FarmerSalesScreen extends StatefulWidget {
-  const FarmerSalesScreen({
-    super.key,
-    this.preview,
-    this.initialPeriod = 'week',
-  });
+  const FarmerSalesScreen({super.key, this.preview, this.chooseCustomRange});
 
   final FarmerAnalytics? preview;
-  final String initialPeriod;
+  final SalesRangePicker? chooseCustomRange;
 
   @override
   State<FarmerSalesScreen> createState() => _FarmerSalesScreenState();
 }
 
 class _FarmerSalesScreenState extends State<FarmerSalesScreen> {
-  late String _period;
+  String _range = 'month';
+  String? _from;
+  String? _to;
+  int? _year;
+  String _category = 'all';
+  String? _selectedPeriod;
+  bool _showAllCrops = false;
   late Future<FarmerAnalytics> _future;
 
   @override
   void initState() {
     super.initState();
-    _period = widget.initialPeriod;
     _future = _load();
   }
 
-  Future<FarmerAnalytics> _load() async {
+  bool _valueAdded(BuildContext context) {
+    try {
+      return context.read<AuthController>().user?.farmFeatures.valueAdded ??
+          false;
+    } on ProviderNotFoundException {
+      return false;
+    }
+  }
+
+  Future<FarmerAnalytics> _load() {
     final preview = widget.preview;
     if (preview != null) {
-      return preview;
+      return Future.value(preview);
     }
-
-    return context.read<AuthController>().api.farmerAnalytics(period: _period);
+    final category = _valueAdded(context) ? _category : 'all';
+    return context.read<AuthController>().api.farmerAnalytics(
+      range: _range,
+      from: _from,
+      to: _to,
+      year: _year,
+      category: category,
+    );
   }
 
   Future<void> _reload() async {
@@ -49,125 +74,265 @@ class _FarmerSalesScreenState extends State<FarmerSalesScreen> {
     await next;
   }
 
-  Future<void> _setPeriod(String period) async {
-    if (_period == period) {
+  Future<void> _commit({
+    required String range,
+    String? from,
+    String? to,
+    int? year,
+    String? category,
+  }) async {
+    final previousRange = _range;
+    final previousFrom = _from;
+    final previousTo = _to;
+    final previousYear = _year;
+    final previousCategory = _category;
+    final previousFuture = _future;
+    setState(() {
+      _range = range;
+      _from = from;
+      _to = to;
+      _year = year;
+      if (category != null) {
+        _category = category;
+      }
+      _selectedPeriod = null;
+      _showAllCrops = false;
+      _future = _load();
+    });
+    try {
+      await _future;
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _range = previousRange;
+        _from = previousFrom;
+        _to = previousTo;
+        _year = previousYear;
+        _category = previousCategory;
+        _future = previousFuture;
+      });
+      _snack(error.message);
+    }
+  }
+
+  void _snack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _chooseCustom() async {
+    final picker = widget.chooseCustomRange;
+    final picked = picker != null
+        ? await picker(context)
+        : await showDateRangePicker(
+            context: context,
+            firstDate: DateTime(2020),
+            lastDate: DateTime.now(),
+          );
+    if (picked == null || !mounted) {
       return;
     }
-    setState(() => _period = period);
-    await _reload();
+    final start = DateTime(picked.start.year, picked.start.month, picked.start.day);
+    final end = DateTime(picked.end.year, picked.end.month, picked.end.day);
+    if (end.difference(start).inDays + 1 > 366) {
+      _snack(AppStrings.of(context).pickAtMost366);
+      return;
+    }
+    await _commit(range: 'custom', from: _iso(start), to: _iso(end));
+  }
+
+  Future<void> _chooseYear(FarmerAnalytics data) async {
+    final years = data.range?.availableYears.isNotEmpty == true
+        ? data.range!.availableYears
+        : [DateTime.now().year];
+    final picked = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        final s = AppStrings.of(context);
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                child: Text(s.chooseYear, style: Theme.of(context).textTheme.titleMedium),
+              ),
+              for (final year in years)
+                ListTile(
+                  key: Key('sales-year-$year'),
+                  title: Text('$year'),
+                  onTap: () => Navigator.pop(context, year),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+    if (picked == null || !mounted) {
+      return;
+    }
+    await _commit(range: 'yearly', year: picked);
   }
 
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
+    final valueAdded = _valueAdded(context);
 
     return AsyncView<FarmerAnalytics>(
       future: _future,
       onRetry: _reload,
       builder: (context, data) {
-        if (data.isEmpty) {
-          return ListView(
-            key: const Key('sales-empty'),
-            padding: AniHowSpace.screenPadding,
+        return DefaultTabController(
+          length: 2,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _PeriodToggle(period: _period, onChanged: _setPeriod),
-              _WindowLine(start: data.windowStart, end: data.windowEnd),
-              const SizedBox(height: AniHowSpace.section),
-              AniHowHintCard(
-                icon: Icons.insights_outlined,
-                title: s.mySalesEmpty,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: _RangeChips(
+                  range: _range,
+                  year: _year,
+                  onWeek: () => _commit(range: 'week'),
+                  onMonth: () => _commit(range: 'month'),
+                  onYear: () => _commit(range: 'year'),
+                  onYearly: () => _chooseYear(data),
+                  onCustom: _chooseCustom,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: _WindowLine(
+                  text: _windowText(s, data),
+                ),
+              ),
+              if (valueAdded)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: _CategoryToggle(
+                    category: _category,
+                    onChanged: (category) => _commit(
+                      range: _range,
+                      from: _from,
+                      to: _to,
+                      year: _year,
+                      category: category,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 8),
+              Material(
+                color: AniHowColors.brand,
+                child: onBrandTabBar(
+                  tabs: [
+                    Tab(text: s.sales),
+                    Tab(text: s.harvestTab),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    _SalesTab(
+                      data: data,
+                      selectedPeriod: _selectedPeriod,
+                      onSelectPeriod: (key) => setState(() => _selectedPeriod = key),
+                      onRefresh: _reload,
+                    ),
+                    _HarvestTab(
+                      data: data,
+                      showAll: _showAllCrops,
+                      onShowAll: () => setState(() => _showAllCrops = true),
+                      onRefresh: _reload,
+                    ),
+                  ],
+                ),
               ),
             ],
-          );
-        }
-
-        return ListView(
-          padding: AniHowSpace.screenPadding,
-          children: [
-            _PeriodToggle(period: _period, onChanged: _setPeriod),
-            _WindowLine(start: data.windowStart, end: data.windowEnd),
-            const SizedBox(height: AniHowSpace.cardGap),
-            _SummaryTiles(summary: data.summary),
-            const SizedBox(height: AniHowSpace.section),
-            Text(s.salesThisPeriod, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: AniHowSpace.cardGap),
-            _SalesBars(points: data.salesPerPeriod),
-            const SizedBox(height: AniHowSpace.section),
-            Text(s.walkInShare, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: AniHowSpace.cardGap),
-            _WalkInCard(share: data.walkInShare),
-            if (data.unitsPerCropType.isNotEmpty) ...[
-              const SizedBox(height: AniHowSpace.section),
-              Text(s.topCrops, style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: AniHowSpace.cardGap),
-              ...data.unitsPerCropType.map((row) => _CropRow(row: row)),
-            ],
-            if (data.bestSelling.isNotEmpty) ...[
-              const SizedBox(height: AniHowSpace.section),
-              Text(s.bestSellers, style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: AniHowSpace.cardGap),
-              ...data.bestSelling.map((row) => _CropRow(row: row)),
-            ],
-          ],
+          ),
         );
       },
     );
   }
-}
 
-class _WindowLine extends StatelessWidget {
-  const _WindowLine({required this.start, required this.end});
-
-  final String? start;
-  final String? end;
-
-  @override
-  Widget build(BuildContext context) {
-    if (start == null || end == null || start!.isEmpty || end!.isEmpty) {
-      return const SizedBox.shrink();
+  String _windowText(AppStrings s, FarmerAnalytics data) {
+    final start = data.range?.from ?? data.windowStart;
+    final end = data.range?.to ?? data.windowEnd;
+    if (start == null || end == null || start.isEmpty || end.isEmpty) {
+      return '';
     }
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Text(
-        AppStrings.of(context).salesWindow(start!, end!),
-        key: const Key('sales-window'),
-        style: Theme.of(context).textTheme.bodySmall,
-      ),
-    );
+    return s.salesRangeLine(start, end, data.range?.grouping);
   }
 }
 
-class _PeriodToggle extends StatelessWidget {
-  const _PeriodToggle({required this.period, required this.onChanged});
+class _RangeChips extends StatelessWidget {
+  const _RangeChips({
+    required this.range,
+    required this.year,
+    required this.onWeek,
+    required this.onMonth,
+    required this.onYear,
+    required this.onYearly,
+    required this.onCustom,
+  });
 
-  final String period;
-  final Future<void> Function(String period) onChanged;
+  final String range;
+  final int? year;
+  final VoidCallback onWeek;
+  final VoidCallback onMonth;
+  final VoidCallback onYear;
+  final VoidCallback onYearly;
+  final VoidCallback onCustom;
 
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
+    final yearlyLabel = range == 'yearly' && year != null
+        ? s.yearlyChip(year!)
+        : s.yearly;
 
-    return Row(
-      children: [
-        Expanded(
-          child: _PeriodChip(
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _PeriodChip(
             key: const Key('sales-period-week'),
-            label: s.periodWeek,
-            selected: period == 'week',
-            onTap: () => onChanged('week'),
+            label: s.thisWeek,
+            selected: range == 'week',
+            onTap: onWeek,
           ),
-        ),
-        const SizedBox(width: AniHowSpace.cardGap),
-        Expanded(
-          child: _PeriodChip(
+          const SizedBox(width: 8),
+          _PeriodChip(
             key: const Key('sales-period-month'),
-            label: s.periodMonth,
-            selected: period == 'month',
-            onTap: () => onChanged('month'),
+            label: s.thisMonth,
+            selected: range == 'month',
+            onTap: onMonth,
           ),
-        ),
-      ],
+          const SizedBox(width: 8),
+          _PeriodChip(
+            key: const Key('sales-range-year'),
+            label: s.thisYear,
+            selected: range == 'year',
+            onTap: onYear,
+          ),
+          const SizedBox(width: 8),
+          _PeriodChip(
+            key: const Key('sales-range-yearly'),
+            label: yearlyLabel,
+            selected: range == 'yearly',
+            onTap: onYearly,
+          ),
+          const SizedBox(width: 8),
+          _PeriodChip(
+            key: const Key('sales-range-custom'),
+            label: s.customRange,
+            selected: range == 'custom',
+            onTap: onCustom,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -196,11 +361,16 @@ class _PeriodChip extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(AniHowTheme.cardRadius),
-          child: Center(
-            child: Text(
-              label,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: selected ? AniHowColors.brand : theme.colorScheme.onSurface,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Center(
+              child: Text(
+                label,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: selected
+                      ? AniHowColors.brand
+                      : theme.colorScheme.onSurface,
+                ),
               ),
             ),
           ),
@@ -210,52 +380,250 @@ class _PeriodChip extends StatelessWidget {
   }
 }
 
-class _SummaryTiles extends StatelessWidget {
-  const _SummaryTiles({required this.summary});
+class _WindowLine extends StatelessWidget {
+  const _WindowLine({required this.text});
 
-  final FarmerAnalyticsSummary summary;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      key: const Key('sales-window'),
+      style: Theme.of(context).textTheme.bodyMedium,
+    );
+  }
+}
+
+class _CategoryToggle extends StatelessWidget {
+  const _CategoryToggle({required this.category, required this.onChanged});
+
+  final String category;
+  final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+      children: [
+        _PeriodChip(
+          key: const Key('sales-category-all'),
+          label: s.salesCategoryAll,
+          selected: category == 'all',
+          onTap: () => onChanged('all'),
+        ),
+        const SizedBox(width: 8),
+        _PeriodChip(
+          key: const Key('sales-category-fresh'),
+          label: s.salesCategoryFresh,
+          selected: category == 'fresh',
+          onTap: () => onChanged('fresh'),
+        ),
+        const SizedBox(width: 8),
+        _PeriodChip(
+          key: const Key('sales-category-value-added'),
+          label: s.salesCategoryValueAdded,
+          selected: category == 'value_added',
+          onTap: () => onChanged('value_added'),
+        ),
+      ],
+      ),
+    );
+  }
+}
 
+class _SalesTab extends StatelessWidget {
+  const _SalesTab({
+    required this.data,
+    required this.selectedPeriod,
+    required this.onSelectPeriod,
+    required this.onRefresh,
+  });
+
+  final FarmerAnalytics data;
+  final String? selectedPeriod;
+  final ValueChanged<String> onSelectPeriod;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    if (!data.hasCompletedSales) {
+      return RefreshIndicator(
+        onRefresh: onRefresh,
+        child: ListView(
+          key: const Key('sales-empty'),
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: AniHowSpace.screenPadding,
+          children: [
+            AniHowHintCard(icon: Icons.insights_outlined, title: s.mySalesEmpty),
+          ],
+        ),
+      );
+    }
+
+    final report = data.sales;
+    final totals = data.displayTotals;
+    final periods = data.displayPeriods;
+    final grouping = data.range?.grouping ?? 'day';
+    FarmerSalesPeriod? selected;
+    for (final point in periods) {
+      if (point.key == selectedPeriod) {
+        selected = point;
+      }
+    }
+
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: AniHowSpace.screenPadding,
+        children: [
+          _MoneyTiles(
+            tiles: [
+              (s.totalSales, AniHowMoney.peso(totals.sales)),
+              (s.completedOrders, '${totals.orders}'),
+              (s.averageOrder, AniHowMoney.peso(totals.averageOrder)),
+              (s.averageTawad, AniHowMoney.peso(totals.averageTawad)),
+            ],
+          ),
+          if (report != null && _hasPie(report.pie)) ...[
+            const SizedBox(height: AniHowSpace.section),
+            _DonutCard(pie: report.pie, total: totals.sales),
+          ],
+          const SizedBox(height: AniHowSpace.section),
+          _SalesBars(
+            periods: periods,
+            grouping: grouping,
+            selected: selected,
+            onSelect: onSelectPeriod,
+          ),
+          if (data.range?.key == 'yearly' || report?.yearTotal != null) ...[
+            const SizedBox(height: AniHowSpace.section),
+            _YearCard(total: report?.yearTotal),
+          ],
+          const SizedBox(height: AniHowSpace.section),
+          Text(s.topCrops, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: AniHowSpace.cardGap),
+          for (final crop in data.displayTopCrops) ...[
+            _TopCropRow(crop: crop),
+            const SizedBox(height: AniHowSpace.cardGap),
+          ],
+          _PaidCard(
+            payment: report?.paymentSplit,
+            source: data.displaySource,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HarvestTab extends StatelessWidget {
+  const _HarvestTab({
+    required this.data,
+    required this.showAll,
+    required this.onShowAll,
+    required this.onRefresh,
+  });
+
+  final FarmerAnalytics data;
+  final bool showAll;
+  final VoidCallback onShowAll;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final harvest = data.harvest;
+    final empty = harvest == null || (harvest.records == 0 && harvest.crops.isEmpty);
+
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: AniHowSpace.screenPadding,
+        children: [
+          AniHowHintCard(
+            key: const Key('sales-harvest-note'),
+            icon: Icons.agriculture_outlined,
+            title: s.harvestNote,
+            body: harvest != null && harvest.estimatedRecords > 0
+                ? s.estimatedHarvests(harvest.estimatedRecords)
+                : null,
+          ),
+          const SizedBox(height: AniHowSpace.section),
+          if (empty)
+            Text(s.noHarvests, style: Theme.of(context).textTheme.bodyLarge)
+          else ...[
+            _MoneyTiles(
+              tiles: [
+                (s.harvestsRecorded, '${harvest.records}'),
+                (s.cropsHarvested, '${harvest.crops.length}'),
+                (s.expectedIncome, AniHowMoney.peso(harvest.income.potential)),
+                (s.actualIncomeSoFar, AniHowMoney.peso(harvest.income.actual)),
+              ],
+            ),
+            const SizedBox(height: AniHowSpace.section),
+            ..._cropCards(s, harvest, showAll, onShowAll),
+            _IncomeBars(income: harvest.income),
+            const SizedBox(height: AniHowSpace.section),
+            _ProfitCard(harvest: harvest),
+          ],
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _cropCards(
+    AppStrings s,
+    FarmerHarvestReport harvest,
+    bool showAll,
+    VoidCallback onShowAll,
+  ) {
+    final crops = [...harvest.crops]
+      ..sort((a, b) => b.harvested.compareTo(a.harvested));
+    final visible = showAll ? crops : crops.take(6).toList();
+    return [
+      for (final crop in visible) ...[
+        _HarvestCropCard(crop: crop),
+        const SizedBox(height: AniHowSpace.cardGap),
+      ],
+      if (!showAll && crops.length > 6)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(onPressed: onShowAll, child: Text(s.showAllCrops)),
+        ),
+      const SizedBox(height: AniHowSpace.section),
+    ];
+  }
+}
+
+class _MoneyTiles extends StatelessWidget {
+  const _MoneyTiles({required this.tiles});
+
+  final List<(String, String)> tiles;
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _StatTile(
-                label: s.completedOrders,
-                value: '${summary.completedOrders}',
+        for (var i = 0; i < tiles.length; i += 2) ...[
+          if (i > 0) const SizedBox(height: AniHowSpace.cardGap),
+          Row(
+            children: [
+              Expanded(child: _StatTile(label: tiles[i].$1, value: tiles[i].$2)),
+              const SizedBox(width: AniHowSpace.cardGap),
+              Expanded(
+                child: i + 1 < tiles.length
+                    ? _StatTile(label: tiles[i + 1].$1, value: tiles[i + 1].$2)
+                    : const SizedBox.shrink(),
               ),
-            ),
-            const SizedBox(width: AniHowSpace.cardGap),
-            Expanded(
-              child: _StatTile(
-                label: s.unitsSold,
-                value: summary.unitsSold.toStringAsFixed(summary.unitsSold == summary.unitsSold.roundToDouble() ? 0 : 2),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AniHowSpace.cardGap),
-        Row(
-          children: [
-            Expanded(
-              child: _StatTile(
-                label: s.grossSales,
-                value: AniHowMoney.peso(summary.grossSales),
-              ),
-            ),
-            const SizedBox(width: AniHowSpace.cardGap),
-            Expanded(
-              child: _StatTile(
-                label: s.averageTawad,
-                value: AniHowMoney.peso(summary.averageDiscount),
-              ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -270,7 +638,6 @@ class _StatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
     return Card(
       child: Padding(
         padding: AniHowSpace.cardPadding,
@@ -287,97 +654,416 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-class _SalesBars extends StatelessWidget {
-  const _SalesBars({required this.points});
+class _DonutCard extends StatelessWidget {
+  const _DonutCard({required this.pie, required this.total});
 
-  final List<FarmerSalesPoint> points;
+  final FarmerSalesPie pie;
+  final double total;
 
   @override
   Widget build(BuildContext context) {
-    final maxRevenue = points.fold<double>(0, (max, point) => point.revenue > max ? point.revenue : max);
-    final theme = Theme.of(context);
+    final s = AppStrings.of(context);
+    final parts = _pieParts(pie, s.othersSlice);
+    return Card(
+      child: Padding(
+        padding: AniHowSpace.cardPadding,
+        child: Column(
+          children: [
+            SizedBox(
+              height: 160,
+              width: 160,
+              child: CustomPaint(
+                painter: _DonutPainter(parts.map((part) => (part.amount, part.color)).toList()),
+                child: Center(
+                  child: Text(
+                    AniHowMoney.peso(total),
+                    style: Theme.of(context).textTheme.titleSmall,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            for (final part in parts)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: part.color,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(part.label)),
+                    Text(AniHowMoney.peso(part.amount)),
+                    const SizedBox(width: 8),
+                    Text(_percent(part.percent)),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PiePart {
+  const _PiePart({
+    required this.label,
+    required this.amount,
+    required this.percent,
+    required this.color,
+  });
+
+  final String label;
+  final double amount;
+  final double percent;
+  final Color color;
+}
+
+bool _hasPie(FarmerSalesPie pie) => pie.slices.isNotEmpty || pie.others != null;
+
+List<_PiePart> _pieParts(FarmerSalesPie pie, String othersLabel) {
+  const colors = [
+    AniHowColors.brand,
+    AniHowColors.sage,
+    AniHowColors.eggplant,
+    AniHowColors.root,
+    _piePeach,
+  ];
+  final parts = <_PiePart>[];
+  for (var i = 0; i < pie.slices.length; i++) {
+    final slice = pie.slices[i];
+    parts.add(
+      _PiePart(
+        label: slice.crop,
+        amount: slice.sales,
+        percent: slice.percent,
+        color: colors[i % colors.length],
+      ),
+    );
+  }
+  final others = pie.others;
+  if (others != null) {
+    parts.add(
+      _PiePart(
+        label: othersLabel,
+        amount: others.sales,
+        percent: others.percent,
+        color: _pieOthers,
+      ),
+    );
+  }
+  return parts.where((part) => part.amount > 0 || part.percent > 0).toList();
+}
+
+class _DonutPainter extends CustomPainter {
+  const _DonutPainter(this.parts);
+
+  final List<(double, Color)> parts;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final total = parts.fold<double>(0, (sum, part) => sum + part.$1);
+    if (total <= 0) {
+      return;
+    }
+    final stroke = size.shortestSide * 0.16;
+    final rect = Rect.fromCircle(
+      center: size.center(Offset.zero),
+      radius: size.shortestSide / 2 - stroke / 2,
+    );
+    var start = -math.pi / 2;
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke;
+    for (final part in parts) {
+      final sweep = part.$1 / total * math.pi * 2;
+      paint.color = part.$2;
+      canvas.drawArc(rect, start, sweep, false, paint);
+      start += sweep;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DonutPainter oldDelegate) => oldDelegate.parts != parts;
+}
+
+class _SalesBars extends StatelessWidget {
+  const _SalesBars({
+    required this.periods,
+    required this.grouping,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final List<FarmerSalesPeriod> periods;
+  final String grouping;
+  final FarmerSalesPeriod? selected;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final maxSales = periods.fold<double>(
+      0,
+      (max, point) => point.sales > max ? point.sales : max,
+    );
+    final caption = grouping == 'day' ? _monthCaption(s, periods) : null;
 
     return Card(
       key: const Key('sales-chart'),
       child: Padding(
         padding: AniHowSpace.cardPadding,
-        child: SizedBox(
-          height: 160,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              for (final point in points)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 3),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.bottomCenter,
-                            child: FractionallySizedBox(
-                              heightFactor: maxRevenue <= 0 ? 0.04 : (point.revenue / maxRevenue).clamp(0.04, 1),
-                              widthFactor: 1,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: AniHowColors.brand,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                              ),
-                            ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(s.salesOverTime, style: Theme.of(context).textTheme.titleSmall),
+            if (selected != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                _periodDetail(s, selected!),
+                key: const Key('sales-bar-detail'),
+              ),
+            ],
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 140,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: periods.length,
+                itemBuilder: (context, index) {
+                  final point = periods[index];
+                  return SizedBox(
+                    width: 44,
+                    child: _BarColumn(
+                      point: point,
+                      label: _barLabel(s, point),
+                      heightFactor: maxSales <= 0
+                          ? 0.08
+                          : (point.sales / maxSales).clamp(0.08, 1),
+                      onTap: () => onSelect(point.key),
+                    ),
+                  );
+                },
+              ),
+            ),
+            if (caption != null) ...[
+              const SizedBox(height: 6),
+              Text(caption, style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _barLabel(AppStrings s, FarmerSalesPeriod point) {
+    final start = _calendar(point.start);
+    if (start == null) {
+      return point.key;
+    }
+    return switch (grouping) {
+      'month' => s.monthName(start),
+      'week' => s.shortDate(start),
+      _ => '${start.day}',
+    };
+  }
+
+  String _periodDetail(AppStrings s, FarmerSalesPeriod point) {
+    final start = _calendar(point.start);
+    final end = _calendar(point.end);
+    final when = switch (grouping) {
+      'week' when start != null && end != null =>
+        '${s.shortDate(start)}–${s.shortDate(end)}',
+      'month' when start != null => s.monthName(start),
+      _ when start != null => s.shortDate(start),
+      _ => point.key,
+    };
+    return '$when · ${AniHowMoney.peso(point.sales)} · ${s.ordersCount(point.orders)}';
+  }
+}
+
+class _BarColumn extends StatelessWidget {
+  const _BarColumn({
+    required this.point,
+    required this.label,
+    required this.heightFactor,
+    required this.onTap,
+  });
+
+  final FarmerSalesPeriod point;
+  final String label;
+  final double heightFactor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Expanded(
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: point.future
+                  ? CustomPaint(
+                      key: Key('sales-future-${point.key}'),
+                      painter: const _DashedOutlinePainter(),
+                      child: const SizedBox(width: 22, height: 72),
+                    )
+                  : FractionallySizedBox(
+                      heightFactor: heightFactor,
+                      child: const SizedBox(
+                        width: 22,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: AniHowColors.brand,
+                            borderRadius: BorderRadius.all(Radius.circular(6)),
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          _shortPeriod(point.period),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelSmall,
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashedOutlinePainter extends CustomPainter {
+  const _DashedOutlinePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(6)),
+      );
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..color = AniHowColors.brand;
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        final next = math.min(distance + 4, metric.length);
+        canvas.drawPath(metric.extractPath(distance, next), paint);
+        distance = next + 3;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedOutlinePainter oldDelegate) => false;
+}
+
+class _YearCard extends StatelessWidget {
+  const _YearCard({required this.total});
+
+  final FarmerYearTotal? total;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final year = total;
+    if (year == null) {
+      return const SizedBox.shrink();
+    }
+    final orders = year.orders;
+    final average = orders == 0 ? 0 : year.sales / orders;
+    final best = year.bestMonth;
+    final bestDate = best == null ? null : _monthFromKey(best.key);
+    final bestLabel = bestDate == null ? '—' : s.monthName(bestDate);
+
+    return Card(
+      color: AniHowColors.brand,
+      child: Padding(
+        padding: AniHowSpace.cardPadding,
+        child: DefaultTextStyle(
+          style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Colors.white),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(s.yearTotalTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              Text('${s.totalSales}: ${AniHowMoney.peso(year.sales)}'),
+              Text('${s.completedOrders}: $orders'),
+              Text('${s.bestMonth}: $bestLabel'),
+              Text('${s.averageOrder}: ${AniHowMoney.peso(average)}'),
             ],
           ),
         ),
       ),
     );
   }
-
-  String _shortPeriod(String period) {
-    if (period.length >= 10 && period.contains('-')) {
-      return period.substring(5);
-    }
-    return period;
-  }
 }
 
-class _WalkInCard extends StatelessWidget {
-  const _WalkInCard({required this.share});
+class _TopCropRow extends StatelessWidget {
+  const _TopCropRow({required this.crop});
 
-  final FarmerWalkInShare share;
+  final FarmerTopCrop crop;
 
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
+    return Card(
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: AniHowSpace.cardPad),
+        title: Text(crop.crop),
+        subtitle: Text(s.quantitySold(_qty(crop.quantity), crop.unit)),
+        trailing: Text(AniHowMoney.peso(crop.sales)),
+      ),
+    );
+  }
+}
 
+class _PaidCard extends StatelessWidget {
+  const _PaidCard({required this.payment, required this.source});
+
+  final FarmerPaymentSplit? payment;
+  final FarmerSourceSplit source;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final online = payment?.online ?? const FarmerSalesBucket(orders: 0, sales: 0);
+    final cash = payment?.cash ?? const FarmerSalesBucket(orders: 0, sales: 0);
     return Card(
       child: Padding(
         padding: AniHowSpace.cardPadding,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _ShareLine(
-              label: s.walkInSales,
-              orders: share.walkInOrders,
-              sales: share.walkInSales,
+            Text(s.howBuyersPaid, style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            _SplitBar(
+              leftLabel: s.onlinePay,
+              rightLabel: s.cashPay,
+              left: online,
+              right: cash,
             ),
-            const SizedBox(height: AniHowSpace.cardGap),
-            _ShareLine(
-              label: s.appSales,
-              orders: share.appOrders,
-              sales: share.appSales,
+            const SizedBox(height: 4),
+            Text(s.cashIncludesWalkIn, style: Theme.of(context).textTheme.bodySmall),
+            const SizedBox(height: 12),
+            _SplitBar(
+              leftLabel: s.appSales,
+              rightLabel: s.walkInSales,
+              left: source.app,
+              right: source.walkIn,
             ),
           ],
         ),
@@ -386,53 +1072,391 @@ class _WalkInCard extends StatelessWidget {
   }
 }
 
-class _ShareLine extends StatelessWidget {
-  const _ShareLine({
-    required this.label,
-    required this.orders,
-    required this.sales,
+class _SplitBar extends StatelessWidget {
+  const _SplitBar({
+    required this.leftLabel,
+    required this.rightLabel,
+    required this.left,
+    required this.right,
   });
 
-  final String label;
-  final int orders;
-  final double sales;
+  final String leftLabel;
+  final String rightLabel;
+  final FarmerSalesBucket left;
+  final FarmerSalesBucket right;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Row(
+    final s = AppStrings.of(context);
+    final total = left.sales + right.sales;
+    final leftFlex = total <= 0 ? 1 : math.max(1, (left.sales / total * 100).round());
+    final rightFlex = total <= 0 ? 1 : math.max(1, (right.sales / total * 100).round());
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
-        Text(
-          '$orders · ${AniHowMoney.peso(sales)}',
-          style: theme.textTheme.titleSmall,
+        SizedBox(
+          height: 10,
+          child: Row(
+            children: [
+              Expanded(flex: leftFlex, child: const ColoredBox(color: AniHowColors.brand)),
+              Expanded(flex: rightFlex, child: const ColoredBox(color: AniHowColors.sage)),
+            ],
+          ),
         ),
+        const SizedBox(height: 4),
+        Text(leftLabel),
+        Text('${AniHowMoney.peso(left.sales)} · ${s.ordersCount(left.orders)}'),
+        Text(rightLabel),
+        Text('${AniHowMoney.peso(right.sales)} · ${s.ordersCount(right.orders)}'),
       ],
     );
   }
 }
 
-class _CropRow extends StatelessWidget {
-  const _CropRow({required this.row});
+class _HarvestCropCard extends StatelessWidget {
+  const _HarvestCropCard({required this.crop});
 
-  final FarmerCropSales row;
+  final FarmerHarvestCrop crop;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final unit = row.unit == null || row.unit!.isEmpty ? '' : ' ${row.unit}';
+    final s = AppStrings.of(context);
+    final unit = crop.unit.isEmpty ? '' : ' ${crop.unit}';
+    final rejected = _reasonLine(s, crop.rejectedByReason);
+    final removed = _reasonLine(s, crop.removedByReason);
+    final nothingRemoved = crop.removedByReason.values.every((value) => value == 0);
 
     return Card(
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: AniHowSpace.cardPad,
-          vertical: 4,
+      child: Padding(
+        padding: AniHowSpace.cardPadding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              crop.unit.isEmpty ? crop.crop : '${crop.crop} · ${crop.unit}',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
+            Text('${s.harvestedLabel} ${_qty(crop.harvested)}$unit'),
+            _Meter(value: crop.harvested, max: math.max(crop.harvested, crop.sold), color: AniHowColors.brand),
+            Text('${s.soldLabel} ${_qty(crop.sold)}$unit'),
+            _Meter(value: crop.sold, max: math.max(crop.harvested, crop.sold), color: AniHowColors.sage),
+            const SizedBox(height: 8),
+            Text('${s.goodLabel} / ${s.rejectedLabel}'),
+            _StackBar(
+              parts: [
+                (crop.good, AniHowColors.sage),
+                (crop.rejected, AniHowColors.root),
+              ],
+            ),
+            if (rejected != null) Text(s.whyRejected(rejected)),
+            const SizedBox(height: 8),
+            Text(s.whereGoodWent),
+            _StackBar(
+              parts: [
+                (crop.sold, AniHowColors.brand),
+                (crop.waiting, AniHowColors.eggplant),
+                (crop.removed, AniHowColors.root),
+                (crop.remaining, AniHowColors.sage),
+              ],
+            ),
+            Text(
+              '${s.soldLabel} · ${s.waitingForPickup} · ${s.removedLabel} · ${s.leftLabel}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            if (nothingRemoved)
+              Text(s.nothingRemoved)
+            else if (removed != null)
+              Text(removed),
+          ],
         ),
-        title: Text(row.crop),
-        subtitle: Text('${row.units}$unit'),
-        trailing: Text(AniHowMoney.peso(row.revenue), style: theme.textTheme.titleSmall),
       ),
     );
   }
+}
+
+class _Meter extends StatelessWidget {
+  const _Meter({required this.value, required this.max, required this.color});
+
+  final double value;
+  final double max;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final factor = max <= 0 ? 0.0 : (value / max).clamp(0.0, 1.0);
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 6),
+      child: SizedBox(
+        height: 8,
+        child: FractionallySizedBox(
+          alignment: Alignment.centerLeft,
+          widthFactor: factor == 0 ? 0.02 : factor,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StackBar extends StatelessWidget {
+  const _StackBar({required this.parts});
+
+  final List<(double, Color)> parts;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = parts.fold<double>(0, (sum, part) => sum + part.$1);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: SizedBox(
+        height: 12,
+        child: total <= 0
+            ? const DecoratedBox(
+                decoration: BoxDecoration(color: Color(0xFFE7E2D8)),
+              )
+            : Row(
+                children: [
+                  for (final part in parts)
+                    if (part.$1 > 0)
+                      Expanded(
+                        flex: math.max(1, (part.$1 / total * 1000).round()),
+                        child: ColoredBox(color: part.$2),
+                      ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class _IncomeBars extends StatelessWidget {
+  const _IncomeBars({required this.income});
+
+  final FarmerHarvestIncome income;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final max = math.max(income.potential, income.actual);
+    return Card(
+      child: Padding(
+        padding: AniHowSpace.cardPadding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(s.expectedVsActual, style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 120,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  _VerticalMoney(
+                    label: s.expectedIncome,
+                    amount: income.potential,
+                    factor: max <= 0 ? 0.08 : (income.potential / max).clamp(0.08, 1),
+                    color: AniHowColors.brand,
+                  ),
+                  const SizedBox(width: 16),
+                  _VerticalMoney(
+                    label: s.actualIncomeSoFar,
+                    amount: income.actual,
+                    factor: max <= 0 ? 0.08 : (income.actual / max).clamp(0.08, 1),
+                    color: AniHowColors.sage,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(s.incomeCaption, style: Theme.of(context).textTheme.bodySmall),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _VerticalMoney extends StatelessWidget {
+  const _VerticalMoney({
+    required this.label,
+    required this.amount,
+    required this.factor,
+    required this.color,
+  });
+
+  final String label;
+  final double amount;
+  final double factor;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Text(AniHowMoney.peso(amount), style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: 4),
+          Expanded(
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: FractionallySizedBox(
+                heightFactor: factor,
+                widthFactor: 0.5,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfitCard extends StatelessWidget {
+  const _ProfitCard({required this.harvest});
+
+  final FarmerHarvestReport harvest;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final cost = harvest.cost;
+    if (cost.recordsWithCost == 0) {
+      return AniHowHintCard(
+        icon: Icons.payments_outlined,
+        title: s.noCostRecorded,
+        body: s.noCostHint,
+      );
+    }
+    final total = cost.recordsWithCost + cost.recordsWithoutCost;
+    return Card(
+      key: const Key('sales-profit'),
+      child: Padding(
+        padding: AniHowSpace.cardPadding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _moneyLine(context, s.costLabel, cost.costTotal),
+            _moneyLine(context, s.expectedProfit, cost.potentialProfit),
+            _moneyLine(context, s.actualProfitSoFar, cost.actualProfit),
+            const SizedBox(height: 6),
+            Text(
+              s.costCoverage(cost.recordsWithCost, total == 0 ? harvest.records : total),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _moneyLine(BuildContext context, String label, double? amount) {
+    final negative = amount != null && amount < 0;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        '$label: ${_optionalPeso(amount)}',
+        style: TextStyle(color: negative ? AniHowColors.cancelledRed : null),
+      ),
+    );
+  }
+}
+
+String? _monthCaption(AppStrings s, List<FarmerSalesPeriod> periods) {
+  final labels = <String>[];
+  for (final point in periods) {
+    final date = _calendar(point.start);
+    if (date == null) {
+      continue;
+    }
+    final label = '${s.monthName(date)} ${date.year}';
+    if (!labels.contains(label)) {
+      labels.add(label);
+    }
+  }
+  if (labels.isEmpty) {
+    return null;
+  }
+  return labels.join(' · ');
+}
+
+String? _reasonLine(AppStrings s, Map<String, double> reasons) {
+  final parts = <String>[];
+  for (final entry in reasons.entries) {
+    if (entry.value <= 0) {
+      continue;
+    }
+    parts.add('${s.rejectionReasonLabel(entry.key)} ${_qty(entry.value)}');
+  }
+  if (parts.isEmpty) {
+    return null;
+  }
+  return parts.join(', ');
+}
+
+String _optionalPeso(double? amount) => amount == null ? '—' : AniHowMoney.peso(amount);
+
+String _percent(double value) {
+  if ((value - value.roundToDouble()).abs() < 0.05) {
+    return '${value.round()}%';
+  }
+  return '${value.toStringAsFixed(1)}%';
+}
+
+String _qty(double value) {
+  if (value == value.roundToDouble()) {
+    return value.round().toString();
+  }
+  var text = value.toStringAsFixed(2);
+  if (text.contains('.')) {
+    text = text.replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
+  }
+  return text;
+}
+
+String _iso(DateTime date) {
+  final year = date.year.toString().padLeft(4, '0');
+  final month = date.month.toString().padLeft(2, '0');
+  final day = date.day.toString().padLeft(2, '0');
+  return '$year-$month-$day';
+}
+
+DateTime? _calendar(String iso) {
+  final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch(iso);
+  if (match == null) {
+    return null;
+  }
+  return DateTime(
+    int.parse(match.group(1)!),
+    int.parse(match.group(2)!),
+    int.parse(match.group(3)!),
+  );
+}
+
+DateTime? _monthFromKey(String key) {
+  final match = RegExp(r'^(\d{4})-(\d{2})').firstMatch(key);
+  if (match == null) {
+    return null;
+  }
+  return DateTime(int.parse(match.group(1)!), int.parse(match.group(2)!), 1);
 }

@@ -15,7 +15,7 @@ class FarmerAnalyticsResource extends JsonResource
         /** @var array<string, mixed> $payload */
         $payload = $this->resource;
 
-        return [
+        $data = [
             'period' => $payload['period'],
             'window_start' => $payload['window_start'],
             'window_end' => $payload['window_end'],
@@ -25,5 +25,13 @@ class FarmerAnalyticsResource extends JsonResource
             'best_selling' => $payload['best_selling'],
             'walk_in_share' => $payload['walk_in_share'],
         ];
+
+        foreach (['range', 'sales', 'harvest'] as $key) {
+            if (array_key_exists($key, $payload)) {
+                $data[$key] = $payload[$key];
+            }
+        }
+
+        return $data;
     }
 }

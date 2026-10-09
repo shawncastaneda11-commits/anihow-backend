@@ -25,6 +25,7 @@ class CheckoutController extends Controller
             FulfillmentPreference::from($request->validated('fulfillment_preference')),
             $request->validated('fulfillment_note'),
             $request->validated('payments') ?? [],
+            $request->validated('payment_flow'),
         );
 
         $orders->each->load(['items', 'farmerSeller', 'farm']);

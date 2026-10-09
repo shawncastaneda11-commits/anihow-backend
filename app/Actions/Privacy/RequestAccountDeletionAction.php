@@ -17,6 +17,12 @@ class RequestAccountDeletionAction
 
     public function handle(User $user, ?string $reason = null): AccountDeletionRequest
     {
+        if ($user->hasRefundDue()) {
+            throw ValidationException::withMessages([
+                'status' => 'Settle your pending payments and refunds first.',
+            ]);
+        }
+
         if ($user->hasOpenMarketplaceOrders()) {
             throw ValidationException::withMessages([
                 'status' => "You can't request deletion while you have orders in progress (placed, confirmed, or ready). Finished or cancelled orders don't block it.",

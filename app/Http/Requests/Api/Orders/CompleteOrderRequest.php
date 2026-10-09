@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Api\Orders;
 
+use App\Enums\OrderPaymentStatus;
+use App\Models\Order;
 use Illuminate\Foundation\Http\FormRequest;
 
 class CompleteOrderRequest extends FormRequest
@@ -20,8 +22,19 @@ class CompleteOrderRequest extends FormRequest
      */
     public function rules(): array
     {
+        $order = $this->route('order');
+        $proofCoversIt = $order instanceof Order
+            && $order->isPaymentTracked()
+            && $order->payment_status === OrderPaymentStatus::Paid;
+
         return [
-            'amount_received' => ['required', 'numeric', 'min:0', 'max:9999999.99'],
+            'amount_received' => [
+                $proofCoversIt ? 'sometimes' : 'required',
+                'nullable',
+                'numeric',
+                'min:0',
+                'max:9999999.99',
+            ],
         ];
     }
 }

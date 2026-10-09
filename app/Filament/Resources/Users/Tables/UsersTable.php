@@ -15,6 +15,8 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -91,11 +93,26 @@ class UsersTable
                     ->visible(fn (User $record): bool => $record->isActive()
                         && ! $record->isSuperAdmin()
                         && auth()->user()->can(Permission::SuspendAccounts->value))
-                    ->form([
-                        TextInput::make('suspension_reason')
+                    ->form(function (User $record): array {
+                        $waiting = $record->unsettledPaymentOrderCount();
+                        $fields = [];
+
+                        if ($waiting > 0) {
+                            $fields[] = Placeholder::make('open_payments')
+                                ->label('Open payments')
+                                ->content("This seller has {$waiting} orders waiting on a payment or a refund. Suspending does not change them.");
+                            $fields[] = Checkbox::make('confirm_open_payments')
+                                ->label('I understand these orders stay as they are')
+                                ->accepted()
+                                ->required();
+                        }
+
+                        $fields[] = TextInput::make('suspension_reason')
                             ->required()
-                            ->maxLength(255),
-                    ])
+                            ->maxLength(255);
+
+                        return $fields;
+                    })
                     ->action(function (User $record, array $data): void {
                         $record->update([
                             'status' => UserStatus::Suspended,

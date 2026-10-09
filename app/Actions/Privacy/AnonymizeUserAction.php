@@ -5,9 +5,13 @@ namespace App\Actions\Privacy;
 use App\Actions\Reservations\CancelReservation;
 use App\Enums\ReservationCancellationReason;
 use App\Enums\UserStatus;
+use App\Models\PaymentProof;
+use App\Models\SellerPaymentQr;
 use App\Models\StallMessage;
 use App\Models\TawadRule;
 use App\Models\User;
+use App\Support\ImageVariants;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -38,6 +42,33 @@ class AnonymizeUserAction
                 'is_active' => false,
                 'ended_at' => now(),
             ]);
+
+        $images = app(ImageVariants::class);
+        $disk = Storage::disk('local');
+
+        SellerPaymentQr::query()
+            ->withTrashed()
+            ->where('farmer_seller_id', $user->id)
+            ->orderBy('id')
+            ->each(function (SellerPaymentQr $qr) use ($images, $disk): void {
+                $images->delete($qr->image_path, $disk);
+                $qr->forceFill(['image_path' => ''])->save();
+            });
+
+        PaymentProof::query()
+            ->where(function ($query) use ($user): void {
+                $query->where('buyer_id', $user->id)
+                    ->orWhere('farmer_seller_id', $user->id);
+            })
+            ->whereNotNull('screenshot_path')
+            ->orderBy('id')
+            ->each(function (PaymentProof $proof) use ($images, $disk): void {
+                $images->delete($proof->screenshot_path, $disk);
+                $proof->forceFill([
+                    'screenshot_path' => null,
+                    'screenshot_deleted_at' => now(),
+                ])->save();
+            });
 
         StallMessage::query()
             ->where('user_id', $user->id)

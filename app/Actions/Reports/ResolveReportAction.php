@@ -7,6 +7,7 @@ use App\Actions\Reviews\RemoveReviewAction;
 use App\Enums\ListingStatus;
 use App\Enums\ReportStatus;
 use App\Models\Listing;
+use App\Models\Order;
 use App\Models\Report;
 use App\Models\Review;
 use App\Models\User;
@@ -67,6 +68,10 @@ class ResolveReportAction
     private function applyModeration(Report $report, User $admin, string $reason, bool $confirmCancelReservations): void
     {
         $target = $report->reportable;
+
+        if ($target instanceof Order) {
+            return;
+        }
 
         if ($target instanceof Listing && $target->status === ListingStatus::Published) {
             $this->takeDownListing->handle($target, $admin, $reason, $confirmCancelReservations);

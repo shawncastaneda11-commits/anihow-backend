@@ -22,6 +22,7 @@ class UpdateShopProfileRequest extends FormRequest
             'location' => ['sometimes', 'nullable', 'string', 'max:255'],
             'contact' => ['sometimes', 'nullable', 'string', 'max:30'],
             'accepts_online_payment' => ['sometimes', 'boolean'],
+            'payment_time_limit_hours' => ['sometimes', 'integer', 'in:1,3,6,12,24,48'],
         ];
     }
 }

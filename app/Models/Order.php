@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\CancellationReason;
 use App\Enums\FulfillmentPreference;
 use App\Enums\OrderActor;
+use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderSource;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
@@ -45,6 +46,14 @@ use Illuminate\Validation\ValidationException;
     'fulfillment_preference',
     'fulfillment_note',
     'payment_method',
+    'payment_status',
+    'payment_due_at',
+    'payment_reminded_at',
+    'paid_at',
+    'payment_qr_ids',
+    'refund_reference',
+    'refunded_at',
+    'refunded_by',
     'subtotal',
     'tawad_total',
     'total',
@@ -83,6 +92,12 @@ class Order extends Model
             'fulfillment_preference' => FulfillmentPreference::class,
             'cancellation_reason' => CancellationReason::class,
             'cancelled_by' => OrderActor::class,
+            'payment_status' => OrderPaymentStatus::class,
+            'payment_due_at' => 'datetime',
+            'payment_reminded_at' => 'datetime',
+            'paid_at' => 'datetime',
+            'payment_qr_ids' => 'array',
+            'refunded_at' => 'datetime',
             'subtotal' => 'decimal:2',
             'tawad_total' => 'decimal:2',
             'total' => 'decimal:2',
@@ -142,6 +157,36 @@ class Order extends Model
         return $this->belongsTo(Reservation::class);
     }
 
+    public function proofs(): HasMany
+    {
+        return $this->hasMany(PaymentProof::class);
+    }
+
+    public function latestProof(): HasOne
+    {
+        return $this->hasOne(PaymentProof::class)->latestOfMany();
+    }
+
+    public function paymentEvents(): HasMany
+    {
+        return $this->hasMany(OrderPaymentEvent::class);
+    }
+
+    public function refundedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'refunded_by')->withTrashed();
+    }
+
+    /**
+     * Null (cash, walk-in) and NotTracked (online orders from before proof
+     * tracking) keep today's rules: no deadline, no refund, no payment gate.
+     */
+    public function isPaymentTracked(): bool
+    {
+        return $this->payment_status instanceof OrderPaymentStatus
+            && $this->payment_status->isTracked();
+    }
+
     public function statusHistories(): HasMany
     {
         return $this->hasMany(OrderStatusHistory::class)->orderBy('created_at');
@@ -198,11 +243,19 @@ class Order extends Model
     }
 
     /**
-     * A buyer may cancel only before the seller confirms.
+     * A buyer may cancel only before the seller confirms, and only before
+     * they have sent payment. A sent or accepted payment needs a refund.
      */
     public function canBeCancelledByBuyer(): bool
     {
-        return $this->status === OrderStatus::Placed;
+        if ($this->status !== OrderStatus::Placed) {
+            return false;
+        }
+
+        return ! in_array($this->payment_status, [
+            OrderPaymentStatus::PaymentSent,
+            OrderPaymentStatus::Paid,
+        ], true);
     }
 
     /**

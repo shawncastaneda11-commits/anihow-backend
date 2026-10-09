@@ -5,8 +5,10 @@ namespace App\Actions\Privacy;
 use App\Models\HarvestRecord;
 use App\Models\Listing;
 use App\Models\Order;
+use App\Models\PaymentProof;
 use App\Models\Reservation;
 use App\Models\Review;
+use App\Models\SellerPaymentQr;
 use App\Models\StallMessage;
 use App\Models\StockRemoval;
 use App\Models\TawadRule;
@@ -32,6 +34,8 @@ class ExportOwnDataAction
             'exported_at' => now()->toIso8601String(),
             'profile' => $this->profile($user),
             'orders' => $orders->map(fn (Order $order): array => $this->order($order, $user))->values()->all(),
+            'payment_proofs' => $this->paymentProofs($user),
+            'payment_qrs' => $this->paymentQrs($user),
             'reviews_written' => $user->reviewsWritten()->with('farmerSeller:id,name,shop_name')->get()
                 ->map(fn ($review): array => [
                     'id' => $review->id,
@@ -204,6 +208,49 @@ class ExportOwnDataAction
                     'created_at' => $report->created_at?->toIso8601String(),
                 ])->all(),
         ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function paymentProofs(User $user): array
+    {
+        return PaymentProof::query()
+            ->where(function ($query) use ($user): void {
+                $query->where('buyer_id', $user->id)
+                    ->orWhere('farmer_seller_id', $user->id);
+            })
+            ->orderBy('id')
+            ->get()
+            ->map(fn (PaymentProof $proof): array => [
+                'id' => $proof->id,
+                'order_id' => $proof->order_id,
+                'reference_number' => $proof->reference_number,
+                'amount' => $proof->amount,
+                'status' => $proof->status->value,
+                'created_at' => $proof->created_at?->toIso8601String(),
+                'reviewed_at' => $proof->reviewed_at?->toIso8601String(),
+            ])
+            ->all();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function paymentQrs(User $user): array
+    {
+        return SellerPaymentQr::query()
+            ->where('farmer_seller_id', $user->id)
+            ->orderBy('id')
+            ->get()
+            ->map(fn (SellerPaymentQr $qr): array => [
+                'id' => $qr->id,
+                'wallet' => $qr->wallet->value,
+                'account_name' => $qr->account_name,
+                'account_last4' => $qr->account_last4,
+                'created_at' => $qr->created_at?->toIso8601String(),
+            ])
+            ->all();
     }
 
     /**

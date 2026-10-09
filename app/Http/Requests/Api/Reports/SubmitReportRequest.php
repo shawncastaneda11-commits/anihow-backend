@@ -22,14 +22,22 @@ class SubmitReportRequest extends FormRequest
         $targetType = $this->input('target_type');
 
         return [
-            'target_type' => ['required', 'string', Rule::in(['listing', 'review'])],
+            'target_type' => ['required', 'string', Rule::in(['listing', 'review', 'order'])],
             'target_id' => [
                 'required',
                 'integer',
                 Rule::when($targetType === 'listing', ['exists:listings,id']),
                 Rule::when($targetType === 'review', ['exists:reviews,id']),
+                Rule::when($targetType === 'order', ['exists:orders,id']),
             ],
-            'reason' => ['required', Rule::enum(ReportReason::class)],
+            'reason' => [
+                'required',
+                Rule::enum(ReportReason::class),
+                Rule::when(
+                    $targetType === 'order',
+                    Rule::in([ReportReason::PaymentProblem->value]),
+                ),
+            ],
             'details' => ['nullable', 'string', 'max:500'],
         ];
     }

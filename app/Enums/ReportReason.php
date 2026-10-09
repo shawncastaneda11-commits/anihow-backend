@@ -8,6 +8,7 @@ enum ReportReason: string
     case ProhibitedItem = 'prohibited_item';
     case OffensiveContent = 'offensive_content';
     case SpamOrFake = 'spam_or_fake';
+    case PaymentProblem = 'payment_problem';
     case Other = 'other';
 
     public function label(): string
@@ -17,6 +18,7 @@ enum ReportReason: string
             self::ProhibitedItem => 'Item not allowed to be sold',
             self::OffensiveContent => 'Offensive or abusive content',
             self::SpamOrFake => 'Spam or fake',
+            self::PaymentProblem => 'Payment problem',
             self::Other => 'Other',
         };
     }
@@ -28,6 +30,7 @@ enum ReportReason: string
             self::ProhibitedItem => 'Bawal ibenta ang item na ito',
             self::OffensiveContent => 'Masakit o mapang-abusong nilalaman',
             self::SpamOrFake => 'Spam o peke',
+            self::PaymentProblem => 'Problema sa bayad',
             self::Other => 'Iba pa',
         };
     }

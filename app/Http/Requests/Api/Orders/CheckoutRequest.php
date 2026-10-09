@@ -32,6 +32,7 @@ class CheckoutRequest extends FormRequest
             'payments' => ['sometimes', 'array'],
             'payments.*.seller_id' => ['required', 'integer'],
             'payments.*.method' => ['required', Rule::enum(PaymentMethod::class)],
+            'payment_flow' => ['sometimes', 'nullable', 'string', 'max:20'],
         ];
     }
 }

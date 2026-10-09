@@ -32,6 +32,14 @@ enum NotificationType: string
     case ReservationCancelled = 'reservation_cancelled';
     case HarvestReminder = 'harvest_reminder';
     case ExpiredStockLeft = 'expired_stock_left';
+    case PaymentProofSubmitted = 'payment_proof_submitted';
+    case PaymentConfirmed = 'payment_confirmed';
+    case PaymentRejected = 'payment_rejected';
+    case PaymentDueSoon = 'payment_due_soon';
+    case PaymentExpired = 'payment_expired';
+    case PaymentCheckReminder = 'payment_check_reminder';
+    case RefundDue = 'refund_due';
+    case RefundCompleted = 'refund_completed';
 
     public function label(): string
     {
@@ -61,6 +69,14 @@ enum NotificationType: string
             self::ReservationCancelled => 'Reservation cancelled',
             self::HarvestReminder => 'Record the actual harvest',
             self::ExpiredStockLeft => 'Stock left after the listing ended',
+            self::PaymentProofSubmitted => 'Payment proof submitted',
+            self::PaymentConfirmed => 'Payment confirmed',
+            self::PaymentRejected => 'Payment rejected',
+            self::PaymentDueSoon => 'Payment due soon',
+            self::PaymentExpired => 'Payment time expired',
+            self::PaymentCheckReminder => 'Payment waiting for your check',
+            self::RefundDue => 'Refund due',
+            self::RefundCompleted => 'Refund completed',
         };
     }
 

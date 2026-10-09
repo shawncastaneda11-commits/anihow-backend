@@ -8,6 +8,7 @@ use App\Enums\CancellationReason;
 use App\Enums\HarvestRecordKind;
 use App\Enums\ListingStatus;
 use App\Enums\NotificationType;
+use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderStatus;
 use App\Enums\ProductCategory;
 use App\Enums\ReservationCancellationReason;
@@ -436,11 +437,17 @@ class HarvestStockTest extends TestCase
             'min_order_quantity' => 1,
             'order_step' => 1,
         ]);
+        $this->acceptOnlinePayment($farmer);
         $this->asUser($buyer)->postJson('/api/buyer/reservations', [
             'listing_id' => $listing->id,
             'quantity' => 8,
             'fulfillment_preference' => 'buyer_pickup',
+            'payment_flow' => 'proof',
         ])->assertCreated();
+        Reservation::query()->where('listing_id', $listing->id)->update([
+            'payment_status' => OrderPaymentStatus::NotTracked->value,
+            'payment_due_at' => null,
+        ]);
 
         $this->asUser($farmer)->postJson("/api/farmer/listings/{$listing->id}/actual-harvest", $this->harvestBody([
             'quantity_harvested' => 3,
@@ -472,14 +479,20 @@ class HarvestStockTest extends TestCase
             'title' => 'Due okra',
             'quantity_available' => 10,
             'price_per_unit' => 30,
-            'available_from' => now()->addHour(),
+            'available_from' => now()->addHours(2),
             'needs_actual_harvest' => true,
         ]);
+        $this->acceptOnlinePayment($farmer);
         $this->asUser($buyer)->postJson('/api/buyer/reservations', [
             'listing_id' => $due->id,
             'quantity' => 4,
             'fulfillment_preference' => 'buyer_pickup',
+            'payment_flow' => 'proof',
         ])->assertCreated();
+        Reservation::query()->where('listing_id', $due->id)->update([
+            'payment_status' => OrderPaymentStatus::NotTracked->value,
+            'payment_due_at' => null,
+        ]);
 
         $this->travelTo($due->available_from->copy()->addMinute());
         $this->asUser($farmer)->postJson("/api/farmer/listings/{$due->id}/open")->assertOk();
@@ -609,13 +622,16 @@ class HarvestStockTest extends TestCase
             ->assertOk()
             ->json('summary');
 
-        $this->assertSame('30.00', $summary['good']);
+        $this->assertSame('20.00', $summary['starting']);
+        $this->assertSame('10.00', $summary['good']);
+        $this->assertSame('10.00', $summary['harvested']);
         $this->assertSame('9.00', $summary['sold']);
         $this->assertSame('19.00', $summary['available']);
         $this->assertSame('2.00', $summary['removed']);
         $this->assertSame('0.00', $summary['held']);
+        $this->assertSame($summary['harvests_without_cost'], $summary['records_without_cost']);
         $this->assertSame(0, bccomp(
-            $summary['good'],
+            bcadd($summary['starting'], $summary['good'], 2),
             bcadd(bcadd($summary['sold'], $summary['available'], 2), $summary['removed'], 2),
             2,
         ));
@@ -670,8 +686,15 @@ class HarvestStockTest extends TestCase
 
         $summary = $this->asUser($farmer)->getJson("/api/farmer/listings/{$listing->id}/stock-history")->json('summary');
         $this->assertSame('0.00', $summary['sold']);
-        $this->assertSame('20.00', $summary['good']);
+        $this->assertSame('20.00', $summary['starting']);
+        $this->assertSame('0.00', $summary['good']);
+        $this->assertSame('0.00', $summary['harvested']);
         $this->assertSame('20.00', $summary['available']);
+        $this->assertSame(0, bccomp(
+            bcadd($summary['starting'], $summary['good'], 2),
+            bcadd(bcadd($summary['sold'], $summary['available'], 2), $summary['removed'], 2),
+            2,
+        ));
     }
 
     public function test_buyers_never_see_harvest_details_and_another_seller_cannot_write_them(): void

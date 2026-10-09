@@ -61,7 +61,7 @@ class ListingResource extends JsonResource
             ),
             'image_url' => $this->imageUrl(),
             'thumbnail_url' => $this->thumbnailUrl(),
-            'can_reserve' => $this->isUpcoming() && ($this->farm?->allowsReservations() ?? true),
+            'can_reserve' => $this->canReserve(),
             'crop_type' => new CropTypeResource($this->whenLoaded('cropType')),
             'tawad' => $this->visibleTawadRule($request),
             'tawad_paused' => $this->tawadIsPaused($request),
@@ -92,6 +92,29 @@ class ListingResource extends JsonResource
             ),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
+    }
+
+    private function canReserve(): bool
+    {
+        if (! $this->isUpcoming() || ! ($this->farm?->allowsReservations() ?? true)) {
+            return false;
+        }
+
+        $seller = $this->farmerSeller;
+
+        if ($seller === null || ! $seller->acceptsOnlinePayment()) {
+            return false;
+        }
+
+        $hasQr = $seller->relationLoaded('paymentQrs')
+            ? $seller->paymentQrs->isNotEmpty()
+            : $seller->paymentQrs()->exists();
+
+        if (! $hasQr) {
+            return false;
+        }
+
+        return $this->available_from !== null && $this->available_from->greaterThan(now()->addHour());
     }
 
     private function ownedBy(Request $request): bool

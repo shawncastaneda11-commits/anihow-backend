@@ -44,11 +44,14 @@ use App\Http\Controllers\Api\Orders\FarmerOrderController;
 use App\Http\Controllers\Api\Orders\OrderHistoryController;
 use App\Http\Controllers\Api\Orders\WalkInSaleController;
 use App\Http\Controllers\Api\Payments\BuyerPaymentProofController;
+use App\Http\Controllers\Api\Payments\BuyerReservationPaymentProofController;
 use App\Http\Controllers\Api\Payments\FarmerPaymentController;
 use App\Http\Controllers\Api\Payments\FarmerPaymentProofController;
+use App\Http\Controllers\Api\Payments\FarmerReservationPaymentProofController;
 use App\Http\Controllers\Api\Payments\OrderRefundController;
 use App\Http\Controllers\Api\Payments\PaymentProofScreenshotController;
 use App\Http\Controllers\Api\Payments\PaymentQrImageController;
+use App\Http\Controllers\Api\Payments\ReservationRefundController;
 use App\Http\Controllers\Api\Payments\SellerPaymentQrController;
 use App\Http\Controllers\Api\Reports\SubmitReportController;
 use App\Http\Controllers\Api\Reservations\BuyerReservationController;
@@ -218,6 +221,10 @@ Route::middleware([
         ->name('farmer.orders.payment-proofs.update');
     Route::patch('orders/{order}/refund', OrderRefundController::class)
         ->name('farmer.orders.refund');
+    Route::patch('reservations/{reservation}/payment-proofs/{paymentProof}', [FarmerReservationPaymentProofController::class, 'update'])
+        ->name('farmer.reservations.payment-proofs.update');
+    Route::patch('reservations/{reservation}/refund', ReservationRefundController::class)
+        ->name('farmer.reservations.refund');
 
     Route::get('payment-qrs', [SellerPaymentQrController::class, 'index'])->name('farmer.payment-qrs.index');
     Route::post('payment-qrs', [SellerPaymentQrController::class, 'store'])->name('farmer.payment-qrs.store');
@@ -280,6 +287,8 @@ Route::middleware([
             ->name('buyer.orders.cancel');
         Route::post('orders/{order}/payment-proofs', [BuyerPaymentProofController::class, 'store'])
             ->name('buyer.orders.payment-proofs.store');
+        Route::post('reservations/{reservation}/payment-proofs', [BuyerReservationPaymentProofController::class, 'store'])
+            ->name('buyer.reservations.payment-proofs.store');
 
         Route::post('reviews', [ReviewController::class, 'store'])->name('buyer.reviews.store');
         Route::post('favorites', [FavoriteController::class, 'store'])->name('buyer.favorites.store');

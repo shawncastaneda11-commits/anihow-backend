@@ -159,12 +159,14 @@ class ListingOrderQuantityTest extends TestCase
             'available_from' => now()->addDays(3),
             'available_until' => now()->addDays(10),
         ]);
+        $this->acceptOnlinePayment($farmer);
 
         $this->asUser($buyer)
             ->postJson('/api/buyer/reservations', [
                 'listing_id' => $listing->id,
                 'quantity' => 1.5,
                 'fulfillment_preference' => 'buyer_pickup',
+                'payment_flow' => 'proof',
             ])
             ->assertUnprocessable()
             ->assertJsonPath('errors.quantity.0', 'Order at least 1 kg, in steps of 1 kg.');
@@ -176,6 +178,7 @@ class ListingOrderQuantityTest extends TestCase
                 'listing_id' => $listing->id,
                 'quantity' => 1.5,
                 'fulfillment_preference' => 'buyer_pickup',
+                'payment_flow' => 'proof',
             ])
             ->assertCreated();
     }

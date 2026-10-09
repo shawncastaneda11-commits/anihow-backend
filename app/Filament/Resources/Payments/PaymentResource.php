@@ -57,6 +57,7 @@ class PaymentResource extends Resource
             'order.farm',
             'order.buyer',
             'order.farmerSeller',
+            'reservation.listing',
             'buyer',
             'farmerSeller',
             'paymentQr',

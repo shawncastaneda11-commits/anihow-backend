@@ -5,9 +5,13 @@ namespace App\Actions\Payments;
 use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentProofStatus;
+use App\Enums\ReservationStatus;
 use App\Models\Order;
 use App\Models\PaymentProof;
+use App\Models\Reservation;
 use App\Support\ImageVariants;
+use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 
 class PurgeSettledProofFiles
@@ -43,8 +47,42 @@ class PurgeSettledProofFiles
             })
             ->pluck('id');
 
-        PaymentProof::query()
-            ->whereIn('order_id', $orderIds)
+        $deleted += $this->deleteScreenshots(
+            PaymentProof::query()->whereIn('order_id', $orderIds),
+            $disk,
+        );
+
+        $reservationIds = Reservation::query()
+            ->where('status', ReservationStatus::Cancelled)
+            ->where(function ($query) use ($cutoff): void {
+                $query->where(function ($refunded) use ($cutoff): void {
+                    $refunded->where('payment_status', OrderPaymentStatus::Refunded)
+                        ->where('refunded_at', '<=', $cutoff);
+                })->orWhere(function ($settled) use ($cutoff): void {
+                    $settled->where('cancelled_at', '<=', $cutoff)
+                        ->whereDoesntHave('proofs', function ($proofs): void {
+                            $proofs->where('status', PaymentProofStatus::Accepted);
+                        });
+                });
+            })
+            ->pluck('id');
+
+        $deleted += $this->deleteScreenshots(
+            PaymentProof::query()->whereIn('reservation_id', $reservationIds),
+            $disk,
+        );
+
+        return $deleted;
+    }
+
+    /**
+     * @param  Builder<PaymentProof>  $query
+     */
+    private function deleteScreenshots(Builder $query, Filesystem $disk): int
+    {
+        $deleted = 0;
+
+        $query
             ->whereNotNull('screenshot_path')
             ->whereNull('screenshot_deleted_at')
             ->orderBy('id')

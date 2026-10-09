@@ -14,11 +14,15 @@ class PaymentProofScreenshotController extends Controller
     {
         $user = $request->user();
         $order = $paymentProof->order;
+        $reservation = $paymentProof->reservation;
 
-        $allowed = $user !== null && $order !== null && (
+        $allowed = $user !== null && (
             $user->isSuperAdmin()
-            || $order->isOwnedByBuyer($user)
-            || $order->isOwnedByFarmer($user)
+            || ($order !== null && ($order->isOwnedByBuyer($user) || $order->isOwnedByFarmer($user)))
+            || ($reservation !== null && (
+                (int) $reservation->buyer_id === (int) $user->id
+                || (int) $reservation->farmer_seller_id === (int) $user->id
+            ))
         );
 
         abort_unless($allowed, 403);

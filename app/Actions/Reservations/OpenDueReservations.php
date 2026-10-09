@@ -4,6 +4,7 @@ namespace App\Actions\Reservations;
 
 use App\Actions\Listings\EnsureHarvestRecorded;
 use App\Enums\FulfillmentPreference;
+use App\Enums\OrderPaymentStatus;
 use App\Enums\ReservationCancellationReason;
 use App\Enums\ReservationStatus;
 use App\Models\Listing;
@@ -98,10 +99,31 @@ class OpenDueReservations
 
             $this->ensureHarvest->forListing($listing);
 
+            $spokenFor = 0.0;
+
             foreach ($reservations as $reservation) {
                 $listing->refresh();
+                $needed = round((float) $reservation->quantity, 2);
+                $sellable = round($listing->sellableQuantity() - $spokenFor, 2);
+                $payment = $reservation->payment_status;
 
-                if (round($listing->sellableQuantity(), 2) + 0.001 < round((float) $reservation->quantity, 2)) {
+                if ($payment === OrderPaymentStatus::PaymentSent) {
+                    if ($sellable + 0.001 < $needed) {
+                        $this->canceller->handle($reservation, ReservationCancellationReason::HarvestShortfall);
+                    } else {
+                        $spokenFor += $needed;
+                    }
+
+                    continue;
+                }
+
+                if ($payment === OrderPaymentStatus::AwaitingPayment) {
+                    $this->canceller->handle($reservation, ReservationCancellationReason::PaymentExpired);
+
+                    continue;
+                }
+
+                if ($sellable + 0.001 < $needed) {
                     $this->canceller->handle($reservation, ReservationCancellationReason::HarvestShortfall);
 
                     continue;

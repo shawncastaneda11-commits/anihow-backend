@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\Payments;
 
 use App\Enums\OrderPaymentStatus;
+use App\Enums\ReservationStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\Reservation;
 use App\Models\SellerPaymentQr;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -42,9 +44,24 @@ class PaymentQrImageController extends Controller
             return true;
         }
 
-        return Order::query()
+        $paying = Order::query()
             ->where('buyer_id', $user->id)
             ->where('farmer_seller_id', $qr->farmer_seller_id)
+            ->whereIn('payment_status', [
+                OrderPaymentStatus::AwaitingPayment,
+                OrderPaymentStatus::PaymentSent,
+            ])
+            ->whereJsonContains('payment_qr_ids', $qr->id)
+            ->exists();
+
+        if ($paying) {
+            return true;
+        }
+
+        return Reservation::query()
+            ->where('buyer_id', $user->id)
+            ->where('farmer_seller_id', $qr->farmer_seller_id)
+            ->where('status', ReservationStatus::Active)
             ->whereIn('payment_status', [
                 OrderPaymentStatus::AwaitingPayment,
                 OrderPaymentStatus::PaymentSent,

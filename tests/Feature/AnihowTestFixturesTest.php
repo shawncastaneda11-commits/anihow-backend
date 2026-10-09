@@ -48,8 +48,12 @@ class AnihowTestFixturesTest extends TestCase
         $this->assertSame(0, User::query()->where('must_change_password', true)->count());
         $this->assertSame(0, User::query()->whereNotNull('temporary_password_expires_at')->count());
         $this->assertSame(3, Farm::query()->count());
-        $this->assertSame(7, Listing::query()->count());
+        $this->assertSame(8, Listing::query()->count());
         $this->assertSame(2, Reservation::query()->count());
+        $opensInThreeDays = Listing::query()->where('title', 'Pechay (opens in 3 days)')->first();
+        $this->assertNotNull($opensInThreeDays);
+        $this->assertTrue($opensInThreeDays->available_from?->greaterThan(now()->addHour()));
+        $this->assertSame('kuyajun@gmail.com', $opensInThreeDays->farmerSeller?->email);
         $this->assertSame(3, Order::query()->count());
         $this->assertSame(1, Review::query()->count());
         $this->assertSame(2, Report::query()->count());
@@ -78,7 +82,7 @@ class AnihowTestFixturesTest extends TestCase
             ->assertSuccessful();
 
         $this->assertSame(11, User::query()->count());
-        $this->assertSame(7, Listing::query()->count());
+        $this->assertSame(8, Listing::query()->count());
         $this->assertSame(3, Order::query()->count());
         $this->assertSame(1, Review::query()->count());
     }

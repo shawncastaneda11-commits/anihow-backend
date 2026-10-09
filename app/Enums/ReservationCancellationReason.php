@@ -9,6 +9,7 @@ enum ReservationCancellationReason: string
     case HarvestShortfall = 'harvest_shortfall';
     case ListingRemoved = 'listing_removed';
     case AccountClosed = 'account_closed';
+    case PaymentExpired = 'payment_expired';
 
     public function label(): string
     {
@@ -18,6 +19,7 @@ enum ReservationCancellationReason: string
             self::HarvestShortfall => 'Harvest shortfall',
             self::ListingRemoved => 'Listing removed',
             self::AccountClosed => 'Account closed',
+            self::PaymentExpired => 'Payment time expired',
         };
     }
 }

@@ -8,9 +8,12 @@ use App\Enums\FulfillmentPreference;
 use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
+use App\Enums\PaymentProofStatus;
 use App\Models\CartItem;
 use App\Models\Listing;
 use App\Models\Order;
+use App\Models\PaymentProof;
+use App\Models\Reservation;
 use App\Models\SellerPaymentQr;
 use App\Models\User;
 use App\Support\InAppNotifier;
@@ -177,7 +180,12 @@ class CheckoutService
         $subtotal = array_sum(array_column($lines, 'line_subtotal'));
         $tawadTotal = array_sum(array_column($lines, 'tawad_amount'));
 
-        if ($reservationId !== null) {
+        $reservation = $reservationId !== null
+            ? Reservation::query()->find($reservationId)
+            : null;
+        $paidReservation = $reservation?->payment_status === OrderPaymentStatus::Paid;
+
+        if ($reservationId !== null && ! $paidReservation) {
             $paymentMethod = PaymentMethod::CashOnHandover;
         }
 
@@ -201,10 +209,13 @@ class CheckoutService
             'status' => OrderStatus::Placed,
             'fulfillment_preference' => $preference,
             'fulfillment_note' => $fulfillmentNote,
-            'payment_method' => $paymentMethod->value,
-            'payment_status' => $tracked ? OrderPaymentStatus::AwaitingPayment : null,
+            'payment_method' => ($paidReservation ? PaymentMethod::OnlineTransfer : $paymentMethod)->value,
+            'payment_status' => $tracked
+                ? OrderPaymentStatus::AwaitingPayment
+                : ($paidReservation ? OrderPaymentStatus::Paid : null),
             'payment_due_at' => $tracked ? now()->addHours($hours) : null,
-            'payment_qr_ids' => $qrIds,
+            'paid_at' => $paidReservation ? $reservation->paid_at : null,
+            'payment_qr_ids' => $tracked ? $qrIds : ($paidReservation ? $reservation->payment_qr_ids : null),
             'subtotal' => $subtotal,
             'tawad_total' => $tawadTotal,
             'total' => $subtotal - $tawadTotal,
@@ -217,6 +228,15 @@ class CheckoutService
 
         if ($tracked) {
             $this->paymentEvents->handle($order, 'placed_online', $buyer);
+        }
+
+        if ($paidReservation && $reservation !== null) {
+            PaymentProof::query()
+                ->where('reservation_id', $reservation->id)
+                ->where('status', PaymentProofStatus::Accepted)
+                ->update(['order_id' => $order->id]);
+
+            $this->paymentEvents->handle($order, 'paid_by_reservation', $buyer);
         }
 
         if ($seller !== null) {

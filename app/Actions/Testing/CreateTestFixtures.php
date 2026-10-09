@@ -105,6 +105,7 @@ class CreateTestFixtures
             'min_quantity' => 5,
         ]);
         $okraNext = $this->listing($jun, 'kuyajun@gmail.com', $pyap, 'Okra (next week)', ['Okra'], ListingUnit::Kilogram, 30.00, 20, 1, 1, 7, null);
+        $this->listing($jun, 'kuyajun@gmail.com', $pyap, 'Pechay (opens in 3 days)', ['Pechay'], ListingUnit::Bundle, 20.00, 20, 1, 1, 3, null);
         $okra = $this->listing($nena, 'alingnena@gmail.com', $pyap, 'Okra Sariwa', ['Okra'], ListingUnit::Kilogram, 25.00, 15, 1, 1, null, null);
         $squash = $this->listing($nena, 'alingnena@gmail.com', $pyap, 'squashy baby', ['Squash', 'Kalabasa'], ListingUnit::Kilogram, 20.00, 12, 1, 1, 3, null);
 
@@ -595,7 +596,17 @@ class CreateTestFixtures
         }
 
         try {
-            $this->reserveListing->handle($buyer, $listing->id, $quantity, FulfillmentPreference::BuyerPickup, null);
+            $seller = $listing->farmerSeller;
+            $canPay = $seller !== null && $seller->acceptsOnlinePayment() && $seller->paymentQrs()->exists();
+            $this->reserveListing->handle(
+                $buyer,
+                $listing->id,
+                $quantity,
+                FulfillmentPreference::BuyerPickup,
+                null,
+                $canPay ? 'proof' : null,
+                ! $canPay,
+            );
             $this->record($item, 'created');
         } catch (ValidationException|HttpException $exception) {
             $this->record($item, 'skipped: '.$this->reason($exception));

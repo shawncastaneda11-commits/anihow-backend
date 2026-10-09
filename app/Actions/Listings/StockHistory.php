@@ -79,6 +79,7 @@ class StockHistory
      */
     private function summary(Listing $listing, $records, $removals): array
     {
+        $starting = '0.00';
         $harvested = '0.00';
         $rejected = '0.00';
         $good = '0.00';
@@ -88,6 +89,12 @@ class StockHistory
         $hasEstimated = false;
 
         foreach ($records as $record) {
+            if ($record->kind === HarvestRecordKind::Opening) {
+                $starting = bcadd($starting, HarvestInput::scale($record->quantity_good), 2);
+
+                continue;
+            }
+
             $harvested = bcadd($harvested, HarvestInput::scale($record->quantity_harvested), 2);
             $rejected = bcadd($rejected, HarvestInput::scale($record->quantity_rejected), 2);
             $good = bcadd($good, HarvestInput::scale($record->quantity_good), 2);
@@ -138,6 +145,7 @@ class StockHistory
         return [
             'tracked_since' => $since?->toIso8601String(),
             'unit' => $listing->unit?->value,
+            'starting' => $starting,
             'harvested' => $harvested,
             'rejected' => $rejected,
             'good' => $good,
@@ -148,6 +156,7 @@ class StockHistory
             'available' => HarvestInput::scale($listing->quantity_available),
             'has_estimated' => $hasEstimated,
             'cost_total' => $anyCost ? $cost : null,
+            'harvests_without_cost' => $withoutCost,
             'records_without_cost' => $withoutCost,
         ];
     }

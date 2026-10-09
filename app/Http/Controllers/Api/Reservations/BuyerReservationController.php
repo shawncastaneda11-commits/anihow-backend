@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Reservations;
 use App\Actions\Reservations\CancelReservation;
 use App\Actions\Reservations\ReserveListing;
 use App\Enums\FulfillmentPreference;
+use App\Enums\OrderPaymentStatus;
 use App\Enums\ReservationCancellationReason;
 use App\Enums\ReservationStatus;
 use App\Http\Controllers\Controller;
@@ -14,6 +15,7 @@ use App\Models\Reservation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Validation\ValidationException;
 
 class BuyerReservationController extends Controller
 {
@@ -23,6 +25,7 @@ class BuyerReservationController extends Controller
 
         $reservations = Reservation::query()
             ->where('buyer_id', $request->user()->id)
+            ->with('latestProof.paymentQr')
             ->orderByRaw('case when status = ? then 0 else 1 end', [ReservationStatus::Active->value])
             ->orderByDesc('id')
             ->get();
@@ -38,6 +41,7 @@ class BuyerReservationController extends Controller
             (float) $request->validated('quantity'),
             FulfillmentPreference::from($request->validated('fulfillment_preference')),
             $request->validated('fulfillment_note'),
+            $request->input('payment_flow'),
         );
 
         $message = $result['created'] ? 'Reserved.' : 'Reservation updated.';
@@ -51,6 +55,15 @@ class BuyerReservationController extends Controller
     public function cancel(Request $request, Reservation $reservation, CancelReservation $cancel): JsonResponse
     {
         $this->authorize('cancel', $reservation);
+
+        if ($reservation->payment_status !== null && ! in_array($reservation->payment_status, [
+            OrderPaymentStatus::AwaitingPayment,
+            OrderPaymentStatus::NotTracked,
+        ], true)) {
+            throw ValidationException::withMessages([
+                'reservation' => "You've already paid for this reservation. Message the seller to change it.",
+            ]);
+        }
 
         $cancel->handle(
             $reservation,

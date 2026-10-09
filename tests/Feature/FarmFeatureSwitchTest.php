@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Actions\Pricing\FlagStrandedListingsAction;
 use App\Enums\ListingUnit;
+use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderSource;
 use App\Enums\ProductCategory;
 use App\Enums\ReservationStatus;
@@ -170,11 +171,13 @@ class FarmFeatureSwitchTest extends TestCase
         $sold = OrderItem::query()->where('listing_id', $jamB->id)->firstOrFail();
         $this->assertEquals(5, (float) $sold->tawad_amount);
 
+        $this->acceptOnlinePayment($farmerB);
         $reserved = $this->asUser($buyer)
             ->postJson('/api/buyer/reservations', [
                 'listing_id' => $upcomingB->id,
                 'quantity' => 1,
                 'fulfillment_preference' => 'buyer_pickup',
+                'payment_flow' => 'proof',
             ])
             ->assertCreated();
 
@@ -239,14 +242,21 @@ class FarmFeatureSwitchTest extends TestCase
         $buyer = $this->buyer();
         $jam = $this->valueAddedCrop();
         $listing = $this->upcoming($farmer, 'Reserved Jam', $jam);
+        $this->acceptOnlinePayment($farmer);
 
         $this->asUser($buyer)
             ->postJson('/api/buyer/reservations', [
                 'listing_id' => $listing->id,
                 'quantity' => 2,
                 'fulfillment_preference' => 'buyer_pickup',
+                'payment_flow' => 'proof',
             ])
             ->assertCreated();
+
+        Reservation::query()->where('listing_id', $listing->id)->update([
+            'payment_status' => OrderPaymentStatus::NotTracked->value,
+            'payment_due_at' => null,
+        ]);
 
         $farm->update([
             'value_added_enabled' => false,
@@ -268,14 +278,21 @@ class FarmFeatureSwitchTest extends TestCase
         $buyer = $this->buyer();
         $other = $this->buyer();
         $listing = $this->upcoming($farmer, 'Morning Harvest');
+        $this->acceptOnlinePayment($farmer);
 
         $this->asUser($buyer)
             ->postJson('/api/buyer/reservations', [
                 'listing_id' => $listing->id,
                 'quantity' => 2,
                 'fulfillment_preference' => 'buyer_pickup',
+                'payment_flow' => 'proof',
             ])
             ->assertCreated();
+
+        Reservation::query()->where('listing_id', $listing->id)->update([
+            'payment_status' => OrderPaymentStatus::NotTracked->value,
+            'payment_due_at' => null,
+        ]);
 
         $farm->update(['reservations_enabled' => false]);
 
@@ -315,11 +332,13 @@ class FarmFeatureSwitchTest extends TestCase
         $placed = OrderItem::query()->where('listing_id', $listing->id)->firstOrFail();
         $this->assertEquals(5, (float) $placed->tawad_amount);
 
+        $this->acceptOnlinePayment($farmer);
         $this->asUser($buyer)
             ->postJson('/api/buyer/reservations', [
                 'listing_id' => $upcoming->id,
                 'quantity' => 1,
                 'fulfillment_preference' => 'buyer_pickup',
+                'payment_flow' => 'proof',
             ])
             ->assertCreated();
 
@@ -363,6 +382,7 @@ class FarmFeatureSwitchTest extends TestCase
                 'listing_id' => $another->id,
                 'quantity' => 1,
                 'fulfillment_preference' => 'buyer_pickup',
+                'payment_flow' => 'proof',
             ])
             ->assertCreated();
 
@@ -404,6 +424,10 @@ class FarmFeatureSwitchTest extends TestCase
         $flagged = app(FlagStrandedListingsAction::class)->floorRaised($farm->fresh(), $crop, 10, 36);
         $this->assertSame([$stranded->id], $flagged);
 
+        Reservation::query()->where('listing_id', $upcoming->id)->update([
+            'payment_status' => OrderPaymentStatus::NotTracked->value,
+            'payment_due_at' => null,
+        ]);
         Carbon::setTestNow($upcoming->available_from->copy());
         $this->artisan('reservations:open-due')->assertSuccessful();
 
@@ -479,6 +503,7 @@ class FarmFeatureSwitchTest extends TestCase
             ->postJson('/api/farmer/listings', $this->listingPayload($jamType, 'New Jam'))
             ->assertCreated();
 
+        $this->acceptOnlinePayment($farmer);
         $this->asUser($buyer)
             ->getJson('/api/buyer/marketplace/'.$harvest->id)
             ->assertOk()
@@ -489,6 +514,7 @@ class FarmFeatureSwitchTest extends TestCase
                 'listing_id' => $harvest->id,
                 'quantity' => 1,
                 'fulfillment_preference' => 'buyer_pickup',
+                'payment_flow' => 'proof',
             ])
             ->assertCreated();
 

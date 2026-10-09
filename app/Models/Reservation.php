@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\FulfillmentPreference;
 use App\Enums\ListingUnit;
+use App\Enums\OrderPaymentStatus;
 use App\Enums\ReservationCancellationReason;
 use App\Enums\ReservationStatus;
 use App\Enums\TawadType;
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * A hold on an upcoming harvest. It does not reserve stock and it does not
@@ -42,6 +45,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'converted_at',
     'cancelled_at',
     'active_slot',
+    'payment_status',
+    'payment_due_at',
+    'payment_reminded_at',
+    'paid_at',
+    'payment_qr_ids',
+    'refund_reference',
+    'refunded_at',
+    'refunded_by',
 ])]
 class Reservation extends Model
 {
@@ -63,6 +74,12 @@ class Reservation extends Model
             'cancellation_reason' => ReservationCancellationReason::class,
             'converted_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'payment_status' => OrderPaymentStatus::class,
+            'payment_due_at' => 'datetime',
+            'payment_reminded_at' => 'datetime',
+            'paid_at' => 'datetime',
+            'payment_qr_ids' => 'array',
+            'refunded_at' => 'datetime',
         ];
     }
 
@@ -91,9 +108,35 @@ class Reservation extends Model
         return $this->belongsTo(Order::class);
     }
 
+    public function refundedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'refunded_by')->withTrashed();
+    }
+
+    public function proofs(): HasMany
+    {
+        return $this->hasMany(PaymentProof::class);
+    }
+
+    public function latestProof(): HasOne
+    {
+        return $this->hasOne(PaymentProof::class)->latestOfMany();
+    }
+
+    public function paymentEvents(): HasMany
+    {
+        return $this->hasMany(OrderPaymentEvent::class);
+    }
+
     public function isActive(): bool
     {
         return $this->status === ReservationStatus::Active;
+    }
+
+    public function isPaymentTracked(): bool
+    {
+        return $this->payment_status instanceof OrderPaymentStatus
+            && $this->payment_status->isTracked();
     }
 
     /**

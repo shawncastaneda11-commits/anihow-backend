@@ -31,7 +31,7 @@ class FarmerSalesAnalytics
      *     year_total: array{sales: float, orders: int, best_month: array{key: string, sales: float}|null}|null
      * }
      */
-    public function build(?User $viewer, AnalyticsRange $range): array
+    public function build(?User $viewer, AnalyticsRange $range, ?int $farmId = null): array
     {
         $buckets = $range->buckets();
         $byKey = [];
@@ -54,6 +54,7 @@ class FarmerSalesAnalytics
             ->where('orders.completed_at', '<=', $range->to);
 
         $this->scopeAnalytics($query, $viewer, 'orders');
+        $this->scopeChosenFarm($query, $viewer, $farmId, 'orders');
         $this->applyCategory($query, $range);
 
         $rows = $query->select([

@@ -25,7 +25,7 @@ class HarvestAnalytics
     /**
      * @return array<string, mixed>
      */
-    public function build(?User $viewer, AnalyticsRange $range): array
+    public function build(?User $viewer, AnalyticsRange $range, ?int $farmId = null): array
     {
         $query = HarvestRecord::query()
             ->leftJoin('crop_types', 'crop_types.id', '=', 'harvest_records.crop_type_id')
@@ -34,6 +34,7 @@ class HarvestAnalytics
             ->whereDate('harvest_records.harvested_on', '<=', $range->to->toDateString());
 
         $this->scopeAnalytics($query, $viewer, 'harvest_records');
+        $this->scopeChosenFarm($query, $viewer, $farmId, 'harvest_records');
         $this->applyCategory($query, $range);
 
         $records = $query->get([

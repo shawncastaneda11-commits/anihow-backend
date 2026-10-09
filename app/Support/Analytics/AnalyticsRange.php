@@ -23,13 +23,48 @@ final readonly class AnalyticsRange
 
     public static function fromRequest(FarmerAnalyticsRequest $request): self
     {
-        $key = (string) $request->validated('range');
-        $category = (string) ($request->validated('category') ?? 'all');
         $year = $request->validated('year');
-        $year = $year === null ? null : (int) $year;
+
+        return self::fromValues(
+            (string) $request->validated('range'),
+            $request->validated('from') !== null ? (string) $request->validated('from') : null,
+            $request->validated('to') !== null ? (string) $request->validated('to') : null,
+            $year === null ? null : (int) $year,
+            (string) ($request->validated('category') ?? 'all'),
+        );
+    }
+
+    /**
+     * Phone requests leave dates alone. The dashboard passes $clampToYear so a
+     * typed range cannot run past today, backwards, or longer than 366 days.
+     */
+    public static function fromValues(
+        string $key,
+        ?string $from,
+        ?string $to,
+        ?int $year,
+        string $category,
+        bool $clampToYear = false,
+    ): self {
         $timezone = (string) config('app.timezone');
 
-        [$from, $to] = match ($key) {
+        if ($clampToYear && ! in_array($key, ['week', 'month', 'year', 'yearly', 'custom'], true)) {
+            $key = 'month';
+        }
+
+        if ($clampToYear && $key === 'yearly') {
+            $currentYear = (int) now()->year;
+
+            if ($year === null || $year < 2020 || $year > $currentYear) {
+                $year = $currentYear;
+            }
+        }
+
+        if ($clampToYear && $key === 'custom' && ($from === null || $from === '' || $to === null || $to === '')) {
+            $key = 'month';
+        }
+
+        [$start, $end] = match ($key) {
             'week' => [now()->startOfWeek()->startOfDay(), now()->endOfDay()],
             'month' => [now()->startOfMonth()->startOfDay(), now()->endOfDay()],
             'year' => [now()->startOfYear()->startOfDay(), now()->endOfDay()],
@@ -38,14 +73,30 @@ final readonly class AnalyticsRange
                 Carbon::create((int) $year, 12, 31, 0, 0, 0, $timezone)->endOfDay(),
             ],
             default => [
-                Carbon::createFromFormat('!Y-m-d', (string) $request->validated('from'), $timezone)->startOfDay(),
-                Carbon::createFromFormat('!Y-m-d', (string) $request->validated('to'), $timezone)->endOfDay(),
+                Carbon::createFromFormat('!Y-m-d', (string) $from, $timezone)->startOfDay(),
+                Carbon::createFromFormat('!Y-m-d', (string) $to, $timezone)->endOfDay(),
             ],
         };
 
-        $grouping = $key === 'yearly' ? 'month' : self::groupingFor($from, $to);
+        if ($clampToYear && $key === 'custom') {
+            $today = now()->endOfDay();
 
-        return new self($key, $from, $to, $grouping, $category, $key === 'yearly' ? $year : null);
+            if ($end->greaterThan($today)) {
+                $end = $today;
+            }
+
+            if ($start->greaterThan($end)) {
+                $start = $end->copy()->startOfDay();
+            }
+
+            if (self::inclusiveDays($start, $end) > 366) {
+                $start = $end->copy()->startOfDay()->subDays(365);
+            }
+        }
+
+        $grouping = $key === 'yearly' ? 'month' : self::groupingFor($start, $end);
+
+        return new self($key, $start, $end, $grouping, $category, $key === 'yearly' ? $year : null);
     }
 
     public static function inclusiveDays(CarbonInterface $from, CarbonInterface $to): int

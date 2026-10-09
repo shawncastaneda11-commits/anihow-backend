@@ -1033,22 +1033,32 @@ class AppStrings {
   String sinceDate(DateTime local) =>
       t('Since ${_monthDay(local)}', 'Mula ${_monthDay(local)}');
 
-  String confirmedAt(DateTime local) =>
-      t('confirmed ${_monthDay(local)}, ${_clock(local)}', 'kumpirmado ${_monthDay(local)}, ${_clock(local)}');
+  String monthDayClock(DateTime local) => '${_monthDay(local)}, ${_clock(local)}';
 
-  String sentAgo(DateTime local) {
+  String confirmedAt(DateTime local) =>
+      t('confirmed ${monthDayClock(local)}', 'kumpirmado ${monthDayClock(local)}');
+
+  String agoPhrase(DateTime local) {
     final minutes = DateTime.now().difference(local).inMinutes;
     if (minutes < 1) {
-      return t('Sent just now', 'Ipinadala ngayon lang');
+      return t('just now', 'ngayon lang');
     }
     if (minutes < 60) {
-      return t('Sent $minutes min ago', 'Ipinadala $minutes min ang nakalipas');
+      return t('$minutes min ago', '$minutes min ang nakalipas');
     }
     final hours = DateTime.now().difference(local).inHours;
     if (hours < 24) {
-      return t('Sent $hours hr ago', 'Ipinadala $hours oras ang nakalipas');
+      return t('$hours hr ago', '$hours oras ang nakalipas');
     }
-    return t('Sent ${_monthDay(local)}', 'Ipinadala noong ${_monthDay(local)}');
+    return _monthDay(local);
+  }
+
+  String sentAgo(DateTime local) {
+    final phrase = agoPhrase(local);
+    if (phrase == _monthDay(local)) {
+      return t('Sent $phrase', 'Ipinadala noong $phrase');
+    }
+    return t('Sent $phrase', 'Ipinadala $phrase');
   }
 
   String get amountToPay => t('Amount to pay', 'Halagang babayaran');

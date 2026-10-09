@@ -890,6 +890,7 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
           onComplete: _complete,
           onCancel: _cancel,
         ),
+        const SizedBox(height: 48),
       ],
     );
   }

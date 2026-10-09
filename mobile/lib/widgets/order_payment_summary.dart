@@ -124,7 +124,7 @@ class OrderPaymentSummary extends StatelessWidget {
                       _row(s.referenceNumber, proof?.reference ?? ''),
                       _row(s.proofAmount, AniHowMoney.peso(proof?.amount)),
                       _row(s.toLabel, paidTo),
-                      if (proof?.sentAt != null) _row(s.sentLabel, s.sentAgo(proof!.sentAt!)),
+                      if (proof?.sentAt != null) _row(s.sentLabel, s.agoPhrase(proof!.sentAt!)),
                     ],
                   ),
                 ),

@@ -31,7 +31,7 @@ class PayNowScreen extends StatefulWidget {
   State<PayNowScreen> createState() => _PayNowScreenState();
 }
 
-class _PayNowScreenState extends State<PayNowScreen> {
+class _PayNowScreenState extends State<PayNowScreen> with WidgetsBindingObserver {
   OrderRecord? _order;
   bool _loading = false;
   bool _sending = false;
@@ -52,8 +52,16 @@ class _PayNowScreenState extends State<PayNowScreen> {
         ? widget.order!.paymentQrs.first.id
         : null;
     _showForm = widget.order != null && _startsWithForm(widget.order!);
+    WidgetsBinding.instance.addObserver(this);
     if (widget.order == null) {
       _loading = true;
+      _load();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _order != null) {
       _load();
     }
   }
@@ -87,6 +95,7 @@ class _PayNowScreenState extends State<PayNowScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _reference.dispose();
     _amount.dispose();
     super.dispose();
@@ -612,7 +621,7 @@ class _SentCard extends StatelessWidget {
             Text('${s.referenceNumber}  ${proof?.reference ?? ''}'),
             Text('${s.proofAmount}  ${AniHowMoney.peso(proof?.amount ?? order.total)}'),
             Text('${s.paidTo}  $paidTo'),
-            if (proof?.sentAt != null) Text('${s.sentLabel}  ${s.sentAgo(proof!.sentAt!)}'),
+            if (proof?.sentAt != null) Text('${s.sentLabel}  ${s.agoPhrase(proof!.sentAt!)}'),
             const SizedBox(height: 10),
             DecoratedBox(
               decoration: BoxDecoration(
@@ -740,7 +749,7 @@ class _PaidCard extends StatelessWidget {
             ),
             Text(s.shopReceived(order.stallName, AniHowMoney.peso(order.total))),
             Text('${s.referenceNumber}  ${proof?.reference ?? ''}'),
-            if (when != null) Text('${s.confirmedLabel}  ${s.confirmedAt(when)}'),
+            if (when != null) Text('${s.confirmedLabel}  ${s.monthDayClock(when)}'),
             const SizedBox(height: 8),
             Text(s.paidNextNote),
             const SizedBox(height: 8),

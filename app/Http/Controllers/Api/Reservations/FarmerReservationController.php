@@ -24,7 +24,7 @@ class FarmerReservationController extends Controller
 
         $reservations = $listing->reservations()
             ->where('status', ReservationStatus::Active)
-            ->with('buyer')
+            ->with(['buyer', 'latestProof.paymentQr'])
             ->orderBy('created_at')
             ->orderBy('id')
             ->get();

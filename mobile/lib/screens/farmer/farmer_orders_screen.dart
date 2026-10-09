@@ -787,9 +787,14 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
                 if (order.amountReceived != null)
                   OrderMetaRow(
                     icon: Icons.payments_outlined,
-                    text: s.cashReceivedLine(
-                      AniHowMoney.peso(order.amountReceived),
-                    ),
+                    text: order.paymentMethod == 'online_transfer' && order.paymentIsPaid
+                        ? s.paidOnlineLine(
+                            AniHowMoney.peso(order.amountReceived),
+                            s.walletLabel(order.latestProof?.wallet),
+                          )
+                        : s.cashReceivedLine(
+                            AniHowMoney.peso(order.amountReceived),
+                          ),
                   ),
                 if (order.hasCancellationReason)
                   OrderMetaRow(

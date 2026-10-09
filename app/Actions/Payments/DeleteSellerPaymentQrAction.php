@@ -3,7 +3,9 @@
 namespace App\Actions\Payments;
 
 use App\Enums\OrderPaymentStatus;
+use App\Enums\ReservationStatus;
 use App\Models\Order;
+use App\Models\Reservation;
 use App\Models\SellerPaymentQr;
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
@@ -19,6 +21,19 @@ class DeleteSellerPaymentQrAction
         $others = $seller->paymentQrs()->whereKeyNot($qr->id)->count();
 
         if ($others === 0) {
+            $trackedReservations = Reservation::query()
+                ->where('farmer_seller_id', $seller->id)
+                ->where('status', ReservationStatus::Active)
+                ->whereNotNull('payment_status')
+                ->where('payment_status', '!=', OrderPaymentStatus::NotTracked->value)
+                ->exists();
+
+            if ($trackedReservations) {
+                throw ValidationException::withMessages([
+                    'qr' => 'Finish or cancel your reservations first.',
+                ]);
+            }
+
             $waiting = Order::query()
                 ->where('farmer_seller_id', $seller->id)
                 ->whereIn('payment_status', [

@@ -225,6 +225,7 @@ class ExportOwnDataAction
             ->map(fn (PaymentProof $proof): array => [
                 'id' => $proof->id,
                 'order_id' => $proof->order_id,
+                'reservation_id' => $proof->reservation_id,
                 'reference_number' => $proof->reference_number,
                 'amount' => $proof->amount,
                 'status' => $proof->status->value,

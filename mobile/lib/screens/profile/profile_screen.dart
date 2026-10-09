@@ -622,6 +622,7 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
   late bool _acceptsOnline;
   late int _hours;
   late List<PaymentQrCode> _qrs;
+  String? _paymentError;
 
   @override
   void initState() {
@@ -732,7 +733,10 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
       Navigator.of(context).pop(_shopFromFields());
       return;
     }
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _paymentError = null;
+    });
     try {
       final shop = await context.read<AuthController>().api.updateFarmerShop({
         'shop_name': _name.text.trim(),
@@ -745,6 +749,10 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
       if (mounted) {
         Navigator.of(context)
             .pop(shop.bio == _bio.text.trim() ? shop : _shopFromFields());
+      }
+    } on ApiException catch (error) {
+      if (mounted) {
+        setState(() => _paymentError = error.message);
       }
     } catch (error) {
       if (mounted) {
@@ -824,6 +832,8 @@ class _ShopEditScreenState extends State<ShopEditScreen> {
             acceptsOnline: _acceptsOnline,
             hours: _hours,
             busy: _busy,
+            error: _paymentError,
+            onError: (message) => setState(() => _paymentError = message),
             onAccepts: (value) => setState(() => _acceptsOnline = value),
             onHours: (value) => setState(() => _hours = value),
             onQrs: (value) => setState(() => _qrs = value),

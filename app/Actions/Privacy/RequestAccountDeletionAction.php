@@ -17,7 +17,7 @@ class RequestAccountDeletionAction
 
     public function handle(User $user, ?string $reason = null): AccountDeletionRequest
     {
-        if ($user->hasRefundDue()) {
+        if ($user->hasRefundDue() || $user->hasBlockingReservationPayments()) {
             throw ValidationException::withMessages([
                 'status' => 'Settle your pending payments and refunds first.',
             ]);

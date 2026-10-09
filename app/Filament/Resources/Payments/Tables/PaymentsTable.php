@@ -21,6 +21,17 @@ class PaymentsTable
         return $table
             ->defaultSort('created_at', 'desc')
             ->columns([
+                TextColumn::make('reservation_id')
+                    ->label('Type')
+                    ->state(function (PaymentProof $record): string {
+                        if ($record->order_id === null && $record->reservation_id !== null) {
+                            $name = $record->reservation?->listing_name;
+
+                            return $name !== null && $name !== '' ? "Reservation · {$name}" : 'Reservation';
+                        }
+
+                        return 'Order';
+                    }),
                 TextColumn::make('order.order_number')
                     ->label('Order')
                     ->searchable(),
@@ -68,10 +79,15 @@ class PaymentsTable
                             return $query;
                         }
 
-                        return $query->whereHas(
-                            'order',
-                            fn (Builder $order): Builder => $order->where('payment_status', $value),
-                        );
+                        return $query->where(function (Builder $proofs) use ($value): void {
+                            $proofs->whereHas(
+                                'order',
+                                fn (Builder $order): Builder => $order->where('payment_status', $value),
+                            )->orWhereHas(
+                                'reservation',
+                                fn (Builder $reservation): Builder => $reservation->where('payment_status', $value),
+                            );
+                        });
                     }),
                 SelectFilter::make('farm')
                     ->label('Farm')

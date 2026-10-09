@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Actions\Auth\SendEmailVerificationCodeAction;
 use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderStatus;
+use App\Enums\ReservationStatus;
 use App\Enums\Role;
 use App\Enums\UserStatus;
 use App\Notifications\ResetPasswordNotification;
@@ -400,6 +401,28 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             ->where(function ($query): void {
                 $query->where('buyer_id', $this->id)
                     ->orWhere('farmer_seller_id', $this->id);
+            })
+            ->exists();
+    }
+
+    /**
+     * A reservation still waiting on a payment check, still holding a paid
+     * quantity, or still owed a refund. These block account deletion.
+     */
+    public function hasBlockingReservationPayments(): bool
+    {
+        return Reservation::query()
+            ->where(function ($query): void {
+                $query->where('buyer_id', $this->id)
+                    ->orWhere('farmer_seller_id', $this->id);
+            })
+            ->where(function ($query): void {
+                $query->where('payment_status', OrderPaymentStatus::PaymentSent)
+                    ->orWhere(function ($paid): void {
+                        $paid->where('payment_status', OrderPaymentStatus::Paid)
+                            ->where('status', ReservationStatus::Active);
+                    })
+                    ->orWhere('payment_status', OrderPaymentStatus::RefundDue);
             })
             ->exists();
     }

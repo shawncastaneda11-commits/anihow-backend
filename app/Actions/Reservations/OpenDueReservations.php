@@ -4,12 +4,14 @@ namespace App\Actions\Reservations;
 
 use App\Actions\Listings\EnsureHarvestRecorded;
 use App\Enums\FulfillmentPreference;
+use App\Enums\OrderPaymentStatus;
 use App\Enums\ReservationCancellationReason;
 use App\Enums\ReservationStatus;
 use App\Models\Listing;
 use App\Models\Reservation;
 use App\Services\CheckoutService;
 use App\Support\InAppNotifier;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -98,10 +100,44 @@ class OpenDueReservations
 
             $this->ensureHarvest->forListing($listing);
 
+            $spokenFor = 0.0;
+
             foreach ($reservations as $reservation) {
                 $listing->refresh();
+                $needed = round((float) $reservation->quantity, 2);
+                $sellable = round($listing->sellableQuantity() - $spokenFor, 2);
+                $payment = $reservation->payment_status;
 
-                if (round($listing->sellableQuantity(), 2) + 0.001 < round((float) $reservation->quantity, 2)) {
+                if ($payment === OrderPaymentStatus::PaymentSent) {
+                    if ($sellable + 0.001 < $needed) {
+                        $this->canceller->handle($reservation, ReservationCancellationReason::HarvestShortfall);
+                    } else {
+                        $spokenFor += $needed;
+                    }
+
+                    continue;
+                }
+
+                if ($payment === OrderPaymentStatus::AwaitingPayment) {
+                    $deadline = $this->openingDeadline($reservation, $listing);
+
+                    if ($deadline !== null && ! now()->greaterThan($deadline) && $sellable + 0.001 >= $needed) {
+                        $spokenFor += $needed;
+
+                        continue;
+                    }
+
+                    $this->canceller->handle(
+                        $reservation,
+                        $deadline !== null && ! now()->greaterThan($deadline)
+                            ? ReservationCancellationReason::HarvestShortfall
+                            : ReservationCancellationReason::PaymentExpired,
+                    );
+
+                    continue;
+                }
+
+                if ($sellable + 0.001 < $needed) {
                     $this->canceller->handle($reservation, ReservationCancellationReason::HarvestShortfall);
 
                     continue;
@@ -110,6 +146,25 @@ class OpenDueReservations
                 $this->convert($reservation);
             }
         });
+    }
+
+    /**
+     * An unpaid reservation can still be paid after opening only while its
+     * deadline holds, and never past an hour after opening. That covers a
+     * proof rejected near harvest day and a listing the seller opened early.
+     * A shortened deadline is saved so the buyer sees the real time.
+     */
+    private function openingDeadline(Reservation $reservation, Listing $listing): ?CarbonInterface
+    {
+        $deadline = $reservation->payment_due_at;
+        $graceEnds = $listing->available_from?->copy()->addHour();
+
+        if ($graceEnds !== null && ($deadline === null || $deadline->greaterThan($graceEnds))) {
+            $deadline = $graceEnds;
+            $reservation->forceFill(['payment_due_at' => $deadline])->save();
+        }
+
+        return $deadline;
     }
 
     private function convert(Reservation $reservation): void

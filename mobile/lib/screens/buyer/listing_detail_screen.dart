@@ -23,7 +23,22 @@ import '../../widgets/promo_badge.dart';
 import '../../widgets/report_sheet.dart';
 import '../../widgets/status_pill.dart';
 import 'cart_screen.dart';
+import 'pay_now_screen.dart';
 import 'shop_profile_screen.dart';
+
+String? _reserveBlockReason(ListingItem listing, AppStrings s) {
+  if (!listing.isUpcoming || listing.canReserve != false) {
+    return null;
+  }
+  if (!listing.acceptsOnlinePayment) {
+    return s.sellerNoReservations;
+  }
+  final opens = listing.availableFrom;
+  if (opens != null && !opens.isAfter(DateTime.now().add(const Duration(hours: 1)))) {
+    return s.reservationsClosed;
+  }
+  return null;
+}
 
 double? _available(ListingItem listing) {
   return double.tryParse(listing.sellableQuantity ?? listing.quantityAvailable);
@@ -72,19 +87,25 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         return ReserveHarvestSheet(
           listing: listing,
           onReserve: (quantity, preference) async {
-            await sheetContext.read<AuthController>().api.reserveListing(
-              listingId: listing.id,
-              quantity: quantity,
-              fulfillmentPreference: preference,
-            );
+            final reservation = await sheetContext
+                .read<AuthController>()
+                .api
+                .reserveListing(
+                  listingId: listing.id,
+                  quantity: quantity,
+                  fulfillmentPreference: preference,
+                );
             if (sheetContext.mounted) {
               Navigator.of(sheetContext).pop();
             }
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(AppStrings.read(context).reserve)),
-              );
+            if (!mounted) {
+              return;
             }
+            await Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => PayNowScreen(reservation: reservation),
+              ),
+            );
           },
         );
       },
@@ -353,7 +374,23 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 Text(listing.description!),
               ],
               const SizedBox(height: AniHowSpace.section),
-              if (listing.showComingSoon)
+              if (_reserveBlockReason(listing, s) case final reason?)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    FilledButton(
+                      key: const ValueKey('reserve-harvest'),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                      onPressed: null,
+                      child: Text(s.reserve),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(reason, key: const ValueKey('reserve-unavailable')),
+                  ],
+                )
+              else if (listing.showComingSoon)
                 Text(
                   s.comingSoon,
                   key: const ValueKey('coming-soon'),
@@ -497,7 +534,7 @@ class _ReserveHarvestSheetState extends State<ReserveHarvestSheet> {
                 key: const ValueKey('reserve-estimate'),
               ),
               const SizedBox(height: 8),
-              Text(s.payCashOnHandover),
+              Text(s.payWithSellerQr),
               const SizedBox(height: 12),
               Row(
                 children: [

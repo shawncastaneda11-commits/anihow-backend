@@ -8,6 +8,7 @@ use App\Models\CropType;
 use App\Models\Farm;
 use App\Models\Listing;
 use App\Models\Order;
+use App\Models\SellerPaymentQr;
 use App\Models\User;
 use Illuminate\Testing\TestResponse;
 
@@ -52,6 +53,20 @@ trait CreatesMarketplaceActors
     protected function listingFor(User $farmer, array $attributes = []): Listing
     {
         return Listing::factory()->forFarmer($farmer)->create($attributes);
+    }
+
+    protected function acceptOnlinePayment(User $farmer, int $hours = 24): SellerPaymentQr
+    {
+        $farmer->forceFill([
+            'accepts_online_payment' => true,
+            'payment_time_limit_hours' => $hours,
+        ])->save();
+
+        return SellerPaymentQr::factory()->create([
+            'farmer_seller_id' => $farmer->id,
+            'account_last4' => '1234',
+            'account_name' => $farmer->shop_name ?: $farmer->name,
+        ]);
     }
 
     protected function asUser(User $user): static

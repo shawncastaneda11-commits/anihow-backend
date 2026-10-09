@@ -34,6 +34,7 @@ class StoreReservationRequest extends FormRequest
             'quantity' => StoreCartItemRequest::quantityRules(),
             'fulfillment_preference' => ['required', Rule::enum(FulfillmentPreference::class)],
             'fulfillment_note' => ['nullable', 'string', 'max:1000'],
+            'payment_flow' => ['nullable', 'string'],
         ];
     }
 }

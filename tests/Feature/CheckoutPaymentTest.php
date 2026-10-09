@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\OrderPaymentStatus;
 use App\Enums\PaymentMethod;
 use App\Models\Order;
+use App\Models\Reservation;
 use App\Models\SellerPaymentQr;
 use App\Models\StallMessage;
 use App\Models\User;
@@ -147,12 +148,19 @@ class CheckoutPaymentTest extends TestCase
             'available_until' => now()->addDays(10),
         ]);
         $buyer = $this->buyer();
+        $this->acceptOnlinePayment($farmer);
 
         $this->asUser($buyer)->postJson('/api/buyer/reservations', [
             'listing_id' => $listing->id,
             'quantity' => 1,
             'fulfillment_preference' => 'buyer_pickup',
+            'payment_flow' => 'proof',
         ])->assertCreated();
+
+        Reservation::query()->where('listing_id', $listing->id)->update([
+            'payment_status' => OrderPaymentStatus::NotTracked->value,
+            'payment_due_at' => null,
+        ]);
 
         $this->asUser($farmer)->postJson("/api/farmer/listings/{$listing->id}/open")->assertOk();
 

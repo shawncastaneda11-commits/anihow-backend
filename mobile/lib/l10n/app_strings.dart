@@ -569,6 +569,38 @@ class AppStrings {
     'Magbayad ng cash sa pagkuha pagkatapos ng ani',
   );
 
+  String get payWithSellerQr => t(
+    "Pay with the seller's QR before the deadline.",
+    'Magbayad gamit ang QR ng nagbebenta bago ang deadline.',
+  );
+
+  String get sellerNoReservations => t(
+    "This seller doesn't take reservations yet.",
+    'Hindi pa tumatanggap ng reserbasyon ang nagbebenta na ito.',
+  );
+
+  String get reservationsClosed => t(
+    'Reservations closed. You can order once it opens.',
+    'Sarado na ang reserbasyon. Puwede kang umorder kapag bumukas na.',
+  );
+
+  String get viewPayment => t('View payment', 'Tingnan ang bayad');
+
+  String get reservationBadge => t('Reservation', 'Reserbasyon');
+
+  String reservationPayLine(String listing) =>
+      t('Reservation · $listing', 'Reserbasyon · $listing');
+
+  String get reservationSecured => t(
+    'Payment confirmed — your reservation is secured. It becomes an order on harvest day.',
+    'Kumpirmado ang bayad — sigurado na ang reserbasyon mo. Magiging order ito sa araw ng ani.',
+  );
+
+  String get waitingForSeller => t(
+    'Waiting for the seller to check it',
+    'Hinihintay ang nagbebenta na suriin ito',
+  );
+
   String reservedHarvest(String quantity, String unit, int count) => t(
     '$quantity $unit reserved ($count)',
     '$quantity $unit ang naka-reserba ($count)',
@@ -812,6 +844,7 @@ class AppStrings {
   }
 
   String costRecorded(String amount) => t('₱$amount cost', '₱$amount gastos');
+  String get statStarting => t('Starting', 'Panimula');
   String get statHarvested => t('Harvested', 'Naani');
   String get statGood => t('Good', 'Mabuti');
   String get statSold => t('Sold', 'Nabenta');
@@ -820,6 +853,10 @@ class AppStrings {
   String get statCost => t('Cost', 'Gastos');
   String recordsWithoutCost(int count) =>
       t('$count records without cost', '$count rekord na walang gastos');
+
+  String harvestsWithoutCost(int count) => count == 1
+      ? t('1 harvest without cost', '1 ani na walang gastos')
+      : t('$count harvests without cost', '$count ani na walang gastos');
   String harvestKind(String? kind) => switch (kind) {
     'added' => addedStockLabel,
     'actual' => actualHarvestLabel,
@@ -1332,6 +1369,13 @@ class AppStrings {
   String get cashReceived => t('Cash received', 'Cash na natanggap');
   String cashReceivedLine(String peso) =>
       t('Cash received $peso', 'Cash na natanggap $peso');
+
+  String paidOnlineLine(String peso, String wallet) {
+    if (wallet.isEmpty) {
+      return t('Paid online $peso', 'Bayad online $peso');
+    }
+    return t('Paid online $peso · $wallet', 'Bayad online $peso · $wallet');
+  }
   String orderTotalHint(String peso) =>
       t('Order total $peso', 'Kabuuan ng order $peso');
   String get enterCashReceived =>

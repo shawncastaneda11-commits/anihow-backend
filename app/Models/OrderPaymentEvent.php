@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'order_id',
+    'reservation_id',
     'event',
     'actor_id',
     'note',
@@ -25,6 +26,11 @@ class OrderPaymentEvent extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function reservation(): BelongsTo
+    {
+        return $this->belongsTo(Reservation::class);
     }
 
     public function actor(): BelongsTo

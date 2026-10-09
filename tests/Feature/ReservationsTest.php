@@ -10,6 +10,7 @@ use App\Enums\FulfillmentPreference;
 use App\Enums\ListingStatus;
 use App\Enums\ListingUnit;
 use App\Enums\NotificationType;
+use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderSource;
 use App\Enums\OrderStatus;
 use App\Enums\ReportReason;
@@ -165,6 +166,7 @@ class ReservationsTest extends TestCase
         $this->reserve($buyer, $listing, 2)->assertCreated();
 
         $listing->update(['price_per_unit' => 90]);
+        $this->keepAsCash($listing);
         $this->open($farmer, $listing);
 
         $item = Order::query()->firstOrFail()->items()->first();
@@ -180,6 +182,7 @@ class ReservationsTest extends TestCase
         $this->reserve($this->buyer(), $listing, 2)->assertCreated();
 
         $listing->cropType->update(['floor_price' => 100]);
+        $this->keepAsCash($listing);
 
         $this->open($farmer, $listing);
 
@@ -197,6 +200,7 @@ class ReservationsTest extends TestCase
         $this->reserve($second, $listing, 4)->assertCreated();
 
         $listing->update(['quantity_available' => 5]);
+        $this->keepAsCash($listing);
         $this->travelToOpen($listing);
         $this->artisan('reservations:open-due')->assertSuccessful();
 
@@ -218,6 +222,7 @@ class ReservationsTest extends TestCase
         $listing = $this->upcoming($farmer, from: now()->addHours(47), until: now()->addDays(10));
         $buyer = $this->buyer();
         $this->reserve($buyer, $listing, 2)->assertCreated();
+        $this->keepAsCash($listing);
         $reservedAt = now()->copy();
 
         $this->travelToOpen($listing);
@@ -246,6 +251,7 @@ class ReservationsTest extends TestCase
         $farmer = $this->farmer();
         $listing = $this->upcoming($farmer);
         $this->reserve($this->buyer(), $listing, 2)->assertCreated();
+        $this->keepAsCash($listing);
         $this->travelToOpen($listing);
 
         $this->artisan('reservations:open-due')->assertSuccessful();
@@ -369,12 +375,14 @@ class ReservationsTest extends TestCase
         $farmer = $this->farmer();
         $buyer = $this->buyer();
         $listing = $this->upcoming($farmer);
+        $this->acceptOnlinePayment($farmer);
         app(ReserveListing::class)->handle(
             $buyer,
             $listing->id,
             1,
             FulfillmentPreference::BuyerPickup,
             null,
+            'proof',
         );
 
         $this->actingAs($admin);
@@ -444,6 +452,7 @@ class ReservationsTest extends TestCase
         $this->reserve($next, $listing, 4)->assertCreated();
 
         $suspended->update(['status' => UserStatus::Suspended]);
+        $this->keepAsCash($listing);
         $this->travelToOpen($listing);
         $this->artisan('reservations:open-due')->assertSuccessful();
 
@@ -528,7 +537,8 @@ class ReservationsTest extends TestCase
         $farmer = $this->farmer();
         $buyer = $this->buyer();
         $listing = $this->upcoming($farmer);
-        app(ReserveListing::class)->handle($buyer, $listing->id, 2, FulfillmentPreference::BuyerPickup, null);
+        $this->acceptOnlinePayment($farmer);
+        app(ReserveListing::class)->handle($buyer, $listing->id, 2, FulfillmentPreference::BuyerPickup, null, 'proof');
 
         try {
             app(TakeDownListingAction::class)->handle($listing, $admin, 'Not this harvest');
@@ -553,7 +563,8 @@ class ReservationsTest extends TestCase
         $farmer = $this->farmer();
         $buyer = $this->buyer();
         $reserved = $this->upcoming($farmer);
-        app(ReserveListing::class)->handle($buyer, $reserved->id, 2, FulfillmentPreference::BuyerPickup, null);
+        $this->acceptOnlinePayment($farmer);
+        app(ReserveListing::class)->handle($buyer, $reserved->id, 2, FulfillmentPreference::BuyerPickup, null, 'proof');
         $clear = $this->listingFor($farmer);
 
         $this->openFilament($admin);
@@ -585,7 +596,8 @@ class ReservationsTest extends TestCase
         $this->assertSame(ListingStatus::TakenDown, $clear->fresh()->status);
 
         $reported = $this->upcoming($farmer);
-        app(ReserveListing::class)->handle($buyer, $reported->id, 1, FulfillmentPreference::BuyerPickup, null);
+        $this->acceptOnlinePayment($farmer);
+        app(ReserveListing::class)->handle($buyer, $reported->id, 1, FulfillmentPreference::BuyerPickup, null, 'proof');
         $report = Report::factory()->create([
             'reporter_id' => $buyer->id,
             'reportable_id' => $reported->id,
@@ -752,6 +764,7 @@ class ReservationsTest extends TestCase
         $listing = $this->upcoming($farmer);
         $buyer = $this->buyer();
         $this->reserve($buyer, $listing, 1)->assertCreated();
+        $this->keepAsCash($listing);
         $this->open($farmer, $listing);
 
         $this->asUser($buyer)->getJson('/api/buyer/orders/'.Order::query()->value('id'))
@@ -832,12 +845,33 @@ class ReservationsTest extends TestCase
         string $preference = 'buyer_pickup',
         ?string $note = null,
     ): TestResponse {
+        $seller = $listing->farmerSeller;
+
+        if ($seller !== null && ! $seller->paymentQrs()->exists()) {
+            $this->acceptOnlinePayment($seller);
+        }
+
         return $this->asUser($buyer)->postJson('/api/buyer/reservations', [
             'listing_id' => $listing->id,
             'quantity' => $quantity,
             'fulfillment_preference' => $preference,
             'fulfillment_note' => $note,
+            'payment_flow' => 'proof',
         ]);
+    }
+
+    /**
+     * Holds placed before payment tracking still become cash orders.
+     */
+    private function keepAsCash(Listing $listing): void
+    {
+        Reservation::query()
+            ->where('listing_id', $listing->id)
+            ->where('status', ReservationStatus::Active)
+            ->update([
+                'payment_status' => OrderPaymentStatus::NotTracked->value,
+                'payment_due_at' => null,
+            ]);
     }
 
     private function open(User $farmer, Listing $listing): void
@@ -859,6 +893,7 @@ class ReservationsTest extends TestCase
         $listing = $this->upcoming($farmer, quantity: 10);
         $buyer = $this->buyer();
         $this->reserve($buyer, $listing, 10)->assertCreated();
+        $this->keepAsCash($listing);
 
         return [$farmer, $listing, $buyer];
     }

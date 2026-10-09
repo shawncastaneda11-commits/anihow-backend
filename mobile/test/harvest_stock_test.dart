@@ -49,6 +49,7 @@ class _ScriptedApi extends ApiClient {
       lastPage: 1,
       summary: const StockSummary(
         trackedSince: '2026-10-09T04:20:52+08:00',
+        starting: '20.00',
         harvested: '193.00',
         good: '193.00',
         sold: '0.00',
@@ -57,6 +58,7 @@ class _ScriptedApi extends ApiClient {
         held: '0.00',
         hasEstimated: false,
         recordsWithoutCost: 1,
+        harvestsWithoutCost: 1,
         costTotal: '900.00',
         unit: 'kg',
       ),
@@ -445,6 +447,9 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('193 kg'), findsWidgets);
+    expect(find.byKey(const ValueKey('stock-stat-starting')), findsOneWidget);
+    expect(find.text('Starting'), findsOneWidget);
+    expect(find.text('1 harvest without cost'), findsOneWidget);
     expect(find.byKey(const ValueKey('stock-stat-harvested')), findsOneWidget);
     expect(find.byKey(const ValueKey('stock-stat-good')), findsOneWidget);
     expect(find.byKey(const ValueKey('stock-stat-sold')), findsOneWidget);

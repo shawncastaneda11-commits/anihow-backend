@@ -28,6 +28,8 @@ class OnlinePaymentSection extends StatelessWidget {
     required this.onAccepts,
     required this.onHours,
     required this.onQrs,
+    this.error,
+    this.onError,
   });
 
   final List<PaymentQrCode> qrs;
@@ -37,6 +39,8 @@ class OnlinePaymentSection extends StatelessWidget {
   final ValueChanged<bool> onAccepts;
   final ValueChanged<int> onHours;
   final ValueChanged<List<PaymentQrCode>> onQrs;
+  final String? error;
+  final ValueChanged<String>? onError;
 
   Future<void> _add(BuildContext context) async {
     final created = await showModalBottomSheet<PaymentQrCode>(
@@ -77,7 +81,9 @@ class OnlinePaymentSection extends StatelessWidget {
         onAccepts(false);
       }
     } on ApiException catch (error) {
-      if (context.mounted) {
+      if (onError != null) {
+        onError!(error.message);
+      } else if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
       }
     }
@@ -193,6 +199,15 @@ class OnlinePaymentSection extends StatelessWidget {
                     : s.onlinePaymentOff,
               ),
             ),
+            if (error != null && error!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  error!,
+                  key: const ValueKey('online-payment-error'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
           ],
         ),
       ),

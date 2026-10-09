@@ -154,6 +154,12 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
+                        if ((double.tryParse(summary.starting) ?? 0) > 0)
+                          _StatTile(
+                            label: s.statStarting,
+                            value: stockAmount(summary.starting, unit),
+                            tileKey: 'starting',
+                          ),
                         _StatTile(
                           label: s.statHarvested,
                           value: stockAmount(summary.harvested, unit),
@@ -188,11 +194,11 @@ class _StockHistoryScreenState extends State<StockHistoryScreen> {
                           ),
                       ],
                     ),
-                    if (summary.recordsWithoutCost > 0)
+                    if (summary.harvestsMissingCost > 0)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Text(
-                          s.recordsWithoutCost(summary.recordsWithoutCost),
+                          s.harvestsWithoutCost(summary.harvestsMissingCost),
                           key: const ValueKey('records-without-cost'),
                         ),
                       ),

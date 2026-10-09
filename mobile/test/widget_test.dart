@@ -259,7 +259,11 @@ void main() {
       fulfillmentPreference: CartRequests.buyerPickup,
       fulfillmentNote: 'Saturday 7am at the barangay hall.',
     );
-    expect(checkout.keys, unorderedEquals(['fulfillment_preference', 'fulfillment_note']));
+    expect(
+      checkout.keys,
+      unorderedEquals(['fulfillment_preference', 'payment_flow', 'fulfillment_note']),
+    );
+    expect(checkout['payment_flow'], 'proof');
     expect(checkout.containsKey('payment_method'), isFalse);
     expect(checkout.containsKey('courier'), isFalse);
     expect(checkout['fulfillment_preference'], 'buyer_pickup');

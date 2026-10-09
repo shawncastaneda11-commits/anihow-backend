@@ -4,6 +4,7 @@ namespace App\Http\Resources\Api;
 
 use App\Enums\Permission;
 use App\Models\ShopFavorite;
+use App\Models\User;
 use App\Support\GeoDistance;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -32,6 +33,16 @@ class ShopProfileResource extends JsonResource
                 ),
             ),
             'accepts_online_payment' => $this->acceptsOnlinePayment(),
+            'payment_time_limit_hours' => $this->when(
+                $this->viewerIsThisSeller($request),
+                fn (): int => (int) ($this->payment_time_limit_hours ?: 24),
+            ),
+            'payment_qrs' => $this->when(
+                $this->viewerIsThisSeller($request),
+                fn (): array => SellerPaymentQrResource::collection(
+                    $this->paymentQrs()->orderBy('id')->get(),
+                )->resolve(),
+            ),
             'contact' => $this->when(
                 $request->user() !== null && (int) $request->user()->id === (int) $this->id,
                 fn (): ?string => $this->shopContact(),
@@ -50,5 +61,12 @@ class ShopProfileResource extends JsonResource
                         ->exists(),
             ),
         ];
+    }
+
+    private function viewerIsThisSeller(Request $request): bool
+    {
+        $user = $request->user();
+
+        return $user instanceof User && (int) $user->id === (int) $this->id;
     }
 }

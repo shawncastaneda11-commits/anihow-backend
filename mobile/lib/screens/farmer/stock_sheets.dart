@@ -6,8 +6,10 @@ import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
+import '../../widgets/hint_card.dart';
 import '../../widgets/primary_button.dart';
 import 'harvest_form.dart';
+import 'walk_in_sale_screen.dart';
 
 Future<bool> showAddStockSheet(
   BuildContext context,
@@ -25,13 +27,25 @@ Future<bool> showRemoveStockSheet(
   BuildContext context,
   ListingItem listing, {
   String? prefilledReason,
-}) {
-  return showModalBottomSheet<bool>(
+}) async {
+  final outcome = await showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
     builder: (context) =>
         _RemoveSheet(listing: listing, prefilledReason: prefilledReason),
-  ).then((saved) => saved == true);
+  );
+  if (!context.mounted) {
+    return false;
+  }
+  if (outcome == 'walk_in') {
+    final recorded = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => WalkInSaleScreen(listingId: listing.id),
+      ),
+    );
+    return recorded == true;
+  }
+  return outcome == 'saved';
 }
 
 class _HarvestSheet extends StatefulWidget {
@@ -301,7 +315,7 @@ class _RemoveSheetState extends State<_RemoveSheet> {
         note: _note.text,
       );
       if (mounted) {
-        Navigator.of(context).pop(true);
+        Navigator.of(context).pop('saved');
       }
     } on ApiException catch (error) {
       if (mounted) {
@@ -354,6 +368,20 @@ class _RemoveSheetState extends State<_RemoveSheet> {
                 ),
             ],
           ),
+          if (_reason == 'sold_outside') ...[
+            const SizedBox(height: AniHowSpace.fieldGap),
+            AniHowHintCard(
+              key: const ValueKey('walk-in-nudge'),
+              icon: Icons.point_of_sale_outlined,
+              title: '',
+              body: s.soldOutsideHint,
+              footer: OutlinedButton(
+                key: const ValueKey('record-walk-in-from-stock'),
+                onPressed: () => Navigator.of(context).pop('walk_in'),
+                child: Text(s.recordWalkInSale),
+              ),
+            ),
+          ],
           if (_reason == 'correction') ...[
             const SizedBox(height: AniHowSpace.fieldGap),
             TextField(

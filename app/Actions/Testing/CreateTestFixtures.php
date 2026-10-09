@@ -13,6 +13,7 @@ use App\Enums\FulfillmentPreference;
 use App\Enums\HarvestRecordKind;
 use App\Enums\ListingUnit;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentWallet;
 use App\Enums\ReportReason;
 use App\Enums\ReportStatus;
 use App\Enums\Role;
@@ -28,6 +29,7 @@ use App\Models\Order;
 use App\Models\Report;
 use App\Models\Reservation;
 use App\Models\Review;
+use App\Models\SellerPaymentQr;
 use App\Models\TawadRule;
 use App\Models\User;
 use App\Services\CheckoutService;
@@ -36,6 +38,7 @@ use App\Support\HarvestInput;
 use App\Support\Pricing\PriceGuardResolver;
 use App\Support\Pricing\UnitConverter;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -80,6 +83,7 @@ class CreateTestFixtures
         $this->editor('susp03@gmail.com', 'Suspended Editor', 'Editor@1234', $testFarm, 'anihow-test-farm', UserStatus::Suspended, 'Test account');
 
         $jun = $this->account('kuyajun@gmail.com', 'Kuya Jun', 'Seller@1234', Role::FarmerSeller, $pyap, UserStatus::Active, 'Kuya Jun Harvest', true);
+        $this->paymentQr($jun);
         $nena = $this->account('alingnena@gmail.com', 'Aling Nena', 'Seller@1234', Role::FarmerSeller, $pyap, UserStatus::Active, 'Aling Nena Produce', false);
         $this->account('pending01@gmail.com', 'Pending Seller', 'Seller@1234', Role::FarmerSeller, $pyap, UserStatus::Pending);
         $this->account('susp02@gmail.com', 'Suspended Seller', 'Seller@1234', Role::FarmerSeller, $pyap, UserStatus::Suspended, suspensionReason: 'Test account');
@@ -205,6 +209,51 @@ class CreateTestFixtures
         $farmSlug = $farm?->slug;
 
         return $this->createAccount($email, $name, $password, $role, $farm, $farmSlug, $status, $shopName, $acceptsOnlinePayment, $suspensionReason);
+    }
+
+    /**
+     * A drawn PNG, not a real wallet. Online payment stays on for this seller.
+     */
+    private function paymentQr(?User $seller): void
+    {
+        if ($seller === null || $this->dryRun) {
+            return;
+        }
+
+        if ($seller->paymentQrs()->exists()) {
+            $seller->forceFill([
+                'accepts_online_payment' => true,
+                'payment_time_limit_hours' => 24,
+            ])->save();
+
+            return;
+        }
+
+        $image = imagecreatetruecolor(320, 80);
+        $white = imagecolorallocate($image, 255, 255, 255);
+        $black = imagecolorallocate($image, 0, 0, 0);
+        imagefilledrectangle($image, 0, 0, 319, 79, $white);
+        imagestring($image, 3, 8, 32, 'TEST QR - not a real account', $black);
+        ob_start();
+        imagepng($image);
+        $png = ob_get_clean();
+        imagedestroy($image);
+
+        $path = 'payment-qrs/'.$seller->id.'/test-qr.png';
+        Storage::disk('local')->put($path, $png === false ? '' : $png);
+
+        SellerPaymentQr::query()->create([
+            'farmer_seller_id' => $seller->id,
+            'wallet' => PaymentWallet::Gcash,
+            'account_name' => $seller->shop_name ?: $seller->name,
+            'account_last4' => '0000',
+            'image_path' => $path,
+        ]);
+
+        $seller->forceFill([
+            'accepts_online_payment' => true,
+            'payment_time_limit_hours' => 24,
+        ])->save();
     }
 
     private function createAccount(

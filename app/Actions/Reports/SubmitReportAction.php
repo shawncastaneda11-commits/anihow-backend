@@ -7,10 +7,12 @@ use App\Enums\Permission;
 use App\Enums\ReportReason;
 use App\Enums\ReportStatus;
 use App\Models\Listing;
+use App\Models\Order;
 use App\Models\Report;
 use App\Models\Review;
 use App\Models\User;
 use App\Support\InAppNotifier;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 
@@ -25,7 +27,7 @@ class SubmitReportAction
         ReportReason $reason,
         ?string $details = null,
     ): Report {
-        $target = $this->resolveVisibleTarget($reporter, $targetType, $targetId);
+        $target = $this->resolveVisibleTarget($reporter, $targetType, $targetId, $reason);
 
         $this->guardAgainstDuplicateOpenReport($reporter, $target);
 
@@ -46,7 +48,7 @@ class SubmitReportAction
         return $report;
     }
 
-    private function resolveVisibleTarget(User $reporter, string $targetType, int $targetId): Model
+    private function resolveVisibleTarget(User $reporter, string $targetType, int $targetId, ReportReason $reason): Model
     {
         if ($targetType === 'listing') {
             return $this->resolveListing($reporter, $targetId);
@@ -56,9 +58,36 @@ class SubmitReportAction
             return $this->resolveReview($reporter, $targetId);
         }
 
+        if ($targetType === 'order') {
+            return $this->resolveOrder($reporter, $targetId, $reason);
+        }
+
         throw ValidationException::withMessages([
-            'target_type' => 'You can only report a listing or a review.',
+            'target_type' => 'You can only report a listing, a review, or an order.',
         ]);
+    }
+
+    private function resolveOrder(User $reporter, int $targetId, ReportReason $reason): Order
+    {
+        if ($reason !== ReportReason::PaymentProblem) {
+            throw ValidationException::withMessages([
+                'reason' => 'An order can only be reported for a payment problem.',
+            ]);
+        }
+
+        $order = Order::query()->find($targetId);
+
+        if ($order === null) {
+            throw ValidationException::withMessages([
+                'target_id' => 'That order is not available to report.',
+            ]);
+        }
+
+        if (! $order->isOwnedByBuyer($reporter) && ! $order->isOwnedByFarmer($reporter)) {
+            throw new AuthorizationException('This action is unauthorized.');
+        }
+
+        return $order;
     }
 
     private function resolveListing(User $reporter, int $targetId): Listing

@@ -2,13 +2,14 @@
 
 namespace Tests\Feature;
 
-use App\Actions\Chat\SendStallMessage;
+use App\Enums\OrderPaymentStatus;
 use App\Enums\PaymentMethod;
 use App\Models\Order;
+use App\Models\SellerPaymentQr;
 use App\Models\StallMessage;
+use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use RuntimeException;
 use Tests\Concerns\CreatesMarketplaceActors;
 use Tests\TestCase;
 
@@ -40,14 +41,16 @@ class CheckoutPaymentTest extends TestCase
         $this->assertSame(0, StallMessage::query()->count());
     }
 
-    public function test_online_payment_is_stored_and_posts_one_buyer_message(): void
+    public function test_online_payment_is_tracked_and_does_not_ask_for_a_qr_in_chat(): void
     {
         $farmer = $this->farmer(['shop_name' => 'Nena Stall']);
+        $qr = $this->allowOnline($farmer);
         $listing = $this->listingFor($farmer, ['price_per_unit' => 30, 'quantity_available' => 10]);
         $buyer = $this->buyer(['name' => 'Carla Santos']);
         $this->addToCart($buyer, $listing, 1);
 
         $response = $this->checkout($buyer, [
+            'payment_flow' => 'proof',
             'payments' => [
                 ['seller_id' => $farmer->id, 'method' => PaymentMethod::OnlineTransfer->value],
             ],
@@ -56,25 +59,22 @@ class CheckoutPaymentTest extends TestCase
         $order = Order::query()->findOrFail($response->json('data.0.id'));
 
         $this->assertSame(PaymentMethod::OnlineTransfer->value, $order->payment_method);
+        $this->assertSame(OrderPaymentStatus::AwaitingPayment, $order->payment_status);
+        $this->assertSame([$qr->id], $order->payment_qr_ids);
         $this->assertSame(PaymentMethod::OnlineTransfer->label(), $response->json('data.0.payment_label'));
-        $this->assertSame(1, StallMessage::query()->count());
-
-        $message = StallMessage::query()->firstOrFail();
-        $this->assertSame($buyer->id, $message->user_id);
-        $this->assertSame($order->id, $message->order_id);
-        $this->assertStringContainsString($order->order_number, (string) $message->body);
-        $this->assertStringContainsString('₱30.00', (string) $message->body);
-        $this->assertDatabaseHas('in_app_notifications', [
-            'user_id' => $farmer->id,
-            'type' => 'order_message',
+        $this->assertSame(0, StallMessage::query()->count());
+        $this->assertDatabaseHas('order_payment_events', [
+            'order_id' => $order->id,
+            'event' => 'placed_online',
         ]);
     }
 
-    public function test_a_split_cart_messages_only_the_online_seller(): void
+    public function test_a_split_cart_tracks_only_the_online_seller(): void
     {
         $farm = $this->farm();
         $cashSeller = $this->farmer(['email' => 'cash@example.com', 'shop_name' => 'Cash Stall'], $farm);
         $onlineSeller = $this->farmer(['email' => 'online@example.com', 'shop_name' => 'QR Stall'], $farm);
+        $this->allowOnline($onlineSeller);
         $cashListing = $this->listingFor($cashSeller, ['price_per_unit' => 30, 'quantity_available' => 10]);
         $onlineListing = $this->listingFor($onlineSeller, ['price_per_unit' => 40, 'quantity_available' => 10]);
         $buyer = $this->buyer();
@@ -82,22 +82,23 @@ class CheckoutPaymentTest extends TestCase
         $this->addToCart($buyer, $onlineListing, 1);
 
         $this->checkout($buyer, [
+            'payment_flow' => 'proof',
             'payments' => [
                 ['seller_id' => $cashSeller->id, 'method' => PaymentMethod::CashOnHandover->value],
                 ['seller_id' => $onlineSeller->id, 'method' => PaymentMethod::OnlineTransfer->value],
             ],
         ])->assertCreated();
 
-        $this->assertSame(1, StallMessage::query()->count());
-        $message = StallMessage::query()->with('conversation')->firstOrFail();
-        $this->assertSame($onlineSeller->id, $message->conversation->farmer_seller_id);
+        $this->assertSame(0, StallMessage::query()->count());
         $this->assertDatabaseHas('orders', [
             'farmer_seller_id' => $cashSeller->id,
             'payment_method' => PaymentMethod::CashOnHandover->value,
+            'payment_status' => null,
         ]);
         $this->assertDatabaseHas('orders', [
             'farmer_seller_id' => $onlineSeller->id,
             'payment_method' => PaymentMethod::OnlineTransfer->value,
+            'payment_status' => OrderPaymentStatus::AwaitingPayment->value,
         ]);
     }
 
@@ -110,6 +111,7 @@ class CheckoutPaymentTest extends TestCase
         $this->addToCart($buyer, $listing, 1);
 
         $this->checkout($buyer, [
+            'payment_flow' => 'proof',
             'payments' => [
                 ['seller_id' => $farmer->id, 'method' => PaymentMethod::OnlineTransfer->value],
             ],
@@ -170,18 +172,16 @@ class CheckoutPaymentTest extends TestCase
         $this->assertSame(0, StallMessage::query()->count());
     }
 
-    public function test_a_chat_failure_still_places_the_online_order(): void
+    public function test_online_checkout_does_not_post_a_qr_request(): void
     {
-        $this->mock(SendStallMessage::class, function ($mock): void {
-            $mock->shouldReceive('handle')->once()->andThrow(new RuntimeException('chat down'));
-        });
-
         $farmer = $this->farmer();
+        $this->allowOnline($farmer);
         $listing = $this->listingFor($farmer, ['price_per_unit' => 30, 'quantity_available' => 10]);
         $buyer = $this->buyer();
         $this->addToCart($buyer, $listing, 1);
 
         $this->checkout($buyer, [
+            'payment_flow' => 'proof',
             'payments' => [
                 ['seller_id' => $farmer->id, 'method' => PaymentMethod::OnlineTransfer->value],
             ],
@@ -198,6 +198,8 @@ class CheckoutPaymentTest extends TestCase
         $farm = $this->farm();
         $first = $this->farmer(['email' => 'first@example.com', 'shop_name' => 'First Stall'], $farm);
         $second = $this->farmer(['email' => 'second@example.com', 'shop_name' => 'Second Stall'], $farm);
+        $this->allowOnline($first);
+        $this->allowOnline($second);
         $firstListing = $this->listingFor($first, [
             'title' => 'Pechay',
             'price_per_unit' => 30,
@@ -214,6 +216,7 @@ class CheckoutPaymentTest extends TestCase
         $secondListing->forceFill(['quantity_available' => 0])->save();
 
         $this->checkout($buyer, [
+            'payment_flow' => 'proof',
             'payments' => [
                 ['seller_id' => $first->id, 'method' => PaymentMethod::OnlineTransfer->value],
                 ['seller_id' => $second->id, 'method' => PaymentMethod::OnlineTransfer->value],
@@ -224,5 +227,19 @@ class CheckoutPaymentTest extends TestCase
         $this->assertSame(0, Order::query()->count());
         $this->assertSame(0, StallMessage::query()->count());
         $this->assertDatabaseCount('in_app_notifications', 0);
+    }
+
+    private function allowOnline(User $farmer): SellerPaymentQr
+    {
+        $farmer->forceFill([
+            'accepts_online_payment' => true,
+            'payment_time_limit_hours' => 24,
+        ])->save();
+
+        return SellerPaymentQr::factory()->create([
+            'farmer_seller_id' => $farmer->id,
+            'account_name' => $farmer->shop_name ?: $farmer->name,
+            'account_last4' => '1234',
+        ]);
     }
 }

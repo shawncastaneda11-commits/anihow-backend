@@ -8,6 +8,7 @@ enum CancellationReason: string
     case SellerDeclined = 'seller_declined';
     case NoShow = 'no_show';
     case SellerUnresponsive = 'seller_unresponsive';
+    case PaymentExpired = 'payment_expired';
     case Other = 'other';
 
     public function label(): string
@@ -17,6 +18,7 @@ enum CancellationReason: string
             self::SellerDeclined => 'Declined by farmer-seller',
             self::NoShow => 'No-show at handover',
             self::SellerUnresponsive => 'Seller unresponsive',
+            self::PaymentExpired => 'Payment time expired',
             self::Other => 'Other',
         };
     }

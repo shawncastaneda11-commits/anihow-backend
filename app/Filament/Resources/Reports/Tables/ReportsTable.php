@@ -10,6 +10,7 @@ use App\Enums\ReportStatus;
 use App\Filament\Resources\Listings\ListingResource;
 use App\Filament\Resources\Reviews\ReviewResource;
 use App\Models\Listing;
+use App\Models\Order;
 use App\Models\Report;
 use App\Models\Review;
 use Filament\Actions\Action;
@@ -161,16 +162,28 @@ class ReportsTable
                 Action::make('dismiss')
                     ->icon('heroicon-o-x-mark')
                     ->color('gray')
-                    ->requiresConfirmation()
                     ->visible(fn (Report $record): bool => $record->status === ReportStatus::Open)
-                    ->action(function (Report $record): void {
-                        app(DismissReportAction::class)->handle($record, auth()->user());
+                    ->schema(fn (Report $record): array => $record->reportable instanceof Order
+                        ? [
+                            Textarea::make('note')
+                                ->label('Note')
+                                ->required()
+                                ->rows(2),
+                        ]
+                        : [])
+                    ->requiresConfirmation()
+                    ->action(function (Report $record, array $data): void {
+                        $report = app(DismissReportAction::class)->handle($record, auth()->user());
+
+                        if (filled($data['note'] ?? null)) {
+                            $report->forceFill(['resolution_note' => $data['note']])->save();
+                        }
                     }),
             ])
             ->toolbarActions([]);
     }
 
-    private static function targetLabel(Report $record): string
+    public static function targetLabel(Report $record): string
     {
         $target = $record->reportable;
 
@@ -182,7 +195,19 @@ class ReportsTable
             return 'Review #'.$target->id;
         }
 
+        if ($target instanceof Order) {
+            $payment = $target->payment_status?->label() ?? 'Not tracked';
+
+            return 'Order '.$target->order_number.' · '.$payment;
+        }
+
         return class_basename((string) $record->reportable_type);
+    }
+
+    public static function offersModeration(Report $record): bool
+    {
+        return $record->reportable instanceof Listing
+            || $record->reportable instanceof Review;
     }
 
     private static function targetUrl(Report $record): ?string

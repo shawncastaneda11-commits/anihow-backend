@@ -809,6 +809,115 @@ class ApiClient {
 
   Future<void> removeCartItem(int id) => _delete(CartRequests.cartItemPath(id));
 
+  Future<List<PaymentQrCode>> listPaymentQrs() {
+    return _list('/farmer/payment-qrs', parse: PaymentQrCode.fromJson);
+  }
+
+  Future<PaymentQrCode> addPaymentQr({
+    required String imagePath,
+    required String wallet,
+    required String accountName,
+    required String accountLast4,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/farmer/payment-qrs',
+        data: FormData.fromMap({
+          'image': await MultipartFile.fromFile(imagePath),
+          'wallet': wallet,
+          'account_name': accountName,
+          'account_last4': accountLast4,
+        }),
+      );
+      final data = _asMap(response.data);
+      return PaymentQrCode.fromJson(_asMap(data['data'] ?? data));
+    } on DioException catch (error) {
+      throw ApiException(_messageFrom(error), statusCode: error.response?.statusCode);
+    }
+  }
+
+  Future<void> deletePaymentQr(int id) => _delete('/farmer/payment-qrs/$id');
+
+  Future<OrderRecord> submitPaymentProof(
+    int orderId, {
+    required String referenceNumber,
+    required String amount,
+    required int qrId,
+    String? screenshotPath,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/buyer/orders/$orderId/payment-proofs',
+        data: FormData.fromMap({
+          'reference_number': referenceNumber,
+          'amount': amount,
+          'qr_id': qrId,
+          if (screenshotPath != null && screenshotPath.isNotEmpty)
+            'screenshot': await MultipartFile.fromFile(screenshotPath),
+        }),
+      );
+      final data = _asMap(response.data);
+      return OrderRecord.fromJson(_asMap(data['data'] ?? data));
+    } on DioException catch (error) {
+      throw ApiException(_messageFrom(error), statusCode: error.response?.statusCode);
+    }
+  }
+
+  Future<OrderRecord> reviewPaymentProof(
+    int orderId,
+    int proofId, {
+    required String decision,
+    String? reason,
+    String? note,
+  }) async {
+    final response = await _patchJson(
+      '/farmer/orders/$orderId/payment-proofs/$proofId',
+      {
+        'decision': decision,
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+        if (note != null && note.isNotEmpty) 'note': note,
+      },
+    );
+    return OrderRecord.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<OrderRecord> refundOrder(int orderId, {required String refundReference}) async {
+    final response = await _patchJson('/farmer/orders/$orderId/refund', {
+      'refund_reference': refundReference,
+    });
+    return OrderRecord.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<PagedItems<OrderRecord>> farmerPayments({
+    required String status,
+    int page = 1,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/farmer/payments',
+        queryParameters: {'status': status, 'page': page},
+      );
+      final body = response.data;
+      final meta = body is Map ? _asMap(body['meta']) : <String, dynamic>{};
+      final lastPage = _asInt(meta['last_page'], 1);
+      return PagedItems(
+        items: _parseList(body, OrderRecord.fromJson),
+        complete: page >= lastPage,
+      );
+    } on DioException catch (error) {
+      throw ApiException(_messageFrom(error));
+    }
+  }
+
+  Future<void> reportOrder(int orderId, {String? details}) {
+    return submitReport(
+      targetType: 'order',
+      targetId: orderId,
+      reason: 'payment_problem',
+      details: details,
+    );
+  }
+
   Future<List<OrderRecord>> checkout({
     required String fulfillmentPreference,
     String? fulfillmentNote,
@@ -845,9 +954,10 @@ class ApiClient {
   Future<OrderRecord> markOrderReady(int id) =>
       _farmerOrderAction('/farmer/orders/$id/ready');
 
-  Future<OrderRecord> completeOrder(int id, {required String amountReceived}) {
+  Future<OrderRecord> completeOrder(int id, {String? amountReceived}) {
     return _farmerOrderAction('/farmer/orders/$id/complete', {
-      'amount_received': amountReceived,
+      if (amountReceived != null && amountReceived.isNotEmpty)
+        'amount_received': amountReceived,
     });
   }
 

@@ -64,6 +64,17 @@ class StatusPill extends StatelessWidget {
     return StatusPill(label: mapped.$2, color: mapped.$1);
   }
 
+  factory StatusPill.paymentTracking(String? status, {AppStrings? strings}) {
+    final label = strings?.paymentStatusLabel(status) ?? '';
+    final color = switch (status) {
+      'paid' => AniHowColors.completed,
+      'payment_sent' => AniHowColors.confirmedBlue,
+      'refund_due' || 'refunded' => AniHowColors.cancelled,
+      _ => AniHowColors.pending,
+    };
+    return StatusPill(label: label, color: color);
+  }
+
   factory StatusPill.lowStock({AppStrings? strings}) {
     return StatusPill(
       label: strings?.lowStock ?? 'Low stock',
@@ -164,5 +175,21 @@ class StatusPill extends StatelessWidget {
             : (hsl.lightness - 0.12).clamp(0.2, 0.85),
     };
     return hsl.withLightness(lightness).toColor();
+  }
+}
+
+class PaymentTrackingPill extends StatelessWidget {
+  const PaymentTrackingPill({super.key, required this.status});
+
+  final String? status;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    final label = strings.paymentStatusLabel(status);
+    if (label.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return StatusPill.paymentTracking(status, strings: strings);
   }
 }

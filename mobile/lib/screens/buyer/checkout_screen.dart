@@ -15,9 +15,8 @@ import '../../widgets/hint_card.dart';
 import '../../widgets/order_look.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
-import '../chat/open_stall_chat.dart';
 import '../chat/order_chat_screen.dart';
-import '../chat/order_chats_screen.dart';
+import 'pay_now_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -82,11 +81,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         _placed = orders;
         _busy = false;
       });
-      if (online.length == 1 && online.first.sellerId != null) {
-        await openChatWithStall(context, sellerId: online.first.sellerId!);
+      if (online.length == 1) {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => PayNowScreen(order: online.first)),
+        );
       } else if (online.length > 1) {
         await Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const OrderChatsScreen()),
+          MaterialPageRoute<void>(builder: (_) => PaySellersScreen(orders: online)),
         );
       }
     } on ApiException catch (error) {

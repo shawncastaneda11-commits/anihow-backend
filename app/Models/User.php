@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Actions\Auth\SendEmailVerificationCodeAction;
+use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderStatus;
 use App\Enums\Role;
 use App\Enums\UserStatus;
@@ -43,6 +44,7 @@ use Spatie\Permission\Traits\HasRoles;
     'bio',
     'contact',
     'accepts_online_payment',
+    'payment_time_limit_hours',
     'avatar_path',
     'cover_photo_path',
     'password',
@@ -85,6 +87,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             'password' => 'hashed',
             'status' => UserStatus::class,
             'accepts_online_payment' => 'boolean',
+            'payment_time_limit_hours' => 'integer',
             'approved_at' => 'datetime',
             'suspended_at' => 'datetime',
             'must_change_password' => 'boolean',
@@ -233,12 +236,17 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     }
 
     /**
-     * Online payment only records the buyer's choice. The seller sends their
-     * own QR in chat. Missing means the column default, which is on.
+     * The seller has turned online payment on. A QR is still required before
+     * checkout will accept it. Null follows the column default, which is off.
      */
     public function acceptsOnlinePayment(): bool
     {
-        return $this->accepts_online_payment !== false;
+        return $this->accepts_online_payment === true;
+    }
+
+    public function paymentQrs(): HasMany
+    {
+        return $this->hasMany(SellerPaymentQr::class, 'farmer_seller_id');
     }
 
     public function isPending(): bool
@@ -364,22 +372,57 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     }
 
     /**
-     * Placed, Confirmed, or Ready — as buyer or as seller. These block a
-     * deletion request because the other party still needs the account.
+     * Placed, Confirmed, or Ready — as buyer or as seller — plus any refund
+     * that has not been marked sent. These block a deletion request because
+     * the other party still needs the account.
      */
     public function hasOpenMarketplaceOrders(): bool
     {
         return Order::query()
-            ->whereIn('status', [
-                OrderStatus::Placed,
-                OrderStatus::Confirmed,
-                OrderStatus::Ready,
-            ])
+            ->where(function ($query): void {
+                $query->where('buyer_id', $this->id)
+                    ->orWhere('farmer_seller_id', $this->id);
+            })
+            ->where(function ($query): void {
+                $query->whereIn('status', [
+                    OrderStatus::Placed,
+                    OrderStatus::Confirmed,
+                    OrderStatus::Ready,
+                ])->orWhere('payment_status', OrderPaymentStatus::RefundDue);
+            })
+            ->exists();
+    }
+
+    public function hasRefundDue(): bool
+    {
+        return Order::query()
+            ->where('payment_status', OrderPaymentStatus::RefundDue)
             ->where(function ($query): void {
                 $query->where('buyer_id', $this->id)
                     ->orWhere('farmer_seller_id', $this->id);
             })
             ->exists();
+    }
+
+    /**
+     * Seller orders still waiting on a payment or a refund. Used only to warn
+     * a Super Admin before they suspend the account. Nothing is changed.
+     */
+    public function unsettledPaymentOrderCount(): int
+    {
+        return Order::query()
+            ->where('farmer_seller_id', $this->id)
+            ->where(function ($query): void {
+                $query->whereIn('payment_status', [
+                    OrderPaymentStatus::AwaitingPayment,
+                    OrderPaymentStatus::PaymentSent,
+                    OrderPaymentStatus::RefundDue,
+                ])->orWhere(function ($paid): void {
+                    $paid->where('payment_status', OrderPaymentStatus::Paid)
+                        ->where('status', '!=', OrderStatus::Completed);
+                });
+            })
+            ->count();
     }
 
     public function shopContact(): ?string

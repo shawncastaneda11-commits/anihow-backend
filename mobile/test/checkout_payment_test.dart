@@ -1,6 +1,6 @@
 import 'package:anihow/models/models.dart';
 import 'package:anihow/screens/buyer/checkout_screen.dart';
-import 'package:anihow/screens/chat/order_chat_screen.dart';
+import 'package:anihow/screens/buyer/pay_now_screen.dart';
 import 'package:anihow/services/api_client.dart';
 import 'package:anihow/services/cart_requests.dart';
 import 'package:anihow/state/auth_controller.dart';
@@ -133,7 +133,14 @@ void main() {
     );
   });
 
-  testWidgets('an online order opens that seller chat', (tester) async {
+  test('checkout body always sends payment_flow proof', () {
+    final body = CartRequests.checkout(
+      fulfillmentPreference: CartRequests.buyerPickup,
+    );
+    expect(body['payment_flow'], 'proof');
+  });
+
+  testWidgets('an online order opens the pay screen', (tester) async {
     await tester.binding.setSurfaceSize(const Size(400, 1000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final api = _CheckoutApi([
@@ -154,6 +161,10 @@ void main() {
 
     await tester.tap(find.text("Online payment (seller's QR)"));
     await tester.pump();
+    expect(
+      find.text("You'll pay with the seller's QR after placing the order."),
+      findsOneWidget,
+    );
     await tester.scrollUntilVisible(
       find.text('Place order'),
       200,
@@ -163,6 +174,6 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.byType(OrderChatScreen), findsOneWidget);
+    expect(find.byType(PayNowScreen), findsOneWidget);
   });
 }

@@ -72,12 +72,14 @@ class FarmerOrderController extends Controller
         Order $order,
         OrderStateMachine $stateMachine,
     ): OrderResource {
+        $amount = $request->validated('amount_received');
+
         return $this->respond(
             $stateMachine->transition(
                 order: $order,
                 next: OrderStatus::Completed,
                 actor: $request->user(),
-                amountReceived: (float) $request->validated('amount_received'),
+                amountReceived: is_numeric($amount) ? (float) $amount : null,
             ),
             'Order completed.',
         );

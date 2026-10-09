@@ -266,10 +266,15 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
 }
 
 class _ExpiredStockBanner extends StatelessWidget {
-  const _ExpiredStockBanner({required this.listing, required this.onExtend});
+  const _ExpiredStockBanner({
+    required this.listing,
+    required this.onExtend,
+    required this.onChanged,
+  });
 
   final ListingItem listing;
   final VoidCallback onExtend;
+  final Future<void> Function() onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -284,11 +289,16 @@ class _ExpiredStockBanner extends StatelessWidget {
         ),
         TextButton(
           key: ValueKey('remove-spoiled-${listing.id}'),
-          onPressed: () => showRemoveStockSheet(
-            context,
-            listing,
-            prefilledReason: 'spoiled',
-          ),
+          onPressed: () async {
+            final changed = await showRemoveStockSheet(
+              context,
+              listing,
+              prefilledReason: 'spoiled',
+            );
+            if (changed) {
+              await onChanged();
+            }
+          },
           child: Text(s.removeAsSpoiled),
         ),
         TextButton(
@@ -372,6 +382,7 @@ class _List extends StatelessWidget {
                   _ExpiredStockBanner(
                     listing: listing,
                     onExtend: () => onOpen(listing),
+                    onChanged: onReload,
                   ),
                 ReservedHarvestLabel(listing: listing),
                 if (listing.isUpcoming)

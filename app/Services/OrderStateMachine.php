@@ -2,13 +2,18 @@
 
 namespace App\Services;
 
+use App\Actions\Payments\RecordPaymentEvent;
 use App\Enums\CancellationReason;
 use App\Enums\NotificationType;
 use App\Enums\OrderActor;
+use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentProofStatus;
+use App\Enums\PaymentRejectionReason;
 use App\Models\Listing;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
+use App\Models\PaymentProof;
 use App\Models\User;
 use App\Support\InAppNotifier;
 use Illuminate\Support\Facades\DB;
@@ -35,7 +40,13 @@ class OrderStateMachine
 {
     public function __construct(
         private readonly InAppNotifier $notifier,
+        private readonly ?RecordPaymentEvent $paymentEvents = null,
     ) {}
+
+    private function paymentEvents(): RecordPaymentEvent
+    {
+        return $this->paymentEvents ?? app(RecordPaymentEvent::class);
+    }
 
     /**
      * Advance an order. Returns the refreshed order.
@@ -61,11 +72,11 @@ class OrderStateMachine
             $from = $order->status;
 
             $order->assertCanTransitionTo($next);
-            $this->assertActorMayTransition($order, $next, $actor);
+            $this->assertActorMayTransition($order, $next, $actor, $reason);
 
             match ($next) {
                 OrderStatus::Confirmed => $this->confirm($order),
-                OrderStatus::Ready => null,
+                OrderStatus::Ready => $this->assertPaymentConfirmed($order),
                 OrderStatus::Completed => $this->complete($order, $amountReceived),
                 OrderStatus::Cancelled => $this->cancel($order, $actor, $reason, $note),
                 OrderStatus::Placed => throw ValidationException::withMessages([
@@ -120,10 +131,38 @@ class OrderStateMachine
     }
 
     /**
-     * Handover happened. The seller records the cash received.
+     * Tracked orders cannot be packed or handed over until the seller has
+     * accepted the buyer's payment. Confirming the order stays allowed.
+     */
+    private function assertPaymentConfirmed(Order $order): void
+    {
+        if (! $order->isPaymentTracked()) {
+            return;
+        }
+
+        if ($order->payment_status !== OrderPaymentStatus::Paid) {
+            throw ValidationException::withMessages([
+                'status' => "Wait for the buyer's payment to be confirmed.",
+            ]);
+        }
+    }
+
+    /**
+     * Handover happened. Cash orders still record what the seller counted.
+     * A tracked paid order uses the accepted proof when the seller omits it.
      */
     private function complete(Order $order, ?float $amountReceived): void
     {
+        $this->assertPaymentConfirmed($order);
+
+        if ($amountReceived === null && $order->isPaymentTracked() && $order->payment_status === OrderPaymentStatus::Paid) {
+            $accepted = $order->proofs()
+                ->where('status', PaymentProofStatus::Accepted)
+                ->latest('id')
+                ->first();
+            $amountReceived = $accepted !== null ? (float) $accepted->amount : null;
+        }
+
         if ($amountReceived === null) {
             throw ValidationException::withMessages([
                 'amount_received' => 'Record the amount received before completing the order.',
@@ -178,6 +217,8 @@ class OrderStateMachine
             $listing->save();
         }
 
+        $this->settleTrackedPaymentOnCancel($order, $actor, $reason);
+
         $order->cancellation_reason = $reason;
         $order->cancellation_note = $note;
         $order->cancelled_by = match (true) {
@@ -189,14 +230,73 @@ class OrderStateMachine
     }
 
     /**
+     * A sent or accepted payment becomes a refund. An order still waiting
+     * for payment just cancels. PaymentExpired also records its own event.
+     */
+    private function settleTrackedPaymentOnCancel(Order $order, User|OrderActor $actor, CancellationReason $reason): void
+    {
+        if ($order->isPaymentTracked() && in_array($order->payment_status, [
+            OrderPaymentStatus::PaymentSent,
+            OrderPaymentStatus::Paid,
+        ], true)) {
+            $order->payment_status = OrderPaymentStatus::RefundDue;
+
+            PaymentProof::query()
+                ->where('order_id', $order->id)
+                ->where('status', PaymentProofStatus::Pending)
+                ->update([
+                    'status' => PaymentProofStatus::Rejected,
+                    'rejection_reason' => PaymentRejectionReason::Other,
+                    'rejection_note' => 'Order cancelled',
+                    'reviewed_at' => now(),
+                    'reviewed_by' => $actor instanceof User ? $actor->id : null,
+                ]);
+
+            $actorUser = $actor instanceof User ? $actor : null;
+            $this->paymentEvents()->handle($order, 'refund_due', $actorUser);
+
+            $order->loadMissing(['buyer', 'farmerSeller']);
+
+            foreach ([$order->buyer, $order->farmerSeller] as $recipient) {
+                if ($recipient === null) {
+                    continue;
+                }
+
+                $this->notifier->send(
+                    $recipient,
+                    NotificationType::RefundDue,
+                    NotificationType::RefundDue->label(),
+                    "Order {$order->order_number} was cancelled and a refund is due.",
+                    $order,
+                );
+            }
+        }
+
+        if ($reason === CancellationReason::PaymentExpired) {
+            $actorUser = $actor instanceof User ? $actor : null;
+            $this->paymentEvents()->handle($order, 'expired', $actorUser);
+        }
+    }
+
+    /**
      * The farmer-seller advances the status. A buyer may only cancel, and
      * only before the seller confirms. The system may cancel a placed app
      * order left unanswered.
      */
-    private function assertActorMayTransition(Order $order, OrderStatus $next, User|OrderActor $actor): void
+    private function assertActorMayTransition(Order $order, OrderStatus $next, User|OrderActor $actor, ?CancellationReason $reason = null): void
     {
         if ($actor === OrderActor::System) {
-            if ($next === OrderStatus::Cancelled && $order->status === OrderStatus::Placed && ! $order->isWalkIn()) {
+            if ($next === OrderStatus::Cancelled && ! $order->isWalkIn() && $order->status === OrderStatus::Placed) {
+                return;
+            }
+
+            if (
+                $next === OrderStatus::Cancelled
+                && $reason === CancellationReason::PaymentExpired
+                && ! $order->isWalkIn()
+                && $order->isPaymentTracked()
+                && $order->status === OrderStatus::Confirmed
+            ) {
                 return;
             }
 
@@ -251,6 +351,26 @@ class OrderStateMachine
      */
     private function notify(Order $order, OrderStatus $status): void
     {
+        if ($status === OrderStatus::Cancelled && $order->cancellation_reason === CancellationReason::PaymentExpired) {
+            $order->loadMissing(['buyer', 'farmerSeller']);
+
+            foreach ([$order->buyer, $order->farmerSeller] as $recipient) {
+                if ($recipient === null) {
+                    continue;
+                }
+
+                $this->notifier->send(
+                    $recipient,
+                    NotificationType::PaymentExpired,
+                    NotificationType::PaymentExpired->label(),
+                    "Order {$order->order_number} was cancelled because the payment time passed.",
+                    $order,
+                );
+            }
+
+            return;
+        }
+
         $type = NotificationType::forOrderStatus($status);
 
         if ($type === null) {

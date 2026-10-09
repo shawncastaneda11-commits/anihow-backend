@@ -963,18 +963,308 @@ class AppStrings {
   String get onlinePaymentPill => t('Online payment', 'Online na bayad');
   String paymentMethodLabel(String? method) =>
       method == 'online_transfer' ? onlinePayment : payOnHandover;
-  String get acceptOnlinePayment => t(
-    'Accept online payment (send your GCash/Maya QR in chat)',
-    'Tumanggap ng online na bayad (ipadala ang GCash/Maya QR sa chat)',
-  );
+  String get acceptOnlinePayment =>
+      t('Accept online payment', 'Tumanggap ng online na bayad');
   String get sellerCashOnly => t(
     'This seller accepts cash only',
     'Cash lang ang tinatanggap ng nagbebenta na ito',
   );
   String get onlinePaymentHint => t(
-    "After you place the order, we'll message the seller to send their QR. Pay in the app you use (GCash/Maya); AniHow does not process payments.",
-    'Pagkatapos mong mag-order, magme-message kami sa nagbebenta para ipadala ang QR. Magbayad sa app na gamit mo (GCash/Maya); hindi nagpoproseso ng bayad ang AniHow.',
+    "You'll pay with the seller's QR after placing the order.",
+    'Magbabayad ka gamit ang QR ng nagbebenta pagkatapos mag-order.',
   );
+  String get onlinePaymentSection => t('Online payment', 'Online na bayad');
+  String get addQrCode => t('Add QR code', 'Magdagdag ng QR code');
+  String get deleteQr => t('Delete QR', 'Burahin ang QR');
+  String get deleteQrAsk => t(
+    'Delete this QR code?',
+    'Burahin ang QR code na ito?',
+  );
+  String get addQrFirst => t('Add a QR code first.', 'Magdagdag muna ng QR code.');
+  String get paymentTimeLimit => t('Payment time limit', 'Limit ng oras ng bayad');
+  String paymentTimeLimitHours(int hours) => t('$hours hours', '$hours oras');
+  String get paymentTimeLimitHelp => t(
+    'Buyers must send proof of payment within this time, or the order is cancelled.',
+    'Kailangang magpadala ng patunay ng bayad ang buyer sa loob ng oras na ito, kung hindi ay kakanselahin ang order.',
+  );
+  String get qrScanNote => t(
+    'Make sure buyers can scan this.',
+    'Siguraduhing mai-scan ito ng mga buyer.',
+  );
+  String get accountName => t('Account name', 'Pangalan sa account');
+  String get last4Digits => t('Last 4 digits', 'Huling 4 na numero');
+  String get last4MustBeFour => t(
+    'Enter exactly 4 numbers.',
+    'Maglagay ng eksaktong 4 na numero.',
+  );
+  String get walletGcash => 'GCash';
+  String get walletMaya => 'Maya';
+  String get walletBank => t('Bank / QR Ph', 'Bank / QR Ph');
+  String walletLabel(String? wallet) => switch (wallet) {
+    'gcash' => walletGcash,
+    'maya' => walletMaya,
+    'bank_qrph' => walletBank,
+    _ => wallet ?? '',
+  };
+  String maskedLast4(String last4) => '•••• $last4';
+  String get payNow => t('Pay now', 'Magbayad na');
+  String paySellers(int count) =>
+      t('Pay $count sellers', 'Magbayad sa $count nagbebenta');
+  String get payBeforeLabel => t('Pay before', 'Magbayad bago ang');
+  String payBefore(DateTime local) {
+    final clock = '${_clock(local)}, ${_monthDay(local)}';
+    return t('Pay before $clock', 'Magbayad bago ang $clock');
+  }
+
+  String _clock(DateTime local) {
+    final hour12 = local.hour % 12 == 0 ? 12 : local.hour % 12;
+    final minute = local.minute.toString().padLeft(2, '0');
+    final suffix = local.hour >= 12 ? 'PM' : 'AM';
+    return '$hour12:$minute $suffix';
+  }
+
+  String _monthDay(DateTime local) {
+    return '${_shortMonth(local, english: !filipino)} ${local.day}';
+  }
+
+  String paidOn(DateTime local) =>
+      t('Paid ${_monthDay(local)}, ${_clock(local)}', 'Bayad noong ${_monthDay(local)}, ${_clock(local)}');
+
+  String sinceDate(DateTime local) =>
+      t('Since ${_monthDay(local)}', 'Mula ${_monthDay(local)}');
+
+  String monthDayClock(DateTime local) => '${_monthDay(local)}, ${_clock(local)}';
+
+  String confirmedAt(DateTime local) =>
+      t('confirmed ${monthDayClock(local)}', 'kumpirmado ${monthDayClock(local)}');
+
+  String agoPhrase(DateTime local) {
+    final minutes = DateTime.now().difference(local).inMinutes;
+    if (minutes < 1) {
+      return t('just now', 'ngayon lang');
+    }
+    if (minutes < 60) {
+      return t('$minutes min ago', '$minutes min ang nakalipas');
+    }
+    final hours = DateTime.now().difference(local).inHours;
+    if (hours < 24) {
+      return t('$hours hr ago', '$hours oras ang nakalipas');
+    }
+    return _monthDay(local);
+  }
+
+  String sentAgo(DateTime local) {
+    final phrase = agoPhrase(local);
+    if (phrase == _monthDay(local)) {
+      return t('Sent $phrase', 'Ipinadala noong $phrase');
+    }
+    return t('Sent $phrase', 'Ipinadala $phrase');
+  }
+
+  String get amountToPay => t('Amount to pay', 'Halagang babayaran');
+  String shopOrderLine(String shop, String? number) {
+    if (number == null || number.isEmpty) {
+      return shop;
+    }
+    return '$shop · $number';
+  }
+
+  String get payStepSave => t('Save or scan the QR', 'I-save o i-scan ang QR');
+  String get payStepPay => t('Pay in GCash or Maya', 'Magbayad sa GCash o Maya');
+  String get payStepReference =>
+      t('Enter the reference number', 'Ilagay ang reference number');
+  String get saveQrToGallery =>
+      t('Save QR to gallery', 'I-save ang QR sa gallery');
+  String get tapQrToZoom => t('Tap the QR to zoom', 'I-tap ang QR para lumaki');
+  String walletAccount(String wallet, String name) => '$wallet · $name';
+  String last4Zoom(String last4) => '${maskedLast4(last4)} · $tapQrToZoom';
+  String get referenceExample =>
+      t('e.g. 5012 345 678 901', 'hal. 5012 345 678 901');
+  String get referenceHelper => t(
+    'Find it in your GCash or Maya receipt.',
+    'Hanapin ito sa resibo ng GCash o Maya.',
+  );
+  String get amountPaid => t('Amount paid', 'Halagang ibinayad');
+  String get addReceiptScreenshot => t(
+    'Add receipt screenshot (optional)',
+    'Magdagdag ng screenshot ng resibo (opsyonal)',
+  );
+  String get sendPaymentProof =>
+      t('Send payment proof', 'Ipadala ang patunay ng bayad');
+  String get paymentSentChip => t(
+    'Payment sent · waiting for the seller',
+    'Naipadala ang bayad · hinihintay ang nagbebenta',
+  );
+  String waitingForShop(String shop) => t(
+    'Waiting for $shop to check it',
+    'Hinihintay si $shop na suriin ito',
+  );
+  String get paymentSentNote => t(
+    "You'll get a notification when the seller confirms it. You can't cancel this order now. If something's wrong, message the seller.",
+    'May abiso ka kapag kinumpirma ng nagbebenta. Hindi mo na makakansela ang order na ito. Kung may problema, i-message ang nagbebenta.',
+  );
+  String get chatWithSeller =>
+      t('Chat with seller', 'Makipag-chat sa nagbebenta');
+  String get viewOrder => t('View order', 'Tingnan ang order');
+  String get reportPaymentLink => t(
+    'Report a payment problem',
+    'Mag-ulat ng problema sa bayad',
+  );
+  String get paidTo => t('Paid to', 'Binayaran kay');
+  String get sentLabel => t('Sent', 'Ipinadala');
+  String get paymentNotReceivedTitle =>
+      t('Payment not received', 'Hindi natanggap ang bayad');
+  String reasonLine(String reason) => t('Reason: $reason', 'Dahilan: $reason');
+  String sendAgainChip(DateTime local) => t(
+    'Send again before ${_clock(local)}, ${_monthDay(local)}',
+    'Ipadala ulit bago ang ${_clock(local)}, ${_monthDay(local)}',
+  );
+
+  String sendAgainBefore(DateTime local) => t(
+    'Check your GCash or Maya history, then send it again before ${_clock(local)}, ${_monthDay(local)}.',
+    'Tingnan ang history ng GCash o Maya, tapos ipadala ulit bago ang ${_clock(local)}, ${_monthDay(local)}.',
+  );
+  String get paymentConfirmed => t('Payment confirmed', 'Kumpirmado ang bayad');
+  String shopReceived(String shop, String peso) =>
+      t('$shop received $peso', 'Natanggap ni $shop ang $peso');
+  String get confirmedLabel => t('Confirmed', 'Kumpirmado');
+  String get paidNextNote => t(
+    "Next: the seller packs your order. You'll get a notification when it's ready for pickup.",
+    'Susunod: iimpake ng nagbebenta ang order. May abiso ka kapag puwede nang kunin.',
+  );
+  String get checkThisPayment => t('Check this payment', 'Suriin ang bayad na ito');
+  String get checkReferenceNote => t(
+    'Open your GCash and look for this reference number before you confirm.',
+    'Buksan ang GCash at hanapin ang reference number na ito bago kumpirmahin.',
+  );
+  String arrivedInWallet(String peso, String wallet) => t(
+    'Did $peso arrive in your $wallet?',
+    'Dumating ba ang $peso sa $wallet mo?',
+  );
+  String lookForReference(String reference, String wallet) => t(
+    'Look for reference $reference in your $wallet history. Only confirm if you can see it.',
+    'Hanapin ang reference na $reference sa history ng $wallet. Kumpirmahin lang kung nakikita mo ito.',
+  );
+  String get yesReceived => t('Yes, received', 'Oo, natanggap');
+  String get confirmWhileUnpaid => t(
+    'You can confirm now. Mark ready unlocks once the payment is received.',
+    'Puwede mo nang kumpirmahin. Magbubukas ang Mark ready kapag natanggap na ang bayad.',
+  );
+  String paidVia(String peso, String wallet) =>
+      t('Paid · $peso via $wallet', 'Bayad na · $peso sa $wallet');
+  String refConfirmed(String reference, String when) =>
+      t('Ref $reference · $when', 'Ref $reference · $when');
+  String get onlinePaymentHelp => t(
+    'Buyers pay with your QR, then send the reference number. You check each one.',
+    'Nagbabayad ang buyer gamit ang QR mo, tapos ipinapadala ang reference number. Sinusuri mo ang bawat isa.',
+  );
+  String addQrCount(int count) => t(
+    'Add QR code ($count of 3 saved)',
+    'Magdagdag ng QR code ($count sa 3 ang naka-save)',
+  );
+  String get onlinePaymentOn => t(
+    'On · buyers can choose Online payment',
+    'Naka-on · puwedeng pumili ng Online na bayad ang buyer',
+  );
+  String get onlinePaymentOff => t(
+    'Off · buyers pay cash only',
+    'Naka-off · cash lang ang bayad ng buyer',
+  );
+  String walletBadge(String? wallet) => switch (wallet) {
+    'gcash' => 'GCASH',
+    'maya' => 'MAYA',
+    'bank_qrph' => 'BANK',
+    _ => (wallet ?? '').toUpperCase(),
+  };
+  String walletRef(String wallet, String reference) =>
+      t('$wallet · ref $reference', '$wallet · ref $reference');
+  String get checkNow => t('Check now', 'Suriin ngayon');
+  String toCheckCount(int count) => t('To check ($count)', 'Susuriin ($count)');
+  String get paymentsEmpty => t('Nothing here right now.', 'Wala rito sa ngayon.');
+  String get toLabel => t('To', 'Kay');
+  String get saveQr => t('Save QR', 'I-save ang QR');
+  String get qrSaved => t('QR saved to your gallery.', 'Na-save ang QR sa gallery.');
+  String get qrSaveNeedsPermission => t(
+    'Allow photo access to save the QR.',
+    'Payagan ang access sa larawan para ma-save ang QR.',
+  );
+  String get ivePaid => t("I've paid", 'Nakabayad na ako');
+  String get referenceNumber => t('Reference number', 'Reference number');
+  String get referenceHint => t(
+    'e.g. 5012 345 678 901',
+    'hal. 5012 345 678 901',
+  );
+  String get referenceRequired => t(
+    'Enter the reference number.',
+    'Ilagay ang reference number.',
+  );
+  String get proofAmount => t('Amount', 'Halaga');
+  String get submitProof => t('Submit', 'I-submit');
+  String get paymentSentWaiting => t(
+    'Payment sent — waiting for the seller to check',
+    'Naipadala ang bayad — hinihintay ang pagsusuri ng nagbebenta',
+  );
+  String get sendAgain => t('Send again', 'Ipadala ulit');
+  String get paymentRejected => t('Payment not accepted', 'Hindi tinanggap ang bayad');
+  String get reportPaymentProblem =>
+      t('Report payment problem', 'I-ulat ang problema sa bayad');
+  String get paymentProblem => t('Payment problem', 'Problema sa bayad');
+  String paymentStatusLabel(String? status) => switch (status) {
+    'awaiting_payment' => t('Awaiting payment', 'Hinihintay ang bayad'),
+    'payment_sent' => t('Payment sent', 'Naipadala ang bayad'),
+    'paid' => t('Paid', 'Bayad na'),
+    'refund_due' => t('Refund due', 'Kailangan i-refund'),
+    'refunded' => t('Refunded', 'Na-refund na'),
+    _ => '',
+  };
+  String get waitingForPayment =>
+      t('Waiting for payment', 'Hinihintay ang bayad');
+  String get receivedPayment => t('Received', 'Natanggap');
+  String get notReceived => t('Not received', 'Hindi natanggap');
+  String get proofAmountDiffers => t(
+    'This amount is not the order total.',
+    'Hindi ito ang kabuuang halaga ng order.',
+  );
+  String get markRefunded => t('Mark as refunded', 'Markahan na na-refund');
+  String get refundReference => t('Refund reference', 'Reference ng refund');
+  String get refundReferenceRequired => t(
+    'Enter the refund reference.',
+    'Ilagay ang reference ng refund.',
+  );
+  String get payments => t('Payments', 'Mga bayad');
+  String get toCheck => t('To check', 'Susuriin');
+  String get confirmedPayments => t('Confirmed', 'Kumpirmado');
+  String get refundDueTab => t('Refund due', 'Kailangan i-refund');
+  String get noPaymentsToCheck =>
+      t('No payments to check.', 'Walang bayad na susuriin.');
+  String get noConfirmedPayments =>
+      t('No confirmed payments.', 'Walang kumpirmadong bayad.');
+  String get noRefundsDue =>
+      t('No refunds due.', 'Walang refund na kailangan.');
+  String paymentRejectReason(String reason) => switch (reason) {
+    'not_received' => t('Not received', 'Hindi natanggap'),
+    'wrong_amount' => t('Wrong amount', 'Maling halaga'),
+    'wrong_reference' => t('Wrong reference', 'Maling reference'),
+    'other' => t('Other', 'Iba pa'),
+    _ => reason,
+  };
+  String get rejectionNoteRequired => t(
+    'Add a note for Other.',
+    'Maglagdag ng note para sa Iba pa.',
+  );
+  String get chooseWallet => t('Choose a wallet.', 'Pumili ng wallet.');
+  String get chooseQrImage => t('Choose a QR image.', 'Pumili ng larawan ng QR.');
+  String get soldOutsideHint => t(
+    'Sold it yourself? Record a walk-in sale instead so it counts in your sales.',
+    'Ikaw mismo ang nagbenta? Magtala ng walk-in sale para maisama sa benta mo.',
+  );
+  String get recordWalkInSale =>
+      t('Record walk-in sale', 'Magtala ng walk-in sale');
+  String get screenshotOptional =>
+      t('Screenshot (optional)', 'Screenshot (opsyonal)');
+  String get pickScreenshot => t('Add screenshot', 'Magdagdag ng screenshot');
+  String get pickFromGallery => t('Gallery', 'Gallery');
+  String get pickFromCamera => t('Camera', 'Camera');
   String get amountReceivedOnline =>
       t('Amount received (online)', 'Halagang natanggap (online)');
   String tawadMinus(String peso) => t('Tawad −$peso', 'Tawad −$peso');
@@ -1330,6 +1620,20 @@ class AppStrings {
       'Stock left after the listing ended',
       'May natirang stock pagkatapos magtapos ang listing',
     ),
+    'payment_proof_submitted' => t(
+      'Payment proof submitted',
+      'Naipadala ang patunay ng bayad',
+    ),
+    'payment_confirmed' => t('Payment confirmed', 'Kumpirmado ang bayad'),
+    'payment_rejected' => t('Payment not accepted', 'Hindi tinanggap ang bayad'),
+    'payment_due_soon' => t('Payment due soon', 'Malapit na ang deadline ng bayad'),
+    'payment_expired' => t('Payment time expired', 'Lumipas ang oras ng bayad'),
+    'payment_check_reminder' => t(
+      'Payment still waiting',
+      'May bayad na hinihintay pa',
+    ),
+    'refund_due' => t('Refund due', 'Kailangan i-refund'),
+    'refund_completed' => t('Refund completed', 'Tapos na ang refund'),
     _ => fallback,
   };
 

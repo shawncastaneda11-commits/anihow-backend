@@ -24,6 +24,14 @@ Schedule::command('orders:sweep-stale')
     ->hourly()
     ->withoutOverlapping();
 
+Schedule::command('payments:upkeep')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();
+
+Schedule::command('payments:purge-proof-files')
+    ->daily()
+    ->withoutOverlapping();
+
 Schedule::command('sanctum:prune-expired --hours=24')
     ->daily()
     ->withoutOverlapping();

@@ -43,6 +43,13 @@ use App\Http\Controllers\Api\Orders\CheckoutController;
 use App\Http\Controllers\Api\Orders\FarmerOrderController;
 use App\Http\Controllers\Api\Orders\OrderHistoryController;
 use App\Http\Controllers\Api\Orders\WalkInSaleController;
+use App\Http\Controllers\Api\Payments\BuyerPaymentProofController;
+use App\Http\Controllers\Api\Payments\FarmerPaymentController;
+use App\Http\Controllers\Api\Payments\FarmerPaymentProofController;
+use App\Http\Controllers\Api\Payments\OrderRefundController;
+use App\Http\Controllers\Api\Payments\PaymentProofScreenshotController;
+use App\Http\Controllers\Api\Payments\PaymentQrImageController;
+use App\Http\Controllers\Api\Payments\SellerPaymentQrController;
 use App\Http\Controllers\Api\Reports\SubmitReportController;
 use App\Http\Controllers\Api\Reservations\BuyerReservationController;
 use App\Http\Controllers\Api\Reservations\FarmerReservationController;
@@ -128,6 +135,12 @@ Route::middleware(['auth:sanctum', 'password.changed'])->group(function (): void
     Route::get('chat/attachments/{stallMessage}', ChatAttachmentController::class)
         ->name('chat.attachments.show');
 
+    Route::get('payment-qrs/{sellerPaymentQr}/image', PaymentQrImageController::class)
+        ->withTrashed()
+        ->name('payment-qrs.image');
+    Route::get('payment-proofs/{paymentProof}/screenshot', PaymentProofScreenshotController::class)
+        ->name('payment-proofs.screenshot');
+
     Route::get('faq', [FaqController::class, 'index'])->name('faq.index');
     Route::post('faq/ask', [FaqController::class, 'ask'])->name('faq.ask');
 
@@ -201,6 +214,16 @@ Route::middleware([
         ->name('farmer.orders.complete');
     Route::patch('orders/{order}/cancel', [FarmerOrderController::class, 'cancel'])
         ->name('farmer.orders.cancel');
+    Route::patch('orders/{order}/payment-proofs/{paymentProof}', [FarmerPaymentProofController::class, 'update'])
+        ->name('farmer.orders.payment-proofs.update');
+    Route::patch('orders/{order}/refund', OrderRefundController::class)
+        ->name('farmer.orders.refund');
+
+    Route::get('payment-qrs', [SellerPaymentQrController::class, 'index'])->name('farmer.payment-qrs.index');
+    Route::post('payment-qrs', [SellerPaymentQrController::class, 'store'])->name('farmer.payment-qrs.store');
+    Route::delete('payment-qrs/{sellerPaymentQr}', [SellerPaymentQrController::class, 'destroy'])
+        ->name('farmer.payment-qrs.destroy');
+    Route::get('payments', FarmerPaymentController::class)->name('farmer.payments.index');
 
     // Walk-in sales: an in-person sale to someone without the app, recorded
     // after the handover. Lands in the same order ledger, directly at Completed.
@@ -255,6 +278,8 @@ Route::middleware([
 
         Route::patch('orders/{order}/cancel', [BuyerOrderController::class, 'cancel'])
             ->name('buyer.orders.cancel');
+        Route::post('orders/{order}/payment-proofs', [BuyerPaymentProofController::class, 'store'])
+            ->name('buyer.orders.payment-proofs.store');
 
         Route::post('reviews', [ReviewController::class, 'store'])->name('buyer.reviews.store');
         Route::post('favorites', [FavoriteController::class, 'store'])->name('buyer.favorites.store');

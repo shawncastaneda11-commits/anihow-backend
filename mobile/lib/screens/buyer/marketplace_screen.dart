@@ -353,7 +353,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     return Column(
       children: [
         AppHeader(
-          title: s.marketplace,
+          title: s.market,
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

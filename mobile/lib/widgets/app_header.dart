@@ -185,7 +185,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     return SizedBox(
       height: kToolbarHeight,
       child: NavigationToolbar(
-        middleSpacing: 8,
+        middleSpacing: 16,
         centerMiddle: true,
         leading: _leading(context, onPrimary),
         middle: titleBlock,

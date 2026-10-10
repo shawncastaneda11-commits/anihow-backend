@@ -9,7 +9,6 @@ import '../../models/models.dart';
 import '../../state/auth_controller.dart';
 import '../../support/seller_mailto.dart';
 import '../../theme/anihow_space.dart';
-import '../../widgets/brand_tab_bar.dart';
 import '../../widgets/primary_button.dart';
 import '../faq/faq_bot_screen.dart';
 import '../../theme/readable_accent.dart';
@@ -79,39 +78,27 @@ class _HelpScreenState extends State<HelpScreen> {
     final s = AppStrings.of(context);
     final seller = context.watch<AuthController>().user?.isFarmerSeller == true;
 
-    return DefaultTabController(
-      length: 2,
-      initialIndex: seller ? 1 : 0,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(s.howAnihowWorks),
-          bottom: onBrandTabBar(
-            tabs: [
-              Tab(text: s.forBuyers),
-              Tab(text: s.forSellers),
-            ],
-          ),
-        ),
-        body: TabBarView(
-          children: [
-            _TopicList(
-              topics: s.buyerHelpTopics,
-              footer: _Footer(help: _help, failed: _failed, onEmail: _email),
-            ),
-            _TopicList(
-              topics: s.sellerHelpTopics,
-              footer: _Footer(help: _help, failed: _failed, onEmail: _email),
-            ),
-          ],
-        ),
+    return Scaffold(
+      appBar: AppBar(title: Text(s.howAnihowWorks)),
+      body: _TopicList(
+        label: seller ? s.forSellers : s.forBuyers,
+        topics: seller ? s.sellerHelpTopics : s.buyerHelpTopics,
+        footer: _Footer(help: _help, failed: _failed, onEmail: _email),
       ),
     );
   }
 }
 
 class _TopicList extends StatefulWidget {
-  const _TopicList({required this.topics, required this.footer});
+  const _TopicList({
+    required this.label,
+    required this.topics,
+    required this.footer,
+  });
 
+  /// Whose guide this is. Buyers only see the buyer guide and sellers only
+  /// the seller guide.
+  final String label;
   final List<HelpTopic> topics;
   final Widget footer;
 
@@ -124,9 +111,19 @@ class _TopicListState extends State<_TopicList> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return ListView(
       padding: AniHowSpace.screenPadding,
       children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            widget.label,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
         Card(
           child: Column(
             children: [

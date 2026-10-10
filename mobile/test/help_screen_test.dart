@@ -75,22 +75,24 @@ Future<void> _pumpHelp(
 }
 
 void main() {
-  testWidgets('a farmer opens on the seller tab', (tester) async {
+  testWidgets('a farmer sees only the seller guide', (tester) async {
     await _pumpHelp(tester, roles: const ['farmer_seller']);
 
+    expect(find.text('For sellers'), findsOneWidget);
     expect(find.text('Listings and photos'), findsOneWidget);
+    expect(find.text('For buyers'), findsNothing);
     expect(find.text('Finding produce'), findsNothing);
-    final context = tester.element(find.byType(TabBar));
-    expect(DefaultTabController.of(context).index, 1);
+    expect(find.byType(TabBar), findsNothing);
   });
 
-  testWidgets('a buyer opens on the buyer tab', (tester) async {
+  testWidgets('a buyer sees only the buyer guide', (tester) async {
     await _pumpHelp(tester, roles: const ['buyer']);
 
+    expect(find.text('For buyers'), findsOneWidget);
     expect(find.text('Finding produce'), findsOneWidget);
+    expect(find.text('For sellers'), findsNothing);
     expect(find.text('Listings and photos'), findsNothing);
-    final context = tester.element(find.byType(TabBar));
-    expect(DefaultTabController.of(context).index, 0);
+    expect(find.byType(TabBar), findsNothing);
   });
 
   testWidgets('only one topic is open at a time', (tester) async {

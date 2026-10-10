@@ -2,20 +2,22 @@
 
 namespace Tests\Feature;
 
-use App\Enums\OrderStatus;
-use App\Enums\Role;
-use App\Models\CropCareArticle;
-use App\Models\FaqEntry;
-use App\Models\FarmAnnouncement;
+use App\Models\Farm;
+use App\Models\HarvestRecord;
 use App\Models\Listing;
 use App\Models\Order;
+use App\Models\PaymentProof;
+use App\Models\Reservation;
 use App\Models\Review;
+use App\Models\StallMessage;
 use App\Models\User;
-use App\Services\AnalyticsService;
+use App\Support\Demo\ClientFarms;
 use App\Support\ListingStorage;
 use Database\Seeders\DemoSeeder;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Mail\Mailable;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -23,52 +25,101 @@ class DemoSeederTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_demo_seeder_is_idempotent_and_keeps_farm_isolation(): void
+    public function test_demo_data_is_idempotent(): void
     {
-        $this->seed(DemoSeeder::class);
-
-        $this->assertSame(0, User::query()->where('must_change_password', true)->count());
-        $this->assertSame(0, User::query()->whereNotNull('temporary_password_expires_at')->count());
+        $this->artisan('anihow:demo-data', ['--weeks' => 4])
+            ->doesntExpectOutputToContain('password')
+            ->assertSuccessful();
 
         $first = $this->snapshot();
 
-        $this->seed(DemoSeeder::class);
+        $this->artisan('anihow:demo-data', ['--weeks' => 4])->assertSuccessful();
+
         $this->assertSame($first, $this->snapshot());
+    }
 
-        $admin = User::factory()->create();
-        $admin->syncRoles(Role::SuperAdmin);
+    public function test_existing_farm_keeps_what_the_admin_typed(): void
+    {
+        $farm = Farm::query()->create([
+            'name' => 'PYAP Manggahan Chapter',
+            'slug' => ClientFarms::PYAP_SLUG,
+            'contact_person' => 'Admin Typed',
+            'contact_number' => '09181234567',
+            'latitude' => 14.3123456,
+            'longitude' => 120.8123456,
+            'description' => 'Typed by the admin.',
+            'address' => 'Admin address',
+            'is_active' => true,
+        ]);
 
-        $summary = app(AnalyticsService::class)->completedSummary($admin);
+        $this->artisan('anihow:demo-data', ['--weeks' => 1])->assertSuccessful();
 
-        $this->assertGreaterThan(0, $summary['completed_orders']);
-        $this->assertGreaterThan(0, $summary['units_sold']);
-        $this->assertGreaterThan(0, $summary['gross_sales']);
+        $farm->refresh();
 
-        $sellers = User::query()->role(Role::FarmerSeller->value)->get();
+        $this->assertSame('PYAP Manggahan Chapter', $farm->name);
+        $this->assertSame(ClientFarms::PYAP_SLUG, $farm->slug);
+        $this->assertSame('Admin Typed', $farm->contact_person);
+        $this->assertSame('09181234567', $farm->contact_number);
+        $this->assertEquals(14.3123456, (float) $farm->latitude);
+        $this->assertEquals(120.8123456, (float) $farm->longitude);
+        $this->assertSame('Typed by the admin.', $farm->description);
+        $this->assertSame('Admin address', $farm->address);
+        $this->assertNotSame('Ka Elena Ramos', $farm->contact_person);
+        $this->assertNotSame('09175552100', $farm->contact_number);
+    }
 
-        $this->assertNotEmpty($sellers);
+    public function test_the_old_demo_contact_on_pyap_is_cleared(): void
+    {
+        $farm = Farm::query()->create([
+            'name' => 'PYAP Manggahan Chapter',
+            'slug' => ClientFarms::PYAP_SLUG,
+            'contact_person' => 'Ka Elena Ramos',
+            'contact_number' => '09175552100',
+            'is_active' => true,
+        ]);
 
-        foreach ($sellers as $seller) {
-            $this->assertTrue(
-                Order::query()
-                    ->where('farmer_seller_id', $seller->id)
-                    ->where('status', OrderStatus::Completed)
-                    ->exists(),
-                "Farmer-seller {$seller->email} has no completed order.",
-            );
-        }
+        $this->artisan('anihow:demo-data', ['--weeks' => 1])->assertSuccessful();
 
-        $mismatched = Order::query()
-            ->join('users as sellers', 'sellers.id', '=', 'orders.farmer_seller_id')
-            ->whereColumn('orders.farm_id', '!=', 'sellers.farm_id')
-            ->count();
+        $farm->refresh();
 
-        $this->assertSame(0, $mismatched);
+        $this->assertNull($farm->contact_person);
+        $this->assertNull($farm->contact_number);
+    }
+
+    public function test_fixture_orders_get_no_demo_reviews_or_chats(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $this->artisan('anihow:test-fixtures')->assertSuccessful();
+
+        $fixtureOrderIds = Order::query()->pluck('id');
+        $fixtureReviews = Review::query()->whereIn('order_id', $fixtureOrderIds)->count();
+
+        $this->artisan('anihow:demo-data', ['--weeks' => 4])->assertSuccessful();
+
+        $this->assertSame($fixtureReviews, Review::query()->whereIn('order_id', $fixtureOrderIds)->count());
+        $this->assertFalse(StallMessage::query()->whereIn('order_id', $fixtureOrderIds)->exists());
+        $this->assertSame(1, Farm::query()->where('slug', ClientFarms::PYAP_SLUG)->first()?->contentEditor()->count());
+    }
+
+    public function test_scheduler_commands_do_not_change_open_records(): void
+    {
+        $this->artisan('anihow:demo-data', ['--weeks' => 4])->assertSuccessful();
+
+        $before = $this->statuses();
+
+        Artisan::call('orders:sweep-stale');
+        Artisan::call('payments:upkeep');
+        Artisan::call('reservations:open-due');
+        Artisan::call('listings:harvest-upkeep');
+        Artisan::call('payments:purge-proof-files');
+        Artisan::call('announcements:notify-due');
+
+        $this->assertSame($before, $this->statuses());
     }
 
     public function test_demo_listing_photos_are_real_produce_images(): void
     {
-        $this->seed(DemoSeeder::class);
+        $this->artisan('anihow:demo-data', ['--weeks' => 1])->assertSuccessful();
 
         $listing = Listing::query()->where('title', 'like', 'Talong, pantatong')->first();
 
@@ -85,7 +136,7 @@ class DemoSeederTest extends TestCase
     {
         Mail::fake();
 
-        $this->seed(DemoSeeder::class);
+        $this->artisan('anihow:demo-data', ['--weeks' => 1])->assertSuccessful();
 
         $demoEmails = User::query()
             ->where('email', 'like', '%'.DemoSeeder::EMAIL_DOMAIN)
@@ -102,18 +153,39 @@ class DemoSeederTest extends TestCase
     }
 
     /**
-     * @return array{orders: int, completed: int, listings: int, reviews: int, announcements: int, articles: int, faq: int}
+     * @return array{orders: int, users: int, listings: int, harvests: int, reviews: int}
      */
     private function snapshot(): array
     {
         return [
             'orders' => Order::query()->count(),
-            'completed' => Order::query()->where('status', OrderStatus::Completed)->count(),
+            'users' => User::query()->count(),
             'listings' => Listing::query()->count(),
+            'harvests' => HarvestRecord::query()->count(),
             'reviews' => Review::query()->count(),
-            'announcements' => FarmAnnouncement::query()->count(),
-            'articles' => CropCareArticle::query()->count(),
-            'faq' => FaqEntry::query()->whereNotNull('farm_id')->count(),
+        ];
+    }
+
+    /**
+     * @return array{orders: list<array<string, mixed>>, reservations: list<array<string, mixed>>, proofs: list<array<string, mixed>>}
+     */
+    private function statuses(): array
+    {
+        return [
+            'orders' => Order::query()->orderBy('id')->get(['id', 'status', 'payment_status'])->map(fn (Order $order): array => [
+                'id' => $order->id,
+                'status' => $order->status?->value,
+                'payment_status' => $order->payment_status?->value,
+            ])->all(),
+            'reservations' => Reservation::query()->orderBy('id')->get(['id', 'status', 'payment_status'])->map(fn (Reservation $reservation): array => [
+                'id' => $reservation->id,
+                'status' => $reservation->status?->value,
+                'payment_status' => $reservation->payment_status?->value,
+            ])->all(),
+            'proofs' => PaymentProof::query()->orderBy('id')->get(['id', 'status'])->map(fn (PaymentProof $proof): array => [
+                'id' => $proof->id,
+                'status' => $proof->status?->value,
+            ])->all(),
         ];
     }
 }

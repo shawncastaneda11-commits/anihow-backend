@@ -34,10 +34,12 @@ use App\Models\TawadRule;
 use App\Models\User;
 use App\Services\CheckoutService;
 use App\Services\OrderStateMachine;
+use App\Support\Demo\ClientFarms;
 use App\Support\HarvestInput;
 use App\Support\Pricing\PriceGuardResolver;
 use App\Support\Pricing\UnitConverter;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -74,23 +76,27 @@ class CreateTestFixtures
         $this->planned = [];
         $this->dryRun = $dryRun;
 
-        $pyap = $this->farm('pyap-manggahan-chapter', 'PYAP Manggahan Chapter', 'General Trias', 'Manggahan');
-        $tonyo = $this->farm('mang-tonyo-farm', 'Mang Tonyo Farm', 'General Trias', null);
-        $testFarm = $this->farm('anihow-test-farm', 'AniHow Test Farm', 'General Trias', null);
+        $farms = [];
+
+        foreach (ClientFarms::definitions() as $definition) {
+            $farms[$definition['slug']] = $this->farm($definition);
+        }
+
+        $pyap = $farms[ClientFarms::PYAP_SLUG];
 
         $admin = $this->account('admin01@gmail.com', 'Admin 01', 'Admin@1234', Role::SuperAdmin, null, UserStatus::Active);
-        $editor = $this->editor('editor01@gmail.com', 'Editor 01', 'Editor@1234', $pyap, 'pyap-manggahan-chapter', UserStatus::Active, null);
-        $this->editor('susp03@gmail.com', 'Suspended Editor', 'Editor@1234', $testFarm, 'anihow-test-farm', UserStatus::Suspended, 'Test account');
+        $editor = $this->editor('editor01@gmail.com', 'Editor 01', 'password', $pyap, ClientFarms::PYAP_SLUG, UserStatus::Active, null);
+        $this->editor('susp03@gmail.com', 'Suspended Editor', 'password', null, null, UserStatus::Suspended, 'Test account');
 
-        $jun = $this->account('kuyajun@gmail.com', 'Kuya Jun', 'Seller@1234', Role::FarmerSeller, $pyap, UserStatus::Active, 'Kuya Jun Harvest', true);
+        $jun = $this->account('kuyajun@gmail.com', 'Kuya Jun', 'password', Role::FarmerSeller, $pyap, UserStatus::Active, 'Kuya Jun Harvest', true);
         $this->paymentQr($jun);
-        $nena = $this->account('alingnena@gmail.com', 'Aling Nena', 'Seller@1234', Role::FarmerSeller, $pyap, UserStatus::Active, 'Aling Nena Produce', false);
-        $this->account('pending01@gmail.com', 'Pending Seller', 'Seller@1234', Role::FarmerSeller, $pyap, UserStatus::Pending);
-        $this->account('susp02@gmail.com', 'Suspended Seller', 'Seller@1234', Role::FarmerSeller, $pyap, UserStatus::Suspended, suspensionReason: 'Test account');
-        $buyer01 = $this->account('buyer01@gmail.com', 'Buyer 01', 'Buyer@1234', Role::Buyer, null, UserStatus::Active);
-        $buyer02 = $this->account('buyer02@gmail.com', 'Buyer 02', 'Buyer@1234', Role::Buyer, null, UserStatus::Active);
-        $delete01 = $this->account('delete01@gmail.com', 'Delete 01', 'Buyer@1234', Role::Buyer, null, UserStatus::Active);
-        $this->account('susp01@gmail.com', 'Suspended Buyer', 'Buyer@1234', Role::Buyer, null, UserStatus::Suspended, suspensionReason: 'Test account');
+        $nena = $this->account('alingnena@gmail.com', 'Aling Nena', 'password', Role::FarmerSeller, $pyap, UserStatus::Active, 'Aling Nena Produce', false);
+        $this->account('pending01@gmail.com', 'Pending Seller', 'password', Role::FarmerSeller, $pyap, UserStatus::Pending);
+        $this->account('susp02@gmail.com', 'Suspended Seller', 'password', Role::FarmerSeller, $pyap, UserStatus::Suspended, suspensionReason: 'Test account');
+        $buyer01 = $this->account('buyer01@gmail.com', 'Buyer 01', 'password', Role::Buyer, null, UserStatus::Active);
+        $buyer02 = $this->account('buyer02@gmail.com', 'Buyer 02', 'password', Role::Buyer, null, UserStatus::Active);
+        $delete01 = $this->account('delete01@gmail.com', 'Delete 01', 'password', Role::Buyer, null, UserStatus::Active);
+        $this->account('susp01@gmail.com', 'Suspended Buyer', 'password', Role::Buyer, null, UserStatus::Suspended, suspensionReason: 'Test account');
 
         $pechay = $this->listing($jun, 'kuyajun@gmail.com', $pyap, 'Pechay, sariwa', ['Pechay'], ListingUnit::Bundle, 20.00, 30, 1, 1, null, null);
         $kalabasa = $this->listing($jun, 'kuyajun@gmail.com', $pyap, 'Kalabasa, pangkare-kare', ['Kalabasa', 'Squash'], ListingUnit::Kilogram, 38.00, 25, 0.5, 0.25, null, null);
@@ -127,11 +133,23 @@ class CreateTestFixtures
         return $this->rows;
     }
 
-    private function farm(string $slug, string $name, string $municipality, ?string $barangay): ?Farm
+    /**
+     * @param  array{slug: string, name: string, municipality: ?string, barangay: ?string, description: ?string, also_names: list<string>}  $definition
+     */
+    private function farm(array $definition): ?Farm
     {
-        $item = "Farm {$name}";
-        $farm = Farm::query()->where('slug', $slug)->first()
-            ?? Farm::query()->where('name', $name)->first();
+        $item = "Farm {$definition['name']}";
+        $farm = Farm::query()->where('slug', $definition['slug'])->first();
+
+        if ($farm === null) {
+            $names = array_merge([$definition['name']], $definition['also_names']);
+            $farm = Farm::query()
+                ->whereIn(DB::raw('LOWER(name)'), array_map(
+                    fn (string $name): string => mb_strtolower($name),
+                    $names,
+                ))
+                ->first();
+        }
 
         if ($farm !== null) {
             $this->record($item, 'exists');
@@ -140,17 +158,18 @@ class CreateTestFixtures
         }
 
         if ($this->dryRun) {
-            $this->plan('farm:'.$slug);
+            $this->plan('farm:'.$definition['slug']);
             $this->record($item, 'would create');
 
             return null;
         }
 
         $farm = Farm::query()->create([
-            'name' => $name,
-            'slug' => $slug,
-            'municipality' => $municipality,
-            'barangay' => $barangay,
+            'name' => $definition['name'],
+            'slug' => $definition['slug'],
+            'municipality' => $definition['municipality'],
+            'barangay' => $definition['barangay'],
+            'description' => $definition['description'],
             'is_active' => true,
         ]);
         $this->record($item, 'created');
@@ -163,7 +182,7 @@ class CreateTestFixtures
         string $name,
         string $password,
         ?Farm $farm,
-        string $farmSlug,
+        ?string $farmSlug,
         UserStatus $status,
         ?string $suspensionReason,
     ): ?User {

@@ -39,15 +39,28 @@ class AnihowTestFixturesTest extends TestCase
         $this->artisan('anihow:test-fixtures')
             ->expectsOutputToContain('created')
             ->doesntExpectOutputToContain('Admin@1234')
-            ->doesntExpectOutputToContain('Seller@1234')
-            ->doesntExpectOutputToContain('Buyer@1234')
-            ->doesntExpectOutputToContain('Editor@1234')
+            ->doesntExpectOutputToContain('password')
             ->assertSuccessful();
 
         $this->assertSame(11, User::query()->count());
+        $this->assertTrue(Hash::check('password', (string) User::query()->where('email', 'kuyajun@gmail.com')->value('password')));
+        $this->assertTrue(Hash::check('password', (string) User::query()->where('email', 'buyer01@gmail.com')->value('password')));
+        $this->assertTrue(Hash::check('password', (string) User::query()->where('email', 'editor01@gmail.com')->value('password')));
+        $this->assertFalse(Hash::check('password', (string) User::query()->where('email', 'admin01@gmail.com')->value('password')));
+        $this->assertNull(User::query()->where('email', 'susp03@gmail.com')->value('farm_id'));
         $this->assertSame(0, User::query()->where('must_change_password', true)->count());
         $this->assertSame(0, User::query()->whereNotNull('temporary_password_expires_at')->count());
         $this->assertSame(3, Farm::query()->count());
+        $this->assertDatabaseMissing('farms', ['slug' => 'mang-tonyo-farm']);
+        $this->assertDatabaseMissing('farms', ['slug' => 'anihow-test-farm']);
+        $truofa = Farm::query()->where('slug', 'truofa')->first();
+        $sanctuario = Farm::query()->where('slug', 'sanctuario-nature-farm')->first();
+        $this->assertSame('Tanza', $truofa?->municipality);
+        $this->assertSame('Tanza Rural and Urban Organic Farmers Association.', $truofa?->description);
+        $this->assertNull($truofa?->contentEditor);
+        $this->assertNull($sanctuario?->municipality);
+        $this->assertNull($sanctuario?->barangay);
+        $this->assertNull($sanctuario?->contentEditor);
         $this->assertSame(8, Listing::query()->count());
         $this->assertSame(2, Reservation::query()->count());
         $opensInThreeDays = Listing::query()->where('title', 'Pechay (opens in 3 days)')->first();
@@ -79,6 +92,7 @@ class AnihowTestFixturesTest extends TestCase
         $this->artisan('anihow:test-fixtures')
             ->expectsOutputToContain('exists')
             ->doesntExpectOutputToContain('created')
+            ->doesntExpectOutputToContain('password')
             ->assertSuccessful();
 
         $this->assertSame(11, User::query()->count());
@@ -143,6 +157,7 @@ class AnihowTestFixturesTest extends TestCase
         $this->artisan('anihow:test-fixtures', ['--dry-run' => true])
             ->expectsOutputToContain('would create')
             ->doesntExpectOutputToContain('Admin@1234')
+            ->doesntExpectOutputToContain('password')
             ->assertSuccessful();
 
         $this->assertSame(0, User::query()->count());

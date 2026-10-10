@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:anihow/l10n/app_strings.dart';
 import 'package:anihow/models/models.dart';
 import 'package:anihow/screens/buyer/buyer_shell.dart';
@@ -15,6 +17,7 @@ import 'package:anihow/support/crop_language.dart';
 import 'package:anihow/theme/anihow_theme.dart';
 import 'package:anihow/widgets/account_menu_button.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -151,6 +154,15 @@ Widget _app({
   );
 }
 
+Future<void> _systemBack(WidgetTester tester) async {
+  await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+    'flutter/navigation',
+    const JSONMethodCodec().encodeMethodCall(const MethodCall('popRoute')),
+    (_) {},
+  );
+  await tester.pumpAndSettle();
+}
+
 Future<void> _openMenu(WidgetTester tester, AppStrings s) async {
   await tester.tap(find.byTooltip(s.accountMenu).hitTestable());
   await tester.pumpAndSettle();
@@ -265,6 +277,45 @@ void main() {
     await tester.tapAt(const Offset(8, 500));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('account-menu-panel')), findsNothing);
+  });
+
+  testWidgets('the system back button closes the menu, not the screen', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final auth = AuthController(api: _MenuApi(_buyer()))
+      ..user = _buyer()
+      ..restoring = false;
+    await tester.pumpWidget(
+      _app(auth: auth, home: const Scaffold(body: Text('home'))),
+    );
+    await tester.pump();
+    unawaited(
+      tester
+          .state<NavigatorState>(find.byType(Navigator).first)
+          .push(
+            MaterialPageRoute<void>(
+              builder: (_) => Scaffold(
+                appBar: AppBar(actions: const [AccountMenuButton()]),
+              ),
+            ),
+          ),
+    );
+    await tester.pumpAndSettle();
+
+    final s = AppStrings(false);
+    await _openMenu(tester, s);
+    expect(find.byKey(const Key('account-menu-panel')), findsOneWidget);
+
+    await _systemBack(tester);
+    expect(find.byKey(const Key('account-menu-panel')), findsNothing);
+    expect(find.byType(AccountMenuButton), findsOneWidget);
+
+    await _systemBack(tester);
+    expect(find.byType(AccountMenuButton), findsNothing);
+    expect(find.text('home'), findsOneWidget);
   });
 
   testWidgets('seller menu replaces the app-bar FAQ icon', (tester) async {

@@ -87,95 +87,105 @@ class _AccountMenuButtonState extends State<AccountMenuButton> {
     final menuWidth = math.min(320.0, math.max(160.0, screenWidth - 20));
     final open = _menu.isOpen;
 
-    return MenuAnchor(
-      controller: _menu,
-      consumeOutsideTap: true,
-      crossAxisUnconstrained: true,
-      clipBehavior: Clip.none,
-      alignmentOffset: Offset(48 - menuWidth, 4),
-      style: const MenuStyle(
-        backgroundColor: WidgetStatePropertyAll(Colors.transparent),
-        surfaceTintColor: WidgetStatePropertyAll(Colors.transparent),
-        elevation: WidgetStatePropertyAll(0),
-        padding: WidgetStatePropertyAll(EdgeInsets.zero),
-      ),
-      onOpen: () => setState(() {}),
-      onClose: () => setState(() {}),
-      menuChildren: [
-        _AccountMenuPanel(
-          width: menuWidth,
-          onProfile: () => _push(
-            seller ? const FarmerProfileScreen() : const ProfileScreen(),
-          ),
-          onSettings: () => _push(const SettingsScreen()),
-          onHelp: () =>
-              _push(seller ? const FaqBotScreen() : const HelpScreen()),
-          onExtra: () =>
-              _push(seller ? const HelpScreen() : const SellerInfoScreen()),
-          onLogOut: () {
-            _menu.close();
-            confirmAndLogOut(context);
-          },
-        ),
-      ],
-      builder: (context, controller, child) {
-        return IconButton(
-          tooltip: s.accountMenu,
-          onPressed: () {
-            if (controller.isOpen) {
-              controller.close();
-            } else {
-              controller.open();
-            }
-          },
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints.tightFor(width: 48, height: 48),
-          icon: SizedBox(
-            width: 48,
-            height: 48,
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: open
-                        ? Border.all(color: Colors.white, width: 3)
-                        : null,
-                  ),
-                  child: AniHowAvatar(
-                    name: avatarName,
-                    imageUrl: user?.avatarUrl,
-                    radius: 18,
-                    backgroundColor: AniHowColors.avatarOnBrand,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  ),
-                ),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 18,
-                    height: 18,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AniHowColors.brand, width: 2),
-                    ),
-                    child: const Icon(
-                      Icons.expand_more,
-                      size: 12,
-                      color: AniHowColors.brand,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
+    // The menu is an overlay, not a route: without this, the system back
+    // button would pop the screen (or leave the app) instead of closing it.
+    return PopScope(
+      canPop: !open,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _menu.isOpen) {
+          _menu.close();
+        }
       },
+      child: MenuAnchor(
+        controller: _menu,
+        consumeOutsideTap: true,
+        crossAxisUnconstrained: true,
+        clipBehavior: Clip.none,
+        alignmentOffset: Offset(48 - menuWidth, 4),
+        style: const MenuStyle(
+          backgroundColor: WidgetStatePropertyAll(Colors.transparent),
+          surfaceTintColor: WidgetStatePropertyAll(Colors.transparent),
+          elevation: WidgetStatePropertyAll(0),
+          padding: WidgetStatePropertyAll(EdgeInsets.zero),
+        ),
+        onOpen: () => setState(() {}),
+        onClose: () => setState(() {}),
+        menuChildren: [
+          _AccountMenuPanel(
+            width: menuWidth,
+            onProfile: () => _push(
+              seller ? const FarmerProfileScreen() : const ProfileScreen(),
+            ),
+            onSettings: () => _push(const SettingsScreen()),
+            onHelp: () =>
+                _push(seller ? const FaqBotScreen() : const HelpScreen()),
+            onExtra: () =>
+                _push(seller ? const HelpScreen() : const SellerInfoScreen()),
+            onLogOut: () {
+              _menu.close();
+              confirmAndLogOut(context);
+            },
+          ),
+        ],
+        builder: (context, controller, child) {
+          return IconButton(
+            tooltip: s.accountMenu,
+            onPressed: () {
+              if (controller.isOpen) {
+                controller.close();
+              } else {
+                controller.open();
+              }
+            },
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 48, height: 48),
+            icon: SizedBox(
+              width: 48,
+              height: 48,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: open
+                          ? Border.all(color: Colors.white, width: 3)
+                          : null,
+                    ),
+                    child: AniHowAvatar(
+                      name: avatarName,
+                      imageUrl: user?.avatarUrl,
+                      radius: 18,
+                      backgroundColor: AniHowColors.avatarOnBrand,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AniHowColors.brand, width: 2),
+                      ),
+                      child: const Icon(
+                        Icons.expand_more,
+                        size: 12,
+                        color: AniHowColors.brand,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

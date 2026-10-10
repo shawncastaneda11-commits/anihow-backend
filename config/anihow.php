@@ -27,7 +27,7 @@ return [
 
     'rate_limit_auth' => (int) env('RATE_LIMIT_AUTH', 5),
 
-    'rate_limit_api' => (int) env('RATE_LIMIT_API', 60),
+    'rate_limit_api' => (int) env('RATE_LIMIT_API', 240),
 
     /*
     |--------------------------------------------------------------------------

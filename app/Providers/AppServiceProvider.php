@@ -54,7 +54,7 @@ class AppServiceProvider extends ServiceProvider
                 return Limit::none();
             }
 
-            return Limit::perMinute((int) config('anihow.rate_limit_api', 60))
+            return Limit::perMinute((int) config('anihow.rate_limit_api', 240))
                 ->by($request->user()?->id ?: $request->ip());
         });
 

@@ -274,4 +274,25 @@ void main() {
     expect(find.byKey(const ValueKey('extend-6')), findsOneWidget);
     expect(find.text('Add stock'), findsNothing);
   });
+
+  testWidgets('a pending harvest offers its harvest, sold out offers stock', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _pump(
+      tester,
+      _ListingsApi([
+        _listing(id: 5, title: 'Pending', quantity: '0', needsActualHarvest: true),
+        _listing(id: 7, title: 'Sold out', quantity: '0'),
+      ]),
+    );
+
+    expect(find.text('Add stock'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('listing-menu-5')));
+    await tester.pumpAndSettle();
+    expect(find.text('Record actual harvest'), findsOneWidget);
+    expect(find.text('Remove stock'), findsNothing);
+  });
 }

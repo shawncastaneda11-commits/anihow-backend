@@ -203,6 +203,11 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
     switch (action) {
       case 'edit':
         await _openForm(listing);
+      case 'actual':
+        final changed = await showAddStockSheet(context, listing, actual: true);
+        if (changed && mounted) {
+          await _reload();
+        }
       case 'add':
         final changed = await showAddStockSheet(context, listing);
         if (changed && mounted) {
@@ -561,22 +566,26 @@ class _FilterChip extends StatelessWidget {
         ? Colors.white
         : theme.colorScheme.onSurface;
     return Center(
-      child: Material(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-        child: InkWell(
-          onTap: onTap,
-          customBorder: const StadiumBorder(),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 36),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Center(
-                child: Text(
-                  label,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: foreground,
-                    fontWeight: FontWeight.w700,
+      child: Semantics(
+        button: true,
+        selected: selected,
+        child: Material(
+          color: background,
+          borderRadius: BorderRadius.circular(999),
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const StadiumBorder(),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 36),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Center(
+                  child: Text(
+                    label,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: foreground,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
@@ -947,7 +956,7 @@ class _ActionRow extends StatelessWidget {
     if (listing.expiredWithStock) {
       return _ExpiredActions(listing: listing, onExtend: onOpen, onChanged: onChanged);
     }
-    if (listing.isLowStock) {
+    if (_needsStock) {
       return Padding(
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
         child: _AmberButton(
@@ -962,6 +971,17 @@ class _ActionRow extends StatelessWidget {
       );
     }
     return const SizedBox.shrink();
+  }
+
+  /// Low or sold out, for listings that take normal stock (not a pending harvest).
+  bool get _needsStock {
+    if (listing.needsActualHarvest ||
+        listing.isUpcoming ||
+        listing.isTakenDown) {
+      return false;
+    }
+    final quantity = double.tryParse(listing.quantityAvailable) ?? 0;
+    return listing.isLowStock || quantity <= 0;
   }
 }
 
@@ -1137,8 +1157,12 @@ class _MoreMenu extends StatelessWidget {
       onSelected: onSelected,
       itemBuilder: (context) => [
         PopupMenuItem(value: 'edit', child: Text(s.editListing)),
-        PopupMenuItem(value: 'add', child: Text(s.addStock)),
-        PopupMenuItem(value: 'remove', child: Text(s.removeStock)),
+        if (listing.needsActualHarvest)
+          PopupMenuItem(value: 'actual', child: Text(s.recordActualHarvest))
+        else ...[
+          PopupMenuItem(value: 'add', child: Text(s.addStock)),
+          PopupMenuItem(value: 'remove', child: Text(s.removeStock)),
+        ],
         PopupMenuItem(value: 'history', child: Text(s.stockHistory)),
         PopupMenuItem(value: 'tawad', child: Text(s.tawadDiscount)),
         if (listing.isUpcoming)

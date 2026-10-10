@@ -49,11 +49,15 @@ class Dashboard extends BaseDashboard
                 ->native(false),
             DatePicker::make('from')
                 ->label('From')
+                ->maxDate(fn (Get $get): mixed => $get('to') ?: now())
+                ->live()
                 ->visible(fn (Get $get): bool => $get('range') === 'custom')
                 ->native(false),
             DatePicker::make('to')
                 ->label('To')
+                ->minDate(fn (Get $get): mixed => $get('from'))
                 ->maxDate(now())
+                ->live()
                 ->helperText('Up to 366 days. Longer ranges are shortened.')
                 ->visible(fn (Get $get): bool => $get('range') === 'custom')
                 ->native(false),

@@ -64,6 +64,10 @@ class CmsAnalyticsDashboardTest extends TestCase
         $this->assertSame('2026-10-01', $future->from->toDateString());
         $this->assertSame('2026-10-10', $future->to->toDateString());
 
+        $backwards = AnalyticsRange::fromValues('custom', '2026-10-10', '2026-04-10', null, 'all', true);
+        $this->assertSame('2026-04-10', $backwards->from->toDateString());
+        $this->assertSame('2026-10-10', $backwards->to->toDateString());
+
         $unknown = AnalyticsRange::fromValues('bogus', null, null, null, 'all', true);
         $this->assertSame('month', $unknown->key);
 

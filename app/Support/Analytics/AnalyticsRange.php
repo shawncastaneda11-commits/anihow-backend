@@ -36,7 +36,7 @@ final readonly class AnalyticsRange
 
     /**
      * Phone requests leave dates alone. The dashboard passes $clampToYear so a
-     * typed range cannot run past today, backwards, or longer than 366 days.
+     * typed range cannot run past today or longer than 366 days; a backwards one is swapped.
      */
     public static function fromValues(
         string $key,
@@ -80,6 +80,10 @@ final readonly class AnalyticsRange
 
         if ($clampToYear && $key === 'custom') {
             $today = now()->endOfDay();
+
+            if ($start->greaterThan($end)) {
+                [$start, $end] = [$end->copy()->startOfDay(), $start->copy()->endOfDay()];
+            }
 
             if ($end->greaterThan($today)) {
                 $end = $today;

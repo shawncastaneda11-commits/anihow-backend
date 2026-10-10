@@ -182,7 +182,7 @@ Buyer **writes** (create/cancel reservation, review, add/remove favorite) requir
 | POST | `/api/auth/reset-password` | guest | `{ email, token, password, password_confirmation }` |
 | POST | `/api/admin/farmer-sellers` | `super_admin` | Create a pre-verified farmer-seller |
 
-Auth routes are throttled (`RATE_LIMIT_AUTH`, default 5/min). The rest of the API uses `RATE_LIMIT_API` (default 60/min).
+Auth routes are throttled (`RATE_LIMIT_AUTH`, default 5/min). The rest of the API uses `RATE_LIMIT_API` (default 240/min per account; the app polls orders, chats and the notification count).
 
 ### Verify email
 
@@ -359,7 +359,7 @@ Copy `.env.example`. Important variables:
 | `AWS_ENDPOINT` / `AWS_URL` / `AWS_USE_PATH_STYLE_ENDPOINT` | empty | set for R2 / MinIO-style APIs |
 | `QUEUE_CONNECTION` | `database` (run `queue:work`) | `database` + a worker service |
 | `CORS_ALLOWED_ORIGINS` | `*` | your Flutter web origin(s), comma-separated |
-| `RATE_LIMIT_AUTH` / `RATE_LIMIT_API` | `5` / `60` | same unless you need to tune |
+| `RATE_LIMIT_AUTH` / `RATE_LIMIT_API` | `5` / `240` | same unless you need to tune |
 | `SUPER_ADMIN_*` | seed credentials | change the password |
 
 ## Deploy on a VPS

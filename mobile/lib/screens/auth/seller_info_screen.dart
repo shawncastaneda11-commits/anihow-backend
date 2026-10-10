@@ -11,6 +11,7 @@ import '../../support/phone_link.dart';
 import '../../support/seller_mailto.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/primary_button.dart';
+import '../../theme/readable_accent.dart';
 
 enum SellerPath { farmer, farm }
 
@@ -123,12 +124,12 @@ class _SellerInfoScreenState extends State<SellerInfoScreen> {
         ? [
             s.sellerStepFarmerFarm,
             s.sellerStepFarmerEmail(office),
-            if (days != null) s.sellerStepFarmerPassword(days),
+            days != null ? s.sellerStepFarmerPassword(days) : s.sellerStepFarmerPasswordSoon,
           ]
         : [
             s.sellerStepFarmEmail(office),
             s.sellerStepFarmCms,
-            if (days != null) s.sellerStepFarmPassword(days),
+            days != null ? s.sellerStepFarmPassword(days) : s.sellerStepFarmPasswordSoon,
           ];
     final muted = theme.textTheme.bodyMedium?.copyWith(
       color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
@@ -224,7 +225,9 @@ class _SellerInfoScreenState extends State<SellerInfoScreen> {
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Center(child: CircularProgressIndicator()),
             )
-          else if (help == null || help.farms.isEmpty)
+          else if (_failed || help == null)
+            const SizedBox.shrink()
+          else if (help.farms.isEmpty)
             Text(s.noPartnerFarms, style: muted)
           else
             Card(
@@ -260,13 +263,13 @@ class _NumberedStep extends StatelessWidget {
           height: 28,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withValues(alpha: 0.12),
+            color: accentTint(context),
             shape: BoxShape.circle,
           ),
           child: Text(
             '$number',
             style: theme.textTheme.labelLarge?.copyWith(
-              color: theme.colorScheme.primary,
+              color: readableAccent(context),
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -299,7 +302,7 @@ class _FarmRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: [
-            Icon(Icons.eco_outlined, color: theme.colorScheme.primary),
+            Icon(Icons.eco_outlined, color: readableAccent(context)),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

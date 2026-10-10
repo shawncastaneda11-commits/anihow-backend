@@ -2060,6 +2060,14 @@ class AppStrings {
     'You\'ll get a temporary password. Sign in and set your own password within $days days.',
     'Makakatanggap ka ng pansamantalang password. Mag-sign in at magtakda ng sarili mong password sa loob ng $days araw.',
   );
+  String get sellerStepFarmerPasswordSoon => t(
+    'You\'ll get a temporary password. Sign in and set your own password soon after.',
+    'Makakatanggap ka ng pansamantalang password. Mag-sign in at magtakda agad ng sarili mong password.',
+  );
+  String get sellerStepFarmPasswordSoon => t(
+    'Sign in to the CMS with the temporary password and change it right away.',
+    'Mag-sign in sa CMS gamit ang pansamantalang password at palitan ito agad.',
+  );
   String sellerStepFarmEmail(String office) => t(
     'Email $office with the farm\'s name, location, contact person and mobile number.',
     'I-email ang $office kasama ang pangalan ng bukid, lokasyon, contact person, at mobile number.',

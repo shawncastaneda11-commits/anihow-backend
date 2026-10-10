@@ -6,6 +6,7 @@ import '../state/auth_controller.dart';
 import '../state/preferences_controller.dart';
 import '../support/crop_language.dart';
 import '../theme/anihow_space.dart';
+import '../theme/readable_accent.dart';
 import '../widgets/auth_layout.dart';
 import '../widgets/form_label.dart';
 import '../widgets/password_field.dart';
@@ -173,7 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       Icon(
                         Icons.storefront_outlined,
-                        color: Theme.of(context).colorScheme.primary,
+                        color: readableAccent(context),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -183,7 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             Text(
                               s.wantToBeASeller,
                               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
+                                color: readableAccent(context),
                                 fontWeight: FontWeight.w600,
                               ),
                             ),

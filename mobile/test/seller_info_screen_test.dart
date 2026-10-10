@@ -146,6 +146,8 @@ void main() {
 
     expect(find.textContaining('the AniHow administrator'), findsWidgets);
     expect(find.textContaining('Make sure your farm is on AniHow'), findsOneWidget);
+    expect(find.textContaining('set your own password soon after'), findsOneWidget);
+    expect(find.text('No partner farms yet.'), findsNothing);
     expect(find.text('desk@example.com'), findsNothing);
     expect(
       find.text("Couldn't load the contact details. Check your connection."),

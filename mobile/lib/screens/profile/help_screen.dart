@@ -12,6 +12,7 @@ import '../../theme/anihow_space.dart';
 import '../../widgets/brand_tab_bar.dart';
 import '../../widgets/primary_button.dart';
 import '../faq/faq_bot_screen.dart';
+import '../../theme/readable_accent.dart';
 
 class HelpScreen extends StatefulWidget {
   const HelpScreen({super.key});
@@ -179,13 +180,13 @@ class _TopicRow extends StatelessWidget {
                     height: 32,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                      color: accentTint(context),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       '$index',
                       style: theme.textTheme.labelLarge?.copyWith(
-                        color: theme.colorScheme.primary,
+                        color: readableAccent(context),
                         fontWeight: FontWeight.w700,
                       ),
                     ),

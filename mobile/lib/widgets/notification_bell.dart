@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_strings.dart';
@@ -127,17 +126,14 @@ class _NotificationBellButtonState extends State<NotificationBellButton>
     final readAt = DateTime.now().toUtc().toIso8601String();
     setState(() {
       _unread = 0;
-      _preview = [
-        for (final item in _preview) item.copyWith(readAt: readAt),
-      ];
+      _preview = [for (final item in _preview) item.copyWith(readAt: readAt)];
     });
     try {
       await context.read<AuthController>().api.markAllNotificationsRead();
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
       }
     }
   }
@@ -149,9 +145,8 @@ class _NotificationBellButtonState extends State<NotificationBellButton>
         await context.read<AuthController>().api.markNotificationRead(item.id);
       } on ApiException catch (error) {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(error.message)));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(error.message)));
         }
       }
     }
@@ -163,9 +158,9 @@ class _NotificationBellButtonState extends State<NotificationBellButton>
 
   void _seeAll() {
     _menu.close();
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const NotificationsScreen()));
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const NotificationsScreen()),
+    );
   }
 
   @override
@@ -249,8 +244,12 @@ class _NotificationBellButtonState extends State<NotificationBellButton>
 }
 
 int _newestFirst(AppNotification a, AppNotification b) {
-  final aTime = DateTime.tryParse(a.createdAt ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
-  final bTime = DateTime.tryParse(b.createdAt ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+  final aTime =
+      DateTime.tryParse(a.createdAt ?? '') ??
+      DateTime.fromMillisecondsSinceEpoch(0);
+  final bTime =
+      DateTime.tryParse(b.createdAt ?? '') ??
+      DateTime.fromMillisecondsSinceEpoch(0);
   return bTime.compareTo(aTime);
 }
 
@@ -327,9 +326,16 @@ class _NotificationMenu extends StatelessWidget {
                   ],
                 ),
               ),
-              _CappedScroll(
-                maxHeight: math.max(0, maxHeight - chrome),
-                child: _menuBody(context, s),
+              // SingleChildScrollView answers the intrinsic sizing MenuAnchor
+              // asks for (a ListView cannot) and scrolls once the cap is hit.
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: math.max(0, maxHeight - chrome),
+                ),
+                child: SingleChildScrollView(
+                  primary: false,
+                  child: _menuBody(context, s),
+                ),
               ),
               TextButton(
                 onPressed: onSeeAll,
@@ -391,159 +397,6 @@ class _NotificationMenu extends StatelessWidget {
           _NotificationMenuRow(item: item, onTap: () => onOpen(item)),
       ],
     );
-  }
-}
-
-/// Keeps a menu section at most [maxHeight] tall and scrolls the rest.
-///
-/// [MenuAnchor] measures its child with intrinsics, which a [ListView] cannot
-/// answer, so this clips a normal column instead.
-class _CappedScroll extends StatefulWidget {
-  const _CappedScroll({required this.maxHeight, required this.child});
-
-  final double maxHeight;
-  final Widget child;
-
-  @override
-  State<_CappedScroll> createState() => _CappedScrollState();
-}
-
-class _CappedScrollState extends State<_CappedScroll> {
-  final GlobalKey _boxKey = GlobalKey();
-  double _offset = 0;
-
-  void _scrollBy(double delta) {
-    final render = _boxKey.currentContext?.findRenderObject();
-    if (render is! _RenderCappedColumn) {
-      return;
-    }
-    final next = (_offset + delta).clamp(0.0, render.maxScroll).toDouble();
-    if (next == _offset) {
-      return;
-    }
-    setState(() => _offset = next);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onVerticalDragUpdate: (details) => _scrollBy(-details.delta.dy),
-      child: _CappedColumn(
-        key: _boxKey,
-        maxHeight: widget.maxHeight,
-        offset: _offset,
-        child: widget.child,
-      ),
-    );
-  }
-}
-
-class _CappedColumn extends SingleChildRenderObjectWidget {
-  const _CappedColumn({
-    super.key,
-    required this.maxHeight,
-    required this.offset,
-    required Widget child,
-  }) : super(child: child);
-
-  final double maxHeight;
-  final double offset;
-
-  @override
-  RenderObject createRenderObject(BuildContext context) {
-    return _RenderCappedColumn(maxHeight: maxHeight, offset: offset);
-  }
-
-  @override
-  void updateRenderObject(BuildContext context, _RenderCappedColumn renderObject) {
-    renderObject
-      ..maxHeight = maxHeight
-      ..offset = offset;
-  }
-}
-
-class _RenderCappedColumn extends RenderProxyBox {
-  _RenderCappedColumn({required this._maxHeight, required this._offset});
-
-  double _maxHeight;
-  double _offset;
-
-  set maxHeight(double value) {
-    if (_maxHeight == value) {
-      return;
-    }
-    _maxHeight = value;
-    markNeedsLayout();
-  }
-
-  set offset(double value) {
-    if (_offset == value) {
-      return;
-    }
-    _offset = value;
-    markNeedsPaint();
-  }
-
-  double get maxScroll {
-    final box = child;
-    if (box == null || !box.hasSize || !hasSize) {
-      return 0;
-    }
-    return math.max(0, box.size.height - size.height);
-  }
-
-  @override
-  double computeMinIntrinsicHeight(double width) {
-    return computeMaxIntrinsicHeight(width);
-  }
-
-  @override
-  double computeMaxIntrinsicHeight(double width) {
-    final inner = child?.getMaxIntrinsicHeight(width) ?? 0;
-    return math.min(inner, _maxHeight);
-  }
-
-  @override
-  void performLayout() {
-    final box = child;
-    if (box == null) {
-      size = constraints.smallest;
-      return;
-    }
-    box.layout(
-      BoxConstraints(minWidth: constraints.maxWidth, maxWidth: constraints.maxWidth),
-      parentUsesSize: true,
-    );
-    final cap = math.min(_maxHeight, constraints.maxHeight);
-    final height = math.min(box.size.height, cap);
-    final limit = math.max(0.0, box.size.height - height);
-    if (_offset > limit) {
-      _offset = limit;
-    }
-    size = constraints.constrain(Size(constraints.maxWidth, height));
-  }
-
-  @override
-  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
-    final box = child;
-    if (box == null) {
-      return false;
-    }
-    return box.hitTest(result, position: position + Offset(0, _offset));
-  }
-
-  @override
-  void paint(PaintingContext context, Offset offset) {
-    final box = child;
-    if (box == null) {
-      return;
-    }
-    context.pushClipRect(needsCompositing, offset, Offset.zero & size, (
-      context,
-      offset,
-    ) {
-      context.paintChild(box, offset - Offset(0, _offset));
-    });
   }
 }
 

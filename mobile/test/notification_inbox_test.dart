@@ -139,6 +139,58 @@ void main() {
     expect(api.deletes, 1);
   });
 
+  testWidgets('on a short screen the bell menu scrolls to its last notice', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 420);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final api = _InboxApi([
+      for (var day = 1; day <= 5; day++)
+        _note(
+          id: day,
+          title: 'Notice $day',
+          body: 'Body $day',
+          type: 'order_ready',
+          createdAt: DateTime.utc(2026, 10, day).toIso8601String(),
+        ),
+    ]);
+    final auth = AuthController(api: api)
+      ..restoring = false
+      ..user = _user(seller: false);
+    final s = AppStrings(false);
+
+    await tester.pumpWidget(
+      _app(
+        auth: auth,
+        home: Scaffold(
+          appBar: AppBar(actions: const [NotificationBellButton()]),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.byTooltip(s.notifications));
+    await tester.pump();
+    await tester.pump();
+
+    final panel = find.byKey(const Key('notification-menu-panel'));
+    expect(tester.getSize(panel).height, lessThanOrEqualTo(420 * 0.6 + 0.5));
+
+    // The oldest of the five sits below the cap until the list scrolls.
+    final oldest = find.byKey(const Key('notification-menu-1'));
+    await tester.ensureVisible(oldest);
+    await tester.pump();
+    await tester.tap(oldest);
+    await tester.pump();
+    await tester.pump();
+
+    expect(api.reads, [1]);
+    expect(panel, findsNothing);
+    // Let the scrollbar's fade-out timer finish.
+    await tester.pump(const Duration(seconds: 2));
+  });
+
   testWidgets('the bell menu shows five notices and opens the inbox', (
     tester,
   ) async {
@@ -176,7 +228,9 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('notification-menu-panel')), findsOneWidget);
-    final menu = tester.getSize(find.byKey(const Key('notification-menu-panel')));
+    final menu = tester.getSize(
+      find.byKey(const Key('notification-menu-panel')),
+    );
     expect(menu.width, lessThanOrEqualTo(320));
     expect(menu.height, lessThanOrEqualTo(360));
     expect(find.byKey(const Key('notification-menu-6')), findsOneWidget);

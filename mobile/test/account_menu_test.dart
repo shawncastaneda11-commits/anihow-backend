@@ -303,7 +303,10 @@ void main() {
       ..user = _buyer()
       ..restoring = false;
     await tester.pumpWidget(
-      _app(auth: auth, home: const Scaffold(body: Text('home'))),
+      _app(
+        auth: auth,
+        home: const Scaffold(body: Text('home')),
+      ),
     );
     await tester.pump();
     unawaited(

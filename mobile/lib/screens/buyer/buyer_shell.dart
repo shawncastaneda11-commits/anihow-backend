@@ -4,8 +4,6 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_strings.dart';
 import '../../navigation/route_observer.dart';
 import '../../state/auth_controller.dart';
-import '../../widgets/account_menu_button.dart';
-import '../../widgets/notification_bell.dart';
 import '../../widgets/order_chat_head.dart';
 import '../../widgets/unverified_email_banner.dart';
 import 'favorites_screen.dart';
@@ -66,29 +64,14 @@ class _BuyerShellState extends State<BuyerShell> {
           const ShopsScreen(showAccountMenu: true),
           const MarketplaceScreen(showAccountMenu: true),
           OrderHistoryScreen(active: _index == 2, showAccountMenu: true),
-          FavoritesScreen(active: _index == 3),
+          FavoritesScreen(active: _index == 3, showAccountMenu: true),
         ];
-    final titles = [s.shops, s.marketplace, s.orders, s.favorites];
-    final hasAppBar = _index == 3;
 
     return VerifyBannerScope(
       hidden: _hideVerifyBanner,
       hide: () => setState(() => _hideVerifyBanner = true),
       child: Scaffold(
-        appBar: hasAppBar
-            ? AppBar(
-                title: Text(titles[_index]),
-                actions: const [NotificationBellButton(), AccountMenuButton()],
-              )
-            : null,
-        body: Column(
-          children: [
-            if (hasAppBar) const UnverifiedEmailBanner(),
-            Expanded(
-              child: IndexedStack(index: _index, children: pages),
-            ),
-          ],
-        ),
+        body: IndexedStack(index: _index, children: pages),
         floatingActionButton: widget.preview == null
             ? const OrderChatHead()
             : null,

@@ -1,6 +1,7 @@
 import 'package:anihow/l10n/app_strings.dart';
 import 'package:anihow/models/models.dart';
 import 'package:anihow/screens/buyer/favorites_screen.dart';
+import 'package:anihow/state/auth_controller.dart';
 import 'package:anihow/state/preferences_controller.dart';
 import 'package:anihow/theme/anihow_theme.dart';
 import 'package:flutter/material.dart';
@@ -8,8 +9,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 Widget _app({required Widget home}) {
-  return ChangeNotifierProvider(
-    create: (_) => PreferencesController(),
+  final auth = AuthController()
+    ..restoring = false
+    ..user = const UserAccount(
+      id: 1,
+      name: 'Maria',
+      email: 'maria@example.com',
+      roles: ['buyer'],
+      emailVerifiedAt: '2026-01-01T00:00:00Z',
+    );
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider(create: (_) => PreferencesController()),
+      ChangeNotifierProvider.value(value: auth),
+    ],
     child: MaterialApp(
       theme: AniHowTheme.light(),
       home: Scaffold(body: home),

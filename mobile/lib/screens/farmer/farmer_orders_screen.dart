@@ -9,6 +9,7 @@ import '../../state/auth_controller.dart';
 import '../../support/relative_time.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
+import '../../widgets/main_tab_app_bar.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/hint_card.dart';
 import '../../widgets/order_look.dart';
@@ -33,9 +34,16 @@ List<({String status, String label, String empty})> _orderTabs(AppStrings s) =>
 const _sellerCancelReasons = ['seller_declined', 'no_show', 'other'];
 
 class FarmerOrdersScreen extends StatefulWidget {
-  const FarmerOrdersScreen({super.key, this.active = true});
+  const FarmerOrdersScreen({
+    super.key,
+    this.active = true,
+    this.showAccountMenu = false,
+  });
 
   final bool active;
+
+  /// Set by [FarmerShell] only.
+  final bool showAccountMenu;
 
   @override
   State<FarmerOrdersScreen> createState() => _FarmerOrdersScreenState();
@@ -229,8 +237,12 @@ class _FarmerOrdersScreenState extends State<FarmerOrdersScreen>
     return DefaultTabController(
       length: tabs.length,
       child: Scaffold(
+        appBar: widget.showAccountMenu
+            ? mainTabAppBar(title: s.incomingOrders, showAccountMenu: true)
+            : null,
         body: Column(
           children: [
+            if (widget.showAccountMenu) mainTabBodyGap,
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton(

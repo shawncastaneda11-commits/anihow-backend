@@ -88,6 +88,83 @@ class NotificationApiTest extends TestCase
             ->assertJsonPath('data.unread_count', 0);
     }
 
+    public function test_user_can_delete_their_own_notification(): void
+    {
+        $farmer = $this->farmer();
+        $notification = $farmer->inAppNotifications()->create([
+            'type' => NotificationType::OrderPlaced,
+            'title' => 'New order',
+            'body' => 'A buyer placed an order.',
+        ]);
+
+        $this->asUser($farmer)
+            ->deleteJson("/api/notifications/{$notification->id}")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('in_app_notifications', [
+            'id' => $notification->id,
+        ]);
+
+        $this->asUser($farmer)
+            ->getJson('/api/notifications/unread-count')
+            ->assertOk()
+            ->assertJsonPath('data.unread_count', 0);
+    }
+
+    public function test_user_cannot_delete_someone_elses_notification(): void
+    {
+        $farmer = $this->farmer();
+        $other = $this->farmer(['email' => 'other-delete@example.com']);
+        $notification = $farmer->inAppNotifications()->create([
+            'type' => NotificationType::OrderPlaced,
+            'title' => 'New order',
+            'body' => 'A buyer placed an order.',
+        ]);
+
+        $this->asUser($other)
+            ->deleteJson("/api/notifications/{$notification->id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('in_app_notifications', [
+            'id' => $notification->id,
+        ]);
+    }
+
+    public function test_clearing_read_notifications_leaves_unread_ones(): void
+    {
+        $farmer = $this->farmer();
+        $read = $farmer->inAppNotifications()->create([
+            'type' => NotificationType::OrderConfirmed,
+            'title' => 'Confirmed',
+            'body' => 'Already read.',
+            'read_at' => now(),
+        ]);
+        $unread = $farmer->inAppNotifications()->create([
+            'type' => NotificationType::OrderPlaced,
+            'title' => 'Still new',
+            'body' => 'Not read yet.',
+        ]);
+
+        $this->asUser($farmer)
+            ->deleteJson('/api/notifications/read')
+            ->assertOk()
+            ->assertJsonPath('deleted', 1);
+
+        $this->assertDatabaseMissing('in_app_notifications', ['id' => $read->id]);
+        $this->assertDatabaseHas('in_app_notifications', ['id' => $unread->id]);
+
+        $this->asUser($farmer)
+            ->getJson('/api/notifications/unread-count')
+            ->assertOk()
+            ->assertJsonPath('data.unread_count', 1);
+    }
+
+    public function test_guests_cannot_delete_notifications(): void
+    {
+        $this->deleteJson('/api/notifications/read')->assertUnauthorized();
+        $this->deleteJson('/api/notifications/1')->assertUnauthorized();
+    }
+
     public function test_user_cannot_mark_someone_elses_notification(): void
     {
         $farmer = $this->farmer();

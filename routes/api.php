@@ -126,6 +126,11 @@ Route::middleware(['auth:sanctum', 'password.changed'])->group(function (): void
         ->name('notifications.unread-count');
     Route::post('notifications/read-all', [NotificationController::class, 'readAll'])
         ->name('notifications.read-all');
+    Route::delete('notifications/read', [NotificationController::class, 'destroyRead'])
+        ->name('notifications.read.destroy');
+    Route::delete('notifications/{inAppNotification}', [NotificationController::class, 'destroy'])
+        ->whereNumber('inAppNotification')
+        ->name('notifications.destroy');
     Route::patch('notifications/{inAppNotification}/read', [NotificationController::class, 'read'])
         ->name('notifications.read');
 

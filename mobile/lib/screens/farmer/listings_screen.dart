@@ -6,6 +6,7 @@ import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
+import '../../widgets/main_tab_app_bar.dart';
 import '../../widgets/availability_chip.dart';
 import '../../widgets/listing_active_badge.dart';
 import '../../widgets/produce_card.dart';
@@ -16,7 +17,10 @@ import 'listing_reservations_screen.dart';
 import 'stock_sheets.dart';
 
 class FarmerListingsScreen extends StatefulWidget {
-  const FarmerListingsScreen({super.key});
+  const FarmerListingsScreen({super.key, this.showAccountMenu = false});
+
+  /// Set by [FarmerShell] only.
+  final bool showAccountMenu;
 
   @override
   State<FarmerListingsScreen> createState() => _FarmerListingsScreenState();
@@ -191,6 +195,9 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
+        appBar: widget.showAccountMenu
+            ? mainTabAppBar(title: s.myListings, showAccountMenu: true)
+            : null,
         floatingActionButton: FloatingActionButton(
           heroTag: 'farmer-add-listing',
           tooltip: s.newListing,
@@ -200,6 +207,7 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
         floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         body: Column(
           children: [
+            if (widget.showAccountMenu) mainTabBodyGap,
             if (userId != null && _announcements.isNotEmpty)
               FarmerAnnouncementHomeBanner(
                 userId: userId,

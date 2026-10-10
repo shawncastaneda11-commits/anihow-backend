@@ -5,12 +5,17 @@ import '../../models/models.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
+import '../../l10n/app_strings.dart';
 import '../../widgets/async_view.dart';
+import '../../widgets/main_tab_app_bar.dart';
 import '../../widgets/care_guide_card.dart';
 import 'crop_care_detail_screen.dart';
 
 class CropCareScreen extends StatefulWidget {
-  const CropCareScreen({super.key});
+  const CropCareScreen({super.key, this.showAccountMenu = false});
+
+  /// Set by [FarmerShell] only.
+  final bool showAccountMenu;
 
   @override
   State<CropCareScreen> createState() => _CropCareScreenState();
@@ -62,12 +67,13 @@ class _CropCareScreenState extends State<CropCareScreen> {
   Widget build(BuildContext context) {
     final selectedKey = _category ?? _allKey;
 
-    return Column(
+    final page = Column(
       children: [
+        if (widget.showAccountMenu) mainTabBodyGap,
         Padding(
-          padding: const EdgeInsets.fromLTRB(
+          padding: EdgeInsets.fromLTRB(
             AniHowSpace.screen,
-            AniHowSpace.labelGap,
+            widget.showAccountMenu ? 0 : AniHowSpace.labelGap,
             AniHowSpace.screen,
             AniHowSpace.cardGap,
           ),
@@ -137,6 +143,16 @@ class _CropCareScreenState extends State<CropCareScreen> {
           ),
         ),
       ],
+    );
+    if (!widget.showAccountMenu) {
+      return page;
+    }
+    return Scaffold(
+      appBar: mainTabAppBar(
+        title: AppStrings.of(context).cropCare,
+        showAccountMenu: true,
+      ),
+      body: page,
     );
   }
 }

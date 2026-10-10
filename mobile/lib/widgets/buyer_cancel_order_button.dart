@@ -22,12 +22,16 @@ class BuyerCancelOrderButton extends StatefulWidget {
     required this.onUpdated,
     this.onReload,
     this.expanded = false,
+    this.compact = false,
   });
 
   final OrderRecord order;
   final ValueChanged<OrderRecord> onUpdated;
   final Future<void> Function()? onReload;
   final bool expanded;
+
+  /// Text button for the order card. The confirm-and-cancel flow stays here.
+  final bool compact;
 
   @override
   State<BuyerCancelOrderButton> createState() => _BuyerCancelOrderButtonState();
@@ -84,7 +88,21 @@ class _BuyerCancelOrderButtonState extends State<BuyerCancelOrderButton> {
       return const SizedBox.shrink();
     }
     final s = AppStrings.of(context);
-    final error = Theme.of(context).colorScheme.error;
+    final error = Theme.of(context).brightness == Brightness.dark
+        ? const Color(0xFFFF8A80)
+        : const Color(0xFFB3261E);
+    if (widget.compact) {
+      return TextButton(
+        key: const Key('cancel-buyer-order'),
+        onPressed: _busy ? null : _press,
+        style: TextButton.styleFrom(
+          foregroundColor: error,
+          minimumSize: const Size(48, 48),
+          tapTargetSize: MaterialTapTargetSize.padded,
+        ),
+        child: Text(_busy ? s.pleaseWait : s.cancelOrder),
+      );
+    }
     final button = OutlinedButton(
       key: const Key('cancel-buyer-order'),
       onPressed: _busy ? null : _press,

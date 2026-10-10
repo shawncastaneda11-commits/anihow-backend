@@ -284,9 +284,21 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final s = AppStrings(false);
 
+    final auth = AuthController()
+      ..restoring = false
+      ..user = const UserAccount(
+        id: 1,
+        name: 'Maria',
+        email: 'maria@example.com',
+        roles: ['buyer'],
+        emailVerifiedAt: '2026-01-01T00:00:00Z',
+      );
     await tester.pumpWidget(
-      ChangeNotifierProvider(
-        create: (_) => PreferencesController(),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => PreferencesController()),
+          ChangeNotifierProvider.value(value: auth),
+        ],
         child: MaterialApp(
           theme: AniHowTheme.light(),
           home: const Scaffold(

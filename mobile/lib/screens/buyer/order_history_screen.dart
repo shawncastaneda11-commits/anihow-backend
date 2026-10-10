@@ -7,11 +7,11 @@ import '../../state/auth_controller.dart';
 import '../../support/relative_time.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
-import '../../widgets/account_menu_button.dart';
+import '../../theme/readable_accent.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/brand_tab_bar.dart';
 import '../../widgets/buyer_cancel_order_button.dart';
-import '../../widgets/notification_bell.dart';
+import '../../widgets/main_tab_app_bar.dart';
 import '../../widgets/order_look.dart';
 import '../../widgets/order_progress.dart';
 import '../../widgets/order_status_poll.dart';
@@ -110,12 +110,9 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(s.orderHistory),
-          actions: [
-            const NotificationBellButton(),
-            if (widget.showAccountMenu) const AccountMenuButton(),
-          ],
+        appBar: mainTabAppBar(
+          title: s.orderHistory,
+          showAccountMenu: widget.showAccountMenu,
           bottom: onBrandTabBar(
             tabs: [
               Tab(text: s.ordersTab),
@@ -127,6 +124,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
           children: [
             Column(
               children: [
+                mainTabBodyGap,
                 const UnverifiedEmailBanner(),
                 Expanded(
                   child: AsyncView<List<OrderRecord>>(
@@ -136,26 +134,23 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                     builder: (context, items) {
                       return RefreshIndicator(
                         onRefresh: _reload,
-                        child: ListView.separated(
+                        child: ListView(
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.fromLTRB(
                             AniHowSpace.screen,
-                            AniHowSpace.screen,
+                            0,
                             AniHowSpace.screen,
                             AniHowSpace.screen + AniHowSpace.section,
                           ),
-                          itemCount: items.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: AniHowSpace.cardGap),
-                          itemBuilder: (context, index) => BuyerOrderCard(
-                            order: items[index],
+                          children: _orderSections(
+                            context,
+                            items,
                             onChanged: (_) => _reload(),
-                            onTap: () async {
+                            onTap: (order) async {
                               await Navigator.of(context).push(
                                 MaterialPageRoute<void>(
-                                  builder: (_) => BuyerOrderDetailScreen(
-                                    order: items[index],
-                                  ),
+                                  builder: (_) =>
+                                      BuyerOrderDetailScreen(order: order),
                                 ),
                               );
                               if (mounted) {
@@ -172,6 +167,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
             ),
             Column(
               children: [
+                mainTabBodyGap,
                 const UnverifiedEmailBanner(),
                 Expanded(
                   child: AsyncView<List<ReservationRecord>>(
@@ -205,6 +201,142 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       ),
     );
   }
+}
+
+int _newestOrder(OrderRecord a, OrderRecord b) {
+  final left = DateTime.tryParse(a.placedAt ?? '') ?? DateTime(1970);
+  final right = DateTime.tryParse(b.placedAt ?? '') ?? DateTime(1970);
+  return right.compareTo(left);
+}
+
+bool _orderIsActive(OrderRecord order) {
+  return order.isPlaced || order.isConfirmed || order.isReady;
+}
+
+List<Widget> _orderSections(
+  BuildContext context,
+  List<OrderRecord> items, {
+  required ValueChanged<OrderRecord> onChanged,
+  required ValueChanged<OrderRecord> onTap,
+}) {
+  final s = AppStrings.of(context);
+  final active = items.where(_orderIsActive).toList()..sort(_newestOrder);
+  final past = items.where((order) => !_orderIsActive(order)).toList()
+    ..sort(_newestOrder);
+  final children = <Widget>[];
+
+  void addSection(String title, List<OrderRecord> orders) {
+    if (orders.isEmpty) {
+      return;
+    }
+    if (children.isNotEmpty) {
+      children.add(const SizedBox(height: AniHowSpace.section));
+    }
+    children.add(_OrderSectionLabel(title));
+    children.add(const SizedBox(height: 8));
+    for (var index = 0; index < orders.length; index++) {
+      if (index > 0) {
+        children.add(const SizedBox(height: AniHowSpace.cardGap));
+      }
+      final order = orders[index];
+      children.add(
+        BuyerOrderCard(
+          order: order,
+          onChanged: onChanged,
+          onTap: () => onTap(order),
+        ),
+      );
+    }
+  }
+
+  addSection(s.activeReservations, active);
+  addSection(s.pastOrders, past);
+  return children;
+}
+
+class _OrderSectionLabel extends StatelessWidget {
+  const _OrderSectionLabel(this.title);
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Text(
+      title.toUpperCase(),
+      style: theme.textTheme.labelSmall?.copyWith(
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.8,
+      ),
+    );
+  }
+}
+
+String _orderItemLine(AppStrings s, OrderRecord order) {
+  if (order.items.isEmpty) {
+    return '';
+  }
+  final first = order.items.first;
+  if (order.items.length > 1) {
+    return '${first.listingName} ${s.moreItems(order.items.length - 1)}';
+  }
+  final quantity = double.tryParse(first.quantity) ?? 0;
+  final unit = s.unitWord(first.unit ?? '', quantity);
+  final amount = first.quantity.trim();
+  if (unit.isEmpty) {
+    return '${first.listingName} · $amount';
+  }
+  return '${first.listingName} · $amount $unit';
+}
+
+String _orderWhen(AppStrings s, OrderRecord order, {required bool active}) {
+  final iso = order.placedAt;
+  if (iso == null || iso.isEmpty) {
+    return '';
+  }
+  if (active) {
+    return relativeTime(iso);
+  }
+  final parsed = DateTime.tryParse(iso);
+  if (parsed == null) {
+    return '';
+  }
+  return s.monthDayClock(parsed.toLocal());
+}
+
+String _orderPaymentWords(AppStrings s, OrderRecord order) {
+  final online = order.paymentMethod == 'online_transfer';
+  final method = online ? s.onlinePaymentPill : s.cashPill;
+  if (!online || !order.isPaymentTracked) {
+    return method;
+  }
+  final state = s.paymentStatusLabel(order.paymentStatus);
+  if (state.isEmpty) {
+    return method;
+  }
+  return '$method, $state';
+}
+
+String _orderSummaryLine(AppStrings s, OrderRecord order, {required bool active}) {
+  final total = AniHowMoney.peso(order.total);
+  final when = _orderWhen(s, order, active: active);
+  if (order.isCancelled) {
+    final reason = s.cancellationReasonText(
+      order.cancellationReason,
+      fallback: order.cancellationLabel,
+    );
+    final note = order.cancellationNote?.trim() ?? '';
+    final detail = note.isNotEmpty && note != reason.trim()
+        ? (reason.trim().isEmpty ? note : '$reason · $note')
+        : reason;
+    if (detail.trim().isEmpty) {
+      return when.isEmpty ? total : '$total · $when';
+    }
+    return when.isEmpty ? '$total · $detail' : '$total · $detail · $when';
+  }
+  final payment = _orderPaymentWords(s, order);
+  return when.isEmpty ? '$total · $payment' : '$total · $payment · $when';
 }
 
 class BuyerOrderCard extends StatefulWidget {
@@ -245,12 +377,18 @@ class _BuyerOrderCardState extends State<BuyerOrderCard> {
     final order = _order;
     final s = AppStrings.of(context);
     final theme = Theme.of(context);
+    final active = _orderIsActive(order);
     final location = order.location;
-    final muted = theme.textTheme.bodyMedium?.copyWith(
-      color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
-    );
-    final when = order.placedAt == null ? null : relativeTime(order.placedAt);
-    final summary = [AniHowMoney.peso(order.total), ?when].join('  ·  ');
+    final mutedColor = theme.colorScheme.onSurface.withValues(alpha: 0.72);
+    final muted = theme.textTheme.bodyMedium?.copyWith(color: mutedColor);
+    final itemLine = _orderItemLine(s, order);
+    final showChat = !order.isWalkIn;
+    final showCancel = order.status == 'placed';
+    final showReview = order.reviewRating != null;
+    final showWriteReview = !showReview && order.canBeReviewed;
+    final showFooter = showChat || showCancel || showReview || showWriteReview;
+    final steps = orderProgressSteps(s, order);
+    final stepIndex = orderProgressIndex(order.status);
 
     return Card(
       child: Padding(
@@ -265,116 +403,164 @@ class _BuyerOrderCardState extends State<BuyerOrderCard> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       AniHowAvatar(name: order.stallName, radius: 20),
                       const SizedBox(width: AniHowSpace.cardGap),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              order.stallName,
-                              style: theme.textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(summary, style: muted),
-                            if (tawadIsActive(order.tawadDisplay))
-                              Padding(
-                                padding: const EdgeInsets.only(top: 2),
-                                child: Text(
-                                  s.discountTawadMinus(
-                                    AniHowMoney.peso(order.tawadDisplay),
-                                  ),
-                                  style: muted?.copyWith(
-                                    color: AniHowColors.sage,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                          ],
+                        child: Text(
+                          order.stallName,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Flexible(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            StatusPill.order(
-                              order.status,
-                              strings: s,
-                              fulfillmentPreference:
-                                  order.fulfillmentPreference,
-                            ),
-                            const SizedBox(height: 6),
-                            StatusPill.payment(order.paymentMethod, strings: s),
-                            if (order.isPaymentTracked) ...[
-                              const SizedBox(height: 6),
-                              PaymentTrackingPill(status: order.paymentStatus),
-                            ],
-                          ],
-                        ),
+                      StatusPill.order(
+                        order.status,
+                        strings: s,
+                        fulfillmentPreference: order.fulfillmentPreference,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  OrderProgress(order: order),
-                  if (location != null && location.isNotEmpty)
-                    OrderMetaRow(icon: Icons.place_outlined, text: location),
-                  if (order.hasCancellationNote)
-                    OrderMetaRow(
-                      icon: Icons.notes_outlined,
-                      text: order.cancellationNote!.trim(),
+                  if (itemLine.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(itemLine, style: theme.textTheme.bodyMedium),
+                  ],
+                  const SizedBox(height: 4),
+                  Text(
+                    _orderSummaryLine(s, order, active: active),
+                    style: muted,
+                  ),
+                  if (tawadIsActive(order.tawadDisplay))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        s.discountTawadMinus(
+                          AniHowMoney.peso(order.tawadDisplay),
+                        ),
+                        style: muted?.copyWith(
+                          color: readableAccent(context),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
-                  if (order.canBeReviewed)
-                    OrderMetaRow(icon: Icons.star_outline, text: s.writeReview),
-                  if (order.reviewRating != null)
-                    OrderMetaRow(
-                      icon: Icons.star,
-                      text: s.youRated(order.reviewRating!),
+                  if (active) ...[
+                    const SizedBox(height: 10),
+                    _OrderStepBar(done: stepIndex + 1),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${s.stepOfFour(stepIndex + 1)} · ${steps[stepIndex].hint}',
+                      style: muted,
                     ),
+                    if (location != null && location.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.place_outlined,
+                            size: 16,
+                            color: mutedColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(child: Text(location, style: muted)),
+                        ],
+                      ),
+                    ],
+                  ],
                 ],
               ),
             ),
-            if (!order.isWalkIn || order.status == 'placed')
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                crossAxisAlignment: WrapCrossAlignment.center,
+            if (showFooter) ...[
+              const Divider(height: 16),
+              Row(
                 children: [
-                  if (!order.isWalkIn)
-                    TextButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => OrderChatScreen(order: order),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                      label: Text(s.chatWithStall),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.only(top: 6, right: 8),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    ),
-                  BuyerCancelOrderButton(
-                    order: order,
-                    onUpdated: (updated) {
-                      setState(() => _order = updated);
-                      widget.onChanged?.call(updated);
-                    },
-                    onReload: widget.onChanged == null
-                        ? null
-                        : () async {
-                            widget.onChanged?.call(_order);
+                  if (showChat)
+                    Flexible(
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: TextButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => OrderChatScreen(order: order),
+                              ),
+                            );
                           },
-                  ),
+                          icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                          label: Text(
+                            s.chatWithStall,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          style: TextButton.styleFrom(
+                            minimumSize: const Size(48, 48),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    const Spacer(),
+                  if (showCancel)
+                    BuyerCancelOrderButton(
+                      compact: true,
+                      order: order,
+                      onUpdated: (updated) {
+                        setState(() => _order = updated);
+                        widget.onChanged?.call(updated);
+                      },
+                      onReload: widget.onChanged == null
+                          ? null
+                          : () async {
+                              widget.onChanged?.call(_order);
+                            },
+                    )
+                  else if (showWriteReview)
+                    TextButton(
+                      onPressed: widget.onTap,
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(48, 48),
+                      ),
+                      child: Text(s.writeReview),
+                    )
+                  else if (showReview)
+                    Text(
+                      '${s.youRated(order.reviewRating!)}★',
+                      style: muted,
+                    ),
                 ],
               ),
+            ],
           ],
         ),
       ),
+    );
+  }
+}
+
+class _OrderStepBar extends StatelessWidget {
+  const _OrderStepBar({required this.done});
+
+  final int done;
+
+  @override
+  Widget build(BuildContext context) {
+    final doneColor = readableAccent(context);
+    final track = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.16);
+    return Row(
+      children: [
+        for (var index = 0; index < 4; index++) ...[
+          if (index > 0) const SizedBox(width: 4),
+          Expanded(
+            child: Container(
+              height: 5,
+              decoration: BoxDecoration(
+                color: index < done ? doneColor : track,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

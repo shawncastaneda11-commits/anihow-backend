@@ -1271,6 +1271,25 @@ class ApiClient {
   Future<void> markAllNotificationsRead() =>
       _post('/notifications/read-all', {});
 
+  Future<void> deleteNotification(int id) => _delete('/notifications/$id');
+
+  Future<int> clearReadNotifications() async {
+    try {
+      final response = await _dio.delete('/notifications/read');
+      final data = _asMap(response.data);
+      final deleted = data['deleted'];
+      if (deleted is int) {
+        return deleted;
+      }
+      if (deleted is num) {
+        return deleted.toInt();
+      }
+      return int.tryParse('$deleted') ?? 0;
+    } on DioException catch (error) {
+      throw ApiException(_messageFrom(error));
+    }
+  }
+
   Future<String?> resendVerification() async {
     final response = await _post('/auth/email/verification-notification', {});
     return response['verification_code'] as String?;

@@ -3,12 +3,14 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
+import '../../push/push_runtime.dart';
 import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
-import '../../theme/anihow_space.dart';
-import '../../theme/anihow_theme.dart';
-import '../../widgets/async_view.dart';
 import '../../support/relative_time.dart';
+import '../../theme/anihow_space.dart';
+import '../../theme/readable_accent.dart';
+import '../../widgets/async_view.dart';
+import '../../widgets/notification_category.dart';
 import '../buyer/listing_detail_screen.dart';
 import '../buyer/marketplace_screen.dart';
 import '../buyer/buyer_order_detail_screen.dart';
@@ -34,6 +36,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   bool _loading = true;
   bool _busy = false;
   Object? _error;
+  NotificationCategory? _filter;
 
   @override
   void initState() {
@@ -102,6 +105,159 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
+  void _drop(AppNotification item) {
+    setState(() {
+      _items = [
+        for (final current in _items)
+          if (current.id != item.id) current,
+      ];
+    });
+  }
+
+  void _restore(AppNotification item, int index) {
+    setState(() {
+      final next = [..._items];
+      final at = index.clamp(0, next.length);
+      next.insert(at, item);
+      _items = next;
+    });
+  }
+
+  Future<void> _remove(AppNotification item) async {
+    final index = _items.indexWhere((current) => current.id == item.id);
+    if (index < 0) {
+      return;
+    }
+    _drop(item);
+    final s = AppStrings.of(context);
+    // Read these before waiting: the person may leave the page while the
+    // Undo bar is up, and the removal must still reach the server.
+    final api = context.read<AuthController>().api;
+    final messenger = ScaffoldMessenger.of(context);
+    // A new removal closes the previous Undo bar, which sends that delete now
+    // instead of queueing this bar behind it.
+    messenger.hideCurrentSnackBar();
+    final closed = messenger
+        .showSnackBar(
+          SnackBar(
+            content: Text(s.notificationRemoved),
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+            persist: false,
+            action: SnackBarAction(label: s.undo, onPressed: () {}),
+          ),
+        )
+        .closed;
+    final reason = await closed;
+    if (reason == SnackBarClosedReason.action) {
+      if (mounted) {
+        _restore(item, index);
+      }
+      return;
+    }
+    try {
+      await api.deleteNotification(item.id);
+      PushRuntime.inbox.ping();
+    } on ApiException {
+      if (!mounted) {
+        return;
+      }
+      _restore(item, index);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppStrings.of(context).somethingWentWrong)),
+      );
+    }
+  }
+
+  Future<void> _markOne(AppNotification item) async {
+    if (!item.isUnread) {
+      return;
+    }
+    _markLocallyRead([item.id]);
+    try {
+      await context.read<AuthController>().api.markNotificationRead(item.id);
+      PushRuntime.inbox.ping();
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+        await _reload();
+      }
+    }
+  }
+
+  Future<void> _clearEarlier() async {
+    final s = AppStrings.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(s.clearEarlierTitle),
+          content: Text(s.clearEarlierBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(s.cancel),
+            ),
+            TextButton(
+              key: const Key('confirm-clear-earlier'),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(s.clearEarlier),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+    final kept = [for (final item in _items) if (item.isUnread) item];
+    setState(() => _items = kept);
+    try {
+      await context.read<AuthController>().api.clearReadNotifications();
+      PushRuntime.inbox.ping();
+    } on ApiException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppStrings.of(context).somethingWentWrong)),
+        );
+        await _reload();
+      }
+    }
+  }
+
+  Future<void> _openMenu(AppNotification item) async {
+    final s = AppStrings.of(context);
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (item.isUnread)
+                ListTile(
+                  title: Text(s.markAsRead),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _markOne(item);
+                  },
+                ),
+              ListTile(
+                title: Text(s.removeNotification),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _remove(item);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _open(AppNotification item) async {
     if (item.isUnread) {
       _markLocallyRead([item.id]);
@@ -146,124 +302,235 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Widget _buildBody() {
+    final s = AppStrings.of(context);
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
     if (_error != null) {
       return AsyncViewError(onRetry: _reload);
     }
-    if (_items.isEmpty) {
-      return const _CaughtUpEmpty();
-    }
-    return ListView.separated(
-      padding: AniHowSpace.screenPadding,
-      itemCount: _items.length,
-      separatorBuilder: (_, _) => const SizedBox(height: AniHowSpace.cardGap),
-      itemBuilder: (context, index) {
-        final item = _items[index];
-        return Card(
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AniHowSpace.cardPad,
-              vertical: 8,
-            ),
-            leading: item.isReportNotice
-                ? Icon(_reportIcon(item.type), color: AniHowColors.brand)
-                : _UnreadDot(visible: item.isUnread),
-            title: Text(
-              AppStrings.of(context).notificationTitle(item.type, item.title),
-              style: TextStyle(
-                fontSize: AniHowSpace.name,
-                fontWeight: item.isUnread ? FontWeight.w800 : FontWeight.w600,
-              ),
-            ),
-            subtitle: Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Column(
+    final seller =
+        context.watch<AuthController>().user?.isFarmerSeller == true;
+    final filtered = [
+      for (final item in _items)
+        if (_filter == null || notificationCategory(item.type) == _filter)
+          item,
+    ];
+    final unread = [for (final item in filtered) if (item.isUnread) item];
+    final earlier = [for (final item in filtered) if (!item.isUnread) item];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: AniHowSpace.screen),
+          child: Row(
+            children: [
+              _filterChip(null, s.all),
+              _filterChip(NotificationCategory.orders, s.orders),
+              _filterChip(NotificationCategory.payments, s.payments),
+              _filterChip(NotificationCategory.messages, s.messages),
+              _filterChip(NotificationCategory.farmNews, s.farmNews),
+              if (seller) _filterChip(NotificationCategory.listings, s.listings),
+            ],
+          ),
+        ),
+        Expanded(
+          child: filtered.isEmpty
+              ? Center(child: Text(s.nothingHere))
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AniHowSpace.screen,
+                    AniHowSpace.cardGap,
+                    AniHowSpace.screen,
+                    AniHowSpace.screen,
+                  ),
+                  children: [
+                    if (unread.isNotEmpty) ...[
+                      _SectionLabel(s.newNotifications),
+                      for (final item in unread) _row(item),
+                    ],
+                    if (earlier.isNotEmpty) ...[
+                      _EarlierHeader(onClear: _clearEarlier),
+                      for (final item in earlier) _row(item),
+                    ],
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _filterChip(NotificationCategory? category, String label) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Text(label),
+        selected: _filter == category,
+        onSelected: (_) => setState(() => _filter = category),
+        materialTapTargetSize: MaterialTapTargetSize.padded,
+      ),
+    );
+  }
+
+  Widget _row(AppNotification item) {
+    final theme = Theme.of(context);
+    final s = AppStrings.of(context);
+    final unread = item.isUnread;
+    final timeColor = unread
+        ? readableAccent(context)
+        : theme.colorScheme.onSurface.withValues(alpha: 0.72);
+    final card = theme.cardTheme.color ?? theme.colorScheme.surface;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
+      child: Dismissible(
+        key: ValueKey('notification-${item.id}'),
+        direction: DismissDirection.endToStart,
+        onDismissed: (_) => _remove(item),
+        background: Container(
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          decoration: BoxDecoration(
+            color: const Color(0xFFB3261E),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.delete_outline, color: Colors.white),
+              const SizedBox(width: 8),
+              Text(s.remove, style: const TextStyle(color: Colors.white)),
+            ],
+          ),
+        ),
+        child: Material(
+          color: unread ? accentTint(context) : card,
+          borderRadius: BorderRadius.circular(12),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => _open(item),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 0, 10),
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    _notificationBody(item.body),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: AniHowSpace.body),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: NotificationCategoryBadge(item: item, size: 44),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    relativeTime(item.createdAt),
-                    style: TextStyle(
-                      fontSize: AniHowSpace.label,
-                      color: Theme.of(context).textTheme.bodySmall?.color,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          s.notificationTitle(item.type, item.title),
+                          style: TextStyle(
+                            fontSize: AniHowSpace.name,
+                            fontWeight: unread
+                                ? FontWeight.w800
+                                : FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _notificationBody(item.body),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: AniHowSpace.body),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          relativeTime(item.createdAt),
+                          style: TextStyle(
+                            fontSize: AniHowSpace.label,
+                            color: timeColor,
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                  if (unread)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, left: 4),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: readableAccent(context),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const SizedBox(width: 8, height: 8),
+                      ),
+                    ),
+                  IconButton(
+                    tooltip: s.removeNotification,
+                    onPressed: () => _openMenu(item),
+                    constraints: const BoxConstraints.tightFor(
+                      width: 48,
+                      height: 48,
+                    ),
+                    icon: const Icon(Icons.more_vert),
                   ),
                 ],
               ),
             ),
-            onTap: () => _open(item),
           ),
-        );
-      },
-    );
-  }
-}
-
-class _CaughtUpEmpty extends StatelessWidget {
-  const _CaughtUpEmpty();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: AniHowSpace.screenPadding,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.notifications_none,
-              size: 56,
-              color: AniHowColors.brand,
-            ),
-            const SizedBox(height: AniHowSpace.cardGap),
-            Text(
-              "You're all caught up",
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ],
         ),
       ),
     );
   }
 }
 
-class _UnreadDot extends StatelessWidget {
-  const _UnreadDot({required this.visible});
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.label);
 
-  final bool visible;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 12,
-      height: 12,
-      child: visible
-          ? const DecoratedBox(
-              decoration: BoxDecoration(
-                color: AniHowColors.brand,
-                shape: BoxShape.circle,
-              ),
-            )
-          : null,
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        label,
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 }
 
-IconData _reportIcon(String? type) {
-  return switch (type) {
-    'report_resolved' => Icons.flag,
-    'report_dismissed' => Icons.flag_outlined,
-    _ => Icons.outlined_flag,
-  };
+class _EarlierHeader extends StatelessWidget {
+  const _EarlierHeader({required this.onClear});
+
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final s = AppStrings.of(context);
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            s.earlierNotifications,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        TextButton(
+          onPressed: onClear,
+          style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+          child: Text(s.clearEarlier),
+        ),
+      ],
+    );
+  }
 }
 
 Future<void> openNotificationTarget(

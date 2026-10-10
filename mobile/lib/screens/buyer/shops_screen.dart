@@ -8,9 +8,8 @@ import '../../services/buyer_location.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
-import '../../widgets/account_menu_button.dart';
 import '../../widgets/async_view.dart';
-import '../../widgets/notification_bell.dart';
+import '../../widgets/main_tab_app_bar.dart';
 import '../../widgets/profile_avatar_button.dart';
 import '../../widgets/unverified_email_banner.dart';
 import 'farm_page_screen.dart';
@@ -229,15 +228,13 @@ class _ShopsScreenState extends State<ShopsScreen> {
     final s = AppStrings.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(s.shops),
-        actions: [
-          const NotificationBellButton(),
-          if (widget.showAccountMenu) const AccountMenuButton(),
-        ],
+      appBar: mainTabAppBar(
+        title: s.shops,
+        showAccountMenu: widget.showAccountMenu,
       ),
       body: Column(
         children: [
+          mainTabBodyGap,
           const UnverifiedEmailBanner(),
           Expanded(child: _farmList(s)),
         ],
@@ -277,7 +274,7 @@ class _ShopsScreenState extends State<ShopsScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 AniHowSpace.screen,
-                AniHowSpace.screen,
+                0,
                 AniHowSpace.screen,
                 AniHowSpace.cardGap,
               ),

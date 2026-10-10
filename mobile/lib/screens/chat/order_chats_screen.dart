@@ -11,6 +11,7 @@ import '../../support/relative_time.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/async_view.dart';
+import '../../widgets/main_tab_app_bar.dart';
 import '../../widgets/order_chat_head.dart';
 import '../../widgets/profile_avatar_button.dart';
 import '../../widgets/status_pill.dart';
@@ -27,12 +28,17 @@ class OrderChatsScreen extends StatefulWidget {
     this.forSeller = false,
     this.embedded = false,
     this.active = true,
+    this.showAccountMenu = false,
   });
 
   final bool forSeller;
 
-  /// The seller shell already shows the title, so this page skips its app bar.
+  /// The seller shell already shows the title, so this page skips its app bar
+  /// unless [showAccountMenu] asks for the shared tab header.
   final bool embedded;
+
+  /// Set by [FarmerShell] only.
+  final bool showAccountMenu;
 
   /// Reloads when a kept-alive tab becomes visible.
   final bool active;
@@ -169,7 +175,12 @@ class _OrderChatsScreenState extends State<OrderChatsScreen> {
         return RefreshIndicator(
           onRefresh: _reload,
           child: ListView.separated(
-            padding: AniHowSpace.screenPadding,
+            padding: EdgeInsets.fromLTRB(
+              AniHowSpace.screen,
+              widget.showAccountMenu ? 0 : AniHowSpace.screen,
+              AniHowSpace.screen,
+              AniHowSpace.screen,
+            ),
             itemCount: entries,
             separatorBuilder: (_, _) =>
                 const SizedBox(height: AniHowSpace.cardGap),
@@ -223,7 +234,18 @@ class _OrderChatsScreenState extends State<OrderChatsScreen> {
     );
 
     if (widget.embedded) {
-      return inbox;
+      if (!widget.showAccountMenu) {
+        return inbox;
+      }
+      return Scaffold(
+        appBar: mainTabAppBar(title: s.chats, showAccountMenu: true),
+        body: Column(
+          children: [
+            mainTabBodyGap,
+            Expanded(child: inbox),
+          ],
+        ),
+      );
     }
 
     return Scaffold(

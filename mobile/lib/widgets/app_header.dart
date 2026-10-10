@@ -12,6 +12,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     this.trailing,
     this.leading,
     this.brandMark = false,
+    this.centerTitle = true,
   });
 
   final String title;
@@ -19,6 +20,10 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   final Widget? trailing;
   final Widget? leading;
   final bool brandMark;
+
+  /// False puts the title at the start, next to the edge, like a tab header
+  /// with several buttons on the right.
+  final bool centerTitle;
 
   /// Darker derived shade of [AniHowColors.brand] (same hue, lower lightness).
   static Color get brandGradientEnd {
@@ -149,14 +154,17 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
 
   Widget _bar(BuildContext context) {
     final onPrimary = Theme.of(context).colorScheme.onPrimary;
+    final align = centerTitle ? TextAlign.center : TextAlign.start;
     final titleBlock = Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: centerTitle
+          ? CrossAxisAlignment.center
+          : CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          textAlign: TextAlign.center,
+          textAlign: align,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
@@ -169,7 +177,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
           const SizedBox(height: 4),
           Text(
             subtitle!,
-            textAlign: TextAlign.center,
+            textAlign: align,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
@@ -186,7 +194,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       height: kToolbarHeight,
       child: NavigationToolbar(
         middleSpacing: 16,
-        centerMiddle: true,
+        centerMiddle: centerTitle,
         leading: _leading(context, onPrimary),
         middle: titleBlock,
         trailing: trailing,

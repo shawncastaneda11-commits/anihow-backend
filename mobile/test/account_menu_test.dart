@@ -198,6 +198,12 @@ void main() {
     expect(tab(s.orders), findsOneWidget);
     expect(tab(s.favorites), findsOneWidget);
 
+    // The market header title sits at the start, clear of the buttons.
+    final title = tester.getRect(find.text(s.marketplace));
+    final account = tester.getRect(find.byType(AccountMenuButton));
+    expect(title.left, lessThan(40));
+    expect(title.right, lessThan(account.left - 100));
+
     expect(find.byType(AccountMenuButton).hitTestable(), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.agriculture_outlined));

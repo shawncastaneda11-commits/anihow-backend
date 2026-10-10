@@ -256,6 +256,43 @@ class AppStrings {
   String get ok => 'OK';
 
   String get myListings => t('My listings', 'Aking mga listing');
+  String newsCount(int count) => t('$count new', '$count bago');
+  String get noFarmNewsYet =>
+      t('No farm news yet', 'Wala pang balita ng bukid');
+  String get moreActions => t('More actions', 'Iba pang aksyon');
+  String get filterAll => t('All', 'Lahat');
+  String get filterInStock => t('In stock', 'May stock');
+  String get filterLow => t('Low', 'Kulang');
+  String get filterHidden => t('Hidden', 'Nakatago');
+  String filterWithCount(String label, int count) => '$label $count';
+  String get noListingsYet => t('No listings yet.', 'Wala pang listing.');
+  String get noInStockListings =>
+      t('No in-stock listings.', 'Walang listing na may stock.');
+  String get noLowStockListings =>
+      t('No low-stock listings.', 'Walang listing na kulang ang stock.');
+  String get noHiddenListings =>
+      t('No hidden listings.', 'Walang nakatagong listing.');
+  String get onTheMarket => t('On the market', 'Nasa palengke');
+  String get hiddenStatus => t('Hidden', 'Nakatago');
+  String get expiredStatus => t('Expired', 'Paso na');
+  String get upcomingStatus => t('Upcoming', 'Paparating');
+  String get outOfStockStatus => t('Out of stock', 'Ubos na');
+  String get tawadOn => t('Tawad on', 'May tawad');
+  String get tawadPausedChip => t('Tawad paused', 'Naka-pause ang tawad');
+  String reservedCount(int count) =>
+      t('$count reserved', '$count naka-reserba');
+  String untilDate(String date) => t('Until $date', 'Hanggang $date');
+  String quantityLeft(String amount, String unit) =>
+      t('$amount $unit left', 'May natitirang $amount $unit');
+  String get buyersCanSeeThis =>
+      t('Buyers can see this', 'Nakikita ito ng mga mamimili');
+  String get hiddenFromBuyers =>
+      t('Hidden from buyers', 'Nakatago sa mga mamimili');
+  String get takenDownByAdmin =>
+      t('Taken down by admin', 'Tinanggal ng admin');
+  String showListingInMarket(String title) =>
+      t('Show $title in the market', 'Ipakita ang $title sa palengke');
+  String get tawadDiscount => t('Tawad discount', 'Diskwento sa tawad');
   String get incomingOrders => t('Incoming orders', 'Mga papasok na order');
   String get cropCare => t('Crop care', 'Pangangalaga ng pananim');
   String get listings => t('Listings', 'Mga listing');

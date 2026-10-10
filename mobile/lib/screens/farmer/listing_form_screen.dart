@@ -16,6 +16,7 @@ import '../../state/auth_controller.dart';
 import '../../state/preferences_controller.dart';
 import '../../support/order_quantity.dart';
 import 'cancel_reservations_dialog.dart';
+import 'listing_delete.dart';
 import 'harvest_form.dart';
 import 'stock_history_screen.dart';
 import 'stock_sheets.dart';
@@ -325,82 +326,22 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     _productionCost.text = breakdownTotal(_costs).toStringAsFixed(2);
   }
 
-  Future<void> _deleteListing({bool confirmed = false}) async {
+  Future<void> _deleteListing() async {
     final listing = _listing;
     if (listing == null || _busy) {
       return;
     }
-    final reserved = listing.activeReservationsCount ?? 0;
-    if (!confirmed && reserved > 0) {
-      final accepted = await confirmCancelReservations(
-        context,
-        count: reserved,
-        quantity: formatReservedQuantity(listing.reservedQuantity),
-        unit: listing.unit ?? '',
-        deleting: true,
-      );
-      if (!accepted || !mounted) {
-        return;
-      }
-      confirmed = true;
-    } else if (!confirmed) {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) {
-          final s = AppStrings.of(context);
-          return AlertDialog(
-            title: Text(s.deleteListingAsk),
-            content: Text(listing.title),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(s.cancel),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(s.delete),
-              ),
-            ],
-          );
-        },
-      );
-      if (confirmed != true || !mounted) {
-        return;
-      }
-    }
-    setState(() => _busy = true);
-    try {
-      await context.read<AuthController>().api.deleteListing(
-        listing.id,
-        confirmCancelReservations: confirmed,
-      );
-      if (mounted) {
-        Navigator.of(context).pop(true);
-      }
-    } on ApiException catch (error) {
-      final conflict = ReservationConflict.fromException(error);
-      if (conflict != null && !confirmed && mounted) {
-        setState(() => _busy = false);
-        final accepted = await confirmCancelReservations(
-          context,
-          count: conflict.count,
-          quantity: conflict.quantity,
-          unit: listing.unit ?? '',
-          deleting: true,
-        );
-        if (accepted && mounted) {
-          await _deleteListing(confirmed: true);
+    final deleted = await deleteListingFlow(
+      context,
+      listing,
+      onBusy: (busy) {
+        if (mounted) {
+          setState(() => _busy = busy);
         }
-        return;
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.message)));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _busy = false);
-      }
+      },
+    );
+    if (deleted && mounted) {
+      Navigator.of(context).pop(true);
     }
   }
 

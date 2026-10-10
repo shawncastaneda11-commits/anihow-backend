@@ -152,7 +152,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Cancel 2 reservation(s)?'), findsNothing);
-    await tester.tap(find.text('Active').first);
+    await tester.tap(find.byKey(const ValueKey('listing-visible-4')));
     await tester.pumpAndSettle();
 
     expect(find.text('Cancel 2 reservation(s)?'), findsOneWidget);
@@ -164,7 +164,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.toggles, 0);
 
-    await tester.tap(find.text('Active').first);
+    await tester.tap(find.byKey(const ValueKey('listing-visible-4')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('confirm-cancel-reservations')));
     await tester.pumpAndSettle();
@@ -180,7 +180,7 @@ void main() {
     await tester.pumpWidget(_app(const FarmerListingsScreen(), auth));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Active').first);
+    await tester.tap(find.byKey(const ValueKey('listing-visible-4')));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('reservation(s)?'), findsNothing);
@@ -196,7 +196,7 @@ void main() {
       await tester.pumpWidget(_app(const FarmerListingsScreen(), auth));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Active').first);
+      await tester.tap(find.byKey(const ValueKey('listing-visible-4')));
       await tester.pumpAndSettle();
 
       expect(find.text('Cancel 3 reservation(s)?'), findsOneWidget);
@@ -211,7 +211,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(api.toggles, 1);
 
-      await tester.tap(find.text('Active').first);
+      await tester.tap(find.byKey(const ValueKey('listing-visible-4')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('confirm-cancel-reservations')));
       await tester.pumpAndSettle();

@@ -126,17 +126,14 @@ class _NotificationBellButtonState extends State<NotificationBellButton>
     final readAt = DateTime.now().toUtc().toIso8601String();
     setState(() {
       _unread = 0;
-      _preview = [
-        for (final item in _preview) item.copyWith(readAt: readAt),
-      ];
+      _preview = [for (final item in _preview) item.copyWith(readAt: readAt)];
     });
     try {
       await context.read<AuthController>().api.markAllNotificationsRead();
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
       }
     }
   }
@@ -148,9 +145,8 @@ class _NotificationBellButtonState extends State<NotificationBellButton>
         await context.read<AuthController>().api.markNotificationRead(item.id);
       } on ApiException catch (error) {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(error.message)));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(error.message)));
         }
       }
     }
@@ -162,9 +158,9 @@ class _NotificationBellButtonState extends State<NotificationBellButton>
 
   void _seeAll() {
     _menu.close();
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const NotificationsScreen()));
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const NotificationsScreen()),
+    );
   }
 
   @override
@@ -172,8 +168,9 @@ class _NotificationBellButtonState extends State<NotificationBellButton>
     final s = AppStrings.of(context);
     final unread = _unread;
     final label = unread > 99 ? '99+' : '$unread';
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final menuWidth = math.min(360.0, math.max(160.0, screenWidth - 20));
+    final screen = MediaQuery.sizeOf(context);
+    final menuWidth = math.min(320.0, math.max(160.0, screen.width - 20));
+    final menuHeight = screen.height * 0.6;
     final open = _menu.isOpen;
     final hasUnread = unread > 0 || _preview.any((item) => item.isUnread);
 
@@ -207,6 +204,7 @@ class _NotificationBellButtonState extends State<NotificationBellButton>
         menuChildren: [
           _NotificationMenu(
             width: menuWidth,
+            maxHeight: menuHeight,
             loading: _loading,
             error: _error,
             items: _preview,
@@ -246,14 +244,19 @@ class _NotificationBellButtonState extends State<NotificationBellButton>
 }
 
 int _newestFirst(AppNotification a, AppNotification b) {
-  final aTime = DateTime.tryParse(a.createdAt ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
-  final bTime = DateTime.tryParse(b.createdAt ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+  final aTime =
+      DateTime.tryParse(a.createdAt ?? '') ??
+      DateTime.fromMillisecondsSinceEpoch(0);
+  final bTime =
+      DateTime.tryParse(b.createdAt ?? '') ??
+      DateTime.fromMillisecondsSinceEpoch(0);
   return bTime.compareTo(aTime);
 }
 
 class _NotificationMenu extends StatelessWidget {
   const _NotificationMenu({
     required this.width,
+    required this.maxHeight,
     required this.loading,
     required this.error,
     required this.items,
@@ -265,6 +268,7 @@ class _NotificationMenu extends StatelessWidget {
   });
 
   final double width;
+  final double maxHeight;
   final bool loading;
   final Object? error;
   final List<AppNotification> items;
@@ -280,85 +284,118 @@ class _NotificationMenu extends StatelessWidget {
     final s = AppStrings.of(context);
     final card = theme.cardTheme.color ?? theme.colorScheme.surface;
 
-    return SizedBox(
-      width: width,
-      child: Material(
-        key: const Key('notification-menu-panel'),
-        color: card,
-        elevation: 8,
-        shadowColor: Colors.black.withValues(alpha: 0.22),
-        borderRadius: BorderRadius.circular(18),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      s.notifications,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: hasUnread ? onMarkAll : null,
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(48, 48),
-                    ),
-                    child: Text(s.markAllRead),
-                  ),
-                ],
-              ),
-            ),
-            if (loading)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (error != null)
+    const chrome = 44.0 + 44.0;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: width, maxHeight: maxHeight),
+      child: SizedBox(
+        width: width,
+        child: Material(
+          key: const Key('notification-menu-panel'),
+          color: card,
+          elevation: 8,
+          shadowColor: Colors.black.withValues(alpha: 0.22),
+          borderRadius: BorderRadius.circular(18),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
+                padding: const EdgeInsets.fromLTRB(12, 0, 4, 0),
+                child: Row(
                   children: [
-                    Text(s.somethingWentWrong, textAlign: TextAlign.center),
-                    TextButton(
-                      onPressed: onRetry,
-                      style: TextButton.styleFrom(
-                        minimumSize: const Size(48, 48),
+                    Expanded(
+                      child: Text(
+                        s.notifications,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                      child: Text(s.retry),
+                    ),
+                    TextButton(
+                      onPressed: hasUnread ? onMarkAll : null,
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(48, 44),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      child: Text(s.markAllRead),
                     ),
                   ],
                 ),
-              )
-            else if (items.isEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-                child: Text(
-                  s.allCaughtUp,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium,
-                ),
-              )
-            else
-              for (final item in items)
-                _NotificationMenuRow(item: item, onTap: () => onOpen(item)),
-            TextButton(
-              onPressed: onSeeAll,
-              style: TextButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-                shape: const RoundedRectangleBorder(),
               ),
-              child: Text(s.seeAllNotifications),
+              // SingleChildScrollView answers the intrinsic sizing MenuAnchor
+              // asks for (a ListView cannot) and scrolls once the cap is hit.
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: math.max(0, maxHeight - chrome),
+                ),
+                child: SingleChildScrollView(
+                  primary: false,
+                  child: _menuBody(context, s),
+                ),
+              ),
+              TextButton(
+                onPressed: onSeeAll,
+                style: TextButton.styleFrom(
+                  minimumSize: const Size.fromHeight(44),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  padding: EdgeInsets.zero,
+                  shape: const RoundedRectangleBorder(),
+                ),
+                child: Text(s.seeAllNotifications),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _menuBody(BuildContext context, AppStrings s) {
+    if (loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (error != null) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(s.somethingWentWrong, textAlign: TextAlign.center),
+            TextButton(
+              onPressed: onRetry,
+              style: TextButton.styleFrom(
+                minimumSize: const Size(48, 44),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(s.retry),
             ),
           ],
         ),
-      ),
+      );
+    }
+    if (items.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+        child: Text(
+          s.allCaughtUp,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final item in items)
+          _NotificationMenuRow(item: item, onTap: () => onOpen(item)),
+      ],
     );
   }
 }
@@ -386,34 +423,51 @@ class _NotificationMenuRow extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 48),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             child: Row(
               children: [
-                NotificationCategoryBadge(item: item, size: 40),
-                const SizedBox(width: 12),
+                NotificationCategoryBadge(item: item, size: 32),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        s.notificationTitle(item.type, item.title),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          fontWeight: unread ? FontWeight.w800 : FontWeight.w600,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              s.notificationTitle(item.type, item.title),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: unread
+                                    ? FontWeight.w800
+                                    : FontWeight.w600,
+                                height: 1.15,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            relativeTime(item.createdAt),
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: timeColor,
+                              height: 1.15,
+                            ),
+                          ),
+                        ],
                       ),
                       Text(
                         item.body,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.72,
+                          ),
+                          height: 1.15,
                         ),
-                      ),
-                      Text(
-                        relativeTime(item.createdAt),
-                        style: theme.textTheme.labelMedium?.copyWith(color: timeColor),
                       ),
                     ],
                   ),

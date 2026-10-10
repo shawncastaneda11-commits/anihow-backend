@@ -7,14 +7,12 @@ import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../state/cart_controller.dart';
-import '../../state/preferences_controller.dart';
-import '../../support/crop_language.dart';
 import '../../support/order_quantity.dart';
 import '../../support/walk_in_quote.dart';
 import '../../theme/anihow_space.dart';
+import '../../theme/readable_accent.dart';
 import '../../state/auth_controller.dart';
 import '../../widgets/chat_with_stall_button.dart';
-import '../../widgets/hint_card.dart';
 import '../../widgets/order_look.dart';
 import '../../widgets/order_quantity_stepper.dart';
 import '../../widgets/primary_button.dart';
@@ -152,43 +150,8 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final cart = context.watch<CartController>();
-    final language = context.watch<PreferencesController>().language;
-    final s = AppStrings.of(context);
-    return Scaffold(
-      appBar: AppBar(title: Text(s.cart)),
-      body: _body(cart, language, s),
-      bottomNavigationBar: cart.isEmpty
-          ? null
-          : SafeArea(
-              child: Padding(
-                padding: AniHowSpace.screenPadding,
-                child: PrimaryButton(
-                  label: s.checkout,
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const CheckoutScreen()),
-                    );
-                  },
-                ),
-              ),
-            ),
-    );
-  }
-
-  Widget _body(CartController cart, CropLanguage language, AppStrings s) {
-    if (cart.loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (cart.error != null) {
-      return Center(child: Text('${cart.error}'));
-    }
-    if (cart.isEmpty) {
-      return Center(child: Text(s.emptyCart));
-    }
-    final groups = cart.snapshot.groupsBySeller
+  List<SellerCartGroup> _groups(CartController cart) {
+    return cart.snapshot.groupsBySeller
         .map(
           (group) => SellerCartGroup(
             sellerId: group.sellerId,
@@ -197,6 +160,19 @@ class _CartScreenState extends State<CartScreen> {
           ),
         )
         .toList();
+  }
+
+  void _openCheckout() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const CheckoutScreen()),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cart = context.watch<CartController>();
+    final s = AppStrings.of(context);
+    final groups = _groups(cart);
     final listed = groups.fold<double>(
       0,
       (sum, group) => sum + group.listedSubtotal,
@@ -206,69 +182,255 @@ class _CartScreenState extends State<CartScreen> {
       (sum, group) => sum + group.tawadTotal,
     );
     final total = groups.fold<double>(0, (sum, group) => sum + group.total);
-    return RefreshIndicator(
-      onRefresh: _refresh,
-      child: ListView(
-        padding: AniHowSpace.screenPadding,
-        children: [
-          AniHowHintCard(
-            icon: Icons.storefront_outlined,
-            title: cart.snapshot.splitMessage,
-            tone: AniHowHintTone.brand,
+    final showBar = !cart.loading && cart.error == null && !cart.isEmpty;
+    final itemCount = groups.fold<int>(
+      0,
+      (sum, group) => sum + group.items.length,
+    );
+    return Scaffold(
+      appBar: AppBar(
+        toolbarHeight: showBar ? 64 : kToolbarHeight,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(s.cart),
+            if (showBar)
+              Text(
+                s.cartLineup(itemCount, groups.length),
+                style: TextStyle(
+                  fontSize: AniHowSpace.label,
+                  fontWeight: FontWeight.w400,
+                  color: Theme.of(context).colorScheme.onPrimary,
+                ),
+              ),
+          ],
+        ),
+      ),
+      body: _body(cart, s, groups, listed, tawad, total),
+      bottomNavigationBar: showBar
+          ? _CartCheckoutBar(
+              total: total,
+              orders: groups.length,
+              onCheckout: _openCheckout,
+            )
+          : null,
+    );
+  }
+
+  Widget _body(
+    CartController cart,
+    AppStrings s,
+    List<SellerCartGroup> groups,
+    double listed,
+    double tawad,
+    double total,
+  ) {
+    if (cart.loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (cart.error != null) {
+      return Center(child: Text('${cart.error}'));
+    }
+    if (cart.isEmpty) {
+      return Center(child: Text(s.emptyCart));
+    }
+    final buyer = context.watch<AuthController>().user?.isBuyer == true;
+    final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.72);
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AniHowSpace.screen,
+            AniHowSpace.cardGap,
+            AniHowSpace.screen,
+            0,
           ),
-          const SizedBox(height: AniHowSpace.section),
-          for (final group in groups) ...[
-            Card(
-              child: Padding(
-                padding: AniHowSpace.cardPadding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        AniHowAvatar(name: group.sellerName),
-                        const SizedBox(width: AniHowSpace.cardGap),
-                        Expanded(
-                          child: Text(
-                            group.sellerName,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        ),
-                      ],
+          child: Row(
+            children: [
+              Icon(Icons.storefront_outlined, size: 18, color: muted),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  cart.snapshot.splitMessage,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: muted,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(
+                AniHowSpace.screen,
+                AniHowSpace.cardGap,
+                AniHowSpace.screen,
+                AniHowSpace.screen,
+              ),
+              children: [
+                for (var index = 0; index < groups.length; index++) ...[
+                  if (index > 0) const SizedBox(height: AniHowSpace.cardGap),
+                  _SellerCartCard(
+                    group: groups[index],
+                    buyer: buyer,
+                    acting: _acting,
+                    onQuantity: _queue,
+                    onEdit: _editQuantity,
+                    onRemove: (item) =>
+                        _run(item.id, () => cart.remove(item.id)),
+                  ),
+                ],
+                const SizedBox(height: AniHowSpace.cardGap),
+                _CartOrderSummary(
+                  itemCount: groups.fold<int>(
+                    0,
+                    (sum, group) => sum + group.items.length,
+                  ),
+                  listed: listed,
+                  tawad: tawad,
+                  total: total,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SellerCartCard extends StatelessWidget {
+  const _SellerCartCard({
+    required this.group,
+    required this.buyer,
+    required this.acting,
+    required this.onQuantity,
+    required this.onEdit,
+    required this.onRemove,
+  });
+
+  final SellerCartGroup group;
+  final bool buyer;
+  final Set<int> acting;
+  final void Function(CartLine item, String next) onQuantity;
+  final void Function(CartLine item) onEdit;
+  final void Function(CartLine item) onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AniHowSpace.cardPad,
+              AniHowSpace.cardPad,
+              AniHowSpace.cardPad,
+              8,
+            ),
+            child: Row(
+              children: [
+                AniHowAvatar(name: group.sellerName, radius: 18),
+                const SizedBox(width: AniHowSpace.cardGap),
+                Expanded(
+                  child: Text(
+                    group.sellerName,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
-                    if (context.watch<AuthController>().user?.isBuyer == true)
-                      ChatWithStallButton(
-                        sellerId: group.sellerId,
-                        compact: true,
+                  ),
+                ),
+                if (buyer)
+                  ChatWithStallButton(
+                    sellerId: group.sellerId,
+                    iconOnly: true,
+                  ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          for (var index = 0; index < group.items.length; index++) ...[
+            if (index > 0) const Divider(height: 1),
+            _CartLine(
+              item: group.items[index],
+              busy: acting.contains(group.items[index].id),
+              onQuantity: (next) => onQuantity(group.items[index], next),
+              onEdit: () => onEdit(group.items[index]),
+              onRemove: () => onRemove(group.items[index]),
+            ),
+          ],
+          _SellerFooter(group: group, label: s.orderSubtotal),
+        ],
+      ),
+    );
+  }
+}
+
+class _SellerFooter extends StatelessWidget {
+  const _SellerFooter({required this.group, required this.label});
+
+  final SellerCartGroup group;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final s = AppStrings.of(context);
+    final fill = theme.brightness == Brightness.dark
+        ? const Color(0xFF2A3330)
+        : const Color(0xFFF1EFE8);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: const BorderRadius.vertical(
+          bottom: Radius.circular(AniHowSpace.radius),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AniHowSpace.cardPad,
+          vertical: 10,
+        ),
+        child: Column(
+          children: [
+            if (tawadIsActive(group.tawadTotal))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        s.discountTawadMinus(AniHowMoney.peso(group.tawadTotal)),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: readableAccent(context),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    const SizedBox(height: AniHowSpace.cardGap),
-                    for (final item in group.items)
-                      _CartLine(
-                        item: item,
-                        language: language,
-                        busy: _acting.contains(item.id),
-                        onQuantity: (next) => _queue(item, next),
-                        onEdit: () => _editQuantity(item),
-                        onRemove: () => _run(item.id, () => cart.remove(item.id)),
-                      ),
-                    const Divider(height: 20),
-                    OrderTotalHero(
-                      total: group.total,
-                      tawadLine: tawadIsActive(group.tawadTotal)
-                          ? AppStrings.of(context)
-                                .discountTawadMinus(
-                                  AniHowMoney.peso(group.tawadTotal),
-                                )
-                          : null,
                     ),
                   ],
                 ),
               ),
+            Row(
+              children: [
+                Expanded(child: Text(label)),
+                Text(
+                  AniHowMoney.peso(group.total),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: AniHowSpace.section),
           ],
-          _CartOrderSummary(listed: listed, tawad: tawad, total: total),
-        ],
+        ),
       ),
     );
   }
@@ -277,7 +439,6 @@ class _CartScreenState extends State<CartScreen> {
 class _CartLine extends StatefulWidget {
   const _CartLine({
     required this.item,
-    required this.language,
     required this.busy,
     required this.onQuantity,
     required this.onEdit,
@@ -285,7 +446,6 @@ class _CartLine extends StatefulWidget {
   });
 
   final CartLine item;
-  final CropLanguage language;
   final bool busy;
   final ValueChanged<String> onQuantity;
   final VoidCallback onEdit;
@@ -331,58 +491,153 @@ class _CartLineState extends State<_CartLine> {
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
+    final theme = Theme.of(context);
     final item = widget.item;
     final listing = item.listing;
-    final crop = item.cropLabel(widget.language);
+    final unit = listing?.unit ?? item.unitLabel;
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.72);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(AniHowSpace.cardPad),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(item.listingName, style: Theme.of(context).textTheme.titleSmall),
-          if (crop != null)
-            Text(crop, style: Theme.of(context).textTheme.bodyMedium),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _CartThumb(item: item),
+              const SizedBox(width: AniHowSpace.cardGap),
               Expanded(
-                child: listing == null
-                    ? Text(item.quantity)
-                    : OrderQuantityStepper(
-                        controller: _controller,
-                        min: listing.minOrderQuantity,
-                        step: listing.orderStep,
-                        unit: listing.unit ?? item.unitLabel,
-                        max: double.tryParse(
-                          listing.sellableQuantity ?? listing.quantityAvailable,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.listingName,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
-                        lineId: item.id,
-                        onChanged: _changed,
-                        onValueTap: widget.onEdit,
+                        const SizedBox(width: 8),
+                        Text(
+                          AniHowMoney.peso(item.lineTotal),
+                          key: ValueKey('cart-line-total-${item.id}'),
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (double.tryParse(item.listedPrice) != null)
+                      Text(
+                        '${AniHowMoney.peso(item.listedPrice)} / $unit',
+                        style: theme.textTheme.bodySmall?.copyWith(color: muted),
                       ),
-              ),
-              const SizedBox(width: 8),
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text(
-                  AniHowMoney.peso(item.lineTotal),
-                  key: ValueKey('cart-line-total-${item.id}'),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        if (listing == null)
+                          Text(item.quantity)
+                        else
+                          OrderQuantityStepper(
+                            controller: _controller,
+                            min: listing.minOrderQuantity,
+                            step: listing.orderStep,
+                            unit: unit,
+                            max: double.tryParse(
+                              listing.sellableQuantity ??
+                                  listing.quantityAvailable,
+                            ),
+                            lineId: item.id,
+                            onChanged: _changed,
+                            onValueTap: widget.onEdit,
+                            pill: true,
+                          ),
+                        const Spacer(),
+                        IconButton(
+                          tooltip: s.remove,
+                          onPressed: widget.busy ? null : widget.onRemove,
+                          icon: const Icon(Icons.delete_outline, size: 20),
+                          style: IconButton.styleFrom(
+                            minimumSize: const Size(44, 44),
+                            fixedSize: const Size(44, 44),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (listing != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        _ruleLine(s, listing, unit),
+                        key: ValueKey('cart-qty-rule-${item.id}'),
+                        style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                      ),
+                      _CartDiscountNudge(
+                        controller: _controller,
+                        listing: listing,
+                      ),
+                    ],
+                  ],
                 ),
-              ),
-              IconButton(
-                tooltip: s.remove,
-                onPressed: widget.busy ? null : widget.onRemove,
-                icon: const Icon(Icons.delete_outline),
-                style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
               ),
             ],
           ),
-          if (listing != null)
-            _CartDiscountNudge(
-              controller: _controller,
-              listing: listing,
-            ),
         ],
+      ),
+    );
+  }
+
+  String _ruleLine(AppStrings s, ListingItem listing, String unit) {
+    final hint = s.quantityStepHint(
+      formatOrderAmount(listing.minOrderQuantity),
+      formatOrderAmount(listing.orderStep),
+      unit,
+    );
+    final equivalent = orderQuantitySmallUnit(1, unit);
+    if (equivalent == null) {
+      return hint;
+    }
+    return '$hint · ${s.unitEquals(unit, equivalent)}';
+  }
+}
+
+class _CartThumb extends StatelessWidget {
+  const _CartThumb({required this.item});
+
+  final CartLine item;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = item.listing?.thumbnailUrl ?? item.listing?.imageUrl;
+    final fallback = _fallback(context);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        width: 60,
+        height: 60,
+        child: url == null || url.isEmpty
+            ? fallback
+            : Image.network(
+                url,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => fallback,
+              ),
+      ),
+    );
+  }
+
+  Widget _fallback(BuildContext context) {
+    return ColoredBox(
+      key: ValueKey('cart-thumb-fallback-${item.id}'),
+      color: accentTint(context),
+      child: Icon(
+        Icons.eco_outlined,
+        color: readableAccent(context),
       ),
     );
   }
@@ -432,12 +687,30 @@ class _CartDiscountNudgeState extends State<_CartDiscountNudge> {
   @override
   Widget build(BuildContext context) {
     final rule = widget.listing.tawad;
-    if (rule == null || !rule.isActive || !rule.isMinQuantity) {
+    final quantity = double.tryParse(widget.controller.text.trim());
+    if (rule == null || !rule.isActive || quantity == null) {
       return const SizedBox.shrink();
     }
-    final quantity = double.tryParse(widget.controller.text.trim());
+    final quote = WalkInQuote.forListing(
+      widget.listing,
+      widget.controller.text,
+    );
+    if (quote != null && tawadIsActive(quote.tawad)) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: _TawadChip(
+          text: AppStrings.of(context).tawadApplied(
+            AniHowMoney.peso(quote.tawad),
+          ),
+          applied: true,
+        ),
+      );
+    }
+    if (!rule.isMinQuantity) {
+      return const SizedBox.shrink();
+    }
     final minimum = double.tryParse(rule.minQuantity ?? '');
-    if (quantity == null || minimum == null) {
+    if (minimum == null) {
       return const SizedBox.shrink();
     }
     final missing = quantityUntilDiscount(
@@ -451,18 +724,67 @@ class _CartDiscountNudgeState extends State<_CartDiscountNudge> {
     }
     final s = AppStrings.of(context);
     return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Text(
-        s.cartDiscountNudge(
+      padding: const EdgeInsets.only(top: 6),
+      child: _TawadChip(
+        text: s.cartDiscountNudge(
           formatOrderAmount(missing),
           widget.listing.unit ?? '',
           AniHowMoney.peso(rule.discountAmount),
         ),
-        key: const ValueKey('cart-discount-nudge'),
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-        ),
+        applied: false,
       ),
+    );
+  }
+}
+
+class _TawadChip extends StatelessWidget {
+  const _TawadChip({required this.text, required this.applied});
+
+  final String text;
+  final bool applied;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final background = applied
+        ? (dark ? const Color(0xFF245C42) : const Color(0xFFE5F4EB))
+        : (dark ? const Color(0xFF5A431C) : const Color(0xFFFBF3DC));
+    final foreground = applied
+        ? (dark ? const Color(0xFFB7E4C7) : const Color(0xFF145C38))
+        : (dark ? const Color(0xFFF6D48A) : const Color(0xFF7A4E0C));
+    return Row(
+      children: [
+        Flexible(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: background,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.local_offer_outlined, size: 14, color: foreground),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      text,
+                      key: applied
+                          ? null
+                          : const ValueKey('cart-discount-nudge'),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: foreground,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -552,37 +874,151 @@ class _CartQuantityDialogState extends State<CartQuantityDialog> {
 
 class _CartOrderSummary extends StatelessWidget {
   const _CartOrderSummary({
+    required this.itemCount,
     required this.listed,
     required this.tawad,
     required this.total,
   });
 
+  final int itemCount;
   final double listed;
   final double tawad;
   final double total;
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.72);
     return Card(
       child: Padding(
         padding: AniHowSpace.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              AppStrings.of(context).orderSummary,
-              style: Theme.of(context).textTheme.titleMedium,
+            _MoneyRow(
+              label: s.itemsCount(itemCount),
+              amount: AniHowMoney.peso(listed),
             ),
-            const SizedBox(height: AniHowSpace.cardGap),
-            OrderTotalHero(
-              total: total,
-              tawadLine: tawadIsActive(tawad)
-                  ? AppStrings.of(context).discountTawadMinus(
-                      AniHowMoney.peso(tawad),
-                    )
-                  : null,
+            if (tawadIsActive(tawad)) ...[
+              const SizedBox(height: 6),
+              Text(
+                s.discountTawadMinus(AniHowMoney.peso(tawad)),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: readableAccent(context),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+            const Divider(height: 20),
+            _MoneyRow(
+              label: s.total,
+              amount: AniHowMoney.peso(total),
+              amountKey: const ValueKey('cart-summary-total'),
+              emphasize: true,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              s.eachSellerPaidSeparately,
+              style: theme.textTheme.bodySmall?.copyWith(color: muted),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MoneyRow extends StatelessWidget {
+  const _MoneyRow({
+    required this.label,
+    required this.amount,
+    this.amountKey,
+    this.emphasize = false,
+  });
+
+  final String label;
+  final String amount;
+  final Key? amountKey;
+  final bool emphasize;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = emphasize
+        ? Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+          )
+        : Theme.of(context).textTheme.bodyLarge;
+    return Row(
+      children: [
+        Expanded(child: Text(label, style: style)),
+        Text(amount, key: amountKey, style: style),
+      ],
+    );
+  }
+}
+
+class _CartCheckoutBar extends StatelessWidget {
+  const _CartCheckoutBar({
+    required this.total,
+    required this.orders,
+    required this.onCheckout,
+  });
+
+  final double total;
+  final int orders;
+  final VoidCallback onCheckout;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.72);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(top: BorderSide(color: theme.dividerColor)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${s.total} · ${s.orderCount(orders)}',
+                      style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                    ),
+                    Text(
+                      AniHowMoney.peso(total),
+                      key: const ValueKey('cart-bottom-total'),
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              PrimaryButton(
+                label: s.checkout,
+                expand: false,
+                onPressed: onCheckout,
+              ),
+            ],
+          ),
         ),
       ),
     );

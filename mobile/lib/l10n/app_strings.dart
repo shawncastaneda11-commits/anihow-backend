@@ -422,6 +422,28 @@ class AppStrings {
   String get update => t('Update', 'I-update');
   String get remove => t('Remove', 'Alisin');
   String get cart => t('Cart', 'Cart');
+  String cartLineup(int items, int sellers) {
+    final itemLabel = items == 1
+        ? t('1 item', '1 item')
+        : t('$items items', '$items item');
+    final sellerLabel = sellers == 1
+        ? t('1 seller', '1 tindahan')
+        : t('$sellers sellers', '$sellers tindahan');
+    return '$itemLabel · $sellerLabel';
+  }
+
+  String itemsCount(int count) => t('Items ($count)', 'Mga item ($count)');
+  String get orderSubtotal => t('Order subtotal', 'Subtotal ng order');
+  String orderCount(int count) =>
+      count == 1 ? t('1 order', '1 order') : t('$count orders', '$count order');
+  String tawadApplied(String amount) =>
+      t('Tawad applied: $amount off', 'Naka-tawad: $amount bawas');
+  String get eachSellerPaidSeparately => t(
+    'Each seller is paid separately at checkout.',
+    'Hiwalay ang bayad sa bawat tindahan sa checkout.',
+  );
+  String unitEquals(String unit, String equivalent) =>
+      t('1 $unit = $equivalent', '1 $unit = $equivalent');
   String get checkout => t('Checkout', 'Checkout');
   String get shops => t('Farms', 'Mga bukid');
   String get saveFarm => t('Save farm', 'I-save ang bukid');

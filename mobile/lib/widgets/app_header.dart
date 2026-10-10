@@ -12,7 +12,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     this.trailing,
     this.leading,
     this.brandMark = false,
-    this.centerTitle = true,
+    this.centerTitle = false,
   });
 
   final String title;
@@ -21,8 +21,8 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   final Widget? leading;
   final bool brandMark;
 
-  /// False puts the title at the start, next to the edge, like a tab header
-  /// with several buttons on the right.
+  /// Titles sit at the start like every app bar (see the theme); true
+  /// centers this one.
   final bool centerTitle;
 
   /// Darker derived shade of [AniHowColors.brand] (same hue, lower lightness).

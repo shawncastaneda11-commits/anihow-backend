@@ -152,7 +152,7 @@ class AniHowTheme {
         backgroundColor: AniHowColors.brand,
         foregroundColor: scheme.onPrimary,
         elevation: 0,
-        centerTitle: true,
+        centerTitle: false,
         titleTextStyle: TextStyle(
           fontFamily: 'Roboto',
           fontSize: AniHowSpace.header,

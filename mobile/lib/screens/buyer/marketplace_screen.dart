@@ -354,7 +354,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       children: [
         AppHeader(
           title: s.marketplace,
-          centerTitle: false,
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

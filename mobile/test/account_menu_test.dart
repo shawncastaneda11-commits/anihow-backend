@@ -357,6 +357,8 @@ void main() {
 
     final s = AppStrings(false);
     expect(find.byIcon(Icons.help_outline), findsNothing);
+    // App bar titles sit at the start, as in the approved mockup.
+    expect(tester.getRect(find.text(s.myListings)).left, lessThan(80));
 
     await _openMenu(tester, s);
     expect(find.text('Cruz Morning Greens'), findsOneWidget);

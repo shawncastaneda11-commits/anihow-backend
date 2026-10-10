@@ -10,6 +10,7 @@ import '../../services/buyer_location.dart';
 import '../../state/auth_controller.dart';
 import '../../state/preferences_controller.dart';
 import '../../theme/anihow_space.dart';
+import '../../widgets/account_menu_button.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/cart_icon_button.dart';
@@ -24,7 +25,10 @@ const _updatesHiddenKey = 'marketplace_updates_hidden_on';
 const _pageSize = 15;
 
 class MarketplaceScreen extends StatefulWidget {
-  const MarketplaceScreen({super.key});
+  const MarketplaceScreen({super.key, this.showAccountMenu = false});
+
+  /// Set by [BuyerShell] only. Pushed copies of this screen omit the menu.
+  final bool showAccountMenu;
 
   @override
   State<MarketplaceScreen> createState() => _MarketplaceScreenState();
@@ -350,9 +354,13 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       children: [
         AppHeader(
           title: s.marketplace,
-          trailing: const Row(
+          trailing: Row(
             mainAxisSize: MainAxisSize.min,
-            children: [CartIconButton(), NotificationBellButton()],
+            children: [
+              const CartIconButton(),
+              const NotificationBellButton(),
+              if (widget.showAccountMenu) const AccountMenuButton(),
+            ],
           ),
         ),
         const UnverifiedEmailBanner(),

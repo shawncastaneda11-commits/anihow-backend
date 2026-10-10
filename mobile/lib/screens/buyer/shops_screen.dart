@@ -8,6 +8,7 @@ import '../../services/buyer_location.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
+import '../../widgets/account_menu_button.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/notification_bell.dart';
 import '../../widgets/profile_avatar_button.dart';
@@ -15,7 +16,10 @@ import '../../widgets/unverified_email_banner.dart';
 import 'farm_page_screen.dart';
 
 class ShopsScreen extends StatefulWidget {
-  const ShopsScreen({super.key});
+  const ShopsScreen({super.key, this.showAccountMenu = false});
+
+  /// Set by [BuyerShell] only. Pushed copies of this screen omit the menu.
+  final bool showAccountMenu;
 
   @override
   State<ShopsScreen> createState() => _ShopsScreenState();
@@ -227,7 +231,10 @@ class _ShopsScreenState extends State<ShopsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(s.shops),
-        actions: const [NotificationBellButton()],
+        actions: [
+          const NotificationBellButton(),
+          if (widget.showAccountMenu) const AccountMenuButton(),
+        ],
       ),
       body: Column(
         children: [

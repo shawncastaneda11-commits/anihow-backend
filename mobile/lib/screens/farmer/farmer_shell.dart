@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../../l10n/app_strings.dart';
 import '../../navigation/route_observer.dart';
-import '../../state/auth_controller.dart';
+import '../../widgets/account_menu_button.dart';
 import '../../widgets/notification_bell.dart';
 import '../../widgets/order_chat_head.dart';
-import '../../widgets/profile_avatar_button.dart';
 import '../chat/order_chats_screen.dart';
-import '../faq/faq_bot_screen.dart';
-import '../profile/profile_screen.dart';
 import 'crop_care_screen.dart';
 import 'farmer_orders_screen.dart';
 import 'farmer_sales_screen.dart';
@@ -43,7 +39,6 @@ class _FarmerShellState extends State<FarmerShell> {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthController>().user;
     final s = AppStrings.of(context);
     final pages =
         widget.preview?.pages ??
@@ -69,31 +64,7 @@ class _FarmerShellState extends State<FarmerShell> {
     return Scaffold(
       appBar: AppBar(
         title: Text(titles[_index]),
-        actions: [
-          IconButton(
-            tooltip: s.faq,
-            icon: const Icon(Icons.help_outline),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const FaqBotScreen()),
-              );
-            },
-          ),
-          const NotificationBellButton(),
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ProfileAvatarButton(
-              name: user?.shopName ?? user?.name ?? 'F',
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const FarmerProfileScreen(),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
+        actions: const [NotificationBellButton(), AccountMenuButton()],
       ),
       body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: DecoratedBox(

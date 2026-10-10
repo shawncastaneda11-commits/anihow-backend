@@ -49,8 +49,9 @@ void main() {
         id: 2,
         name: 'Nena',
         email: 'nena@example.com',
-        roles: ['farmer-seller'],
+        roles: ['farmer_seller'],
         shopName: 'Aling Nena Produce',
+        farmName: 'Aling Nena Produce',
       )
       ..restoring = false;
 
@@ -59,6 +60,8 @@ void main() {
 
     final s = AppStrings(false);
     expect(find.byType(FloatingActionButton), findsNothing);
+    expect(find.byIcon(Icons.help_outline), findsNothing);
+    expect(find.byTooltip(s.accountMenu), findsOneWidget);
     expect(find.text(s.chats), findsOneWidget);
     expect(find.text('Seller chats'), findsNothing);
 

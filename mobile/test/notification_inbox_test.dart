@@ -176,6 +176,9 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('notification-menu-panel')), findsOneWidget);
+    final menu = tester.getSize(find.byKey(const Key('notification-menu-panel')));
+    expect(menu.width, lessThanOrEqualTo(320));
+    expect(menu.height, lessThanOrEqualTo(360));
     expect(find.byKey(const Key('notification-menu-6')), findsOneWidget);
     expect(find.byKey(const Key('notification-menu-2')), findsOneWidget);
     expect(find.byKey(const Key('notification-menu-1')), findsNothing);

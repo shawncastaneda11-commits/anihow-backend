@@ -189,10 +189,14 @@ void main() {
     final s = AppStrings(false);
     expect(find.byType(NavigationDestination), findsNWidgets(4));
     expect(find.text(s.profile), findsNothing);
-    expect(find.text(s.shops), findsOneWidget);
-    expect(find.text(s.market), findsOneWidget);
-    expect(find.text(s.orders), findsOneWidget);
-    expect(find.text(s.favorites), findsOneWidget);
+    Finder tab(String label) => find.descendant(
+      of: find.byType(NavigationBar),
+      matching: find.text(label),
+    );
+    expect(tab(s.shops), findsOneWidget);
+    expect(tab(s.market), findsOneWidget);
+    expect(tab(s.orders), findsOneWidget);
+    expect(tab(s.favorites), findsOneWidget);
 
     expect(find.byType(AccountMenuButton).hitTestable(), findsOneWidget);
 

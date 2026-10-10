@@ -110,43 +110,64 @@ class HarvestFields extends StatelessWidget {
     final reasonMissing =
         rejectedAmount > 0 && (reason == null || reason!.isEmpty);
 
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(s.harvestSection, style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: AniHowSpace.fieldGap),
         AniHowField(
           label: valueAdded ? s.dateMade : s.harvestDate,
           child: OutlinedButton(
             key: ValueKey(valueAdded ? 'date-made' : 'harvest-date'),
             onPressed: onPickDate,
-            child: Align(
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
               alignment: Alignment.centerLeft,
-              child: Text(
-                harvestedOnLabel.isEmpty ? s.dateNotSet : harvestedOnLabel,
-              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.calendar_today_outlined, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    harvestedOnLabel.isEmpty ? s.dateNotSet : harvestedOnLabel,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
         const SizedBox(height: AniHowSpace.fieldGap),
-        AniHowField(
-          label: valueAdded ? s.quantityMade : s.harvestedQuantity,
-          child: TextField(
-            key: const ValueKey('harvest-quantity'),
-            controller: harvested,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (_) => onChanged(),
-          ),
-        ),
-        const SizedBox(height: AniHowSpace.fieldGap),
-        AniHowField(
-          label: valueAdded ? s.defectiveQuantity : s.rejectedQuantity,
-          child: TextField(
-            key: const ValueKey('rejected-quantity'),
-            controller: rejected,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (_) => onChanged(),
-          ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: AniHowField(
+                label: valueAdded ? s.quantityMade : s.harvestedQuantity,
+                child: TextField(
+                  key: const ValueKey('harvest-quantity'),
+                  controller: harvested,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  onChanged: (_) => onChanged(),
+                ),
+              ),
+            ),
+            const SizedBox(width: AniHowSpace.cardGap),
+            Expanded(
+              child: AniHowField(
+                label: valueAdded ? s.defectiveQuantity : s.rejectedQuantity,
+                child: TextField(
+                  key: const ValueKey('rejected-quantity'),
+                  controller: rejected,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  onChanged: (_) => onChanged(),
+                ),
+              ),
+            ),
+          ],
         ),
         if (rejectedAmount > 0) ...[
           const SizedBox(height: AniHowSpace.fieldGap),
@@ -192,10 +213,43 @@ class HarvestFields extends StatelessWidget {
           ],
         ],
         const SizedBox(height: AniHowSpace.cardGap),
-        Text(
-          s.goodToSell(formatGoodQuantity(good), unitLabel),
-          key: const ValueKey('good-to-sell'),
-          style: Theme.of(context).textTheme.titleSmall,
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: dark ? const Color(0xFF245C42) : const Color(0xFFE5F4EB),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    s.goodToSellLabel,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: dark
+                          ? const Color(0xFFB7E4C7)
+                          : const Color(0xFF145C38),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    s.goodToSell(formatGoodQuantity(good), unitLabel),
+                    key: const ValueKey('good-to-sell'),
+                    textAlign: TextAlign.end,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: dark
+                          ? const Color(0xFFB7E4C7)
+                          : const Color(0xFF145C38),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
         const SizedBox(height: AniHowSpace.fieldGap),
         AniHowField(

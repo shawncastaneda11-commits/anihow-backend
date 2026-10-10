@@ -239,10 +239,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(
-      find.byKey(const ValueKey('listing-growing-method')),
-    );
-    await tester.tap(find.byKey(const ValueKey('listing-growing-method')));
+    await tester.ensureVisible(find.text('Not stated'));
     await tester.pumpAndSettle();
 
     expect(find.text('Not stated'), findsWidgets);
@@ -263,10 +260,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(
-      find.byKey(const ValueKey('listing-growing-method')),
-    );
-    await tester.tap(find.byKey(const ValueKey('listing-growing-method')));
+    await tester.ensureVisible(find.text('Certified Organic'));
     await tester.pumpAndSettle();
 
     expect(find.text('Certified Organic'), findsWidgets);

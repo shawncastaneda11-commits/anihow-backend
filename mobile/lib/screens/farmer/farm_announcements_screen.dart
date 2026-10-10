@@ -10,8 +10,8 @@ import '../../theme/anihow_space.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/hint_card.dart';
 
-void openFarmAnnouncements(BuildContext context) {
-  Navigator.of(context).push(
+Future<void> openFarmAnnouncements(BuildContext context) {
+  return Navigator.of(context).push(
     MaterialPageRoute<void>(builder: (_) => const FarmAnnouncementsScreen()),
   );
 }

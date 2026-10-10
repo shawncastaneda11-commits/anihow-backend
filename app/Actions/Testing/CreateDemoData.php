@@ -538,7 +538,11 @@ class CreateDemoData
                 ->first();
 
             if ($found !== null) {
-                $listings[$plan['key']] = $found;
+                if ($found->title !== $plan['title']) {
+                    $found->forceFill(['title' => $plan['title']])->save();
+                }
+
+                $listings[$plan['key']] = $found->fresh();
 
                 continue;
             }
@@ -576,7 +580,7 @@ class CreateDemoData
     private function listingPlans(): array
     {
         return [
-            $this->plan('nena-kamatis', 'nena', 'kamatis', 'Kamatis, bagong pitas', 'Ripe red tomatoes, harvested Friday.', 55),
+            $this->plan('nena-kamatis', 'nena', 'kamatis', 'Kamatis, pula at hinog', 'Ripe red tomatoes, harvested Friday.', 55),
             $this->plan('nena-talong', 'nena', 'talong', 'Talong, mahaba', 'Long purple eggplant from the backyard plot.', 40, 1, 0.5),
             $this->plan('nena-sitaw', 'nena', 'sitaw', 'Sitaw, sariwa', 'Yard-long beans, tied in bundles.', 22),
             $this->plan('nena-pechay', 'nena', 'pechay', 'Pechay, bunot umaga', 'Leafy pechay, washed and bundled.', 18),
@@ -587,9 +591,9 @@ class CreateDemoData
             $this->plan('rosa-kamatis', 'rosa', 'kamatis', 'Kamatis, salad size', 'Medium tomatoes, firm for packing.', 58),
             $this->plan('rosa-sili', 'rosa', 'sili', 'Sili, anghang', 'Green chili and a little labuyo.', 150, 0.5, 0.5, true),
             $this->plan('rosa-sitaw', 'rosa', 'sitaw', 'Sitaw, mahaba', 'Long sitaw, good for ginisang sitaw.', 24),
-            $this->plan('jun-talong', 'jun', 'talong', 'Talong, pantatong', 'Firm eggplant for tortang talong.', 42),
-            $this->plan('jun-kalabasa', 'jun', 'kalabasa', 'Kalabasa, pangkare-kare', 'Dense squash, sold by the kilo.', 38),
-            $this->plan('jun-pechay', 'jun', 'pechay', 'Pechay, sariwa', 'Morning-cut pechay bundles.', 20),
+            $this->plan('jun-talong', 'jun', 'talong', 'Talong, pang-torta', 'Firm eggplant for tortang talong.', 42),
+            $this->plan('jun-kalabasa', 'jun', 'kalabasa', 'Kalabasa, pang-ginataan', 'Dense squash, sold by the kilo.', 38),
+            $this->plan('jun-pechay', 'jun', 'pechay', 'Pechay, bagong ani', 'Morning-cut pechay bundles.', 20),
             $this->plan('liza-kamatis', 'liza', 'kamatis', 'Kamatis, Tanza plot', 'Salad tomatoes from the Tanza rows.', 52, 1, 1, true),
             $this->plan('liza-talong', 'liza', 'talong', 'Talong, Tanza', 'Firm eggplant for torta.', 40, 1, 0.5),
             $this->plan('liza-sitaw', 'liza', 'sitaw', 'Sitaw, Tanza', 'Bundled yard-long beans.', 22),

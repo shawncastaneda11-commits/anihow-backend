@@ -68,6 +68,18 @@ class DemoSeederTest extends TestCase
         $this->assertNotSame('09175552100', $farm->contact_number);
     }
 
+    public function test_a_second_run_renames_demo_listings_that_clash_with_fixtures(): void
+    {
+        $this->artisan('anihow:demo-data', ['--weeks' => 1])->assertSuccessful();
+
+        $listing = Listing::query()->where('title', 'Pechay, bagong ani')->firstOrFail();
+        $listing->forceFill(['title' => 'Pechay, sariwa'])->save();
+
+        $this->artisan('anihow:demo-data', ['--weeks' => 1])->assertSuccessful();
+
+        $this->assertSame('Pechay, bagong ani', $listing->fresh()->title);
+    }
+
     public function test_the_old_demo_contact_on_pyap_is_cleared(): void
     {
         $farm = Farm::query()->create([
@@ -121,7 +133,7 @@ class DemoSeederTest extends TestCase
     {
         $this->artisan('anihow:demo-data', ['--weeks' => 1])->assertSuccessful();
 
-        $listing = Listing::query()->where('title', 'like', 'Talong, pantatong')->first();
+        $listing = Listing::query()->where('title', 'Talong, pang-torta')->first();
 
         $this->assertNotNull($listing?->image_path);
         $this->assertTrue(ListingStorage::disk()->exists($listing->image_path));

@@ -161,6 +161,9 @@ class DemoDataCommandTest extends TestCase
         $this->artisan('anihow:demo-data', ['--weeks' => 4])->assertSuccessful();
         $this->artisan('anihow:test-fixtures')->assertSuccessful();
 
+        $titles = Listing::query()->pluck('title');
+        $this->assertSame($titles->count(), $titles->unique()->count(), 'Demo and fixture listings must not share a name');
+
         $pyap = Farm::query()->where('slug', ClientFarms::PYAP_SLUG)->first();
         $truofa = Farm::query()->where('slug', ClientFarms::TRUOFA_SLUG)->first();
 

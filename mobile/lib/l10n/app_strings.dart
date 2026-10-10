@@ -2026,4 +2026,91 @@ class AppStrings {
             body: 'For how-to help, open FAQ in Settings. For one reservation, open that order and use Chat.',
           ),
         ];
+
+  String get orDivider => t('or', 'o');
+  String get wantToBeASeller =>
+      t('Want to be a seller?', 'Gusto mo bang maging seller?');
+  String get wantToSellOnAnihow =>
+      t('Want to sell on AniHow?', 'Gusto mo bang magbenta sa AniHow?');
+  String get howFarmersGetAccount => t(
+    'How farmers and farms get an account',
+    'Paano nagkakaroon ng account ang mga magsasaka at bukid',
+  );
+  String get sellerInfoIntro => t(
+    'Seller and farm accounts are made by the AniHow administrator. Pick what fits you.',
+    'Ang mga seller at farm account ay ginagawa ng administrator ng AniHow. Piliin ang bagay sa iyo.',
+  );
+  String get imAFarmer => t(
+    "I'm a farmer and want to sell",
+    'Magsasaka ako at gusto kong magbenta',
+  );
+  String get myFarmWantsToJoin =>
+      t('My farm wants to join', 'Gusto ng bukid ko na sumali');
+  String get sellerHelpAdmin =>
+      t('the AniHow administrator', 'ang administrator ng AniHow');
+  String get sellerStepFarmerFarm => t(
+    'Make sure your farm is on AniHow (see Partner farms below) and tell your farm\'s contact person.',
+    'Siguraduhing nasa AniHow na ang bukid mo (tingnan ang Mga partner na bukid sa ibaba) at sabihin sa contact person ng bukid mo.',
+  );
+  String sellerStepFarmerEmail(String office) => t(
+    'Email $office with your full name, your farm, your mobile number and the email you\'ll use.',
+    'I-email ang $office kasama ang buong pangalan mo, ang bukid mo, ang mobile number mo, at ang email na gagamitin mo.',
+  );
+  String sellerStepFarmerPassword(int days) => t(
+    'You\'ll get a temporary password. Sign in and set your own password within $days days.',
+    'Makakatanggap ka ng pansamantalang password. Mag-sign in at magtakda ng sarili mong password sa loob ng $days araw.',
+  );
+  String get sellerStepFarmerPasswordSoon => t(
+    'You\'ll get a temporary password. Sign in and set your own password soon after.',
+    'Makakatanggap ka ng pansamantalang password. Mag-sign in at magtakda agad ng sarili mong password.',
+  );
+  String get sellerStepFarmPasswordSoon => t(
+    'Sign in to the CMS with the temporary password and change it right away.',
+    'Mag-sign in sa CMS gamit ang pansamantalang password at palitan ito agad.',
+  );
+  String sellerStepFarmEmail(String office) => t(
+    'Email $office with the farm\'s name, location, contact person and mobile number.',
+    'I-email ang $office kasama ang pangalan ng bukid, lokasyon, contact person, at mobile number.',
+  );
+  String get sellerStepFarmCms => t(
+    'The administrator sets up your farm page and a Content Editor account for the CMS (website).',
+    'Inihahanda ng administrator ang pahina ng bukid mo at isang Content Editor account para sa CMS (website).',
+  );
+  String sellerStepFarmPassword(int days) => t(
+    'Sign in to the CMS with the temporary password and change it within $days days.',
+    'Mag-sign in sa CMS gamit ang pansamantalang password at palitan ito sa loob ng $days araw.',
+  );
+  String emailOffice(String office) => t('Email $office', 'I-email ang $office');
+  String get copyEmail => t('Copy email', 'Kopyahin ang email');
+  String get emailCopied => t('Email copied', 'Nakopya ang email');
+  String callOffice(String office) => t('Call $office', 'Tawagan ang $office');
+  String get noEmailApp => t(
+    'No email app found. The email was copied.',
+    'Walang nahanap na email app. Nakopya ang email.',
+  );
+  String emailAppHint(String subject) => t(
+    'Opens your email app with "$subject" and a short form filled in.',
+    'Bubuksan ang email app na may "$subject" at isang maikling form na napunan na.',
+  );
+  String get partnerFarms => t('Partner farms', 'Mga partner na bukid');
+  String get farmsAlreadyOnAnihow =>
+      t('Farms already on AniHow', 'Mga bukid na nasa AniHow na');
+  String get noPartnerFarms =>
+      t('No partner farms yet.', 'Wala pang partner na bukid.');
+  String get sellerHelpLoadError => t(
+    'Couldn\'t load the contact details. Check your connection.',
+    'Hindi ma-load ang detalye ng contact. Suriin ang koneksyon mo.',
+  );
+  String get howAnihowWorks =>
+      t('How AniHow works', 'Paano gumagana ang AniHow');
+  String get forBuyers => t('For buyers', 'Para sa mga buyer');
+  String get forSellers => t('For sellers', 'Para sa mga seller');
+  String get stillStuck => t('Still stuck?', 'Hindi pa rin malinaw?');
+  String stillStuckBody(String office, String email) => t(
+    'Ask the FAQ bot, or email $office at $email.',
+    'Tanungin ang FAQ bot, o i-email ang $office sa $email.',
+  );
+  String get askTheFaqBot => t('Ask the FAQ bot', 'Tanungin ang FAQ bot');
+  String get askTheFaqBotOnly =>
+      t('Ask the FAQ bot.', 'Tanungin ang FAQ bot.');
 }

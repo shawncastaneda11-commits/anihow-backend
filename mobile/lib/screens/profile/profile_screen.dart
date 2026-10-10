@@ -25,6 +25,7 @@ import '../farmer/listing_form_screen.dart';
 import '../farmer/shop_reviews_screen.dart';
 import '../farmer/walk_in_sale_screen.dart';
 import '../faq/faq_bot_screen.dart';
+import '../auth/seller_info_screen.dart';
 import '../farm/farm_profile_screen.dart';
 import 'online_payment_section.dart';
 import 'settings_screen.dart';
@@ -151,6 +152,16 @@ class ProfileScreen extends StatelessWidget {
                         appBar: AppBar(title: Text(s.favorites)),
                         body: const FavoritesScreen(),
                       ),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1),
+                _ProfileLink(
+                  icon: Icons.storefront_outlined,
+                  label: s.wantToSellOnAnihow,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const SellerInfoScreen(),
                     ),
                   ),
                 ),

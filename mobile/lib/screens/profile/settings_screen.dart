@@ -16,7 +16,9 @@ import 'change_password_screen.dart';
 import 'my_data_screen.dart';
 import 'profile_screen.dart';
 import 'verify_email_screen.dart';
+import '../auth/seller_info_screen.dart';
 import '../faq/faq_bot_screen.dart';
+import 'help_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -48,6 +50,24 @@ class SettingsScreen extends StatelessWidget {
                   MaterialPageRoute<void>(builder: (_) => const FaqBotScreen()),
                 ),
               ),
+              _SettingsRow(
+                key: const Key('help-how-it-works'),
+                icon: Icons.menu_book_outlined,
+                label: s.howAnihowWorks,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const HelpScreen()),
+                ),
+              ),
+              if (user?.isBuyer == true)
+                _SettingsRow(
+                  icon: Icons.storefront_outlined,
+                  label: s.wantToBeASeller,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const SellerInfoScreen(),
+                    ),
+                  ),
+                ),
             ],
           ),
           _SectionTitle(s.appearance),
@@ -398,6 +418,7 @@ class _SettingsCard extends StatelessWidget {
 
 class _SettingsRow extends StatelessWidget {
   const _SettingsRow({
+    super.key,
     required this.icon,
     required this.label,
     this.trailing,

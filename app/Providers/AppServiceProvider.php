@@ -41,6 +41,14 @@ class AppServiceProvider extends ServiceProvider
 
     private function configureRateLimiting(): void
     {
+        RateLimiter::for('public', function (Request $request) {
+            if (app()->runningUnitTests()) {
+                return Limit::none();
+            }
+
+            return Limit::perMinute(30)->by($request->ip());
+        });
+
         RateLimiter::for('api', function (Request $request) {
             if (app()->runningUnitTests()) {
                 return Limit::none();

@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../state/auth_controller.dart';
+import '../../support/phone_link.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/async_view.dart';
@@ -97,8 +98,8 @@ class _FarmProfileScreenState extends State<FarmProfileScreen> {
   }
 
   Future<void> _call(String number) async {
-    final digits = number.replaceAll(RegExp(r'[^\d+]'), '');
-    if (digits.isEmpty) {
+    final digits = dialablePhone(number);
+    if (digits == null) {
       return;
     }
     final opened = await launchUrl(Uri(scheme: 'tel', path: digits));

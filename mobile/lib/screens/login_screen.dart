@@ -6,11 +6,13 @@ import '../state/auth_controller.dart';
 import '../state/preferences_controller.dart';
 import '../support/crop_language.dart';
 import '../theme/anihow_space.dart';
+import '../theme/readable_accent.dart';
 import '../widgets/auth_layout.dart';
 import '../widgets/form_label.dart';
 import '../widgets/password_field.dart';
 import '../widgets/primary_button.dart';
 import 'auth/forgot_password_screen.dart';
+import 'auth/seller_info_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -139,6 +141,71 @@ class _LoginScreenState extends State<LoginScreen> {
               ).push(MaterialPageRoute(builder: (_) => const RegisterScreen()));
             },
             child: Text(s.createBuyerAccount),
+          ),
+          const SizedBox(height: AniHowSpace.section),
+          Row(
+            children: [
+              const Expanded(child: Divider()),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  s.orDivider,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+              const Expanded(child: Divider()),
+            ],
+          ),
+          const SizedBox(height: AniHowSpace.cardGap),
+          Material(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(14),
+            child: InkWell(
+              key: const Key('want-to-be-seller'),
+              borderRadius: BorderRadius.circular(14),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const SellerInfoScreen()),
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.storefront_outlined,
+                        color: readableAccent(context),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              s.wantToBeASeller,
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: readableAccent(context),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              s.howFarmersGetAccount,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.68),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: AniHowSpace.section),
           SegmentedButton<CropLanguage>(

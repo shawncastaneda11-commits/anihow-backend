@@ -9,10 +9,12 @@ use App\Models\Order;
 use App\Models\PaymentProof;
 use App\Models\Reservation;
 use App\Models\Review;
+use App\Models\StallMessage;
 use App\Models\User;
 use App\Support\Demo\ClientFarms;
 use App\Support\ListingStorage;
 use Database\Seeders\DemoSeeder;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Mail\Mailable;
 use Illuminate\Support\Facades\Artisan;
@@ -64,6 +66,39 @@ class DemoSeederTest extends TestCase
         $this->assertSame('Admin address', $farm->address);
         $this->assertNotSame('Ka Elena Ramos', $farm->contact_person);
         $this->assertNotSame('09175552100', $farm->contact_number);
+    }
+
+    public function test_the_old_demo_contact_on_pyap_is_cleared(): void
+    {
+        $farm = Farm::query()->create([
+            'name' => 'PYAP Manggahan Chapter',
+            'slug' => ClientFarms::PYAP_SLUG,
+            'contact_person' => 'Ka Elena Ramos',
+            'contact_number' => '09175552100',
+            'is_active' => true,
+        ]);
+
+        $this->artisan('anihow:demo-data', ['--weeks' => 1])->assertSuccessful();
+
+        $farm->refresh();
+
+        $this->assertNull($farm->contact_person);
+        $this->assertNull($farm->contact_number);
+    }
+
+    public function test_fixture_orders_get_no_demo_reviews_or_chats(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $this->artisan('anihow:test-fixtures')->assertSuccessful();
+
+        $fixtureOrderIds = Order::query()->pluck('id');
+        $fixtureReviews = Review::query()->whereIn('order_id', $fixtureOrderIds)->count();
+
+        $this->artisan('anihow:demo-data', ['--weeks' => 4])->assertSuccessful();
+
+        $this->assertSame($fixtureReviews, Review::query()->whereIn('order_id', $fixtureOrderIds)->count());
+        $this->assertFalse(StallMessage::query()->whereIn('order_id', $fixtureOrderIds)->exists());
+        $this->assertSame(1, Farm::query()->where('slug', ClientFarms::PYAP_SLUG)->first()?->contentEditor()->count());
     }
 
     public function test_scheduler_commands_do_not_change_open_records(): void

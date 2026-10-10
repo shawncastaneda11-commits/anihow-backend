@@ -56,6 +56,7 @@ use App\Support\ImageVariants;
 use App\Support\ListingStorage;
 use App\Support\Pricing\PriceGuardResolver;
 use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -69,6 +70,11 @@ class CreateDemoData
     public const string EMAIL_DOMAIN = '@demo.anihow.local';
 
     private const int SEED = 20261010;
+
+    /** The old demo seeder wrote these onto PYAP; a real call button must not dial them. */
+    private const string OLD_DEMO_CONTACT_PERSON = 'Ka Elena Ramos';
+
+    private const string OLD_DEMO_CONTACT_NUMBER = '09175552100';
 
     /** @var array<string, string> */
     private const array CROP_PHOTOS = [
@@ -204,6 +210,13 @@ class CreateDemoData
                 ]);
             }
 
+            if ($definition['slug'] === ClientFarms::PYAP_SLUG
+                && $farm->contact_person === self::OLD_DEMO_CONTACT_PERSON
+                && $farm->contact_number === self::OLD_DEMO_CONTACT_NUMBER) {
+                $farm->contact_person = null;
+                $farm->contact_number = null;
+            }
+
             foreach ($extras[$definition['slug']] ?? [] as $field => $value) {
                 $this->fillBlank($farm, $field, $value);
             }
@@ -286,19 +299,24 @@ class CreateDemoData
     private function editors(array $farms): array
     {
         return [
-            'pyap' => $this->account(
-                'editor01@gmail.com',
-                'Editor 01',
-                Role::ContentEditor,
-                $farms['pyap'],
-            ),
-            'sanctuario' => $this->account(
-                'editor.sanctuario'.self::EMAIL_DOMAIN,
-                'Sanctuario Demo Editor',
-                Role::ContentEditor,
-                $farms['sanctuario'],
-            ),
+            'pyap' => $this->editor($farms['pyap'], 'editor01@gmail.com', 'Editor 01'),
+            'sanctuario' => $this->editor($farms['sanctuario'], 'editor.sanctuario'.self::EMAIL_DOMAIN, 'Sanctuario Demo Editor'),
         ];
+    }
+
+    /**
+     * A farm has one Content Editor. When someone else already holds the
+     * farm, keep them and let them author the demo posts.
+     */
+    private function editor(Farm $farm, string $email, string $name): User
+    {
+        $current = $farm->contentEditor()->first();
+
+        if ($current !== null && $current->email !== $email) {
+            return $current;
+        }
+
+        return $this->account($email, $name, Role::ContentEditor, $farm);
     }
 
     /**
@@ -537,7 +555,7 @@ class CreateDemoData
                 'min_order_quantity' => $plan['min'],
                 'order_step' => $plan['step'],
                 'is_active' => true,
-            ], null, $this->harvestPayload('30.00', false));
+            ], null, $this->harvestPayload($this->stockFor($crop->unit_of_measure), false, $price, $crop->unit_of_measure));
 
             $listing->forceFill([
                 'image_path' => $this->storePublicPhoto(
@@ -663,6 +681,7 @@ class CreateDemoData
     private function history(int $weeks, Carbon $start, array $buyers, array $listings): void
     {
         $pools = $this->salePools($listings);
+        $ordersPerWeek = ['pyap' => 7, 'truofa' => 5, 'sanctuario' => 4];
         $reasons = [
             CancellationReason::BuyerCancelled,
             CancellationReason::SellerDeclined,
@@ -676,68 +695,76 @@ class CreateDemoData
         $counts = [];
 
         for ($week = 0; $week < $weeks; $week++) {
-            $when = $start->copy()->addWeeks($week)->setTime(7, 15, 0);
+            $weekStart = $start->copy()->addWeeks($week);
+            $events = [];
 
-            $this->at($when, function () use ($listings, $when): void {
+            $events[] = [$weekStart->copy()->setTime(6, 30, 0), function () use ($listings, $weekStart): void {
                 foreach ($listings as $listing) {
-                    $reject = mt_rand(1, 3) === 1;
-                    $this->addStock->handle(
-                        $listing->fresh(),
-                        $this->harvestPayload('12.00', $reject),
-                        $listing->farmerSeller,
-                    );
+                    $this->topUp($listing);
                 }
 
-                if ((int) $when->format('W') % 4 === 0) {
-                    $this->reprice($listings, $when);
+                if ((int) $weekStart->format('W') % 4 === 0) {
+                    $this->reprice($listings, $weekStart);
                 }
-            });
+            }];
 
             foreach ($pools as $farmKey => $keys) {
                 $counts[$farmKey] = $counts[$farmKey] ?? 0;
+                $orderCount = $ordersPerWeek[$farmKey] + mt_rand(-1, 1);
 
-                for ($n = 0; $n < 4; $n++) {
+                for ($n = 0; $n < $orderCount; $n++) {
                     $counts[$farmKey]++;
-                    $listing = $listings[$keys[($week + $n) % count($keys)]];
+                    $listing = $listings[$keys[($week * 3 + $n) % count($keys)]];
                     $buyer = $buyers[($week + $n + strlen($farmKey)) % count($buyers)];
-                    $preference = $n % 2 === 0
-                        ? FulfillmentPreference::BuyerPickup
-                        : FulfillmentPreference::SellerDelivers;
+                    $preference = $n % 3 === 1
+                        ? FulfillmentPreference::SellerDelivers
+                        : FulfillmentPreference::BuyerPickup;
                     $cancel = $counts[$farmKey] % 10 === 0
                         ? $reasons[(intdiv($counts[$farmKey], 10) - 1) % 3]
                         : null;
                     $online = $cancel === null
                         && $listing->farmerSeller->acceptsOnlinePayment()
                         && mt_rand(1, 10) <= 3;
+                    $quantity = $this->orderQuantity($listing);
+                    $placedAt = $weekStart->copy()
+                        ->addDays(intdiv($n * 7, $orderCount))
+                        ->setTime(7 + mt_rand(0, 10), mt_rand(0, 59), 0);
 
-                    $this->at($when->copy()->setTime(8 + $n, 5, 0), function () use ($buyer, $listing, $preference, $cancel, $online): void {
-                        $order = $this->place($buyer, $listing, 1, $preference, $online);
+                    $events[] = [$placedAt, function () use ($buyer, $listing, $quantity, $preference, $cancel, $online): void {
+                        $this->ensureStock($listing, $quantity);
+                        $order = $this->place($buyer, $listing->fresh(), $quantity, $preference, $online);
 
                         if ($online) {
                             $order = $this->pay($order, $buyer, true);
                         }
 
                         $this->advance($order, $listing->farmerSeller, $buyer, $cancel);
-                    });
+                    }];
                 }
 
-                $walkListing = $listings[$keys[$week % count($keys)]];
-                $this->at($when->copy()->setTime(11, 0, 0), function () use ($walkListing): void {
-                    $fresh = $walkListing->fresh();
-                    $this->walkIns->execute(
-                        $fresh->farmerSeller,
-                        $fresh,
-                        1,
-                        (float) $fresh->price_per_unit,
-                        'Walk-in neighbor',
-                        'Saturday stall walk-in.',
-                    );
-                });
+                $walkIns = mt_rand(1, 2);
+
+                for ($w = 0; $w < $walkIns; $w++) {
+                    $walkListing = $listings[$keys[($week + $w * 5) % count($keys)]];
+                    $walkQuantity = $this->orderQuantity($walkListing);
+                    $events[] = [$weekStart->copy()->addDays(2 + $w * 3)->setTime(11, 30, 0), function () use ($walkListing, $walkQuantity): void {
+                        $this->ensureStock($walkListing, $walkQuantity);
+                        $fresh = $walkListing->fresh();
+                        $this->walkIns->execute(
+                            $fresh->farmerSeller,
+                            $fresh,
+                            $walkQuantity,
+                            round((float) $fresh->price_per_unit * $walkQuantity, 2),
+                            'Walk-in neighbor',
+                            'Stall walk-in.',
+                        );
+                    }];
+                }
 
                 if ($week % 4 === 0) {
                     $removeListing = $listings[$keys[($week + 1) % count($keys)]];
                     $reason = $removalReasons[intdiv($week, 4) % 3];
-                    $this->at($when->copy()->setTime(16, 0, 0), function () use ($removeListing, $reason): void {
+                    $events[] = [$weekStart->copy()->addDays(4)->setTime(17, 0, 0), function () use ($removeListing, $reason): void {
                         $fresh = $removeListing->fresh();
 
                         if ($fresh->sellableQuantity() < 2) {
@@ -745,13 +772,102 @@ class CreateDemoData
                         }
 
                         $this->removeStock->handle($fresh, '1.00', $reason, 'Demo stock removal.', $fresh->farmerSeller);
-                    });
+                    }];
                 }
+            }
+
+            usort($events, fn (array $a, array $b): int => $a[0] <=> $b[0]);
+
+            foreach ($events as [$when, $event]) {
+                $this->at($when, $event);
             }
         }
 
         $this->scriptedPayments($start, $listings, $buyers);
         $this->pastReservations($start, $weeks, $listings, $buyers);
+    }
+
+    /**
+     * Stock a seller keeps on hand: a weekly harvest tops the listing back up
+     * to this, so harvests track sales instead of piling up.
+     */
+    private function targetStock(Listing $listing): float
+    {
+        return $this->stockFor($listing->unit);
+    }
+
+    private function stockFor(?ListingUnit $unit): float
+    {
+        return match ($unit) {
+            ListingUnit::Piece => 24.0,
+            ListingUnit::Bundle => 12.0,
+            default => 10.0,
+        };
+    }
+
+    /**
+     * A believable basket: the listing minimum plus a few steps.
+     */
+    private function orderQuantity(Listing $listing): float
+    {
+        $min = max(0.5, (float) $listing->min_order_quantity);
+        $step = max(0.5, (float) $listing->order_step);
+        $max = match ($listing->unit) {
+            ListingUnit::Piece => 6.0,
+            ListingUnit::Bundle => 4.0,
+            default => 3.0,
+        };
+        $steps = max(0, (int) floor(($max - $min) / $step));
+
+        return $min + $step * mt_rand(0, $steps);
+    }
+
+    /**
+     * Weekly pick: whatever sold since the last harvest is picked again.
+     */
+    private function topUp(Listing $listing): void
+    {
+        $fresh = $listing->fresh();
+
+        if ($fresh->isUpcoming()) {
+            return;
+        }
+
+        $target = $this->targetStock($fresh);
+        $sellable = $fresh->sellableQuantity();
+
+        if ($sellable > $target - 1) {
+            return;
+        }
+
+        $this->harvest($fresh, ceil(($target - $sellable) * 2) / 2);
+    }
+
+    /**
+     * An extra pick when a sale would otherwise run past the stock.
+     */
+    private function ensureStock(Listing $listing, float $quantity): void
+    {
+        $fresh = $listing->fresh();
+
+        if ($fresh->sellableQuantity() >= $quantity) {
+            return;
+        }
+
+        $this->harvest($fresh, ceil(($this->targetStock($fresh) + $quantity - $fresh->sellableQuantity()) * 2) / 2);
+    }
+
+    private function harvest(Listing $listing, float $good): void
+    {
+        if ($good <= 0) {
+            return;
+        }
+
+        $this->addStock->handle(
+            $listing,
+            $this->harvestPayload($good, mt_rand(1, 3) === 1, (float) $listing->price_per_unit, $listing->unit),
+            $listing->farmerSeller,
+        );
     }
 
     /**
@@ -825,6 +941,7 @@ class CreateDemoData
 
         foreach ($scripts as [$listing, $buyer, $mode]) {
             $this->at($when, function () use ($listing, $buyer, $mode): void {
+                $this->ensureStock($listing, 1);
                 $fresh = $listing->fresh();
                 $order = $this->place($buyer, $fresh, 1, FulfillmentPreference::BuyerPickup, true);
 
@@ -940,6 +1057,12 @@ class CreateDemoData
     {
         $moment = $this->end->copy()->subHour();
 
+        $this->at($moment->copy()->subHour(), function () use ($listings): void {
+            foreach ($listings as $listing) {
+                $this->topUp($listing);
+            }
+        });
+
         $live = [
             'pyap' => [
                 [$listings['nena-pechay'], $buyers[0], OrderStatus::Placed],
@@ -961,6 +1084,7 @@ class CreateDemoData
         foreach ($live as $rows) {
             foreach ($rows as [$listing, $buyer, $status]) {
                 $this->at($moment, function () use ($listing, $buyer, $status): void {
+                    $this->ensureStock($listing, 1);
                     $fresh = $listing->fresh();
                     $order = $this->place($buyer, $fresh, 1, FulfillmentPreference::BuyerPickup, false);
                     $steps = match ($status) {
@@ -977,6 +1101,7 @@ class CreateDemoData
         }
 
         $this->at($moment, function () use ($listings, $buyers): void {
+            $this->ensureStock($listings['nena-sitaw'], 1);
             $listing = $listings['nena-sitaw']->fresh();
             $order = $this->place($buyers[3], $listing, 1, FulfillmentPreference::BuyerPickup, true);
             $this->pay($order, $buyers[3], false);
@@ -1131,20 +1256,32 @@ class CreateDemoData
      *     cost_breakdown: null
      * }
      */
-    private function harvestPayload(string $good, bool $reject): array
+    private function harvestPayload(float $good, bool $reject, float $unitPrice, ?ListingUnit $unit): array
     {
-        $rejected = $reject ? 2.0 : 0.0;
-        $harvested = (float) $good + $rejected;
+        $rejectReasons = [
+            HarvestRejectionReason::Pests,
+            HarvestRejectionReason::BruisedDamaged,
+            HarvestRejectionReason::Undersized,
+            HarvestRejectionReason::Spoiled,
+        ];
+        $whole = in_array($unit, [ListingUnit::Piece, ListingUnit::Bundle], true);
+        $rejected = match (true) {
+            ! $reject => 0.0,
+            $whole => max(1.0, round($good * 0.12)),
+            default => max(0.5, round($good * 0.12 * 2) / 2),
+        };
+        $harvested = $good + $rejected;
         $withCost = mt_rand(1, 10) <= 7;
+        $costShare = mt_rand(30, 42) / 100;
 
         return [
             'harvested_on' => now()->toDateString(),
             'quantity_harvested' => number_format($harvested, 2, '.', ''),
             'quantity_rejected' => number_format($rejected, 2, '.', ''),
-            'quantity_good' => number_format((float) $good, 2, '.', ''),
-            'rejection_reason' => $reject ? HarvestRejectionReason::Pests->value : null,
-            'rejection_note' => $reject ? 'Demo reject.' : null,
-            'production_cost' => $withCost ? '80.00' : null,
+            'quantity_good' => number_format($good, 2, '.', ''),
+            'rejection_reason' => $reject ? $rejectReasons[mt_rand(0, count($rejectReasons) - 1)]->value : null,
+            'rejection_note' => $reject ? 'Sorted out at harvest.' : null,
+            'production_cost' => $withCost ? number_format(round($harvested * $unitPrice * $costShare, 2), 2, '.', '') : null,
             'cost_breakdown' => null,
         ];
     }
@@ -1162,7 +1299,7 @@ class CreateDemoData
             'Pechay perked up after a soak.',
         ];
 
-        $completed = Order::query()
+        $completed = $this->demoOrders()
             ->where('status', OrderStatus::Completed)
             ->whereNotNull('buyer_id')
             ->where('source', '!=', OrderSource::WalkIn)
@@ -1194,9 +1331,10 @@ class CreateDemoData
 
     private function chats(): void
     {
-        $orders = Order::query()
+        $orders = $this->demoOrders()
             ->where('status', OrderStatus::Completed)
             ->whereNotNull('buyer_id')
+            ->where('source', '!=', OrderSource::WalkIn)
             ->orderBy('id')
             ->limit(3)
             ->get();
@@ -1361,9 +1499,18 @@ class CreateDemoData
 
     private function historyExists(): bool
     {
+        return $this->demoOrders()->exists();
+    }
+
+    /**
+     * Orders sold by demo sellers only, so fixture orders never get demo reviews or chats.
+     *
+     * @return Builder<Order>
+     */
+    private function demoOrders(): Builder
+    {
         return Order::query()
-            ->whereHas('farmerSeller', fn ($query) => $query->where('email', 'like', '%'.self::EMAIL_DOMAIN))
-            ->exists();
+            ->whereHas('farmerSeller', fn (Builder $query): Builder => $query->where('email', 'like', '%'.self::EMAIL_DOMAIN));
     }
 
     private function reference(): string

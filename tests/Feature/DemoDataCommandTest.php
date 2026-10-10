@@ -14,6 +14,7 @@ use App\Models\Farm;
 use App\Models\HarvestRecord;
 use App\Models\Listing;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\PaymentProof;
 use App\Models\Reservation;
 use App\Models\StockRemoval;
@@ -116,6 +117,26 @@ class DemoDataCommandTest extends TestCase
 
         $this->assertGreaterThan(0, $sales['totals']['orders']);
         $this->assertGreaterThan(0, $harvest['records']);
+
+        foreach ([$pyap, $truofa, $sanctuario] as $farm) {
+            $harvested = (float) HarvestRecord::query()->where('farm_id', $farm->id)->sum('quantity_good');
+            $sold = (float) OrderItem::query()
+                ->whereHas('order', fn ($query) => $query
+                    ->where('farm_id', $farm->id)
+                    ->where('status', OrderStatus::Completed))
+                ->sum('quantity');
+            $this->assertGreaterThan(0.6, $sold / $harvested, $farm->name.' harvests should track sales');
+
+            $weekdays = Order::query()
+                ->where('farm_id', $farm->id)
+                ->where('created_at', '>=', now()->subWeeks(8))
+                ->pluck('created_at')
+                ->map(fn ($createdAt): int => Carbon::parse($createdAt)->dayOfWeek)
+                ->unique();
+            $this->assertGreaterThanOrEqual(4, $weekdays->count(), $farm->name.' orders should spread over the week');
+        }
+
+        $this->assertGreaterThan(1, OrderItem::query()->distinct()->count('quantity'));
     }
 
     public function test_production_refuses_to_run_without_force(): void

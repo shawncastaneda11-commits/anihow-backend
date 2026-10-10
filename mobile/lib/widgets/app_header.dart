@@ -50,7 +50,11 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AniHowSpace.screen),
+          // End inset matches the app bar theme's actionsPadding.
+          padding: const EdgeInsetsDirectional.only(
+            start: AniHowSpace.screen,
+            end: 8,
+          ),
           child: _bar(context),
         ),
       ),

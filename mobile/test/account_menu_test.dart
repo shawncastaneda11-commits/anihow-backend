@@ -204,19 +204,23 @@ void main() {
     expect(title.left, lessThan(40));
     expect(title.right, lessThan(account.left - 100));
 
-    expect(find.byType(AccountMenuButton).hitTestable(), findsOneWidget);
+    final visible = find.byType(AccountMenuButton).hitTestable();
+    expect(visible, findsOneWidget);
+    final marketSpot = tester.getCenter(visible);
 
-    await tester.tap(find.byIcon(Icons.agriculture_outlined));
-    await tester.pump();
-    expect(find.byType(AccountMenuButton).hitTestable(), findsOneWidget);
-
-    await tester.tap(find.byIcon(Icons.receipt_long_outlined));
-    await tester.pump();
-    expect(find.byType(AccountMenuButton).hitTestable(), findsOneWidget);
-
-    await tester.tap(find.byIcon(Icons.favorite_outline));
-    await tester.pump();
-    expect(find.byType(AccountMenuButton).hitTestable(), findsOneWidget);
+    // The account button sits in the same spot on every tab.
+    for (final icon in [
+      Icons.agriculture_outlined,
+      Icons.receipt_long_outlined,
+      Icons.favorite_outline,
+    ]) {
+      await tester.tap(find.byIcon(icon));
+      await tester.pump();
+      expect(visible, findsOneWidget);
+      final spot = tester.getCenter(visible);
+      expect(spot.dx, closeTo(marketSpot.dx, 0.5));
+      expect(spot.dy, closeTo(marketSpot.dy, 0.5));
+    }
   });
 
   testWidgets('a pushed market or orders screen has no account button', (

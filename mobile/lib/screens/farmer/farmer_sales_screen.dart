@@ -11,6 +11,7 @@ import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/brand_tab_bar.dart';
+import '../../widgets/main_tab_app_bar.dart';
 
 typedef SalesRangePicker = Future<DateTimeRange?> Function(BuildContext context);
 
@@ -19,10 +20,18 @@ const Color _pieOthers = Color(0xFFC9C4B8);
 const double _cardGap = 14;
 
 class FarmerSalesScreen extends StatefulWidget {
-  const FarmerSalesScreen({super.key, this.preview, this.chooseCustomRange});
+  const FarmerSalesScreen({
+    super.key,
+    this.preview,
+    this.chooseCustomRange,
+    this.showAccountMenu = false,
+  });
 
   final FarmerAnalytics? preview;
   final SalesRangePicker? chooseCustomRange;
+
+  /// Set by [FarmerShell] only.
+  final bool showAccountMenu;
 
   @override
   State<FarmerSalesScreen> createState() => _FarmerSalesScreenState();
@@ -161,11 +170,12 @@ class _FarmerSalesScreenState extends State<FarmerSalesScreen> {
     final s = AppStrings.of(context);
     final valueAdded = _valueAdded(context);
 
-    return DefaultTabController(
+    final page = DefaultTabController(
       length: 2,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (widget.showAccountMenu) mainTabBodyGap,
           Material(
             color: AniHowColors.brand,
             child: onBrandTabBar(
@@ -212,6 +222,13 @@ class _FarmerSalesScreenState extends State<FarmerSalesScreen> {
           ),
         ],
       ),
+    );
+    if (!widget.showAccountMenu) {
+      return page;
+    }
+    return Scaffold(
+      appBar: mainTabAppBar(title: s.mySales, showAccountMenu: true),
+      body: page,
     );
   }
 

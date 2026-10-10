@@ -112,6 +112,56 @@ class _MenuApi extends ApiClient {
   Future<PagedItems<ListingItem>> farmerListingsPaged() async {
     return const PagedItems(items: [], complete: true);
   }
+
+  @override
+  Future<List<ListingItem>> farmerListings() async => const [];
+
+  @override
+  Future<List<FarmAnnouncement>> farmerAnnouncements() async => const [];
+
+  @override
+  Future<List<OrderRecord>> farmerOrders({String? status}) async => const [];
+
+  @override
+  Future<List<CropCareArticle>> cropCare({
+    String? search,
+    String? category,
+    int? cropTypeId,
+    int? farmId,
+  }) async => const [];
+
+  @override
+  Future<List<StallChat>> stallChats() async => const [];
+
+  @override
+  Future<FarmerAnalytics> farmerAnalytics({
+    String range = 'month',
+    String? from,
+    String? to,
+    int? year,
+    String category = 'all',
+  }) async {
+    return const FarmerAnalytics(
+      period: 'week',
+      windowStart: '2026-09-18',
+      windowEnd: '2026-09-24',
+      summary: FarmerAnalyticsSummary(
+        completedOrders: 0,
+        unitsSold: 0,
+        grossSales: 0,
+        averageDiscount: 0,
+      ),
+      salesPerPeriod: [],
+      unitsPerCropType: [],
+      bestSelling: [],
+      walkInShare: FarmerWalkInShare(
+        walkInOrders: 0,
+        walkInSales: 0,
+        appOrders: 0,
+        appSales: 0,
+      ),
+    );
+  }
 }
 
 UserAccount _buyer() {
@@ -347,17 +397,7 @@ void main() {
       _app(
         auth: auth,
         theme: AniHowTheme.dark(),
-        home: FarmerShell(
-          preview: FarmerShellPreview(
-            pages: const [
-              SizedBox.shrink(),
-              SizedBox.shrink(),
-              SizedBox.shrink(),
-              SizedBox.shrink(),
-              SizedBox.shrink(),
-            ],
-          ),
-        ),
+        home: const FarmerShell(),
       ),
     );
     await tester.pump();

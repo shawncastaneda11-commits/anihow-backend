@@ -90,6 +90,18 @@ Widget _listPage() {
   );
 }
 
+Widget _appBarPage() {
+  return Scaffold(
+    appBar: AppBar(title: const Text('Favorites')),
+    body: Column(
+      children: [
+        const UnverifiedEmailBanner(),
+        Expanded(child: _listPage()),
+      ],
+    ),
+  );
+}
+
 void main() {
   for (final inset in [24.0, 48.0]) {
     for (final textScale in [1.0, 2.0]) {
@@ -141,7 +153,7 @@ void main() {
                 const SizedBox.shrink(),
                 const SizedBox.shrink(),
                 const SizedBox.shrink(),
-                _listPage(),
+                _appBarPage(),
               ],
               inset: inset,
               textScale: textScale,

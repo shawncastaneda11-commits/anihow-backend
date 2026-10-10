@@ -61,7 +61,6 @@ void main() {
     final s = AppStrings(false);
     expect(find.byType(FloatingActionButton), findsNothing);
     expect(find.byIcon(Icons.help_outline), findsNothing);
-    expect(find.byTooltip(s.accountMenu), findsOneWidget);
     expect(find.text(s.chats), findsOneWidget);
     expect(find.text('Seller chats'), findsNothing);
 

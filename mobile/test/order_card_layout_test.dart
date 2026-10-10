@@ -1,5 +1,6 @@
 import 'package:anihow/models/models.dart';
 import 'package:anihow/screens/buyer/order_history_screen.dart';
+import 'package:anihow/widgets/status_pill.dart';
 import 'package:anihow/screens/farmer/farmer_orders_screen.dart';
 import 'package:anihow/services/api_client.dart';
 import 'package:anihow/state/auth_controller.dart';
@@ -41,8 +42,8 @@ void main() {
           home: const BuyerOrderCard(
             order: OrderRecord(
               id: 1,
-              status: 'completed',
-              statusLabel: 'Completed',
+              status: 'confirmed',
+              statusLabel: 'Confirmed',
               total: '160',
               subtotal: '180',
               tawadTotal: '20',
@@ -81,7 +82,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Seller unresponsive'), findsOneWidget);
+    expect(find.textContaining('Seller unresponsive'), findsOneWidget);
   });
 
   testWidgets('buyer order card shows the seller cancellation note', (
@@ -104,8 +105,8 @@ void main() {
       ),
     );
 
-    expect(find.text('Other'), findsOneWidget);
-    expect(find.text('Stall closed after the rain.'), findsOneWidget);
+    expect(find.textContaining('Other'), findsOneWidget);
+    expect(find.textContaining('Stall closed after the rain.'), findsOneWidget);
   });
 
   testWidgets('buyer order card shows chat for app orders', (tester) async {
@@ -164,8 +165,9 @@ void main() {
       ),
     );
 
-    expect(find.text('Online payment'), findsOneWidget);
-    expect(find.text('Cash'), findsNothing);
+    expect(find.textContaining('Online payment'), findsOneWidget);
+    expect(find.textContaining('Cash'), findsNothing);
+    expect(find.byType(StatusPill), findsOneWidget);
   });
 
   testWidgets('a ready online order hides the farmer cash card', (

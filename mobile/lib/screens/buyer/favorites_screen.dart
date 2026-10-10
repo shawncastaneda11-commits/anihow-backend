@@ -8,7 +8,10 @@ import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/async_view.dart';
+import '../../widgets/brand_tab_bar.dart';
+import '../../widgets/main_tab_app_bar.dart';
 import '../../widgets/produce_card.dart';
+import '../../widgets/unverified_email_banner.dart';
 import '../../widgets/profile_avatar_button.dart';
 import 'farm_page_screen.dart';
 import 'shop_profile_screen.dart';
@@ -21,12 +24,20 @@ class FavoritesPreview {
 }
 
 class FavoritesScreen extends StatefulWidget {
-  const FavoritesScreen({super.key, this.preview, this.active = true});
+  const FavoritesScreen({
+    super.key,
+    this.preview,
+    this.active = true,
+    this.showAccountMenu = false,
+  });
 
   final FavoritesPreview? preview;
 
   /// The buyer shell keeps this page alive. Reload when the tab is opened.
   final bool active;
+
+  /// Set by [BuyerShell] only. Pushed copies of this screen omit the menu.
+  final bool showAccountMenu;
 
   @override
   State<FavoritesScreen> createState() => _FavoritesScreenState();
@@ -119,25 +130,33 @@ class _FavoritesScreenState extends State<FavoritesScreen>
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
-    return Column(
-      children: [
-        TabBar(
+    return Scaffold(
+      appBar: mainTabAppBar(
+        title: s.favorites,
+        showAccountMenu: widget.showAccountMenu,
+        bottom: onBrandTabBar(
           controller: _tabs,
           tabs: [
             Tab(text: s.favoriteStores),
             Tab(key: const Key('favorite-farms-tab'), text: s.favoriteFarms),
           ],
         ),
-        Expanded(
-          child: TabBarView(
-            controller: _tabs,
-            children: [
-              _storesTab(s),
-              _farmsTab(s),
-            ],
+      ),
+      body: Column(
+        children: [
+          mainTabBodyGap,
+          const UnverifiedEmailBanner(),
+          Expanded(
+            child: TabBarView(
+              controller: _tabs,
+              children: [
+                _storesTab(s),
+                _farmsTab(s),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -150,7 +169,12 @@ class _FavoritesScreenState extends State<FavoritesScreen>
         return RefreshIndicator(
           onRefresh: _reload,
           child: ListView.separated(
-            padding: AniHowSpace.screenPadding,
+            padding: const EdgeInsets.fromLTRB(
+              AniHowSpace.screen,
+              0,
+              AniHowSpace.screen,
+              AniHowSpace.screen,
+            ),
             itemCount: items.length,
             separatorBuilder: (_, _) =>
                 const SizedBox(height: AniHowSpace.cardGap),
@@ -247,7 +271,12 @@ class _FavoritesScreenState extends State<FavoritesScreen>
         return RefreshIndicator(
           onRefresh: _reload,
           child: ListView.separated(
-            padding: AniHowSpace.screenPadding,
+            padding: const EdgeInsets.fromLTRB(
+              AniHowSpace.screen,
+              0,
+              AniHowSpace.screen,
+              AniHowSpace.screen,
+            ),
             itemCount: items.length,
             separatorBuilder: (_, _) =>
                 const SizedBox(height: AniHowSpace.cardGap),

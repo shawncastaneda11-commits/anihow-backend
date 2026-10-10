@@ -389,6 +389,9 @@ class AppStrings {
   String get reviews => t('Reviews', 'Mga review');
   String get noReviewsYet => t('No reviews yet.', 'Wala pang review.');
   String get orderHistory => t('Order history', 'Kasaysayan ng order');
+  String get pastOrders => t('Past', 'Nakaraan');
+  String stepOfFour(int step) => t('Step $step of 4', 'Hakbang $step sa 4');
+  String moreItems(int count) => t('+$count more', '+$count pa');
 
   String get back => t('Back', 'Bumalik');
   String get cancel => t('Cancel', 'Kansela');

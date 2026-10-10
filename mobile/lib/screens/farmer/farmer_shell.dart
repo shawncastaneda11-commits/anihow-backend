@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_strings.dart';
 import '../../navigation/route_observer.dart';
-import '../../widgets/account_menu_button.dart';
-import '../../widgets/notification_bell.dart';
 import '../../widgets/order_chat_head.dart';
 import '../chat/order_chats_screen.dart';
 import 'crop_care_screen.dart';
@@ -43,29 +41,19 @@ class _FarmerShellState extends State<FarmerShell> {
     final pages =
         widget.preview?.pages ??
         [
-          const FarmerListingsScreen(),
-          FarmerOrdersScreen(active: _index == 1),
-          const FarmerSalesScreen(),
-          const CropCareScreen(),
+          const FarmerListingsScreen(showAccountMenu: true),
+          FarmerOrdersScreen(active: _index == 1, showAccountMenu: true),
+          const FarmerSalesScreen(showAccountMenu: true),
+          const CropCareScreen(showAccountMenu: true),
           OrderChatsScreen(
             forSeller: true,
             embedded: true,
             active: _index == 4,
+            showAccountMenu: true,
           ),
         ];
-    final titles = [
-      s.myListings,
-      s.incomingOrders,
-      s.mySales,
-      s.cropCare,
-      s.chats,
-    ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(titles[_index]),
-        actions: const [NotificationBellButton(), AccountMenuButton()],
-      ),
       body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(

@@ -10,11 +10,8 @@ import '../../services/buyer_location.dart';
 import '../../state/auth_controller.dart';
 import '../../state/preferences_controller.dart';
 import '../../theme/anihow_space.dart';
-import '../../widgets/account_menu_button.dart';
-import '../../widgets/app_header.dart';
+import '../../widgets/main_tab_app_bar.dart';
 import '../../widgets/async_view.dart';
-import '../../widgets/cart_icon_button.dart';
-import '../../widgets/notification_bell.dart';
 import '../../widgets/produce_card.dart';
 import '../../widgets/unverified_email_banner.dart';
 import 'announcements_feed_screen.dart';
@@ -350,19 +347,15 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     final s = AppStrings.of(context);
     final newest = _updates.isEmpty ? null : _updates.first;
     final showUpdates = !_updatesHidden && newest != null;
-    return Column(
+    return Scaffold(
+      appBar: mainTabAppBar(
+        title: s.marketplace,
+        showCart: true,
+        showAccountMenu: widget.showAccountMenu,
+      ),
+      body: Column(
       children: [
-        AppHeader(
-          title: s.marketplace,
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CartIconButton(),
-              const NotificationBellButton(),
-              if (widget.showAccountMenu) const AccountMenuButton(),
-            ],
-          ),
-        ),
+        mainTabBodyGap,
         const UnverifiedEmailBanner(),
         Expanded(
           child: RefreshIndicator(
@@ -455,6 +448,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           ),
         ),
       ],
+      ),
     );
   }
 

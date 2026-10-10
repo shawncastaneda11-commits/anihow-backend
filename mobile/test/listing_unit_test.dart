@@ -33,7 +33,7 @@ void main() {
   testWidgets('unit picker shows only the units the crop allows', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(400, 900));
+    await tester.binding.setSurfaceSize(const Size(400, 1600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     const crop = CategoryItem(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -6,6 +7,7 @@ import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../theme/anihow_space.dart';
+import '../../theme/readable_accent.dart';
 import '../../widgets/dashed_photo_box.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/hint_card.dart';
@@ -64,6 +66,10 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   bool _isActive = true;
   bool _discountOpen = false;
   bool _busy = false;
+  final _photoKey = GlobalKey();
+  final _detailsKey = GlobalKey();
+  final _priceKey = GlobalKey();
+  final _fourthKey = GlobalKey();
   late Future<List<CategoryItem>> _cropTypes;
   ListingItem? _listing;
 
@@ -90,10 +96,82 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     }
     _cropTypes =
         widget.cropTypes ?? context.read<AuthController>().api.cropTypes();
+    for (final controller in [_name, _price, _quantity, _harvestedQty]) {
+      controller.addListener(_refreshSteps);
+    }
+  }
+
+  void _refreshSteps() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  bool get _photoDone {
+    final picked = _imagePath != null && _imagePath!.isNotEmpty;
+    final existing =
+        widget.listing?.imageUrl != null &&
+        widget.listing!.imageUrl!.isNotEmpty;
+    return picked || existing;
+  }
+
+  bool get _detailsDone => _name.text.trim().isNotEmpty && _cropTypeId != null;
+
+  bool get _priceDone {
+    final price = double.tryParse(_price.text.trim()) ?? 0;
+    return _unit != null && _unit!.isNotEmpty && price > 0;
+  }
+
+  bool get _fourthDone {
+    if (widget.listing != null) {
+      return true;
+    }
+    if (_isUpcoming) {
+      return (double.tryParse(_quantity.text.trim()) ?? 0) > 0;
+    }
+    return (double.tryParse(_harvestedQty.text.trim()) ?? 0) > 0;
+  }
+
+  String _fourthLabel(AppStrings s) {
+    if (widget.listing != null) {
+      return s.stepStock;
+    }
+    if (_isUpcoming) {
+      return s.stepExpected;
+    }
+    return s.harvestSection;
+  }
+
+  String _saveHint(AppStrings s) {
+    final missing = <String>[
+      if (!_photoDone) s.stepPhoto.toLowerCase(),
+      if (!_detailsDone) s.stepDetails.toLowerCase(),
+      if (!_priceDone) s.stepPrice.toLowerCase(),
+      if (!_fourthDone) _fourthLabel(s).toLowerCase(),
+    ];
+    if (missing.isEmpty) {
+      return s.everythingFilledIn;
+    }
+    return s.notFilledYet(missing.join(', '));
+  }
+
+  void _scrollTo(GlobalKey key) {
+    final target = key.currentContext;
+    if (target == null) {
+      return;
+    }
+    Scrollable.ensureVisible(
+      target,
+      duration: const Duration(milliseconds: 250),
+      alignment: 0.05,
+    );
   }
 
   @override
   void dispose() {
+    for (final controller in [_name, _price, _quantity, _harvestedQty]) {
+      controller.removeListener(_refreshSteps);
+    }
     _name.dispose();
     _price.dispose();
     _quantity.dispose();
@@ -651,6 +729,21 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
               icon: const Icon(Icons.delete_outline),
             ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(44),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+            child: _FormStepBar(
+              steps: [
+                (s.stepPhoto, _photoDone, _photoKey),
+                (s.stepDetails, _detailsDone, _detailsKey),
+                (s.stepPrice, _priceDone, _priceKey),
+                (_fourthLabel(s), _fourthDone, _fourthKey),
+              ],
+              onTap: _scrollTo,
+            ),
+          ),
+        ),
       ),
       body: FutureBuilder<List<CategoryItem>>(
         future: _cropTypes,
@@ -668,14 +761,19 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
             children: [
               Expanded(
                 child: ListView(
+                  scrollCacheExtent: const ScrollCacheExtent.pixels(8000),
                   padding: AniHowSpace.screenPadding,
                   children: [
-                    AniHowFormCard(
+                    KeyedSubtree(
+                      key: _photoKey,
                       child: DashedPhotoBox(
                         filePath: _imagePath,
                         networkUrl: widget.listing?.imageUrl,
                         onTap: _pickPhoto,
                         emptyLabel: s.addPhoto,
+                        hint: s.listingPhotoHint,
+                        changeLabel: s.changePhoto,
+                        height: 190,
                       ),
                     ),
                     if (_listing?.isTakenDown == true) ...[
@@ -689,360 +787,464 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                       ),
                     ],
                     const SizedBox(height: AniHowSpace.cardGap),
-                    AniHowHintCard(
-                      icon: Icons.photo_camera_outlined,
-                      title: s.listingPhotoHint,
-                      tone: AniHowHintTone.brand,
-                    ),
-                    const SizedBox(height: AniHowSpace.section),
                     AniHowFormCard(
-                      title: s.listingDetails,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          AniHowField(
-                            label: s.titleLabel,
-                            child: TextField(
-                              controller: _name,
-                              textCapitalization: TextCapitalization.words,
-                              decoration: InputDecoration(
-                                hintText: s.nameProduce,
+                      child: KeyedSubtree(
+                        key: _detailsKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _NumberedHeading(
+                              number: '1',
+                              title: s.whatAreYouSelling,
+                            ),
+                            const SizedBox(height: AniHowSpace.fieldGap),
+                            AniHowField(
+                              label: s.titleLabel,
+                              child: TextField(
+                                controller: _name,
+                                textCapitalization: TextCapitalization.words,
+                                decoration: InputDecoration(
+                                  hintText: s.nameProduce,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: AniHowSpace.fieldGap),
-                          AniHowField(
-                            label: s.cropType,
-                            child: DropdownButtonFormField<int>(
-                              initialValue: _cropTypeId,
-                              items: cropTypes
-                                  .map(
-                                    (cropType) => DropdownMenuItem(
-                                      value: cropType.id,
-                                      child: Text(
-                                        cropType.labelFor(
+                            const SizedBox(height: AniHowSpace.fieldGap),
+                            AniHowField(
+                              label: s.cropType,
+                              child: DropdownButtonFormField<int>(
+                                initialValue: _cropTypeId,
+                                items: cropTypes
+                                    .map(
+                                      (cropType) => DropdownMenuItem(
+                                        value: cropType.id,
+                                        child: Text(
+                                          cropType.labelFor(
+                                            context
+                                                .watch<PreferencesController>()
+                                                .language,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (value) => setState(() {
+                                  _cropTypeId = value;
+                                  _unit = _resolvedUnit(
+                                    _selectedCrop(cropTypes),
+                                  );
+                                }),
+                              ),
+                            ),
+                            const SizedBox(height: AniHowSpace.fieldGap),
+                            AniHowField(
+                              label: s.howWasItGrown,
+                              child: _GrowingMethodChips(
+                                value:
+                                    context
+                                                .watch<AuthController>()
+                                                .user
+                                                ?.farmIsOrganicCertified ==
+                                            true ||
+                                        _growingMethod != 'certified_organic'
+                                    ? _growingMethod
+                                    : '',
+                                certified:
+                                    context
+                                        .watch<AuthController>()
+                                        .user
+                                        ?.farmIsOrganicCertified ==
+                                    true,
+                                notStated: s.notStated,
+                                naturallyGrown: s.naturallyGrown,
+                                certifiedOrganic: s.certifiedOrganic,
+                                onChanged: (value) =>
+                                    setState(() => _growingMethod = value),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AniHowSpace.cardGap),
+                    AniHowFormCard(
+                      child: KeyedSubtree(
+                        key: _priceKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _NumberedHeading(number: '2', title: s.stepPrice),
+                            const SizedBox(height: AniHowSpace.fieldGap),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (selectedCrop != null)
+                                  Expanded(
+                                    child: AniHowField(
+                                      label: s.soldBy,
+                                      child: DropdownButtonFormField<String>(
+                                        key: ValueKey(
+                                          'listing-unit-${selectedCrop.id}-${_unit ?? ''}',
+                                        ),
+                                        initialValue: _resolvedUnit(
+                                          selectedCrop,
+                                        ),
+                                        isExpanded: true,
+                                        items: _unitItems(selectedCrop, s),
+                                        onChanged: (value) {
+                                          if (value == null ||
+                                              value.startsWith('#')) {
+                                            return;
+                                          }
+                                          setState(() {
+                                            _unit = value;
+                                            if (sellsWhole(value)) {
+                                              final min =
+                                                  double.tryParse(
+                                                    _minOrder.text,
+                                                  ) ??
+                                                  1;
+                                              if (orderHundredths(min) % 100 !=
+                                                  0) {
+                                                _minOrder.text = '1';
+                                              }
+                                              final step =
+                                                  double.tryParse(
+                                                    _orderStep.text,
+                                                  ) ??
+                                                  1;
+                                              if (orderHundredths(step) % 100 !=
+                                                  0) {
+                                                _orderStep.text = '1';
+                                              }
+                                            }
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                if (selectedCrop != null)
+                                  const SizedBox(width: AniHowSpace.cardGap),
+                                Expanded(
+                                  child: AniHowField(
+                                    label: s.price,
+                                    child: TextField(
+                                      controller: _price,
+                                      keyboardType:
+                                          const TextInputType.numberWithOptions(
+                                            decimal: true,
+                                          ),
+                                      decoration: InputDecoration(
+                                        prefixText: '₱ ',
+                                        suffixText: _unit == null
+                                            ? null
+                                            : '/ $_unit',
+                                        hintText: '0.00',
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (_unit != null) ...[
+                              const SizedBox(height: AniHowSpace.fieldGap),
+                              _orderRuleFields(s),
+                            ],
+                            if (floor != null && floor.isNotEmpty) ...[
+                              const SizedBox(height: AniHowSpace.cardGap),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.info_outline,
+                                    size: 16,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.62),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      s.floorPriceFor(
+                                        selectedCrop!.labelFor(
                                           context
                                               .watch<PreferencesController>()
                                               .language,
                                         ),
+                                        AniHowMoney.peso(floor),
+                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.72),
+                                          ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AniHowSpace.cardGap),
+                    AniHowFormCard(
+                      child: KeyedSubtree(
+                        key: _fourthKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (widget.listing == null && !_isUpcoming) ...[
+                              _NumberedHeading(
+                                number: '3',
+                                title: s.harvestSection,
+                              ),
+                              const SizedBox(height: AniHowSpace.fieldGap),
+                              HarvestFields(
+                                valueAdded: selectedCrop?.isValueAdded == true,
+                                unit: _unit ?? selectedCrop?.unit ?? '',
+                                harvestedOnLabel: s.shortDate(_harvestDate),
+                                harvested: _harvestedQty,
+                                rejected: _rejected,
+                                reason: _rejectionReason,
+                                note: _rejectionNote,
+                                cost: _productionCost,
+                                costs: _costs,
+                                breakdownOpen: _breakdown,
+                                showReasonError: _showReasonError,
+                                onChanged: () => setState(_syncCost),
+                                onPickDate: () => _pickDate(
+                                  current: _harvestDate,
+                                  firstDate: DateTime.now().subtract(
+                                    const Duration(days: 365),
+                                  ),
+                                  lastDate: DateTime.now(),
+                                  onPicked: (date) =>
+                                      setState(() => _harvestDate = date),
+                                ),
+                                onReason: (value) =>
+                                    setState(() => _rejectionReason = value),
+                                onToggleBreakdown: () => setState(() {
+                                  _breakdown = !_breakdown;
+                                  _syncCost();
+                                }),
+                              ),
+                            ],
+                            if (widget.listing == null && _isUpcoming) ...[
+                              _NumberedHeading(
+                                number: '3',
+                                title: s.expectedHarvest,
+                              ),
+                              const SizedBox(height: AniHowSpace.fieldGap),
+                              AniHowField(
+                                label: s.expectedQuantity,
+                                child: TextField(
+                                  key: const ValueKey('listing-quantity'),
+                                  controller: _quantity,
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                        decimal: true,
+                                      ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(s.expectedQuantityHint),
+                              ),
+                            ],
+                            if (widget.listing != null) ...[
+                              _NumberedHeading(
+                                number: '3',
+                                title: s.stockSection,
+                              ),
+                              const SizedBox(height: AniHowSpace.fieldGap),
+                              AniHowField(
+                                label: s.quantity,
+                                child: TextField(
+                                  key: const ValueKey('listing-quantity'),
+                                  controller: _quantity,
+                                  readOnly: !widget.listing!.needsActualHarvest,
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                        decimal: true,
+                                      ),
+                                ),
+                              ),
+                              if (widget.listing!.needsActualHarvest)
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: TextButton(
+                                    key: const ValueKey(
+                                      'record-actual-harvest',
+                                    ),
+                                    onPressed: () => showAddStockSheet(
+                                      context,
+                                      widget.listing!,
+                                      actual: true,
+                                    ),
+                                    child: Text(s.recordActualHarvest),
+                                  ),
+                                ),
+                              if (!widget.listing!.needsActualHarvest)
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        key: const ValueKey('add-stock'),
+                                        onPressed: () => showAddStockSheet(
+                                          context,
+                                          widget.listing!,
+                                        ),
+                                        child: Text(s.addStock),
                                       ),
                                     ),
-                                  )
-                                  .toList(),
-                              onChanged: (value) => setState(() {
-                                _cropTypeId = value;
-                                _unit = _resolvedUnit(_selectedCrop(cropTypes));
-                              }),
-                            ),
-                          ),
-                          const SizedBox(height: AniHowSpace.fieldGap),
-                          AniHowField(
-                            label: s.howWasItGrown,
-                            child: DropdownButtonFormField<String>(
-                              key: const ValueKey('listing-growing-method'),
-                              initialValue:
-                                  context
-                                              .watch<AuthController>()
-                                              .user
-                                              ?.farmIsOrganicCertified ==
-                                          true ||
-                                      _growingMethod != 'certified_organic'
-                                  ? _growingMethod
-                                  : '',
-                              isExpanded: true,
-                              items: [
-                                DropdownMenuItem(
-                                  value: '',
-                                  child: Text(s.notStated),
+                                    const SizedBox(width: AniHowSpace.cardGap),
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        key: const ValueKey('remove-stock'),
+                                        onPressed: () async {
+                                          final changed =
+                                              await showRemoveStockSheet(
+                                                context,
+                                                widget.listing!,
+                                              );
+                                          if (changed && mounted) {
+                                            await _reloadListing();
+                                          }
+                                        },
+                                        child: Text(s.removeStock),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                DropdownMenuItem(
-                                  value: 'naturally_grown',
-                                  child: Text(s.naturallyGrown),
+                              const SizedBox(height: AniHowSpace.fieldGap),
+                              _DateField(
+                                label: s.harvestedOnLabel,
+                                value: _harvestedOn,
+                                clearLabel: s.clearDate,
+                                emptyLabel: s.dateNotSet,
+                                formatted: _harvestedOn == null
+                                    ? null
+                                    : s.shortDate(_harvestedOn!),
+                                onPick: () => _pickDate(
+                                  current: _harvestedOn,
+                                  lastDate: DateTime.now(),
+                                  onPicked: (date) =>
+                                      setState(() => _harvestedOn = date),
                                 ),
-                                if (context
-                                        .watch<AuthController>()
-                                        .user
-                                        ?.farmIsOrganicCertified ==
-                                    true)
-                                  DropdownMenuItem(
-                                    value: 'certified_organic',
-                                    child: Text(s.certifiedOrganic),
-                                  ),
-                              ],
-                              onChanged: (value) {
-                                setState(() => _growingMethod = value ?? '');
-                              },
-                            ),
-                          ),
-                          if (selectedCrop != null) ...[
-                            const SizedBox(height: AniHowSpace.fieldGap),
-                            AniHowField(
-                              label: s.unit,
-                              child: DropdownButtonFormField<String>(
-                                key: ValueKey(
-                                  'listing-unit-${selectedCrop.id}-${_unit ?? ''}',
-                                ),
-                                initialValue: _resolvedUnit(selectedCrop),
-                                isExpanded: true,
-                                items: _unitItems(selectedCrop, s),
-                                onChanged: (value) {
-                                  if (value == null || value.startsWith('#')) {
-                                    return;
-                                  }
-                                  setState(() {
-                                    _unit = value;
-                                    if (sellsWhole(value)) {
-                                      final min =
-                                          double.tryParse(_minOrder.text) ?? 1;
-                                      if (orderHundredths(min) % 100 != 0) {
-                                        _minOrder.text = '1';
-                                      }
-                                      final step =
-                                          double.tryParse(_orderStep.text) ?? 1;
-                                      if (orderHundredths(step) % 100 != 0) {
-                                        _orderStep.text = '1';
-                                      }
-                                    }
-                                  });
-                                },
+                                onClear: () =>
+                                    setState(() => _harvestedOn = null),
                               ),
-                            ),
+                            ],
                           ],
-                          if (_unit != null) ...[
-                            const SizedBox(height: AniHowSpace.fieldGap),
-                            _orderRuleFields(s),
-                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AniHowSpace.cardGap),
+                    AniHowFormCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _NumberedHeading(
+                            number: '4',
+                            title: s.whenCanBuyersOrder,
+                          ),
                           const SizedBox(height: AniHowSpace.fieldGap),
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
-                                child: AniHowField(
-                                  label: s.price,
-                                  child: TextField(
-                                    controller: _price,
-                                    keyboardType:
-                                        const TextInputType.numberWithOptions(
-                                          decimal: true,
-                                        ),
-                                    decoration: const InputDecoration(
-                                      prefixText: '₱ ',
-                                      hintText: '0.00',
-                                    ),
+                                child: _DateField(
+                                  label: s.availableFromLabel,
+                                  value: _availableFrom,
+                                  clearLabel: s.clearDate,
+                                  emptyLabel: s.dateNotSet,
+                                  formatted: _availableFrom == null
+                                      ? null
+                                      : s.shortDate(_availableFrom!),
+                                  onPick: () => _pickDate(
+                                    current: _availableFrom,
+                                    onPicked: (date) =>
+                                        setState(() => _availableFrom = date),
                                   ),
+                                  onClear: () =>
+                                      setState(() => _availableFrom = null),
                                 ),
                               ),
                               const SizedBox(width: AniHowSpace.cardGap),
-                              if (widget.listing != null || _isUpcoming)
-                                Expanded(
-                                  child: AniHowField(
-                                    label: _isUpcoming && widget.listing == null
-                                        ? s.expectedQuantity
-                                        : s.quantity,
-                                    child: TextField(
-                                      key: const ValueKey('listing-quantity'),
-                                      controller: _quantity,
-                                      readOnly:
-                                          widget.listing != null &&
-                                          !widget.listing!.needsActualHarvest,
-                                      keyboardType:
-                                          const TextInputType.numberWithOptions(
-                                            decimal: true,
-                                          ),
-                                    ),
+                              Expanded(
+                                child: _DateField(
+                                  label: s.availableUntilLabel,
+                                  value: _availableUntil,
+                                  clearLabel: s.clearDate,
+                                  emptyLabel: s.dateNotSet,
+                                  formatted: _availableUntil == null
+                                      ? null
+                                      : s.shortDate(_availableUntil!),
+                                  onPick: () => _pickDate(
+                                    current: _availableUntil,
+                                    onPicked: (date) =>
+                                        setState(() => _availableUntil = date),
                                   ),
+                                  onClear: () =>
+                                      setState(() => _availableUntil = null),
                                 ),
+                              ),
                             ],
                           ),
-                          if (widget.listing == null && _isUpcoming)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: Text(s.expectedQuantityHint),
-                            ),
-                          if (widget.listing != null &&
-                              widget.listing!.needsActualHarvest)
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: TextButton(
-                                key: const ValueKey('record-actual-harvest'),
-                                onPressed: () => showAddStockSheet(
-                                  context,
-                                  widget.listing!,
-                                  actual: true,
-                                ),
-                                child: Text(s.recordActualHarvest),
-                              ),
-                            ),
-                          if (widget.listing != null &&
-                              !widget.listing!.needsActualHarvest)
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton(
-                                    key: const ValueKey('add-stock'),
-                                    onPressed: () => showAddStockSheet(
-                                      context,
-                                      widget.listing!,
-                                    ),
-                                    child: Text(s.addStock),
-                                  ),
-                                ),
-                                const SizedBox(width: AniHowSpace.cardGap),
-                                Expanded(
-                                  child: OutlinedButton(
-                                    key: const ValueKey('remove-stock'),
-                                    onPressed: () async {
-                                      final changed = await showRemoveStockSheet(
-                                        context,
-                                        widget.listing!,
-                                      );
-                                      if (changed && mounted) {
-                                        await _reloadListing();
-                                      }
-                                    },
-                                    child: Text(s.removeStock),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          if (floor != null && floor.isNotEmpty) ...[
-                            const SizedBox(height: AniHowSpace.cardGap),
-                            Text(
-                              s.floorPriceFor(
-                                selectedCrop!.labelFor(
-                                  context
-                                      .watch<PreferencesController>()
-                                      .language,
-                                ),
-                                AniHowMoney.peso(floor),
-                              ),
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.7),
-                                  ),
-                            ),
-                          ],
-                          const SizedBox(height: AniHowSpace.fieldGap),
-                          _DateField(
-                            label: s.availableFromLabel,
-                            value: _availableFrom,
-                            clearLabel: s.clearDate,
-                            emptyLabel: s.dateNotSet,
-                            formatted: _availableFrom == null
-                                ? null
-                                : s.shortDate(_availableFrom!),
-                            onPick: () => _pickDate(
-                              current: _availableFrom,
-                              onPicked: (date) =>
-                                  setState(() => _availableFrom = date),
-                            ),
-                            onClear: () =>
-                                setState(() => _availableFrom = null),
-                          ),
-                          const SizedBox(height: AniHowSpace.fieldGap),
-                          _DateField(
-                            label: s.availableUntilLabel,
-                            value: _availableUntil,
-                            clearLabel: s.clearDate,
-                            emptyLabel: s.dateNotSet,
-                            formatted: _availableUntil == null
-                                ? null
-                                : s.shortDate(_availableUntil!),
-                            onPick: () => _pickDate(
-                              current: _availableUntil,
-                              onPicked: (date) =>
-                                  setState(() => _availableUntil = date),
-                            ),
-                            onClear: () =>
-                                setState(() => _availableUntil = null),
-                          ),
-                          if (widget.listing == null && !_isUpcoming) ...[
-                            const SizedBox(height: AniHowSpace.section),
-                            HarvestFields(
-                              valueAdded: selectedCrop?.isValueAdded == true,
-                              unit: _unit ?? selectedCrop?.unit ?? '',
-                              harvestedOnLabel: s.shortDate(_harvestDate),
-                              harvested: _harvestedQty,
-                              rejected: _rejected,
-                              reason: _rejectionReason,
-                              note: _rejectionNote,
-                              cost: _productionCost,
-                              costs: _costs,
-                              breakdownOpen: _breakdown,
-                              showReasonError: _showReasonError,
-                              onChanged: () => setState(_syncCost),
-                              onPickDate: () => _pickDate(
-                                current: _harvestDate,
-                                firstDate: DateTime.now().subtract(
-                                  const Duration(days: 365),
-                                ),
-                                lastDate: DateTime.now(),
-                                onPicked: (date) =>
-                                    setState(() => _harvestDate = date),
-                              ),
-                              onReason: (value) =>
-                                  setState(() => _rejectionReason = value),
-                              onToggleBreakdown: () => setState(() {
-                                _breakdown = !_breakdown;
-                                _syncCost();
-                              }),
-                            ),
-                          ],
-                          if (widget.listing != null) ...[
-                            const SizedBox(height: AniHowSpace.fieldGap),
-                            _DateField(
-                              label: s.harvestedOnLabel,
-                              value: _harvestedOn,
-                              clearLabel: s.clearDate,
-                              emptyLabel: s.dateNotSet,
-                              formatted: _harvestedOn == null
-                                  ? null
-                                  : s.shortDate(_harvestedOn!),
-                              onPick: () => _pickDate(
-                                current: _harvestedOn,
-                                lastDate: DateTime.now(),
-                                onPicked: (date) =>
-                                    setState(() => _harvestedOn = date),
-                              ),
-                              onClear: () =>
-                                  setState(() => _harvestedOn = null),
-                            ),
-                          ],
-                          const SizedBox(height: AniHowSpace.fieldGap),
                           if (_listing != null && !_listing!.isTakenDown) ...[
+                            const Divider(height: 28),
                             SwitchListTile(
                               key: const Key('listing-active-switch'),
                               contentPadding: EdgeInsets.zero,
-                              title: Text(
-                                _isActive ? s.listingActive : s.listingInactive,
-                              ),
+                              title: Text(s.showInTheMarketTitle),
                               value: _isActive,
                               onChanged: _busy
                                   ? null
                                   : (value) =>
                                         setState(() => _isActive = value),
                             ),
-                            const SizedBox(height: AniHowSpace.fieldGap),
-                          ],
-                          AniHowField(
-                            label: s.description,
-                            child: TextField(
-                              controller: _description,
-                              maxLines: 4,
-                              textCapitalization: TextCapitalization.sentences,
-                              decoration: InputDecoration(
-                                hintText: s.shortNote,
-                              ),
+                            Text(
+                              _isActive
+                                  ? s.buyersCanOrderOnceSaved
+                                  : s.savedAsHidden,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.72),
+                                  ),
                             ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AniHowSpace.cardGap),
+                    AniHowFormCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _NumberedHeading(
+                            number: '5',
+                            title: s.description,
+                            trailing: s.optionalLabel,
+                          ),
+                          const SizedBox(height: AniHowSpace.fieldGap),
+                          TextField(
+                            controller: _description,
+                            maxLines: 4,
+                            textCapitalization: TextCapitalization.sentences,
+                            decoration: InputDecoration(hintText: s.shortNote),
                           ),
                         ],
                       ),
                     ),
                     if (_listing != null && _showDiscount(context)) ...[
-                      const SizedBox(height: AniHowSpace.section),
+                      const SizedBox(height: AniHowSpace.cardGap),
                       Card(
                         child: Theme(
                           data: Theme.of(context)
@@ -1052,6 +1254,29 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                             initiallyExpanded: _discountOpen,
                             onExpansionChanged: (open) =>
                                 setState(() => _discountOpen = open),
+                            leading: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color:
+                                    Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? const Color(0xFF5A431C)
+                                    : const Color(0xFFFBF3DC),
+                                shape: BoxShape.circle,
+                              ),
+                              child: SizedBox(
+                                width: 36,
+                                height: 36,
+                                child: Icon(
+                                  Icons.local_offer_outlined,
+                                  size: 18,
+                                  color:
+                                      Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? const Color(0xFFF6D48A)
+                                      : const Color(0xFF7A4E0C),
+                                ),
+                              ),
+                            ),
                             tilePadding: const EdgeInsets.symmetric(
                               horizontal: 16,
                             ),
@@ -1154,35 +1379,59 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                   ],
                 ),
               ),
-              SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AniHowSpace.screen,
-                    8,
-                    AniHowSpace.screen,
-                    AniHowSpace.screen,
+              Material(
+                color: Theme.of(context).cardColor,
+                elevation: 8,
+                shadowColor: Colors.black26,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Theme.of(context).dividerColor),
+                    ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (_formError != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Text(
-                            _formError!,
-                            key: const ValueKey('listing-form-error'),
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                          ),
-                        ),
-                      PrimaryButton(
-                        label: s.saveListing,
-                        busy: _busy,
-                        onPressed: _save,
+                  child: SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AniHowSpace.screen,
+                        8,
+                        AniHowSpace.screen,
+                        AniHowSpace.screen,
                       ),
-                    ],
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (_formError != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Text(
+                                _formError!,
+                                key: const ValueKey('listing-form-error'),
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                              ),
+                            ),
+                          PrimaryButton(
+                            label: s.saveListing,
+                            busy: _busy,
+                            onPressed: _save,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _saveHint(s),
+                            key: const ValueKey('form-save-hint'),
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.72),
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -1226,17 +1475,203 @@ class _DateField extends StatelessWidget {
                 alignment: Alignment.centerLeft,
               ),
               onPressed: onPick,
-              child: Text(formatted ?? emptyLabel),
+              child: Row(
+                children: [
+                  const Icon(Icons.calendar_today_outlined, size: 16),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      formatted ?? emptyLabel,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          if (value != null) ...[
-            const SizedBox(width: 8),
-            SizedBox(
-              height: 48,
-              child: TextButton(onPressed: onClear, child: Text(clearLabel)),
+          if (value != null)
+            IconButton(
+              tooltip: clearLabel,
+              onPressed: onClear,
+              icon: const Icon(Icons.close),
             ),
-          ],
         ],
+      ),
+    );
+  }
+}
+
+class _NumberedHeading extends StatelessWidget {
+  const _NumberedHeading({
+    required this.number,
+    required this.title,
+    this.trailing,
+  });
+
+  final String number;
+  final String title;
+  final String? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: accentTint(context),
+            shape: BoxShape.circle,
+          ),
+          child: SizedBox(
+            width: 28,
+            height: 28,
+            child: Center(
+              child: Text(
+                number,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: readableAccent(context),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            title,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        if (trailing != null)
+          Text(
+            trailing!,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.62),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _GrowingMethodChips extends StatelessWidget {
+  const _GrowingMethodChips({
+    required this.value,
+    required this.certified,
+    required this.notStated,
+    required this.naturallyGrown,
+    required this.certifiedOrganic,
+    required this.onChanged,
+  });
+
+  final String value;
+  final bool certified;
+  final String notStated;
+  final String naturallyGrown;
+  final String certifiedOrganic;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final options = <(String, String)>[
+      ('', notStated),
+      ('naturally_grown', naturallyGrown),
+      if (certified) ('certified_organic', certifiedOrganic),
+    ];
+    return Wrap(
+      key: const ValueKey('listing-growing-method'),
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final option in options)
+          ChoiceChip(
+            label: Text(option.$2),
+            selected: value == option.$1,
+            selectedColor: const Color(0xFF1F5A3E),
+            backgroundColor: dark
+                ? const Color(0xFF2A3330)
+                : const Color(0xFFF1EFE8),
+            labelStyle: TextStyle(
+              color: value == option.$1
+                  ? Colors.white
+                  : Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
+            onSelected: (_) => onChanged(option.$1),
+          ),
+      ],
+    );
+  }
+}
+
+class _FormStepBar extends StatelessWidget {
+  const _FormStepBar({required this.steps, required this.onTap});
+
+  final List<(String, bool, GlobalKey)> steps;
+  final ValueChanged<GlobalKey> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 36,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (var index = 0; index < steps.length; index++) ...[
+              if (index > 0) const SizedBox(width: 8),
+              _stepChip(index),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _stepChip(int index) {
+    final (label, done, key) = steps[index];
+    final background = done
+        ? const Color(0xFFE5F4EB)
+        : Colors.white.withValues(alpha: 0.16);
+    final foreground = done ? const Color(0xFF145C38) : Colors.white;
+    return Material(
+      color: background,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        key: ValueKey('form-step-$index'),
+        borderRadius: BorderRadius.circular(999),
+        onTap: () => onTap(key),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(
+            children: [
+              if (done)
+                Icon(Icons.check, size: 14, color: foreground)
+              else
+                Text(
+                  '${index + 1}',
+                  style: TextStyle(
+                    color: foreground,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: foreground,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -130,7 +130,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
     _drop(item);
     final s = AppStrings.of(context);
+    // Read these before waiting: the person may leave the page while the
+    // Undo bar is up, and the removal must still reach the server.
+    final api = context.read<AuthController>().api;
     final messenger = ScaffoldMessenger.of(context);
+    // A new removal closes the previous Undo bar, which sends that delete now
+    // instead of queueing this bar behind it.
+    messenger.hideCurrentSnackBar();
     final closed = messenger
         .showSnackBar(
           SnackBar(
@@ -143,15 +149,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         )
         .closed;
     final reason = await closed;
-    if (!mounted) {
-      return;
-    }
     if (reason == SnackBarClosedReason.action) {
-      _restore(item, index);
+      if (mounted) {
+        _restore(item, index);
+      }
       return;
     }
     try {
-      await context.read<AuthController>().api.deleteNotification(item.id);
+      await api.deleteNotification(item.id);
       PushRuntime.inbox.ping();
     } on ApiException {
       if (!mounted) {

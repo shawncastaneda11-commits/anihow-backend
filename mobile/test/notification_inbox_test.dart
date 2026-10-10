@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:anihow/l10n/app_strings.dart';
 import 'package:anihow/models/models.dart';
 import 'package:anihow/screens/notifications/notifications_screen.dart';
@@ -84,6 +86,59 @@ UserAccount _user({required bool seller}) {
 }
 
 void main() {
+  testWidgets('a removal still reaches the server after leaving the page', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final api = _InboxApi([
+      _note(
+        id: 7,
+        title: 'Order placed',
+        body: 'Leave me',
+        type: 'order_placed',
+        readAt: '2026-10-01T00:00:00Z',
+      ),
+    ]);
+    final auth = AuthController(api: api)
+      ..restoring = false
+      ..user = _user(seller: false);
+    await tester.pumpWidget(
+      _app(
+        auth: auth,
+        home: const Scaffold(body: Text('home')),
+      ),
+    );
+    final navigator = tester.state<NavigatorState>(
+      find.byType(Navigator).first,
+    );
+    unawaited(
+      navigator.push(
+        MaterialPageRoute<void>(builder: (_) => const NotificationsScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump();
+
+    await tester.drag(find.text('Leave me'), const Offset(-500, 0));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Leave me'), findsNothing);
+
+    navigator.pop();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('home'), findsOneWidget);
+    expect(api.deletes, 0);
+
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump();
+    expect(api.deletes, 1);
+  });
+
   testWidgets('the bell menu shows five notices and opens the inbox', (
     tester,
   ) async {
@@ -109,7 +164,9 @@ void main() {
     await tester.pumpWidget(
       _app(
         auth: auth,
-        home: Scaffold(appBar: AppBar(actions: const [NotificationBellButton()])),
+        home: Scaffold(
+          appBar: AppBar(actions: const [NotificationBellButton()]),
+        ),
       ),
     );
     await tester.pump();
@@ -155,7 +212,9 @@ void main() {
     await tester.pumpWidget(
       _app(
         auth: auth,
-        home: Scaffold(appBar: AppBar(actions: const [NotificationBellButton()])),
+        home: Scaffold(
+          appBar: AppBar(actions: const [NotificationBellButton()]),
+        ),
       ),
     );
     await tester.pump();

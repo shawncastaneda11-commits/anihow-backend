@@ -142,7 +142,6 @@ void main() {
                 const SizedBox.shrink(),
                 const SizedBox.shrink(),
                 _listPage(),
-                const SizedBox.shrink(),
               ],
               inset: inset,
               textScale: textScale,

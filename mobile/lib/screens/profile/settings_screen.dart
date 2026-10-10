@@ -10,6 +10,7 @@ import '../../state/theme_controller.dart';
 import '../../support/crop_language.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
+import '../../widgets/account_menu_button.dart';
 import '../../widgets/anihow_logo.dart';
 import '../../widgets/status_pill.dart';
 import 'change_password_screen.dart';
@@ -238,12 +239,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: AniHowSpace.section),
           OutlinedButton(
-            onPressed: () async {
-              await auth.logout();
-              if (context.mounted) {
-                Navigator.of(context).popUntil((route) => route.isFirst);
-              }
-            },
+            onPressed: () => confirmAndLogOut(context),
             style: OutlinedButton.styleFrom(
               foregroundColor: scheme.error,
               side: BorderSide(color: scheme.error),

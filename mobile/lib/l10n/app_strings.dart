@@ -97,6 +97,17 @@ class AppStrings {
   String get aboutAniHow => t('About AniHow', 'Tungkol sa AniHow');
   String get termsPrivacy => t('Terms & privacy', 'Mga tuntunin at privacy');
   String get logOut => t('Log out', 'Mag-log out');
+  String get accountMenu => t('Account menu', 'Menu ng account');
+  String get viewYourProfile => t('View your profile', 'Tingnan ang profile mo');
+  String get viewYourShopProfile =>
+      t('View your shop profile', 'Tingnan ang shop profile mo');
+  String get helpAndFaq => t('Help and FAQ', 'Tulong at FAQ');
+  String get logOutConfirmTitle =>
+      t('Log out of AniHow?', 'Mag-log out sa AniHow?');
+  String get logOutConfirmBody => t(
+    'You\'ll need your email and password to sign back in. Nothing in your account is deleted.',
+    'Kailangan mo ang email at password mo para makapag-sign in ulit. Walang mabubura sa account mo.',
+  );
 
   String get signIn => t('Sign in', 'Mag-sign in');
   String get rememberMe => t('Remember me', 'Tandaan ako');

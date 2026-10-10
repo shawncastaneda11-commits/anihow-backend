@@ -19,8 +19,6 @@ import '../../widgets/produce_card.dart';
 import '../../widgets/profile_avatar_button.dart';
 import '../../widgets/shop_profile_parts.dart';
 import '../../widgets/status_pill.dart';
-import '../buyer/favorites_screen.dart';
-import '../buyer/order_history_screen.dart';
 import '../farmer/listing_form_screen.dart';
 import '../farmer/shop_reviews_screen.dart';
 import '../farmer/walk_in_sale_screen.dart';
@@ -48,7 +46,9 @@ class ProfileScreen extends StatelessWidget {
         ? s.roleBuyer
         : user.roleLabel;
 
-    return ListView(
+    return Scaffold(
+      appBar: AppBar(title: Text(s.profile)),
+      body: ListView(
       padding: AniHowSpace.screenPadding,
       children: [
         Card(
@@ -134,29 +134,6 @@ class ProfileScreen extends StatelessWidget {
             children: [
               if (user.isBuyer) ...[
                 _ProfileLink(
-                  icon: Icons.receipt_long_outlined,
-                  label: s.orderHistory,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const OrderHistoryScreen(),
-                    ),
-                  ),
-                ),
-                const Divider(height: 1),
-                _ProfileLink(
-                  icon: Icons.favorite_outline,
-                  label: s.favorites,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => Scaffold(
-                        appBar: AppBar(title: Text(s.favorites)),
-                        body: const FavoritesScreen(),
-                      ),
-                    ),
-                  ),
-                ),
-                const Divider(height: 1),
-                _ProfileLink(
                   icon: Icons.storefront_outlined,
                   label: s.wantToSellOnAnihow,
                   onTap: () => Navigator.of(context).push(
@@ -188,6 +165,7 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
       ],
+      ),
     );
   }
 }

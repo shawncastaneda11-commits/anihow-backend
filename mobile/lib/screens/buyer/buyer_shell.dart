@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_strings.dart';
 import '../../navigation/route_observer.dart';
 import '../../state/auth_controller.dart';
+import '../../widgets/account_menu_button.dart';
 import '../../widgets/notification_bell.dart';
 import '../../widgets/order_chat_head.dart';
 import '../../widgets/unverified_email_banner.dart';
@@ -11,7 +12,6 @@ import 'favorites_screen.dart';
 import 'marketplace_screen.dart';
 import 'order_history_screen.dart';
 import 'shops_screen.dart';
-import '../profile/profile_screen.dart';
 import '../profile/verify_email_screen.dart';
 
 /// Test hook so the banner layout can be pumped without live API pages.
@@ -63,14 +63,13 @@ class _BuyerShellState extends State<BuyerShell> {
     final pages =
         widget.preview?.pages ??
         [
-          const ShopsScreen(),
-          const MarketplaceScreen(),
-          OrderHistoryScreen(active: _index == 2),
+          const ShopsScreen(showAccountMenu: true),
+          const MarketplaceScreen(showAccountMenu: true),
+          OrderHistoryScreen(active: _index == 2, showAccountMenu: true),
           FavoritesScreen(active: _index == 3),
-          const ProfileScreen(),
         ];
-    final titles = [s.shops, s.marketplace, s.orders, s.favorites, s.profile];
-    final hasAppBar = _index > 2;
+    final titles = [s.shops, s.marketplace, s.orders, s.favorites];
+    final hasAppBar = _index == 3;
 
     return VerifyBannerScope(
       hidden: _hideVerifyBanner,
@@ -79,7 +78,7 @@ class _BuyerShellState extends State<BuyerShell> {
         appBar: hasAppBar
             ? AppBar(
                 title: Text(titles[_index]),
-                actions: const [NotificationBellButton()],
+                actions: const [NotificationBellButton(), AccountMenuButton()],
               )
             : null,
         body: Column(
@@ -124,10 +123,6 @@ class _BuyerShellState extends State<BuyerShell> {
               NavigationDestination(
                 icon: const Icon(Icons.favorite_outline),
                 label: s.favorites,
-              ),
-              NavigationDestination(
-                icon: const Icon(Icons.person_outline),
-                label: s.profile,
               ),
             ],
           ),

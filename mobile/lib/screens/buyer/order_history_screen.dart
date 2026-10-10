@@ -7,6 +7,7 @@ import '../../state/auth_controller.dart';
 import '../../support/relative_time.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
+import '../../widgets/account_menu_button.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/brand_tab_bar.dart';
 import '../../widgets/buyer_cancel_order_button.dart';
@@ -23,9 +24,16 @@ import 'pay_now_screen.dart';
 import 'reservation_detail_screen.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
-  const OrderHistoryScreen({super.key, this.active = true});
+  const OrderHistoryScreen({
+    super.key,
+    this.active = true,
+    this.showAccountMenu = false,
+  });
 
   final bool active;
+
+  /// Set by [BuyerShell] only. Pushed copies of this screen omit the menu.
+  final bool showAccountMenu;
 
   @override
   State<OrderHistoryScreen> createState() => _OrderHistoryScreenState();
@@ -104,7 +112,10 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
       child: Scaffold(
         appBar: AppBar(
           title: Text(s.orderHistory),
-          actions: const [NotificationBellButton()],
+          actions: [
+            const NotificationBellButton(),
+            if (widget.showAccountMenu) const AccountMenuButton(),
+          ],
           bottom: onBrandTabBar(
             tabs: [
               Tab(text: s.ordersTab),
@@ -404,7 +415,8 @@ class BuyerReservationsList extends StatelessWidget {
             onOpen: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => ReservationDetailScreen(reservation: reservation),
+                  builder: (_) =>
+                      ReservationDetailScreen(reservation: reservation),
                 ),
               );
             },
@@ -475,7 +487,10 @@ class _ReservationTile extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(reservation.listingName, style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                reservation.listingName,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 8,
@@ -487,8 +502,11 @@ class _ReservationTile extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 4),
-              Text('$quantity $unit · ${AniHowMoney.peso(reservation.lineTotal)}'),
-              if (reservation.isAwaitingPayment && reservation.paymentDueAt != null)
+              Text(
+                '$quantity $unit · ${AniHowMoney.peso(reservation.lineTotal)}',
+              ),
+              if (reservation.isAwaitingPayment &&
+                  reservation.paymentDueAt != null)
                 Text(s.payBefore(reservation.paymentDueAt!)),
               if (reservation.refundReference != null &&
                   reservation.refundReference!.isNotEmpty &&
@@ -514,7 +532,8 @@ class _ReservationActions extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     final payNow = reservation.isAwaitingPayment;
-    final viewPayment = reservation.isPaymentTracked && !reservation.isAwaitingPayment;
+    final viewPayment =
+        reservation.isPaymentTracked && !reservation.isAwaitingPayment;
     if (!payNow && !viewPayment && onCancel == null) {
       return const SizedBox.shrink();
     }

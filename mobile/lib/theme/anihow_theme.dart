@@ -152,7 +152,9 @@ class AniHowTheme {
         backgroundColor: AniHowColors.brand,
         foregroundColor: scheme.onPrimary,
         elevation: 0,
-        centerTitle: true,
+        centerTitle: false,
+        // Same right edge as AppHeader, so the account button never moves.
+        actionsPadding: const EdgeInsetsDirectional.only(end: 8),
         titleTextStyle: TextStyle(
           fontFamily: 'Roboto',
           fontSize: AniHowSpace.header,

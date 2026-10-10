@@ -8,6 +8,7 @@ use App\Models\InAppNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 class NotificationController extends Controller
 {
@@ -60,5 +61,28 @@ class NotificationController extends Controller
         return response()->json([
             'message' => 'All notifications marked as read.',
         ]);
+    }
+
+    public function destroyRead(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', InAppNotification::class);
+
+        $deleted = $request->user()
+            ->inAppNotifications()
+            ->whereNotNull('read_at')
+            ->delete();
+
+        return response()->json([
+            'deleted' => $deleted,
+        ]);
+    }
+
+    public function destroy(InAppNotification $inAppNotification): Response
+    {
+        $this->authorize('delete', $inAppNotification);
+
+        $inAppNotification->delete();
+
+        return response()->noContent();
     }
 }

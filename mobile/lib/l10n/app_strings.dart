@@ -52,6 +52,26 @@ class AppStrings {
   String get system => t('System', 'Sistema');
   String get preferences => t('Preferences', 'Mga kagustuhan');
   String get notifications => t('Notifications', 'Mga abiso');
+  String get allCaughtUp => t("You're all caught up", 'Nabasa mo na lahat');
+  String get newNotifications => t('New', 'Bago');
+  String get earlierNotifications => t('Earlier', 'Mas maaga');
+  String get clearEarlier => t('Clear', 'Burahin');
+  String get clearEarlierTitle =>
+      t('Clear earlier notifications?', 'Burahin ang mas maagang notification?');
+  String get clearEarlierBody => t(
+    "Only notifications you've already read are removed.",
+    'Aalisin lang ang mga notification na nabasa mo na.',
+  );
+  String get removeNotification =>
+      t('Remove notification', 'Alisin ang notification');
+  String get notificationRemoved =>
+      t('Notification removed', 'Naalis ang notification');
+  String get undo => t('Undo', 'Ibalik');
+  String get markAsRead => t('Mark as read', 'Markahang nabasa');
+  String get seeAllNotifications =>
+      t('See all notifications', 'Tingnan lahat ng notification');
+  String get messages => t('Messages', 'Mensahe');
+  String get farmNews => t('Farm news', 'Balita sa bukid');
   String get pushOnThisPhone => t(
     'Push notifications on this phone',
     'Mga push notification sa phone na ito',

@@ -21,4 +21,9 @@ class InAppNotificationPolicy
     {
         return $notification->isOwnedBy($user);
     }
+
+    public function delete(User $user, InAppNotification $notification): bool
+    {
+        return $notification->isOwnedBy($user);
+    }
 }

@@ -18,6 +18,7 @@ class OrderQuantityStepper extends StatefulWidget {
     this.lineId,
     this.onChanged,
     this.onValueTap,
+    this.pill = false,
   });
 
   final TextEditingController controller;
@@ -28,6 +29,9 @@ class OrderQuantityStepper extends StatefulWidget {
   final int? lineId;
   final ValueChanged<String>? onChanged;
   final VoidCallback? onValueTap;
+
+  /// Compact cart stepper. Hides the gram chip and the rule line.
+  final bool pill;
 
   @override
   State<OrderQuantityStepper> createState() => _OrderQuantityStepperState();
@@ -153,6 +157,9 @@ class _OrderQuantityStepperState extends State<OrderQuantityStepper> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.pill) {
+      return _pillStepper(context);
+    }
     final s = AppStrings.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -209,6 +216,61 @@ class _OrderQuantityStepperState extends State<OrderQuantityStepper> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _pillStepper(BuildContext context) {
+    final theme = Theme.of(context);
+    final fill = theme.brightness == Brightness.dark
+        ? const Color(0xFF2A3330)
+        : const Color(0xFFF1EFE8);
+    final amount = formatOrderAmount(_current);
+    final unit = widget.unit.trim();
+    final label = unit.isEmpty ? amount : '$amount $unit';
+    final suffix = widget.lineId == null ? '' : '-${widget.lineId}';
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            key: ValueKey('order-qty-minus$suffix'),
+            onPressed: _canDecrease ? () => _nudge(-1) : null,
+            icon: const Icon(Icons.remove, size: 18),
+            style: IconButton.styleFrom(
+              minimumSize: const Size(40, 40),
+              fixedSize: const Size(40, 40),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: EdgeInsets.zero,
+            ),
+          ),
+          TextButton(
+            key: ValueKey('order-qty-field$suffix'),
+            onPressed: widget.onValueTap,
+            style: TextButton.styleFrom(
+              minimumSize: const Size(40, 40),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              foregroundColor: theme.colorScheme.onSurface,
+            ),
+            child: Text(label),
+          ),
+          IconButton(
+            key: ValueKey('order-qty-plus$suffix'),
+            onPressed: _canIncrease ? () => _nudge(1) : null,
+            icon: const Icon(Icons.add, size: 18),
+            style: IconButton.styleFrom(
+              minimumSize: const Size(40, 40),
+              fixedSize: const Size(40, 40),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: EdgeInsets.zero,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

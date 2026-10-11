@@ -318,24 +318,10 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
       ),
       body: Column(
         children: [
-          if (widget.showAccountMenu) mainTabBodyGap,
-          if (!_loading && _error == null) ...[
-            _FarmNewsRow(
-              title: _announcements.isEmpty ? null : _announcements.first.title,
-              unseen: unseen,
-              onTap: _openNews,
-            ),
-            const SizedBox(height: 6),
-            _FilterChips(
-              selected: _filter,
-              count: _count,
-              onSelected: (filter) => setState(() => _filter = filter),
-            ),
-          ],
           Expanded(
             child: NotificationListener<UserScrollNotification>(
               onNotification: _onScroll,
-              child: _body(s, language),
+              child: _body(s, language, unseen),
             ),
           ),
         ],
@@ -357,7 +343,7 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
     return false;
   }
 
-  Widget _body(AppStrings s, CropLanguage language) {
+  Widget _body(AppStrings s, CropLanguage language, int unseen) {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -371,41 +357,58 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
       _ListingFilter.low => s.noLowStockListings,
       _ListingFilter.hidden => s.noHiddenListings,
     };
+    // Farm news and the filters are the list's first item, so they scroll
+    // away with the cards.
+    final header = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.showAccountMenu) mainTabBodyGap,
+        _FarmNewsRow(
+          title: _announcements.isEmpty ? null : _announcements.first.title,
+          unseen: unseen,
+          onTap: _openNews,
+        ),
+        const SizedBox(height: AniHowSpace.cardGap),
+        _FilterChips(
+          selected: _filter,
+          count: _count,
+          onSelected: (filter) => setState(() => _filter = filter),
+        ),
+        const SizedBox(height: AniHowSpace.cardGap),
+      ],
+    );
     return RefreshIndicator(
       onRefresh: _reload,
-      child: items.isEmpty
-          ? ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                SizedBox(
-                  height: 240,
-                  child: Center(child: Text(empty)),
-                ),
-              ],
-            )
-          : ListView.separated(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(
-                AniHowSpace.screen,
-                6,
-                AniHowSpace.screen,
-                96,
-              ),
-              itemCount: items.length,
-              separatorBuilder: (_, _) =>
-                  const SizedBox(height: AniHowSpace.cardGap),
-              itemBuilder: (context, index) {
-                final listing = items[index];
-                return _SellerListingCard(
-                  listing: listing,
-                  language: language,
-                  onOpen: () => _openForm(listing),
-                  onToggle: (active) => _toggle(listing, active),
-                  onMenu: (action) => _menu(action, listing),
-                  onChanged: _reload,
-                );
-              },
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 96),
+        itemCount: items.isEmpty ? 2 : items.length + 1,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return header;
+          }
+          if (items.isEmpty) {
+            return SizedBox(height: 240, child: Center(child: Text(empty)));
+          }
+          final listing = items[index - 1];
+          return Padding(
+            padding: EdgeInsets.fromLTRB(
+              AniHowSpace.screen,
+              0,
+              AniHowSpace.screen,
+              index == items.length ? 0 : AniHowSpace.cardGap,
             ),
+            child: _SellerListingCard(
+              listing: listing,
+              language: language,
+              onOpen: () => _openForm(listing),
+              onToggle: (active) => _toggle(listing, active),
+              onMenu: (action) => _menu(action, listing),
+              onChanged: _reload,
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -550,21 +553,21 @@ class _FilterChips extends StatelessWidget {
         const ValueKey('listing-filter-hidden'),
       ),
     ];
-    return SizedBox(
-      height: 48,
-      child: ListView(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AniHowSpace.screen),
+      child: Row(
         key: const ValueKey('listing-filters'),
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AniHowSpace.screen),
         children: [
-          for (final chip in chips) ...[
-            _FilterChip(
-              key: chip.$3,
-              label: s.filterWithCount(chip.$2, count(chip.$1)),
-              selected: selected == chip.$1,
-              onTap: () => onSelected(chip.$1),
+          for (final (index, chip) in chips.indexed) ...[
+            if (index > 0) const SizedBox(width: 8),
+            Expanded(
+              child: _FilterChip(
+                key: chip.$3,
+                label: s.filterWithCount(chip.$2, count(chip.$1)),
+                selected: selected == chip.$1,
+                onTap: () => onSelected(chip.$1),
+              ),
             ),
-            const SizedBox(width: 8),
           ],
         ],
       ),
@@ -595,23 +598,25 @@ class _FilterChip extends StatelessWidget {
     final foreground = selected
         ? (dark ? const Color(0xFF10251A) : Colors.white)
         : theme.colorScheme.onSurface;
-    return Center(
-      child: Semantics(
-        button: true,
-        selected: selected,
-        child: Material(
-          color: background,
-          borderRadius: BorderRadius.circular(999),
-          child: InkWell(
-            onTap: onTap,
-            customBorder: const StadiumBorder(),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 36),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Center(
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        color: background,
+        shape: const StadiumBorder(),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const StadiumBorder(),
+          child: SizedBox(
+            height: 40,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
                   child: Text(
                     label,
+                    maxLines: 1,
                     style: theme.textTheme.labelLarge?.copyWith(
                       color: foreground,
                       fontWeight: FontWeight.w700,

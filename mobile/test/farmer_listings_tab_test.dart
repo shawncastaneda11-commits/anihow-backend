@@ -72,7 +72,10 @@ class _ListingsApi extends ApiClient {
     bool confirmCancelReservations = false,
   }) async {
     deletes++;
-    items = [for (final item in items) if (item.id != id) item];
+    items = [
+      for (final item in items)
+        if (item.id != id) item,
+    ];
   }
 }
 
@@ -130,11 +133,6 @@ void main() {
     expect(find.text('Hidden'), findsWidgets);
     expect(find.text('Taken down'), findsOneWidget);
 
-    await tester.drag(
-      find.byKey(const ValueKey('listing-filters')),
-      const Offset(-160, 0),
-    );
-    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('listing-filter-hidden')));
     await tester.pumpAndSettle();
     expect(find.text('Paused'), findsOneWidget);
@@ -284,7 +282,12 @@ void main() {
     await _pump(
       tester,
       _ListingsApi([
-        _listing(id: 5, title: 'Pending', quantity: '0', needsActualHarvest: true),
+        _listing(
+          id: 5,
+          title: 'Pending',
+          quantity: '0',
+          needsActualHarvest: true,
+        ),
         _listing(id: 7, title: 'Sold out', quantity: '0'),
       ]),
     );
@@ -335,5 +338,37 @@ void main() {
     await tester.drag(find.byType(ListView).last, const Offset(0, 200));
     await tester.pumpAndSettle();
     expect(fabOffset(), Offset.zero);
+  });
+
+  testWidgets('filters share the row equally and scroll away with the cards', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _pump(
+      tester,
+      _ListingsApi([
+        for (var id = 1; id <= 8; id++) _listing(id: id, title: 'Item $id'),
+      ]),
+    );
+
+    final widths = [
+      for (final key in ['all', 'stock', 'low', 'hidden'])
+        tester.getSize(find.byKey(ValueKey('listing-filter-$key'))).width,
+    ];
+    for (final width in widths) {
+      expect(width, moreOrLessEquals(widths.first, epsilon: 0.5));
+    }
+
+    final newsTop = tester
+        .getTopLeft(find.byKey(const ValueKey('farm-news-row')))
+        .dy;
+    await tester.drag(find.byType(ListView).last, const Offset(0, -150));
+    await tester.pumpAndSettle();
+    final moved = find.byKey(const ValueKey('farm-news-row'));
+    expect(
+      moved.evaluate().isEmpty || tester.getTopLeft(moved).dy < newsTop - 100,
+      isTrue,
+    );
   });
 }

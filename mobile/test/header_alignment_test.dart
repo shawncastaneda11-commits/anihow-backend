@@ -177,7 +177,7 @@ void main() {
     ];
     final sellerTabs = [
       _TabHeader(s.listings, s.myListings),
-      _TabHeader(s.orders, s.incomingOrders),
+      _TabHeader(s.orders, s.orders),
       _TabHeader(s.mySales, s.mySales),
       _TabHeader(s.cropCare, s.cropCare),
       _TabHeader(s.chats, s.chats),

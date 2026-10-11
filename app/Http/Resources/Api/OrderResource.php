@@ -100,6 +100,11 @@ class OrderResource extends JsonResource
                 ],
             )),
             'review' => new ReviewResource($this->whenLoaded('review')),
+            'latest_message' => $this->whenLoaded('latestChatMessage', fn (): array => [
+                'body' => $this->latestChatMessage->body,
+                'user_id' => $this->latestChatMessage->user_id,
+                'created_at' => $this->latestChatMessage->created_at?->toIso8601String(),
+            ]),
         ];
     }
 

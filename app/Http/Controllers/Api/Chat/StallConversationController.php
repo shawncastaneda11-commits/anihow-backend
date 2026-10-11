@@ -28,7 +28,7 @@ class StallConversationController extends Controller
         $conversations = StallConversation::query()
             ->whereHas('messages')
             ->visibleInInbox($user)
-            ->with(['buyer', 'farmerSeller', 'latestMessage'])
+            ->with(['buyer', 'farmerSeller', 'latestMessage', 'latestQuestion'])
             ->when(
                 $user->isBuyer(),
                 fn ($query) => $query->where('buyer_id', $user->id),

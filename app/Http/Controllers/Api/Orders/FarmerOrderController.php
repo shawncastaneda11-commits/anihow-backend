@@ -21,7 +21,7 @@ class FarmerOrderController extends Controller
 
         $orders = $request->user()
             ->incomingOrders()
-            ->with(['items', 'buyer', 'farm', 'review'])
+            ->with(['items', 'buyer', 'farm', 'review', 'latestProof.paymentQr', 'latestChatMessage'])
             ->when(
                 $request->query('status'),
                 fn ($query, string $status) => $query->where('status', $status),

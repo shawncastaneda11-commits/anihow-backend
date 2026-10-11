@@ -197,4 +197,51 @@ void main() {
     expect(find.text('Liza'), findsNothing);
     expect(find.text('I am outside'), findsOneWidget);
   });
+
+  testWidgets('stall chats show only general questions, not order messages', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final orderOnly = StallChat.fromJson(const {
+      'id': 7,
+      'farmer_seller_id': 4,
+      'shop_name': 'Nena Stall',
+      'buyer_name': 'Order only Ola',
+      'latest_message': {
+        'body': 'About my order',
+        'user_id': 9,
+        'created_at': '2026-10-11T08:00:00',
+      },
+      'latest_question': null,
+    });
+    final mixed = StallChat.fromJson(const {
+      'id': 8,
+      'farmer_seller_id': 4,
+      'shop_name': 'Nena Stall',
+      'buyer_name': 'Mixed Mia',
+      'latest_message': {
+        'body': 'Order is ready',
+        'user_id': 4,
+        'created_at': '2026-10-11T09:00:00',
+      },
+      'latest_question': {
+        'body': 'Any eggplant tomorrow?',
+        'user_id': 9,
+        'created_at': '2026-10-10T07:00:00',
+      },
+    });
+
+    await _pump(tester, _InboxApi(const [], [orderOnly, mixed]));
+
+    expect(find.text('Order only Ola'), findsNothing);
+    expect(find.text('Mixed Mia'), findsOneWidget);
+    expect(find.text('Any eggplant tomorrow?'), findsOneWidget);
+    expect(find.text('Order is ready'), findsNothing);
+
+    await tester.tap(find.text('Needs reply'));
+    await tester.pump();
+    expect(find.text('Mixed Mia'), findsOneWidget);
+  });
 }

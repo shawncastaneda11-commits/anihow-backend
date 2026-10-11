@@ -31,6 +31,11 @@ class StallConversationResource extends JsonResource
                 'user_id' => $latest->user_id,
                 'created_at' => $latest->created_at?->toIso8601String(),
             ],
+            'latest_question' => $this->whenLoaded('latestQuestion', fn (): array => [
+                'body' => $this->latestQuestion->body,
+                'user_id' => $this->latestQuestion->user_id,
+                'created_at' => $this->latestQuestion->created_at?->toIso8601String(),
+            ]),
         ];
     }
 }

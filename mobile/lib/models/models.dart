@@ -2305,6 +2305,10 @@ class StallChat {
     this.latestBody,
     this.latestAt,
     this.latestUserId,
+    this.hasQuestionInfo = false,
+    this.questionBody,
+    this.questionAt,
+    this.questionUserId,
   });
 
   final int id;
@@ -2319,6 +2323,21 @@ class StallChat {
   final String? latestAt;
   final int? latestUserId;
 
+  /// The newest message not tagged to an order. Order messages already show
+  /// on their order rows, so the chat list previews only these.
+  final bool hasQuestionInfo;
+  final String? questionBody;
+  final String? questionAt;
+  final int? questionUserId;
+
+  String? get previewBody => hasQuestionInfo ? questionBody : latestBody;
+  String? get previewAt => hasQuestionInfo ? questionAt : latestAt;
+  int? get previewUserId => hasQuestionInfo ? questionUserId : latestUserId;
+
+  /// False when every message in this chat belongs to an order.
+  bool get hasQuestions =>
+      !hasQuestionInfo || questionAt != null || questionBody != null;
+
   String title({required bool viewingAsSeller}) {
     return viewingAsSeller ? buyerName : shopName;
   }
@@ -2330,6 +2349,10 @@ class StallChat {
   factory StallChat.fromJson(Map<String, dynamic> json) {
     final latest = json['latest_message'];
     final latestMap = latest is Map ? Map<String, dynamic>.from(latest) : null;
+    final question = json['latest_question'];
+    final questionMap = question is Map
+        ? Map<String, dynamic>.from(question)
+        : null;
     return StallChat(
       id: ListingItem._asCount(json['id']) ?? 0,
       sellerId: ListingItem._asCount(json['farmer_seller_id']) ?? 0,
@@ -2342,6 +2365,10 @@ class StallChat {
       latestBody: latestMap?['body'] as String?,
       latestAt: latestMap?['created_at'] as String?,
       latestUserId: ListingItem._asCount(latestMap?['user_id']),
+      hasQuestionInfo: json.containsKey('latest_question'),
+      questionBody: questionMap?['body'] as String?,
+      questionAt: questionMap?['created_at'] as String?,
+      questionUserId: ListingItem._asCount(questionMap?['user_id']),
     );
   }
 }

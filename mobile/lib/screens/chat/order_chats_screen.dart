@@ -174,9 +174,13 @@ class _OrderChatsScreenState extends State<OrderChatsScreen> {
     return order.isPlaced || order.isConfirmed || order.isReady;
   }
 
+  /// Stall chats that only hold order messages are covered by their order
+  /// rows, so they are left out instead of showing twice.
+  bool _showStall(StallChat chat) => !_isHidden(chat) && chat.hasQuestions;
+
   bool _hasThreads(_ChatInbox inbox) {
     return inbox.orders.any(_showOrder) ||
-        inbox.stalls.any((chat) => !_isHidden(chat));
+        inbox.stalls.any(_showStall);
   }
 
   bool _needsReply(int? authorId, int? myId) {
@@ -239,11 +243,11 @@ class _OrderChatsScreenState extends State<OrderChatsScreen> {
         ),
       );
     }
-    for (final chat in inbox.stalls.where((chat) => !_isHidden(chat))) {
+    for (final chat in inbox.stalls.where(_showStall)) {
       if (!_stallMatches(chat, query)) {
         continue;
       }
-      final needsReply = _needsReply(chat.latestUserId, myId);
+      final needsReply = _needsReply(chat.previewUserId, myId);
       if (!_passesFilter(needsReply: needsReply, isOrder: false)) {
         continue;
       }
@@ -251,7 +255,7 @@ class _OrderChatsScreenState extends State<OrderChatsScreen> {
         _ChatEntry.stall(
           chat: chat,
           needsReply: needsReply,
-          sortAt: _stamp(chat.latestAt, chat.updatedAt),
+          sortAt: _stamp(chat.previewAt, chat.updatedAt),
         ),
       );
     }
@@ -268,8 +272,8 @@ class _OrderChatsScreenState extends State<OrderChatsScreen> {
         count++;
       }
     }
-    for (final chat in inbox.stalls.where((chat) => !_isHidden(chat))) {
-      if (_stallMatches(chat, query) && _needsReply(chat.latestUserId, myId)) {
+    for (final chat in inbox.stalls.where(_showStall)) {
+      if (_stallMatches(chat, query) && _needsReply(chat.previewUserId, myId)) {
         count++;
       }
     }
@@ -757,7 +761,7 @@ class _ThreadBody extends StatelessWidget {
     final when = relativeTime(
       order != null
           ? (order.latestMessageAt ?? order.placedAt)
-          : (chat!.latestAt ?? chat.updatedAt),
+          : (chat!.previewAt ?? chat.updatedAt),
     );
     final preview = _preview(s);
     final quiet = preview == s.noMessagesYet;
@@ -846,11 +850,12 @@ class _ThreadBody extends StatelessWidget {
       }
       return body;
     }
-    final body = entry.chat?.latestBody;
+    final body = entry.chat?.previewBody;
     if (body == null || body.isEmpty) {
       return s.noMessagesYet;
     }
-    if (entry.chat?.latestUserId != null && entry.chat?.latestUserId == myId) {
+    if (entry.chat?.previewUserId != null &&
+        entry.chat?.previewUserId == myId) {
       return s.youSaid(body);
     }
     return body;

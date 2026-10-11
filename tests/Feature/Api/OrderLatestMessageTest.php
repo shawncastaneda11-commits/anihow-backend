@@ -82,6 +82,41 @@ class OrderLatestMessageTest extends TestCase
             ->assertJsonPath('data.0.latest_message.user_id', $buyer->id);
     }
 
+    public function test_a_stall_conversation_shows_its_latest_question_apart_from_order_messages(): void
+    {
+        $farmer = $this->farmer();
+        $buyer = $this->buyer();
+        $listing = $this->listingFor($farmer, ['price_per_unit' => 30, 'quantity_available' => 10]);
+        $order = $this->placeOrder($buyer, $listing, 1);
+
+        $this->asUser($buyer)
+            ->postJson("/api/orders/{$order->id}/messages", ['body' => 'About my order'])
+            ->assertCreated();
+
+        $this->asUser($farmer)
+            ->getJson('/api/stall-chats')
+            ->assertOk()
+            ->assertJsonPath('data.0.latest_message.body', 'About my order')
+            ->assertJsonPath('data.0.latest_question', null);
+
+        $conversationId = $this->asUser($buyer)
+            ->postJson('/api/stall-chats', ['farmer_seller_id' => $farmer->id])
+            ->json('data.id');
+        $this->asUser($buyer)
+            ->postJson("/api/stall-chats/{$conversationId}/messages", ['body' => 'Any eggplant tomorrow?'])
+            ->assertCreated();
+        $this->asUser($farmer)
+            ->postJson("/api/orders/{$order->id}/messages", ['body' => 'Your order is ready'])
+            ->assertCreated();
+
+        $this->asUser($farmer)
+            ->getJson('/api/stall-chats')
+            ->assertOk()
+            ->assertJsonPath('data.0.latest_message.body', 'Your order is ready')
+            ->assertJsonPath('data.0.latest_question.body', 'Any eggplant tomorrow?')
+            ->assertJsonPath('data.0.latest_question.user_id', $buyer->id);
+    }
+
     public function test_the_order_list_loads_the_latest_message_in_one_query(): void
     {
         $farmer = $this->farmer();

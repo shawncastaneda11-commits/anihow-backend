@@ -64,6 +64,20 @@ class StallConversation extends Model
     }
 
     /**
+     * Newest message that is not tagged to an order, so the chat list can show
+     * general questions without repeating what the order threads already show.
+     *
+     * @return HasOne<StallMessage, $this>
+     */
+    public function latestQuestion(): HasOne
+    {
+        return $this->hasOne(StallMessage::class)->ofMany(
+            ['id' => 'max'],
+            fn ($query) => $query->whereNull('order_id'),
+        );
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

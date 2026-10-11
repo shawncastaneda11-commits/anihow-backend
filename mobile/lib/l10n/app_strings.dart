@@ -1391,6 +1391,26 @@ class AppStrings {
   String get refundReferenceRequired =>
       t('Enter the refund reference.', 'Ilagay ang reference ng refund.');
   String get payments => t('Payments', 'Mga bayad');
+  String paymentsToCheck(int count) => count == 1
+      ? t('1 payment to check', '1 bayad na susuriin')
+      : t('$count payments to check', '$count bayad na susuriin');
+  String get buyersSentProof => t(
+    'Buyers sent proof of payment',
+    'Nagpadala ng patunay ng bayad ang mga buyer',
+  );
+  String get reviewPayments => t('Review', 'Suriin');
+  String get allPaymentsChecked =>
+      t('All payments checked', 'Nasuri na ang lahat ng bayad');
+  String refundsDue(int count) => count == 1
+      ? t('1 refund due', '1 refund na kailangan')
+      : t('$count refunds due', '$count refund na kailangan');
+  String get notPaidYet => t('Not paid yet', 'Hindi pa bayad');
+  String get newOrders => t('New', 'Bago');
+  String sectionWithCount(String label, int count) => '$label · $count';
+  String get confirmStep => t('Confirm', 'Kumpirmahin');
+  String get completeStep => t('Complete', 'Tapusin');
+  String get chat => t('Chat', 'Chat');
+  String get walkInSale => t('Walk-in sale', 'Benta sa walk-in');
   String get toCheck => t('To check', 'Susuriin');
   String get confirmedPayments => t('Confirmed', 'Kumpirmado');
   String get refundDueTab => t('Refund due', 'Kailangan i-refund');

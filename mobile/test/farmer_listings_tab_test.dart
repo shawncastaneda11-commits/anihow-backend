@@ -13,6 +13,7 @@ ListingItem _listing({
   required int id,
   required String title,
   String quantity = '10',
+  String unit = 'kg',
   bool isActive = true,
   String? status,
   bool isUpcoming = false,
@@ -27,8 +28,8 @@ ListingItem _listing({
     title: title,
     pricePerUnit: '40',
     quantityAvailable: quantity,
-    unit: 'kg',
-    unitLabel: 'kg',
+    unit: unit,
+    unitLabel: unit,
     isActive: isActive,
     status: status,
     isUpcoming: isUpcoming,
@@ -294,5 +295,45 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Record actual harvest'), findsOneWidget);
     expect(find.text('Remove stock'), findsNothing);
+  });
+
+  testWidgets('stock line uses the plural unit word', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(400, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _pump(
+      tester,
+      _ListingsApi([
+        _listing(id: 1, title: 'Sitaw', quantity: '12', unit: 'bundle'),
+        _listing(id: 2, title: 'Pechay', quantity: '1', unit: 'bundle'),
+      ]),
+    );
+
+    expect(find.text('12 bundles left'), findsOneWidget);
+    expect(find.text('1 bundle left'), findsOneWidget);
+  });
+
+  testWidgets('the New listing button hides while scrolling down', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _pump(
+      tester,
+      _ListingsApi([
+        for (var id = 1; id <= 8; id++) _listing(id: id, title: 'Item $id'),
+      ]),
+    );
+
+    Offset fabOffset() =>
+        tester.widget<AnimatedSlide>(find.byType(AnimatedSlide)).offset;
+    expect(fabOffset(), Offset.zero);
+
+    await tester.drag(find.byType(ListView).last, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(fabOffset(), isNot(Offset.zero));
+
+    await tester.drag(find.byType(ListView).last, const Offset(0, 200));
+    await tester.pumpAndSettle();
+    expect(fabOffset(), Offset.zero);
   });
 }

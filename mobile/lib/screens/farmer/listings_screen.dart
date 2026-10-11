@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/app_strings.dart';
@@ -40,6 +41,7 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
   Object? _error;
   final Set<int> _toggling = {};
   _ListingFilter _filter = _ListingFilter.all;
+  bool _showFab = true;
 
   @override
   void initState() {
@@ -297,16 +299,22 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
       appBar: widget.showAccountMenu
           ? mainTabAppBar(title: s.myListings, showAccountMenu: true)
           : null,
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'farmer-add-listing',
-        tooltip: s.newListing,
-        backgroundColor: AniHowColors.brand,
-        foregroundColor: Colors.white,
-        shape: const StadiumBorder(),
-        extendedIconLabelSpacing: 8,
-        onPressed: () => _openForm(),
-        icon: const Icon(Icons.add),
-        label: Text(s.newListing),
+      floatingActionButton: AnimatedSlide(
+        offset: _showFab ? Offset.zero : const Offset(0, 2),
+        duration: const Duration(milliseconds: 200),
+        child: FloatingActionButton.extended(
+          heroTag: 'farmer-add-listing',
+          tooltip: s.newListing,
+          backgroundColor: Theme.of(context).brightness == Brightness.dark
+              ? AniHowColors.switchOn
+              : AniHowColors.brand,
+          foregroundColor: Colors.white,
+          shape: const StadiumBorder(),
+          extendedIconLabelSpacing: 8,
+          onPressed: () => _openForm(),
+          icon: const Icon(Icons.add),
+          label: Text(s.newListing),
+        ),
       ),
       body: Column(
         children: [
@@ -317,16 +325,36 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
               unseen: unseen,
               onTap: _openNews,
             ),
+            const SizedBox(height: 6),
             _FilterChips(
               selected: _filter,
               count: _count,
               onSelected: (filter) => setState(() => _filter = filter),
             ),
           ],
-          Expanded(child: _body(s, language)),
+          Expanded(
+            child: NotificationListener<UserScrollNotification>(
+              onNotification: _onScroll,
+              child: _body(s, language),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  /// Hides the New listing button while scrolling down so it never sits on a
+  /// card's switch, and brings it back on the way up.
+  bool _onScroll(UserScrollNotification notification) {
+    final show = switch (notification.direction) {
+      ScrollDirection.reverse => false,
+      ScrollDirection.forward => true,
+      ScrollDirection.idle => _showFab,
+    };
+    if (show != _showFab) {
+      setState(() => _showFab = show);
+    }
+    return false;
   }
 
   Widget _body(AppStrings s, CropLanguage language) {
@@ -359,7 +387,7 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(
                 AniHowSpace.screen,
-                0,
+                6,
                 AniHowSpace.screen,
                 96,
               ),
@@ -561,9 +589,11 @@ class _FilterChip extends StatelessWidget {
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
     final fill = dark ? const Color(0xFF2A3330) : const Color(0xFFF1EFE8);
-    final background = selected ? AniHowColors.brand : fill;
+    final background = selected
+        ? (dark ? const Color(0xFFA8D5BA) : AniHowColors.brand)
+        : fill;
     final foreground = selected
-        ? Colors.white
+        ? (dark ? const Color(0xFF10251A) : Colors.white)
         : theme.colorScheme.onSurface;
     return Center(
       child: Semantics(
@@ -703,10 +733,11 @@ class _SellerListingCard extends StatelessWidget {
           : reserved.toString();
       return s.reservedHarvest(shown, listing.unit ?? '', count);
     }
-    final amount = formatGoodQuantity(
-      double.tryParse(listing.quantityAvailable) ?? 0,
+    final quantity = double.tryParse(listing.quantityAvailable) ?? 0;
+    return s.quantityLeft(
+      formatGoodQuantity(quantity),
+      s.unitWord(listing.unit ?? '', quantity),
     );
-    return s.quantityLeft(amount, listing.unit ?? '');
   }
 }
 
@@ -760,12 +791,25 @@ class _StatusPill extends StatelessWidget {
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: foreground,
-              fontWeight: FontWeight.w700,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: foreground,
+                  shape: BoxShape.circle,
+                ),
+                child: const SizedBox(width: 6, height: 6),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: foreground,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
         ),
       ),

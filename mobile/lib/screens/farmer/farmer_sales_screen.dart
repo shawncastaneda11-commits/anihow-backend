@@ -177,7 +177,6 @@ class _FarmerSalesScreenState extends State<FarmerSalesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (widget.showAccountMenu) mainTabBodyGap,
           ClipRect(
             child: AnimatedAlign(
               key: const ValueKey('sales-tabs'),

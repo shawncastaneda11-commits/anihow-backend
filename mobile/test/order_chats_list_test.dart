@@ -167,36 +167,37 @@ void main() {
     expect(_row('Aira'), findsNothing);
   });
 
-  testWidgets('needs reply is only the other person, and rows follow the latest message', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(400, 1600));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+  testWidgets(
+    'needs reply is only the other person, and rows follow the latest message',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    await _pump(tester, _InboxApi(orders, const [stall]));
+      await _pump(tester, _InboxApi(orders, const [stall]));
 
-    expect(
-      tester.getTopLeft(find.text('Aira')).dy,
-      lessThan(tester.getTopLeft(find.text('Questions from Bea')).dy),
-    );
-    expect(
-      tester.getTopLeft(find.text('Questions from Bea')).dy,
-      lessThan(tester.getTopLeft(find.text('Marco')).dy),
-    );
-    expect(
-      tester.getTopLeft(find.text('Marco')).dy,
-      lessThan(tester.getTopLeft(find.text('Liza')).dy),
-    );
+      expect(
+        tester.getTopLeft(find.text('Aira')).dy,
+        lessThan(tester.getTopLeft(find.text('Questions from Bea')).dy),
+      );
+      expect(
+        tester.getTopLeft(find.text('Questions from Bea')).dy,
+        lessThan(tester.getTopLeft(find.text('Marco')).dy),
+      );
+      expect(
+        tester.getTopLeft(find.text('Marco')).dy,
+        lessThan(tester.getTopLeft(find.text('Liza')).dy),
+      );
 
-    await tester.tap(find.text('Needs reply'));
-    await tester.pump();
+      await tester.tap(find.text('Needs reply'));
+      await tester.pump();
 
-    expect(find.text('Aira'), findsOneWidget);
-    expect(find.text('Questions from Bea'), findsOneWidget);
-    expect(find.text('Marco'), findsNothing);
-    expect(find.text('Liza'), findsNothing);
-    expect(find.text('I am outside'), findsOneWidget);
-  });
+      expect(find.text('Aira'), findsOneWidget);
+      expect(find.text('Questions from Bea'), findsOneWidget);
+      expect(find.text('Marco'), findsNothing);
+      expect(find.text('Liza'), findsNothing);
+      expect(find.text('I am outside'), findsOneWidget);
+    },
+  );
 
   testWidgets('stall chats show only general questions, not order messages', (
     tester,
@@ -243,5 +244,64 @@ void main() {
     await tester.tap(find.text('Needs reply'));
     await tester.pump();
     expect(find.text('Mixed Mia'), findsOneWidget);
+  });
+
+  testWidgets('chats are grouped by day and old ones show a short date', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final now = DateTime.now();
+    final old = now.subtract(const Duration(days: 30));
+    final orders = [
+      _order(
+        id: 21,
+        status: 'placed',
+        buyer: 'Fresh Fe',
+        placedAt: now.toIso8601String(),
+        latestBody: 'Hello',
+        latestUserId: 9,
+        latestAt: now.subtract(const Duration(minutes: 5)).toIso8601String(),
+      ),
+      _order(
+        id: 22,
+        status: 'completed',
+        buyer: 'Old Olga',
+        placedAt: old.toIso8601String(),
+        latestBody: 'Thanks',
+        latestUserId: 4,
+        latestAt: old.toIso8601String(),
+      ),
+    ];
+
+    await _pump(tester, _InboxApi(orders, const []));
+
+    expect(find.text('TODAY'), findsOneWidget);
+    expect(find.text('EARLIER'), findsOneWidget);
+    expect(find.text('THIS WEEK'), findsNothing);
+    expect(
+      tester.getTopLeft(find.text('TODAY')).dy,
+      lessThan(tester.getTopLeft(find.text('Fresh Fe')).dy),
+    );
+    expect(
+      tester.getTopLeft(find.text('EARLIER')).dy,
+      lessThan(tester.getTopLeft(find.text('Old Olga')).dy),
+    );
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    expect(find.text('${months[old.month - 1]} ${old.day}'), findsOneWidget);
   });
 }

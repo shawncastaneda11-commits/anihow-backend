@@ -183,6 +183,75 @@ class _OrderChatsScreenState extends State<OrderChatsScreen> {
         inbox.stalls.any(_showStall);
   }
 
+  /// Today, This week and Earlier, so a long list reads in groups instead of
+  /// one tall block.
+  List<(String, List<_ChatEntry>)> _sections(
+    AppStrings s,
+    List<_ChatEntry> entries,
+  ) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final weekStart = today.subtract(const Duration(days: 6));
+    final groups = <(String, List<_ChatEntry>)>[
+      (s.today, []),
+      (s.thisWeek, []),
+      (s.earlierNotifications, []),
+    ];
+    for (final entry in entries) {
+      final at = entry.sortAt.toLocal();
+      final index = !at.isBefore(today)
+          ? 0
+          : !at.isBefore(weekStart)
+          ? 1
+          : 2;
+      groups[index].$2.add(entry);
+    }
+    return [
+      for (final group in groups)
+        if (group.$2.isNotEmpty) group,
+    ];
+  }
+
+  Widget _rowFor(_ChatEntry entry, int? myId) {
+    return _ChatRow(
+      entry: entry,
+      forSeller: widget.forSeller,
+      myId: myId,
+      onOpenOrder: (order) async {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => OrderChatScreen(order: order),
+          ),
+        );
+        if (mounted) {
+          await _reload();
+        }
+      },
+      onOpenStall: (chat) async {
+        final removed = await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (_) => StallChatScreen(
+              chat: chat,
+              viewingAsSeller: widget.forSeller,
+            ),
+          ),
+        );
+        if (!mounted) {
+          return;
+        }
+        if (removed == true) {
+          setState(
+            () => _hiddenLatestAt[chat.id] = chat.latestAt,
+          );
+        }
+        await _reload();
+      },
+      onAskRemove: (title) =>
+          confirmRemoveStallChat(context, title),
+      onRemove: _hideAndDelete,
+    );
+  }
+
   bool _needsReply(int? authorId, int? myId) {
     return authorId != null && authorId != myId;
   }
@@ -355,53 +424,26 @@ class _OrderChatsScreenState extends State<OrderChatsScreen> {
                           AniHowSpace.screen,
                         ),
                         children: [
-                          Card(
-                            clipBehavior: Clip.antiAlias,
-                            child: Column(
-                              children: [
-                                for (var index = 0; index < entries.length; index++) ...[
-                                  if (index > 0) const Divider(height: 1),
-                                  _ChatRow(
-                                    entry: entries[index],
-                                    forSeller: widget.forSeller,
-                                    myId: myId,
-                                    onOpenOrder: (order) async {
-                                      await Navigator.of(context).push(
-                                        MaterialPageRoute<void>(
-                                          builder: (_) => OrderChatScreen(order: order),
-                                        ),
-                                      );
-                                      if (mounted) {
-                                        await _reload();
-                                      }
-                                    },
-                                    onOpenStall: (chat) async {
-                                      final removed = await Navigator.of(context).push<bool>(
-                                        MaterialPageRoute(
-                                          builder: (_) => StallChatScreen(
-                                            chat: chat,
-                                            viewingAsSeller: widget.forSeller,
-                                          ),
-                                        ),
-                                      );
-                                      if (!mounted) {
-                                        return;
-                                      }
-                                      if (removed == true) {
-                                        setState(
-                                          () => _hiddenLatestAt[chat.id] = chat.latestAt,
-                                        );
-                                      }
-                                      await _reload();
-                                    },
-                                    onAskRemove: (title) =>
-                                        confirmRemoveStallChat(context, title),
-                                    onRemove: _hideAndDelete,
-                                  ),
-                                ],
-                              ],
+                          for (final (index, section)
+                              in _sections(s, entries).indexed) ...[
+                            if (index > 0) const SizedBox(height: 16),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4, bottom: 8),
+                              child: OrderSectionLabel(section.$1),
                             ),
-                          ),
+                            Card(
+                              margin: EdgeInsets.zero,
+                              clipBehavior: Clip.antiAlias,
+                              child: Column(
+                                children: [
+                                  for (var i = 0; i < section.$2.length; i++) ...[
+                                    if (i > 0) const Divider(height: 1),
+                                    _rowFor(section.$2[i], myId),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
               ),
@@ -548,6 +590,7 @@ class _ChatFilters extends StatelessWidget {
         for (final (index, chip) in chips.indexed) ...[
           if (index > 0) const SizedBox(width: 8),
           Expanded(
+            flex: chip.$1 == _ChatFilter.needsReply ? 4 : 3,
             child: _ChatFilterChip(
               label: chip.$2,
               count: chip.$1 == _ChatFilter.needsReply ? needsReply : null,
@@ -758,7 +801,8 @@ class _ThreadBody extends StatelessWidget {
     final avatarUrl = order != null
         ? order.chatPeerAvatar(viewingAsSeller: forSeller)
         : chat!.avatarUrl(viewingAsSeller: forSeller);
-    final when = relativeTime(
+    final when = _when(
+      s,
       order != null
           ? (order.latestMessageAt ?? order.placedAt)
           : (chat!.previewAt ?? chat.updatedAt),
@@ -771,9 +815,9 @@ class _ThreadBody extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 72),
+        constraints: const BoxConstraints(minHeight: 80),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+          padding: const EdgeInsets.fromLTRB(14, 14, 6, 14),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -815,7 +859,7 @@ class _ThreadBody extends StatelessWidget {
                           ),
                       ],
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Text(
                       preview,
                       maxLines: 1,
@@ -824,7 +868,7 @@ class _ThreadBody extends StatelessWidget {
                         color: quiet ? muted : null,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     _ContextChip(entry: entry, forSeller: forSeller),
                   ],
                 ),
@@ -835,6 +879,19 @@ class _ThreadBody extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Relative time for the last week, then a short date like "Sep 10".
+  String _when(AppStrings s, String? iso) {
+    final parsed = DateTime.tryParse(iso ?? '');
+    if (parsed == null) {
+      return '';
+    }
+    final local = parsed.toLocal();
+    if (DateTime.now().difference(local).inDays >= 7) {
+      return s.shortDate(local);
+    }
+    return relativeTime(iso);
   }
 
   String _preview(AppStrings s) {

@@ -1722,6 +1722,7 @@ class AppStrings {
   String get appSales => t('App sales', 'Benta sa app');
   String get periodWeek => t('Week', 'Linggo');
   String get periodMonth => t('Month', 'Buwan');
+  String get today => t('Today', 'Ngayon');
   String get thisWeek => t('This week', 'Ngayong linggo');
   String get thisMonth => t('This month', 'Ngayong buwan');
   String get thisYear => t('This year', 'Ngayong taon');

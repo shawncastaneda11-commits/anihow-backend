@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/app_strings.dart';
@@ -45,6 +46,7 @@ class _FarmerSalesScreenState extends State<FarmerSalesScreen> {
   String _category = 'all';
   String? _selectedPeriod;
   bool _showAllCrops = false;
+  bool _showTabs = true;
   late Future<FarmerAnalytics> _future;
 
   @override
@@ -175,18 +177,27 @@ class _FarmerSalesScreenState extends State<FarmerSalesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (widget.showAccountMenu) mainTabBodyGap,
-          Material(
-            color: AniHowColors.brand,
-            child: onBrandTabBar(
-              tabs: [
-                Tab(text: s.sales),
-                Tab(text: s.harvestTab),
-              ],
+          ClipRect(
+            child: AnimatedAlign(
+              key: const ValueKey('sales-tabs'),
+              alignment: Alignment.topCenter,
+              heightFactor: _showTabs ? 1 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: Material(
+                color: AniHowColors.brand,
+                child: onBrandTabBar(
+                  tabs: [
+                    Tab(text: s.sales),
+                    Tab(text: s.harvestTab),
+                  ],
+                ),
+              ),
             ),
           ),
           Expanded(
-            child: AsyncView<FarmerAnalytics>(
+            child: NotificationListener<UserScrollNotification>(
+              onNotification: _onScroll,
+              child: AsyncView<FarmerAnalytics>(
               future: _future,
               onRetry: _reload,
               builder: (context, data) {
@@ -218,6 +229,7 @@ class _FarmerSalesScreenState extends State<FarmerSalesScreen> {
                   ],
                 );
               },
+              ),
             ),
           ),
         ],
@@ -230,6 +242,23 @@ class _FarmerSalesScreenState extends State<FarmerSalesScreen> {
       appBar: mainTabAppBar(title: s.mySales, showAccountMenu: true),
       body: page,
     );
+  }
+
+  /// The Sales / Harvest tabs slide away while scrolling down and come back on
+  /// the way up or at the top. Sideways swipes between tabs are ignored.
+  bool _onScroll(UserScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) {
+      return false;
+    }
+    final show = switch (notification.direction) {
+      ScrollDirection.reverse => false,
+      ScrollDirection.forward => true,
+      ScrollDirection.idle => _showTabs || notification.metrics.pixels <= 0,
+    };
+    if (show != _showTabs) {
+      setState(() => _showTabs = show);
+    }
+    return false;
   }
 
   String _rangeName(AppStrings s) {

@@ -14,10 +14,7 @@ import 'package:provider/provider.dart';
 Widget _app({required Widget home}) {
   return ChangeNotifierProvider(
     create: (_) => PreferencesController(),
-    child: MaterialApp(
-      theme: AniHowTheme.light(),
-      home: home,
-    ),
+    child: MaterialApp(theme: AniHowTheme.light(), home: home),
   );
 }
 
@@ -76,7 +73,9 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
-      _app(home: const Scaffold(body: FarmerSalesScreen(preview: _empty))),
+      _app(
+        home: const Scaffold(body: FarmerSalesScreen(preview: _empty)),
+      ),
     );
     await tester.pump();
 
@@ -92,12 +91,16 @@ void main() {
     expect(tester.getSize(find.byKey(const Key('sales-filter'))).height, 48);
   });
 
-  testWidgets('sales screen populated state shows tiles, bars, and crops', (tester) async {
+  testWidgets('sales screen populated state shows tiles, bars, and crops', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
-      _app(home: const Scaffold(body: FarmerSalesScreen(preview: _populated))),
+      _app(
+        home: const Scaffold(body: FarmerSalesScreen(preview: _populated)),
+      ),
     );
     await tester.pump();
 
@@ -120,6 +123,32 @@ void main() {
       scrollable: find.byType(Scrollable).last,
     );
     expect(find.text(s.walkInSales), findsOneWidget);
+  });
+
+  testWidgets('the Sales / Harvest tabs hide while scrolling down', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _app(
+        home: const Scaffold(body: FarmerSalesScreen(preview: _populated)),
+      ),
+    );
+    await tester.pump();
+
+    double tabsHeight() =>
+        tester.getSize(find.byKey(const ValueKey('sales-tabs'))).height;
+    expect(tabsHeight(), greaterThan(40));
+
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -200));
+    await tester.pumpAndSettle();
+    expect(tabsHeight(), 0);
+
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, 100));
+    await tester.pumpAndSettle();
+    expect(tabsHeight(), greaterThan(40));
   });
 
   test('null cost fields stay null instead of zero', () {
@@ -266,7 +295,9 @@ void main() {
   testWidgets('pie legend lists five crops and Others', (tester) async {
     await _surface(tester);
     await tester.pumpWidget(
-      _app(home: Scaffold(body: FarmerSalesScreen(preview: _piePreview))),
+      _app(
+        home: Scaffold(body: FarmerSalesScreen(preview: _piePreview)),
+      ),
     );
     await tester.pump();
 
@@ -286,7 +317,9 @@ void main() {
   testWidgets('future months render as outlines', (tester) async {
     await _surface(tester);
     await tester.pumpWidget(
-      _app(home: Scaffold(body: FarmerSalesScreen(preview: _futurePreview))),
+      _app(
+        home: Scaffold(body: FarmerSalesScreen(preview: _futurePreview)),
+      ),
     );
     await tester.pump();
 
@@ -297,7 +330,9 @@ void main() {
   testWidgets('harvest note includes the estimated line', (tester) async {
     await _surface(tester);
     await tester.pumpWidget(
-      _app(home: Scaffold(body: FarmerSalesScreen(preview: _harvestPreview(1)))),
+      _app(
+        home: Scaffold(body: FarmerSalesScreen(preview: _harvestPreview(1))),
+      ),
     );
     await tester.pump();
     await tester.tap(find.text('Harvest'));
@@ -329,7 +364,10 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).last,
     );
-    expect(find.byKey(const Key('sales-crop-bar-Pechay-bundle')), findsOneWidget);
+    expect(
+      find.byKey(const Key('sales-crop-bar-Pechay-bundle')),
+      findsOneWidget,
+    );
     expect(find.text('Sold 4 bundles'), findsOneWidget);
     expect(find.text('Left 3 bundles'), findsOneWidget);
     expect(find.textContaining('Removed 0'), findsNothing);
@@ -362,7 +400,10 @@ void main() {
       scrollable: find.byType(Scrollable).last,
     );
     expect(find.text(s.noCostRecorded), findsNothing);
-    expect(find.textContaining('\u2212${AniHowMoney.peso(40)}'), findsOneWidget);
+    expect(
+      find.textContaining('\u2212${AniHowMoney.peso(40)}'),
+      findsOneWidget,
+    );
     expect(find.text(s.costCoverage(2, 3)), findsOneWidget);
   });
 
@@ -372,7 +413,9 @@ void main() {
     await _surface(tester);
     final s = AppStrings(false);
     await tester.pumpWidget(
-      _app(home: const Scaffold(body: FarmerSalesScreen(preview: _emptyBoth))),
+      _app(
+        home: const Scaffold(body: FarmerSalesScreen(preview: _emptyBoth)),
+      ),
     );
     await tester.pump();
     expect(find.byKey(const Key('sales-filter')), findsOneWidget);
@@ -388,7 +431,9 @@ void main() {
   testWidgets('a null cost total never renders as zero pesos', (tester) async {
     await _surface(tester);
     await tester.pumpWidget(
-      _app(home: Scaffold(body: FarmerSalesScreen(preview: _nullCostPreview))),
+      _app(
+        home: Scaffold(body: FarmerSalesScreen(preview: _nullCostPreview)),
+      ),
     );
     await tester.pump();
     await tester.tap(find.text(AppStrings(false).harvestTab));
@@ -404,10 +449,14 @@ void main() {
     expect(find.text(AniHowMoney.peso(12)), findsWidgets);
   });
 
-  testWidgets('changing the filter on Harvest keeps the Harvest tab', (tester) async {
+  testWidgets('changing the filter on Harvest keeps the Harvest tab', (
+    tester,
+  ) async {
     await _surface(tester);
     await tester.pumpWidget(
-      _app(home: Scaffold(body: FarmerSalesScreen(preview: _harvestPreview(1)))),
+      _app(
+        home: Scaffold(body: FarmerSalesScreen(preview: _harvestPreview(1))),
+      ),
     );
     await tester.pump();
     await tester.tap(find.text('Harvest'));
@@ -421,7 +470,9 @@ void main() {
     await _surface(tester);
     final s = AppStrings(false);
     await tester.pumpWidget(
-      _app(home: Scaffold(body: FarmerSalesScreen(preview: _futurePreview))),
+      _app(
+        home: Scaffold(body: FarmerSalesScreen(preview: _futurePreview)),
+      ),
     );
     await tester.pump();
     await _apply(tester, const Key('sales-range-yearly'), year: 2026);
@@ -638,7 +689,10 @@ final _piePreview = _base(
         sales: 100,
       ),
     ],
-    paymentSplit: const FarmerPaymentSplit(online: _paidBucket, cash: _paidBucket),
+    paymentSplit: const FarmerPaymentSplit(
+      online: _paidBucket,
+      cash: _paidBucket,
+    ),
     sourceSplit: const FarmerSourceSplit(app: _paidBucket, walkIn: _paidBucket),
   ),
 );
@@ -674,7 +728,11 @@ final _futurePreview = _base(
     ],
     paymentSplit: FarmerPaymentSplit(online: _paidBucket, cash: _emptyBucket),
     sourceSplit: FarmerSourceSplit(app: _paidBucket, walkIn: _emptyBucket),
-    yearTotal: FarmerYearTotal(sales: 40, orders: 1, bestMonth: FarmerBestMonth(key: '2026-06', sales: 40)),
+    yearTotal: FarmerYearTotal(
+      sales: 40,
+      orders: 1,
+      bestMonth: FarmerBestMonth(key: '2026-06', sales: 40),
+    ),
   ),
 );
 
@@ -717,10 +775,7 @@ FarmerAnalytics _harvestPreview(int estimated, {bool withCost = false}) {
               potentialProfit: 10,
               actualProfit: -40,
             )
-          : const FarmerHarvestCost(
-              recordsWithCost: 0,
-              recordsWithoutCost: 3,
-            ),
+          : const FarmerHarvestCost(recordsWithCost: 0, recordsWithoutCost: 3),
     ),
   );
 }

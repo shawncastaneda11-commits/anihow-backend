@@ -86,6 +86,10 @@ class ListingResource extends JsonResource
                 $this->ownedBy($request),
                 $this->isExpired() && (float) $this->quantity_available > 0,
             ),
+            'stock_baseline' => $this->when(
+                $this->ownedBy($request),
+                fn (): float => max((float) $this->stock_baseline, (float) $this->quantity_available),
+            ),
             'has_harvest_records' => $this->when(
                 $this->ownedBy($request),
                 fn (): bool => (bool) ($this->harvest_records_exists ?? $this->harvestRecords()->exists()),

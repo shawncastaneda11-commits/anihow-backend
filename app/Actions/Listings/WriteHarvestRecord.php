@@ -52,6 +52,10 @@ class WriteHarvestRecord
             $listing->needs_actual_harvest = false;
         }
 
+        if (in_array($kind, [HarvestRecordKind::Initial, HarvestRecordKind::Added, HarvestRecordKind::Actual], true)) {
+            $listing->stock_baseline = $listing->quantity_available;
+        }
+
         $listing->save();
 
         $category = $listing->cropType?->category;

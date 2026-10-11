@@ -349,6 +349,7 @@ class ListingItem {
     this.needsActualHarvest = false,
     this.expiredWithStock = false,
     this.hasHarvestRecords = false,
+    this.stockBaseline,
   });
 
   final int id;
@@ -390,6 +391,9 @@ class ListingItem {
   final bool needsActualHarvest;
   final bool expiredWithStock;
   final bool hasHarvestRecords;
+
+  /// Stock right after the last restock (seller's own listings only).
+  final double? stockBaseline;
 
   bool get harvestDueSoon {
     if (!needsActualHarvest || availableFrom == null) {
@@ -485,6 +489,7 @@ class ListingItem {
       needsActualHarvest: needsActualHarvest,
       expiredWithStock: expiredWithStock,
       hasHarvestRecords: hasHarvestRecords,
+      stockBaseline: stockBaseline,
     );
   }
 
@@ -559,6 +564,7 @@ class ListingItem {
       needsActualHarvest: json['needs_actual_harvest'] == true,
       expiredWithStock: json['expired_with_stock'] == true,
       hasHarvestRecords: json['has_harvest_records'] == true,
+      stockBaseline: _asDouble(json['stock_baseline']),
     );
   }
 

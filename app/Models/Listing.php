@@ -38,6 +38,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'description',
     'price_per_unit',
     'quantity_available',
+    'stock_baseline',
     'quantity_held',
     'min_order_quantity',
     'order_step',
@@ -64,6 +65,7 @@ class Listing extends Model
             'unit' => ListingUnit::class,
             'price_per_unit' => 'decimal:4',
             'quantity_available' => 'decimal:2',
+            'stock_baseline' => 'decimal:2',
             'quantity_held' => 'decimal:2',
             'min_order_quantity' => 'decimal:2',
             'order_step' => 'decimal:2',
@@ -100,6 +102,14 @@ class Listing extends Model
 
     protected static function booted(): void
     {
+        // The stock bar needs a full amount to compare against. Listings made
+        // outside the harvest flow start full at whatever they were given.
+        static::saving(function (Listing $listing): void {
+            if ($listing->stock_baseline === null && (float) $listing->quantity_available > 0) {
+                $listing->stock_baseline = $listing->quantity_available;
+            }
+        });
+
         // forceDeleted, not deleting. With SoftDeletes, `deleting` fires on a
         // soft delete and would destroy the image of a listing that is still
         // recoverable and still referenced by order items.

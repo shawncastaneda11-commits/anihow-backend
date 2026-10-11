@@ -286,6 +286,8 @@ class AppStrings {
   String reservedCount(int count) =>
       t('$count reserved', '$count naka-reserba');
   String untilDate(String date) => t('Until $date', 'Hanggang $date');
+  String quantityLeftOf(String amount, String total, String unit) =>
+      t('$amount of $total $unit left', 'May natitirang $amount sa $total $unit');
   String quantityLeft(String amount, String unit) =>
       t('$amount $unit left', 'May natitirang $amount $unit');
   String get buyersCanSeeThis =>

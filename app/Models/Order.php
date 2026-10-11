@@ -206,6 +206,16 @@ class Order extends Model
         return $this->hasMany(StallMessage::class, 'order_id')->orderBy('id');
     }
 
+    /**
+     * Newest stall message tagged to this order.
+     *
+     * @return HasOne<StallMessage, $this>
+     */
+    public function latestChatMessage(): HasOne
+    {
+        return $this->hasOne(StallMessage::class, 'order_id')->latestOfMany();
+    }
+
     public function isWalkIn(): bool
     {
         return $this->source === OrderSource::WalkIn;

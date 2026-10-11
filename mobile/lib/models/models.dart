@@ -773,6 +773,9 @@ class OrderRecord {
     this.refundedAt,
     this.latestProof,
     this.paymentQrs = const [],
+    this.latestMessageBody,
+    this.latestMessageUserId,
+    this.latestMessageAt,
   });
 
   final int id;
@@ -817,6 +820,9 @@ class OrderRecord {
   final List<PaymentQrCode> paymentQrs;
   final List<String> allowedNext;
   final List<OrderItemRow> items;
+  final String? latestMessageBody;
+  final int? latestMessageUserId;
+  final String? latestMessageAt;
 
   static DateTime? _asDate(Object? value) {
     if (value is! String || value.isEmpty) {
@@ -900,6 +906,17 @@ class OrderRecord {
           .map((item) => item.toString())
           .toList(),
       items: _jsonMaps(json['items']).map(OrderItemRow.fromJson).toList(),
+      latestMessageBody: json['latest_message'] is Map
+          ? Map<String, dynamic>.from(json['latest_message'] as Map)['body'] as String?
+          : null,
+      latestMessageUserId: json['latest_message'] is Map
+          ? ListingItem._asCount(
+              Map<String, dynamic>.from(json['latest_message'] as Map)['user_id'],
+            )
+          : null,
+      latestMessageAt: json['latest_message'] is Map
+          ? Map<String, dynamic>.from(json['latest_message'] as Map)['created_at'] as String?
+          : null,
     );
   }
 
@@ -1064,6 +1081,9 @@ class OrderRecord {
       latestProof: latestProof ?? this.latestProof,
       paymentQrs: paymentQrs ?? this.paymentQrs,
       allowedNext: allowedNext ?? this.allowedNext,
+      latestMessageBody: latestMessageBody,
+      latestMessageUserId: latestMessageUserId,
+      latestMessageAt: latestMessageAt,
     );
   }
 }
@@ -2284,6 +2304,7 @@ class StallChat {
     this.updatedAt,
     this.latestBody,
     this.latestAt,
+    this.latestUserId,
   });
 
   final int id;
@@ -2296,6 +2317,7 @@ class StallChat {
   final String? updatedAt;
   final String? latestBody;
   final String? latestAt;
+  final int? latestUserId;
 
   String title({required bool viewingAsSeller}) {
     return viewingAsSeller ? buyerName : shopName;
@@ -2319,6 +2341,7 @@ class StallChat {
       updatedAt: json['updated_at'] as String?,
       latestBody: latestMap?['body'] as String?,
       latestAt: latestMap?['created_at'] as String?,
+      latestUserId: ListingItem._asCount(latestMap?['user_id']),
     );
   }
 }

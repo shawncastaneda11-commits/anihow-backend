@@ -586,6 +586,18 @@ class AppStrings {
   );
   String get openOrders => t('Open orders', 'Buksan ang mga order');
   String get chatWithStall => t('Chat with stall', 'Makipag-chat sa tindahan');
+  String get searchBuyersOrProduce =>
+      t('Search buyers or produce', 'Maghanap ng buyer o ani');
+  String get searchStoresOrProduce =>
+      t('Search stores or produce', 'Maghanap ng tindahan o ani');
+  String get needsReply => t('Needs reply', 'Kailangan sumagot');
+  String get questions => t('Questions', 'Mga tanong');
+  String get noMessagesYet => t('No messages yet', 'Wala pang mensahe');
+  String youSaid(String body) => t('You: $body', 'Ikaw: $body');
+  String get questionAboutStall =>
+      t('Question about your stall', 'Tanong tungkol sa tindahan mo');
+  String get chatWithTheStall =>
+      t('Chat with the stall', 'Makipag-chat sa tindahan');
   String get removeChat => t('Remove chat', 'Alisin ang chat');
   String get removeChatTitle =>
       t('Remove this chat?', 'Alisin ang chat na ito?');

@@ -28,6 +28,7 @@ class StallConversationResource extends JsonResource
             'updated_at' => $this->updated_at?->toIso8601String(),
             'latest_message' => $latest === null ? null : [
                 'body' => $latest->body,
+                'user_id' => $latest->user_id,
                 'created_at' => $latest->created_at?->toIso8601String(),
             ],
         ];

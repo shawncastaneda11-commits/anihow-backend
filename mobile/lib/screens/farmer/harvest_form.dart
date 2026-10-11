@@ -222,23 +222,18 @@ class HarvestFields extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
-                Expanded(
-                  child: Text(
-                    s.goodToSellLabel,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: dark
-                          ? const Color(0xFFB7E4C7)
-                          : const Color(0xFF145C38),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                Icon(
+                  Icons.check_circle_outline,
+                  size: 20,
+                  color: dark
+                      ? const Color(0xFFB7E4C7)
+                      : const Color(0xFF145C38),
                 ),
-                const SizedBox(width: 8),
-                Flexible(
+                const SizedBox(width: 10),
+                Expanded(
                   child: Text(
                     s.goodToSell(formatGoodQuantity(good), unitLabel),
                     key: const ValueKey('good-to-sell'),
-                    textAlign: TextAlign.end,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: dark
                           ? const Color(0xFFB7E4C7)

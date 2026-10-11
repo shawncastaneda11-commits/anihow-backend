@@ -1604,7 +1604,6 @@ class AppStrings {
       t('Not filled in yet: $items', 'Hindi pa napupunan: $items');
   String get everythingFilledIn =>
       t('Everything is filled in.', 'Kumpleto na ang lahat.');
-  String get goodToSellLabel => t('Good to sell', 'Mabebenta');
   String floorPriceFor(String crop, String peso) => t(
     'Floor price for $crop: $peso (set by your farm)',
     'Floor price para sa $crop: $peso (itinakda ng farm)',

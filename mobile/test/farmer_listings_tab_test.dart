@@ -14,6 +14,7 @@ ListingItem _listing({
   required String title,
   String quantity = '10',
   String unit = 'kg',
+  double? stockBaseline,
   bool isActive = true,
   String? status,
   bool isUpcoming = false,
@@ -39,6 +40,7 @@ ListingItem _listing({
     category: const CategoryItem(id: 3, name: 'Talong', labelEn: 'Eggplant'),
     tawad: tawad,
     activeReservationsCount: reservations,
+    stockBaseline: stockBaseline,
   );
 }
 
@@ -370,5 +372,43 @@ void main() {
       moved.evaluate().isEmpty || tester.getTopLeft(moved).dy < newsTop - 100,
       isTrue,
     );
+  });
+
+  testWidgets('the stock bar shows what is left since the last restock', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _pump(
+      tester,
+      _ListingsApi([
+        _listing(id: 1, title: 'Half', quantity: '6', stockBaseline: 12),
+        _listing(id: 2, title: 'Low', quantity: '2', stockBaseline: 10),
+        _listing(id: 3, title: 'Coming', isUpcoming: true, stockBaseline: 9),
+        _listing(id: 4, title: 'Legacy', quantity: '7'),
+      ]),
+    );
+
+    expect(find.byKey(const ValueKey('stock-bar-1')), findsOneWidget);
+    expect(find.text('6 of 12 kg left'), findsOneWidget);
+    expect(find.text('50%'), findsOneWidget);
+    expect(find.text('2 of 10 kg left'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('stock-bar-2')),
+        matching: find.text('Low stock'),
+      ),
+      findsOneWidget,
+    );
+    final fill = tester.widget<FractionallySizedBox>(
+      find.descendant(
+        of: find.byKey(const ValueKey('stock-bar-1')),
+        matching: find.byType(FractionallySizedBox),
+      ),
+    );
+    expect(fill.widthFactor, 0.5);
+    expect(find.byKey(const ValueKey('stock-bar-3')), findsNothing);
+    expect(find.byKey(const ValueKey('stock-bar-4')), findsNothing);
+    expect(find.text('7 kg left'), findsOneWidget);
   });
 }

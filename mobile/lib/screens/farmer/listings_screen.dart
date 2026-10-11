@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
@@ -705,13 +707,19 @@ class _SellerListingCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    _stockLine(s),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: muted,
-                      fontSize: 13,
+                  if (_StockBar.shows(listing))
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: _StockBar(listing: listing),
+                    )
+                  else
+                    Text(
+                      _stockLine(s),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: muted,
+                        fontSize: 13,
+                      ),
                     ),
-                  ),
                   _NoticeChips(listing: listing),
                 ],
               ),
@@ -742,6 +750,91 @@ class _SellerListingCard extends StatelessWidget {
     return s.quantityLeft(
       formatGoodQuantity(quantity),
       s.unitWord(listing.unit ?? '', quantity),
+    );
+  }
+}
+
+/// "8 of 12 kg left" over a thin bar showing what is left since the last
+/// restock.
+class _StockBar extends StatelessWidget {
+  const _StockBar({required this.listing});
+
+  final ListingItem listing;
+
+  static bool shows(ListingItem listing) {
+    final baseline = listing.stockBaseline ?? 0;
+    return !listing.isUpcoming && !listing.needsActualHarvest && baseline > 0;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.72);
+    final left = double.tryParse(listing.quantityAvailable) ?? 0;
+    final total = math.max(listing.stockBaseline ?? 0, left);
+    final share = total <= 0 ? 0.0 : (left / total).clamp(0.0, 1.0);
+    final amber = dark ? const Color(0xFFF6D48A) : const Color(0xFF7A4E0C);
+    final fill = listing.isLowStock ? amber : readableAccent(context);
+    final track = dark ? const Color(0xFF2E3A34) : const Color(0xFFE3DFD5);
+    final label = s.quantityLeftOf(
+      formatGoodQuantity(left),
+      formatGoodQuantity(total),
+      s.unitWord(listing.unit ?? '', total),
+    );
+    final note = left <= 0
+        ? s.outOfStockStatus
+        : listing.isLowStock
+        ? s.lowStock
+        : '${(share * 100).round()}%';
+    return Semantics(
+      label: label,
+      excludeSemantics: true,
+      child: Column(
+        key: ValueKey('stock-bar-${listing.id}'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: muted,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              Text(
+                note,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: left <= 0 ? muted : fill,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: SizedBox(
+              height: 6,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ColoredBox(color: track),
+                  FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: share,
+                    child: ColoredBox(color: fill),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

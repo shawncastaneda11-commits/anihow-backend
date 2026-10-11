@@ -711,6 +711,7 @@ class HarvestStockTest extends TestCase
         $this->assertArrayNotHasKey('needs_actual_harvest', $market);
         $this->assertArrayNotHasKey('expired_with_stock', $market);
         $this->assertArrayNotHasKey('has_harvest_records', $market);
+        $this->assertArrayNotHasKey('stock_baseline', $market);
         $this->assertStringNotContainsString('production_cost', json_encode($market));
 
         $own = $this->asUser($owner)->getJson("/api/farmer/listings/{$listing->id}")->assertOk()->json('data');
@@ -773,6 +774,38 @@ class HarvestStockTest extends TestCase
     /**
      * @param  array<string, mixed>  $extra
      */
+    public function test_the_stock_baseline_resets_on_each_restock_and_never_drops_below_what_is_left(): void
+    {
+        $farmer = $this->farmer();
+        $listing = $this->tracked($farmer, 20, 30);
+        $baseline = fn (): float => (float) $this->asUser($farmer)
+            ->getJson("/api/farmer/listings/{$listing->id}")
+            ->assertOk()
+            ->json('data.stock_baseline');
+
+        $this->assertSame(20.0, $baseline());
+
+        $this->asUser($farmer)->postJson("/api/farmer/listings/{$listing->id}/harvests", $this->harvestBody([
+            'quantity_harvested' => 6,
+            'quantity_rejected' => 1,
+            'rejection_reason' => 'bruised_damaged',
+        ]))->assertOk();
+        $this->assertSame(25.0, $baseline());
+
+        $this->asUser($farmer)->postJson("/api/farmer/listings/{$listing->id}/stock-removals", [
+            'quantity' => 5,
+            'reason' => 'damaged',
+            'note' => 'Crushed in the crate',
+        ])->assertOk();
+        $this->assertSame(20.0, (float) $listing->fresh()->quantity_available);
+        $this->assertSame(25.0, $baseline());
+
+        $this->asUser($farmer)->postJson("/api/farmer/listings/{$listing->id}/harvests", $this->harvestBody([
+            'quantity_harvested' => 2,
+        ]))->assertOk();
+        $this->assertSame(22.0, $baseline());
+    }
+
     private function tracked(User $farmer, float $quantity, float $price, array $extra = []): Listing
     {
         return $this->listingFor($farmer, [

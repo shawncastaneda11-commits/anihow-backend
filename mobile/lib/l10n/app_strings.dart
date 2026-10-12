@@ -716,6 +716,120 @@ class AppStrings {
   );
   String get acceptAndContinue =>
       t('Accept and continue', 'Tanggapin at magpatuloy');
+
+  String get verifyYourId => t('Verify your ID', 'I-verify ang iyong ID');
+  String get skipForNow => t('Skip for now', 'Laktawan muna');
+  String get verifiedBuyersCanOrder => t(
+    'Verified buyers can place orders',
+    'Ang beripikadong buyer ang puwedeng mag-order',
+  );
+  String get verifyIdIntro => t(
+    'You can browse and chat with sellers now. We check your ID before your first order, usually within a day.',
+    'Puwede ka nang mag-browse at makipag-chat sa mga seller. Sinusuri namin ang ID mo bago ang una mong order, kadalasan sa loob ng isang araw.',
+  );
+  String get verifyIdIntroOptional => t(
+    'Verifying is optional for your account. It adds a Verified badge so sellers know you are a real buyer.',
+    'Opsyonal ito para sa account mo. Magkakaroon ka ng Verified badge para alam ng seller na totoo kang buyer.',
+  );
+  String get whichIdStep =>
+      t('1. Which ID will you use?', '1. Aling ID ang gagamitin mo?');
+  String get idFrontStep => t(
+    '2. Photo of the front of your ID',
+    '2. Larawan ng harap ng iyong ID',
+  );
+  String get idSelfieStep =>
+      t('3. Selfie holding your ID', '3. Selfie na hawak ang iyong ID');
+  String get optionalFasterApproval => t(
+    '(optional, faster approval)',
+    '(opsyonal, mas mabilis maaprubahan)',
+  );
+  String get takeAPhoto => t('Take a photo', 'Kumuha ng larawan');
+  String get orChooseFromGallery =>
+      t('or choose from your gallery', 'o pumili mula sa gallery');
+  String get takeASelfie => t('Take a selfie', 'Mag-selfie');
+  String get retakePhoto => t('Retake', 'Ulitin');
+  String get useCamera => t('Camera', 'Camera');
+  String get useGallery => t('Gallery', 'Gallery');
+  String get idTipCorners => t(
+    'All four corners showing, no glare or blur',
+    'Kita ang apat na sulok, walang silaw o labo',
+  );
+  String get idTipReadable => t(
+    'Your name and photo must be readable',
+    'Dapat mabasa ang pangalan at kita ang larawan mo',
+  );
+  String get idConsent => t(
+    'I agree that AniHow may use these photos only to verify my account. Only AniHow admins can see them, and they are deleted after review. (Data Privacy Act of 2012)',
+    'Pumapayag ako na gamitin ng AniHow ang mga larawang ito para lang i-verify ang account ko. Ang AniHow admin lang ang makakakita, at buburahin ang mga ito pagkatapos suriin. (Data Privacy Act of 2012)',
+  );
+  String get submitForReview => t('Submit for review', 'Ipasa para masuri');
+  String get doThisLaterFromProfile => t(
+    'You can also do this later from your profile.',
+    'Puwede mo rin itong gawin mamaya sa profile mo.',
+  );
+  String get idSubmitted => t(
+    'Sent. We will notify you when your ID is checked.',
+    'Naipasa na. Aabisuhan ka namin kapag nasuri na ang ID mo.',
+  );
+  String idTypeLabel(String type) => switch (type) {
+    'national_id' => t('National ID (PhilSys)', 'National ID (PhilSys)'),
+    'drivers_license' => t("Driver's license", 'Lisensya sa pagmamaneho'),
+    'passport' => t('Passport', 'Pasaporte'),
+    'umid' => t('UMID', 'UMID'),
+    'postal_id' => t('Postal ID', 'Postal ID'),
+    _ => t('Other government ID', 'Ibang government ID'),
+  };
+  String get verifyIdToOrder => t(
+    'Verify your ID to place orders',
+    'I-verify ang ID mo para makapag-order',
+  );
+  String get verifyIdToOrderBody => t(
+    'It takes a minute. You can browse and chat with sellers in the meantime.',
+    'Isang minuto lang ito. Puwede ka munang mag-browse at makipag-chat sa mga seller.',
+  );
+  String get getVerifiedBadge =>
+      t('Get a Verified badge', 'Kumuha ng Verified badge');
+  String get getVerifiedBadgeBody => t(
+    'Optional for your account. Verify your ID so sellers know you are a real buyer.',
+    'Opsyonal ito sa account mo. I-verify ang ID mo para alam ng seller na totoo kang buyer.',
+  );
+  String get checkingYourId =>
+      t('We are checking your ID', 'Sinusuri namin ang ID mo');
+  String idSubmittedOn(String when) => t(
+    'Submitted $when. You will get a notification when it is done, usually within a day.',
+    'Ipinasa noong $when. Aabisuhan ka kapag tapos na, kadalasan sa loob ng isang araw.',
+  );
+  String get couldNotVerifyId =>
+      t('We could not verify your ID', 'Hindi namin na-verify ang ID mo');
+  String idRejectedReason(String reason) =>
+      t('Reason: $reason', 'Dahilan: $reason');
+  String get yourIdIsVerified =>
+      t('Your ID is verified', 'Beripikado na ang ID mo');
+  String idVerifiedOn(String when) => t(
+    'Verified on $when. Your ID photo has been deleted.',
+    'Na-verify noong $when. Nabura na ang larawan ng ID mo.',
+  );
+  String get verifyMyId => t('Verify my ID', 'I-verify ang ID ko');
+  String get tryIdAgain => t('Try again', 'Subukan ulit');
+  String get idVerifiedBadge => t('ID verified', 'Beripikadong ID');
+  String get cartIsSaved => t(
+    'Your cart is saved, so you will not lose anything.',
+    'Naka-save ang cart mo, kaya walang mawawala.',
+  );
+  String get waitingForIdReview =>
+      t('Waiting for ID review', 'Hinihintay ang pagsusuri ng ID');
+  String get cartSavedUntilApproved => t(
+    'Your cart is saved. You can place this order once your ID is approved.',
+    'Naka-save ang cart mo. Puwede mo itong i-order kapag naaprubahan na ang ID mo.',
+  );
+  String get reserveNeedsId => t(
+    'Reservations need a verified ID, just like orders.',
+    'Kailangan ng beripikadong ID sa reserbasyon, gaya ng order.',
+  );
+  String get reserveWaitsForId => t(
+    'You can reserve once your ID is approved.',
+    'Puwede kang mag-reserve kapag naaprubahan na ang ID mo.',
+  );
   String get report => t('Report', 'I-ulat');
   String get reportDetails => t('Details (optional)', 'Detalye (opsyonal)');
   String get reportChooseReason => t('Choose a reason.', 'Pumili ng dahilan.');
@@ -2097,6 +2211,11 @@ class AppStrings {
       'Account deletion request rejected',
       'Tinanggihan ang kahilingan sa pagbura ng account',
     ),
+    'id_verification_approved' => t('ID verified', 'Beripikado na ang ID'),
+    'id_verification_rejected' => t(
+      'ID not verified',
+      'Hindi na-verify ang ID',
+    ),
     'report_submitted' => t('New report submitted', 'May bagong ulat'),
     'report_resolved' => t('Report resolved', 'Naaksyunan ang ulat'),
     'report_dismissed' => t('Report dismissed', 'Tinanggihan ang ulat'),
@@ -2182,7 +2301,7 @@ class AppStrings {
           ),
           (
             title: 'Mga account',
-            body: 'Gamitin ang tunay mong pangalan at gumaganang email. Itago ang password at huwag ipamahagi ang login. Kailangang beripikahin ng buyer ang email bago mag-order. Ang farmer-seller account ay ginagawa ng AniHow admin para sa isang partner farm.',
+            body: 'Gamitin ang tunay mong pangalan at gumaganang email. Itago ang password at huwag ipamahagi ang login. Kailangang beripikahin ng buyer ang email bago mag-order, at ang bagong buyer ay magpapasa rin ng government ID bago ang unang order o reserbasyon. Ang farmer-seller account ay ginagawa ng AniHow admin para sa isang partner farm.',
           ),
           (
             title: 'Mga order at reserbasyon',
@@ -2216,7 +2335,7 @@ class AppStrings {
           ),
           (
             title: 'Accounts',
-            body: 'Use your real name and a working email. Keep your password private and do not share your login. Buyers verify their email before ordering. Farmer-seller accounts are created by the AniHow admin for a partner farm.',
+            body: 'Use your real name and a working email. Keep your password private and do not share your login. Buyers verify their email before ordering, and new buyers also submit a government ID before their first order or reservation. Farmer-seller accounts are created by the AniHow admin for a partner farm.',
           ),
           (
             title: 'Orders and reservations',
@@ -2253,7 +2372,7 @@ class AppStrings {
           ),
           (
             title: 'Ano ang kinokolekta namin',
-            body: 'Account: pangalan, email, phone (opsyonal), password (naka-encrypt, hindi namin nababasa), at profile photo (opsyonal). Gamit: mga order, reserbasyon, review, paborito, at chat sa seller. Bayad: ang screenshot o patunay ng online na bayad na ina-upload mo; hindi namin nakikita ang password ng card o e-wallet mo. Seller: shop profile, listing at larawan nito, at tala ng ani at benta. Device: notification token kung pinayagan mo ang abiso.',
+            body: 'Account: pangalan, email, phone (opsyonal), password (naka-encrypt, hindi namin nababasa), at profile photo (opsyonal). Pag-verify ng ID (buyer): larawan ng iyong government ID at, kung idinagdag mo, selfie na hawak ito. Gamit: mga order, reserbasyon, review, paborito, at chat sa seller. Bayad: ang screenshot o patunay ng online na bayad na ina-upload mo; hindi namin nakikita ang password ng card o e-wallet mo. Seller: shop profile, listing at larawan nito, at tala ng ani at benta. Device: notification token kung pinayagan mo ang abiso.',
           ),
           (
             title: 'Lokasyon',
@@ -2265,11 +2384,11 @@ class AppStrings {
           ),
           (
             title: 'Sino ang nakakakita',
-            body: 'Nakikita ng seller ang pangalan, phone at mensahe mo para sa iyong mga order. Nakikita ng buyer ang pangalan ng shop, profile at listing ng seller. Nakikita ng admin ang kailangan lang para suportahan ang app at asikasuhin ang report. Hindi namin ibinebenta o pinauupahan ang data mo, at walang ads.',
+            body: 'Nakikita ng seller ang pangalan, phone at mensahe mo para sa iyong mga order. Nakikita ng buyer ang pangalan ng shop, profile at listing ng seller. Nakikita ng admin ang kailangan lang para suportahan ang app, suriin ang ID, at asikasuhin ang report. Hindi namin ibinebenta o pinauupahan ang data mo, at walang ads.',
           ),
           (
             title: 'Gaano katagal itinatago',
-            body: 'Habang aktibo ang account mo. Kapag binura ang account mo, aalisin ang pangalan, email, phone at mga larawan mo; mananatili ang mga order nang wala ang mga detalye mo para tama ang tala ng benta ng farm.',
+            body: 'Habang aktibo ang account mo. Binubura ang larawan ng ID sa sandaling masuri ito ng admin; ang resulta lang (beripikado o hindi) ang itinatago. Kapag binura ang account mo, aalisin ang pangalan, email, phone at mga larawan mo; mananatili ang mga order nang wala ang mga detalye mo para tama ang tala ng benta ng farm.',
           ),
           (
             title: 'Ang mga karapatan mo',
@@ -2291,7 +2410,7 @@ class AppStrings {
           ),
           (
             title: 'What we collect',
-            body: 'Account: name, email, phone (optional), password (stored scrambled, we cannot read it), and a profile photo (optional). Activity: orders, reservations, reviews, favorites, and chats with sellers. Payments: the screenshot or proof of an online payment that you upload; we never see your card or e-wallet password. Sellers: shop profile, listings and their photos, and harvest and sales records. Device: a notification token if you allow notifications.',
+            body: 'Account: name, email, phone (optional), password (stored scrambled, we cannot read it), and a profile photo (optional). ID check (buyers): a photo of your government ID and, if you add one, a selfie holding it. Activity: orders, reservations, reviews, favorites, and chats with sellers. Payments: the screenshot or proof of an online payment that you upload; we never see your card or e-wallet password. Sellers: shop profile, listings and their photos, and harvest and sales records. Device: a notification token if you allow notifications.',
           ),
           (
             title: 'Location',
@@ -2303,11 +2422,11 @@ class AppStrings {
           ),
           (
             title: 'Who can see it',
-            body: 'Sellers see your name, phone and messages for your orders. Buyers see a seller\'s shop name, profile and listings. Admins see only what they need to support the app and handle reports. We do not sell or rent your data, and there are no ads.',
+            body: 'Sellers see your name, phone and messages for your orders. Buyers see a seller\'s shop name, profile and listings. Admins see only what they need to support the app, check IDs and handle reports. We do not sell or rent your data, and there are no ads.',
           ),
           (
             title: 'How long we keep it',
-            body: 'While your account is active. If your account is deleted, your name, email, phone and photos are removed; orders stay without your details so the farm\'s sales records remain correct.',
+            body: 'While your account is active. ID photos are deleted as soon as an admin reviews them; only the result (verified or not) is kept. If your account is deleted, your name, email, phone and photos are removed; orders stay without your details so the farm\'s sales records remain correct.',
           ),
           (
             title: 'Your rights',

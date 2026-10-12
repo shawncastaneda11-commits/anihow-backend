@@ -13,6 +13,7 @@ import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/hint_card.dart';
+import '../../widgets/id_verification_card.dart';
 import '../../widgets/order_look.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/produce_card.dart';
@@ -97,6 +98,7 @@ class ProfileScreen extends StatelessWidget {
                                       label: s.unverified,
                                       color: AniHowColors.pending,
                                     ),
+                              if (user.isIdVerified) const IdVerifiedBadge(),
                             ],
                           ),
                         ],
@@ -109,6 +111,10 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
         ),
+        if (user.idVerification case final idCheck?) ...[
+          const SizedBox(height: AniHowSpace.cardGap),
+          IdVerificationCard(info: idCheck),
+        ],
         if (!user.isVerified) ...[
           const SizedBox(height: AniHowSpace.cardGap),
           AniHowHintCard(

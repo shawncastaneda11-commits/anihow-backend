@@ -27,6 +27,7 @@ class UserResource extends JsonResource
             'must_change_password' => (bool) $this->must_change_password,
             'needs_terms' => $this->needsTermsAcceptance(),
             'terms_accepted_at' => $this->terms_accepted_at,
+            'id_verification' => $this->idVerificationSummary(),
             'roles' => $this->whenLoaded('roles', fn () => $this->roles->pluck('name')->values()),
             'farm' => $this->whenLoaded(
                 'farm',
@@ -47,6 +48,29 @@ class UserResource extends JsonResource
             'permissions' => $this->getAllPermissions()->pluck('name')->values(),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+        ];
+    }
+
+    /**
+     * @return array{required: bool, verified: bool, status: string, id_type: ?string, rejection_reason: ?string, submitted_at: ?string, reviewed_at: ?string}|null
+     */
+    private function idVerificationSummary(): ?array
+    {
+        if (! $this->isBuyer()) {
+            return null;
+        }
+
+        $latest = $this->latestIdVerification;
+        $verified = $this->id_verified_at !== null;
+
+        return [
+            'required' => $this->mustVerifyIdToOrder(),
+            'verified' => $verified,
+            'status' => $verified ? 'approved' : ($latest?->status->value ?? 'none'),
+            'id_type' => $latest?->id_type->value,
+            'rejection_reason' => $latest?->rejection_reason,
+            'submitted_at' => $latest?->created_at?->toIso8601String(),
+            'reviewed_at' => ($verified ? $this->id_verified_at : $latest?->reviewed_at)?->toIso8601String(),
         ];
     }
 }

@@ -10,6 +10,7 @@ import 'favorites_screen.dart';
 import 'marketplace_screen.dart';
 import 'order_history_screen.dart';
 import 'shops_screen.dart';
+import '../auth/verify_id_screen.dart';
 import '../profile/verify_email_screen.dart';
 
 /// Test hook so the banner layout can be pumped without live API pages.
@@ -44,15 +45,31 @@ class _BuyerShellState extends State<BuyerShell> {
     }
   }
 
-  void _openVerifyAfterRegister() {
+  /// After sign-up: verify the email first, then offer the ID check once.
+  Future<void> _openVerifyAfterRegister() async {
     final auth = context.read<AuthController>();
-    if (!auth.pendingEmailVerification || auth.user?.isVerified == true) {
+    if (auth.pendingEmailVerification && auth.user?.isVerified != true) {
+      auth.clearPendingEmailVerification();
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const VerifyEmailScreen()),
+      );
+      if (!mounted) {
+        return;
+      }
+    }
+    if (!auth.pendingIdVerification) {
       return;
     }
-    auth.clearPendingEmailVerification();
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const VerifyEmailScreen()));
+    auth.clearPendingIdVerification();
+    final idCheck = auth.user?.idVerification;
+    if (idCheck == null || !idCheck.blocksOrders || idCheck.status != 'none') {
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const VerifyIdScreen(afterSignUp: true),
+      ),
+    );
   }
 
   @override

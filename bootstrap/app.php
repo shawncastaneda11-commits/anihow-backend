@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\ReservationsRequireConfirmation;
+use App\Http\Middleware\EnsureIdVerified;
 use App\Http\Middleware\EnsurePasswordChanged;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\SecurityHeaders;
@@ -42,6 +43,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
             'password.changed' => EnsurePasswordChanged::class,
+            'id.verified' => EnsureIdVerified::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

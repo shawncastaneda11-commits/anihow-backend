@@ -36,6 +36,9 @@ class AuthController extends ChangeNotifier {
   String? error;
   bool sessionEnded = false;
   bool pendingEmailVerification = false;
+
+  /// Set right after sign-up so the buyer is offered the ID check once.
+  bool pendingIdVerification = false;
   String? pendingVerificationCode;
 
   Future<void> restoreSession() async {
@@ -135,6 +138,7 @@ class AuthController extends ChangeNotifier {
       );
       user = result.user;
       pendingEmailVerification = true;
+      pendingIdVerification = true;
       pendingVerificationCode = result.verificationCode;
       notifyListeners();
       return true;
@@ -147,6 +151,10 @@ class AuthController extends ChangeNotifier {
 
   void clearPendingEmailVerification() {
     pendingEmailVerification = false;
+  }
+
+  void clearPendingIdVerification() {
+    pendingIdVerification = false;
   }
 
   void rememberVerificationCode(String? code) {

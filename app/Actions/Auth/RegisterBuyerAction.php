@@ -28,6 +28,7 @@ class RegisterBuyerAction
 
         $user->assignRole(Role::Buyer);
         $user->acceptCurrentTerms();
+        $user->forceFill(['requires_id_verification' => true])->save();
         $code = app(SendEmailVerificationCodeAction::class)->handle($user);
 
         return [

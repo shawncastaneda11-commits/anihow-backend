@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/app_strings.dart';
+import '../auth/terms_screen.dart';
 import '../../push/push_preferences.dart';
 import '../../push/push_runtime.dart';
 import '../../state/auth_controller.dart';
@@ -221,18 +222,7 @@ class SettingsScreen extends StatelessWidget {
                 icon: Icons.description_outlined,
                 label: s.termsPrivacy,
                 onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => _SettingsCopyScreen(
-                      title: s.termsPrivacy,
-                      sections: [
-                        for (final section in s.termsSections)
-                          _CopySection(
-                            title: section.title,
-                            body: section.body,
-                          ),
-                      ],
-                    ),
-                  ),
+                  MaterialPageRoute<void>(builder: (_) => const TermsScreen()),
                 ),
               ),
             ],

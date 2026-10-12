@@ -98,7 +98,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final s = AppStrings.of(context);
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
-    final sheet = theme.cardTheme.color ??
+    final sheet =
+        theme.cardTheme.color ??
         (dark ? AniHowColors.darkCard : AniHowColors.card);
     final muted = theme.colorScheme.onSurface.withValues(alpha: 0.72);
     final good = dark ? const Color(0xFF7FD3A0) : const Color(0xFF1F7A45);
@@ -109,185 +110,193 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: AniHowColors.brand,
+        // The card colour, not green: space under the form (for example
+        // when the keyboard is open) must not show a green band.
+        backgroundColor: sheet,
         body: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _Header(onBack: () => Navigator.of(context).maybePop()),
-              Material(
-                color: sheet,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(24),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    AniHowSpace.screen,
-                    22,
-                    AniHowSpace.screen,
-                    24 + MediaQuery.paddingOf(context).bottom,
+              ColoredBox(
+                color: AniHowColors.brand,
+                child: _Header(onBack: () => Navigator.of(context).maybePop()),
+              ),
+              ColoredBox(
+                color: AniHowColors.brand,
+                child: Material(
+                  color: sheet,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      AniHowField(
-                        label: s.fullName,
-                        child: TextField(
-                          key: const ValueKey('register-name'),
-                          controller: _name,
-                          textCapitalization: TextCapitalization.words,
-                          autofillHints: const [AutofillHints.name],
-                          decoration: const InputDecoration(
-                            prefixIcon: Icon(Icons.person_outline),
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AniHowSpace.screen,
+                      22,
+                      AniHowSpace.screen,
+                      24 + MediaQuery.paddingOf(context).bottom,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        AniHowField(
+                          label: s.fullName,
+                          child: TextField(
+                            key: const ValueKey('register-name'),
+                            controller: _name,
+                            textCapitalization: TextCapitalization.words,
+                            autofillHints: const [AutofillHints.name],
+                            decoration: const InputDecoration(
+                              prefixIcon: Icon(Icons.person_outline),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      AniHowField(
-                        label: s.email,
-                        child: TextField(
-                          key: const ValueKey('register-email'),
-                          controller: _email,
-                          keyboardType: TextInputType.emailAddress,
-                          autofillHints: const [AutofillHints.email],
-                          decoration: const InputDecoration(
-                            prefixIcon: Icon(Icons.mail_outline),
+                        const SizedBox(height: 16),
+                        AniHowField(
+                          label: s.email,
+                          child: TextField(
+                            key: const ValueKey('register-email'),
+                            controller: _email,
+                            keyboardType: TextInputType.emailAddress,
+                            autofillHints: const [AutofillHints.email],
+                            decoration: const InputDecoration(
+                              prefixIcon: Icon(Icons.mail_outline),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      AniHowField(
-                        label: s.phoneOptional,
-                        child: TextField(
-                          key: const ValueKey('register-phone'),
-                          controller: _phone,
-                          keyboardType: TextInputType.phone,
-                          autofillHints: const [
-                            AutofillHints.telephoneNumber,
-                          ],
-                          decoration: const InputDecoration(
-                            prefixIcon: Icon(Icons.phone_outlined),
-                            hintText: '0912 345 6789',
+                        const SizedBox(height: 16),
+                        AniHowField(
+                          label: s.phoneOptional,
+                          child: TextField(
+                            key: const ValueKey('register-phone'),
+                            controller: _phone,
+                            keyboardType: TextInputType.phone,
+                            autofillHints: const [
+                              AutofillHints.telephoneNumber,
+                            ],
+                            decoration: const InputDecoration(
+                              prefixIcon: Icon(Icons.phone_outlined),
+                              hintText: '0912 345 6789',
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      PasswordField(
-                        key: const ValueKey('register-password'),
-                        controller: _password,
-                        label: s.password,
-                        showLockIcon: true,
-                      ),
-                      const SizedBox(height: 8),
-                      PasswordRulesChecklist(password: _password.text),
-                      const SizedBox(height: 16),
-                      PasswordField(
-                        key: const ValueKey('register-confirm'),
-                        controller: _confirm,
-                        label: s.confirmPassword,
-                        showLockIcon: true,
-                      ),
-                      if (_confirm.text.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          _passwordsMatch
-                              ? s.passwordsMatch
-                              : s.passwordsDontMatch,
-                          key: const ValueKey('register-match'),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: _passwordsMatch
-                                ? good
-                                : theme.colorScheme.error,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        const SizedBox(height: 16),
+                        PasswordField(
+                          key: const ValueKey('register-password'),
+                          controller: _password,
+                          label: s.password,
+                          showLockIcon: true,
                         ),
-                      ],
-                      const SizedBox(height: 12),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Checkbox(
-                            key: const ValueKey('register-terms'),
-                            value: _agreed,
-                            onChanged: (value) =>
-                                setState(() => _agreed = value ?? false),
+                        const SizedBox(height: 8),
+                        PasswordRulesChecklist(password: _password.text),
+                        const SizedBox(height: 16),
+                        PasswordField(
+                          key: const ValueKey('register-confirm'),
+                          controller: _confirm,
+                          label: s.confirmPassword,
+                          showLockIcon: true,
+                        ),
+                        if (_confirm.text.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            _passwordsMatch
+                                ? s.passwordsMatch
+                                : s.passwordsDontMatch,
+                            key: const ValueKey('register-match'),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: _passwordsMatch
+                                  ? good
+                                  : theme.colorScheme.error,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(top: 12),
-                              child: Text.rich(
-                                TextSpan(
-                                  style: theme.textTheme.bodyMedium,
-                                  children: [
-                                    TextSpan(text: s.iAgreePrefix),
-                                    TextSpan(
-                                      text: s.termsOfService,
-                                      style: linkStyle,
-                                      recognizer: _termsTap,
-                                    ),
-                                    TextSpan(text: s.andWord),
-                                    TextSpan(
-                                      text: s.privacyPolicy,
-                                      style: linkStyle,
-                                      recognizer: _privacyTap,
-                                    ),
-                                    const TextSpan(text: '.'),
-                                  ],
+                        ],
+                        const SizedBox(height: 12),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Checkbox(
+                              key: const ValueKey('register-terms'),
+                              value: _agreed,
+                              onChanged: (value) =>
+                                  setState(() => _agreed = value ?? false),
+                            ),
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 12),
+                                child: Text.rich(
+                                  TextSpan(
+                                    style: theme.textTheme.bodyMedium,
+                                    children: [
+                                      TextSpan(text: s.iAgreePrefix),
+                                      TextSpan(
+                                        text: s.termsOfService,
+                                        style: linkStyle,
+                                        recognizer: _termsTap,
+                                      ),
+                                      TextSpan(text: s.andWord),
+                                      TextSpan(
+                                        text: s.privacyPolicy,
+                                        style: linkStyle,
+                                        recognizer: _privacyTap,
+                                      ),
+                                      const TextSpan(text: '.'),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      if (error != null) ...[
-                        const SizedBox(height: AniHowSpace.cardGap),
-                        Text(
-                          error,
-                          style: TextStyle(
-                            color: theme.colorScheme.error,
-                            fontSize: AniHowSpace.body,
-                          ),
+                          ],
                         ),
-                      ],
-                      const SizedBox(height: 16),
-                      PrimaryButton(
-                        key: const ValueKey('register-submit'),
-                        label: s.createAccount,
-                        busy: _busy,
-                        onPressed: missing.isEmpty ? _submit : null,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        missing.isEmpty
-                            ? s.weWillSendCode
-                            : s.stillNeeded(missing.join(', ')),
-                        key: const ValueKey('register-hint'),
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: muted,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
+                        if (error != null) ...[
+                          const SizedBox(height: AniHowSpace.cardGap),
                           Text(
-                            s.alreadyHaveAccount,
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.of(context).maybePop(),
-                            child: Text(
-                              s.logIn,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
+                            error,
+                            style: TextStyle(
+                              color: theme.colorScheme.error,
+                              fontSize: AniHowSpace.body,
                             ),
                           ),
                         ],
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        PrimaryButton(
+                          key: const ValueKey('register-submit'),
+                          label: s.createAccount,
+                          busy: _busy,
+                          onPressed: missing.isEmpty ? _submit : null,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          missing.isEmpty
+                              ? s.weWillSendCode
+                              : s.stillNeeded(missing.join(', ')),
+                          key: const ValueKey('register-hint'),
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: muted,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              s.alreadyHaveAccount,
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(context).maybePop(),
+                              child: Text(
+                                s.logIn,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

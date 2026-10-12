@@ -69,7 +69,7 @@ return [
     | asked again the next time they open the app.
     |
     */
-    'terms_version' => (int) env('TERMS_VERSION', 1),
+    'terms_version' => (int) env('TERMS_VERSION', 2),
 
     /*
     | Who a farmer or a farm emails when they want an account. Phone is

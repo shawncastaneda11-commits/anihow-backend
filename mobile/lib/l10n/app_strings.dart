@@ -2172,81 +2172,154 @@ class AppStrings {
           (title: 'Version', body: 'This Android app is AniHow v1.0.0.'),
         ];
 
-  /// Sections 1 to 5 of [termsSections] are the Terms of Service; the rest
-  /// (what we store, what we do not do, questions) are the Privacy Policy.
-  List<({String title, String body})> get termsOfServiceSections =>
-      termsSections.take(5).toList();
-
-  List<({String title, String body})> get privacyPolicySections =>
-      termsSections.skip(5).toList();
-
-  List<({String title, String body})> get termsSections => filipino
+  /// Terms of Service. Shown with [privacyPolicySections] on the terms page.
+  /// Raise TERMS_VERSION on the server whenever either text changes.
+  List<({String title, String body})> get termsOfServiceSections => filipino
       ? const [
           (
             title: 'Paggamit ng AniHow',
-            body: 'Sa paggamit ng app, sumasang-ayon ka sa mga tuntuning ito. Ang AniHow ay pantala ng reserbasyon at benta sa pickup market. Hindi ito mismo ang nagbebenta, at hindi ito tumatanggap ng card, GCash, o bangko.',
+            body: 'Sa paggawa ng account o paggamit ng app, sumasang-ayon ka sa mga tuntuning ito. Ikinokonekta ng AniHow ang mga buyer sa mga farmer-seller ng mga partner farm para sa pickup na order at reserbasyon. Ang mga farm ang nagbebenta ng ani; ang AniHow ang app na ginagamit nila.',
           ),
           (
             title: 'Mga account',
-            body: 'Itago ang email at password. Kailangang beripikahin ng buyer ang email bago mag-order o mag-save ng paborito. Ang farmer-seller account ay nakatali sa farm na ibinigay ng admin. Huwag ipamahagi ang login.',
+            body: 'Gamitin ang tunay mong pangalan at gumaganang email. Itago ang password at huwag ipamahagi ang login. Kailangang beripikahin ng buyer ang email bago mag-order. Ang farmer-seller account ay ginagawa ng AniHow admin para sa isang partner farm.',
           ),
           (
-            title: 'Order at pera',
-            body: 'Ang Placed order ay reserbasyon, hindi pa bayad. Kinukumpirma ng seller ang stock, minamarkahan itong ready, at nagtatala ng cash sa handover. Puwedeng i-cancel ng buyer habang Placed pa. Ang walk-in ay para sa buyer na wala sa app at walang chat.',
+            title: 'Mga order at reserbasyon',
+            body: 'Ang Placed na order ay hiling pa lamang hangga\'t hindi kinukumpirma ng seller. Kinukumpirma ng seller ang order, minamarkahang ready, at tinatapos sa handover. Puwede kang mag-cancel habang Placed pa; puwede ring mag-cancel ang seller na may dahilan, at aabisuhan ka. Ganito rin ang patakaran sa reserbasyon ng paparating na ani.',
+          ),
+          (
+            title: 'Bayad',
+            body: 'Direkta kang nagbabayad sa seller: cash sa pickup, o sa sariling payment QR code ng seller. Hindi tumatanggap, nag-iingat, o nagre-refund ng pera ang AniHow. Kinukumpirma ng seller ang online na bayad matapos mong ipadala ang patunay.',
           ),
           (
             title: 'Presyo at tawad',
-            body: 'Ang nakalistang presyo at tawad ay itinakda ng seller. Hindi puwedeng bumaba ang tawad sa floor price ng farm. Hindi pantawad ang chat.',
+            body: 'Ang presyo at anumang tawad ay itinakda ng seller. Hindi puwedeng bumaba ang tawad sa floor price ng farm. Hindi pantawad ng bagong presyo ang chat.',
           ),
           (
-            title: 'Listing at review',
-            body: 'Dapat totoo ang deskripsyon ng stock. Puwedeng tanggalin ng admin ang listing na lumalabag sa rule ng farm. Puwedeng mag-review ang buyer pagkatapos ng completed handover.',
+            title: 'Listing, review at chat',
+            body: 'Dapat totoo ang paglalarawan ng ani. Puwedeng mag-review ang buyer matapos ang natapos na handover. Maging magalang sa chat; bawal ang pang-aabuso at spam. Sinusuri ng admin ang mga report.',
           ),
           (
-            title: 'Ano ang iniimbak namin',
-            body: 'Iniimbak ng AniHow ang pangalan, email, at optional na phone; mga order, chat tungkol sa order, paborito, at teksto ng shop profile. Iniimbak din ang larawan ng listing. Ginagamit ito para patakbuhin ang palengke, magpadala ng verification code, at magpakita ng abiso.',
+            title: 'Pagsuspinde',
+            body: 'Puwedeng suspindihin ng admin ang account na lumalabag sa mga tuntuning ito o sa patakaran ng farm, o nag-aabuso sa app.',
           ),
           (
-            title: 'Ano ang hindi namin ginagawa',
-            body: 'Hindi namin ibinebenta ang data mo. Hindi kami tumatanggap ng card o e-wallet. Hindi namin sinusubaybayan ang live location. Wala pang push notification sa bersyong ito.',
-          ),
-          (
-            title: 'Mga tanong',
-            body: 'Para sa tulong, buksan ang FAQ sa Settings. Para sa isang reserbasyon, buksan ang order at gamitin ang Chat.',
+            title: 'Mga pagbabago',
+            body: 'Puwede naming baguhin ang mga tuntuning ito. Kapag nagbago, hihilingin ng app na basahin at tanggapin mo ang bagong bersyon bago magpatuloy.',
           ),
         ]
       : const [
           (
             title: 'Using AniHow',
-            body: 'By using this app you agree to these rules. AniHow is a reservation and record tool for a pickup market. It does not sell produce itself and it does not take card, GCash, or bank payments.',
+            body: 'By creating an account or using the app, you agree to these terms. AniHow connects buyers with the farmer-sellers of partner farms for pickup orders and reservations. The farms sell the produce; AniHow is the app they use.',
           ),
           (
             title: 'Accounts',
-            body: 'Keep your email and password private. Buyers must verify email before they can order or save favorites. Farmer-seller accounts stay under the farm that the admin assigned. Do not share a login.',
+            body: 'Use your real name and a working email. Keep your password private and do not share your login. Buyers verify their email before ordering. Farmer-seller accounts are created by the AniHow admin for a partner farm.',
           ),
           (
-            title: 'Orders and cash',
-            body: 'A Placed order is a reservation, not a paid sale. The seller confirms stock, marks it ready, and records cash at handover. A buyer may cancel only while the order is still Placed. Walk-in sales are for buyers who are not in the app and have no chat thread.',
+            title: 'Orders and reservations',
+            body: 'A placed order is a request until the seller confirms it. The seller confirms it, marks it ready, and completes it at handover. You can cancel while it is still placed; the seller can cancel with a reason, and you are notified. Reservations for upcoming harvests follow the same rules.',
+          ),
+          (
+            title: 'Payments',
+            body: 'You pay the seller directly: cash at pickup, or through the seller\'s own payment QR code. AniHow does not receive, hold or refund money. The seller confirms an online payment after you send proof.',
           ),
           (
             title: 'Prices and tawad',
-            body: 'The listed price and any tawad (peso discount) are set by the seller. Tawad cannot go below the farm floor price. Chat is not for negotiating a new price.',
+            body: 'The price and any tawad (discount) are set by the seller. Tawad cannot go below the farm floor price. Chat is not for negotiating a new price.',
           ),
           (
-            title: 'Listings and reviews',
-            body: 'Sellers must describe stock honestly. The admin may take down a listing that breaks farm rules. Buyers may review a seller only after a completed handover.',
+            title: 'Listings, reviews and chat',
+            body: 'Listings must describe the produce honestly. Buyers can review a seller after a completed handover. Be respectful in chat; abuse and spam are not allowed. The admin reviews reports.',
           ),
           (
-            title: 'What we store',
-            body: 'AniHow stores your name, email, and optional phone; orders, chat about those orders, favorites, and shop profile text. Listing photos you upload are stored so buyers can see the produce. We use this data to run the market hub, send a verification code, and show in-app notices.',
+            title: 'Suspension',
+            body: 'The admin may suspend an account that breaks these terms or the farm rules, or misuses the app.',
           ),
           (
-            title: 'What we do not do',
-            body: 'We do not sell your data. We do not process cards or e-wallets. We do not track your live location. Push notifications are not in this version.',
+            title: 'Changes',
+            body: 'We may update these terms. When we do, the app asks you to read and accept the new version before you continue.',
+          ),
+        ];
+
+  /// Privacy Policy, written for the Data Privacy Act of 2012 (RA 10173).
+  List<({String title, String body})> get privacyPolicySections => filipino
+      ? const [
+          (
+            title: 'Tungkol sa patakarang ito',
+            body: 'Ipinapaliwanag nito kung anong personal na impormasyon ang kinokolekta ng AniHow, bakit, at paano ito pinoprotektahan. Sinusunod namin ang Data Privacy Act of 2012 (Republic Act No. 10173).',
           ),
           (
-            title: 'Questions',
-            body: 'For how-to help, open FAQ in Settings. For one reservation, open that order and use Chat.',
+            title: 'Ano ang kinokolekta namin',
+            body: 'Account: pangalan, email, phone (opsyonal), password (naka-encrypt, hindi namin nababasa), at profile photo (opsyonal). Gamit: mga order, reserbasyon, review, paborito, at chat sa seller. Bayad: ang screenshot o patunay ng online na bayad na ina-upload mo; hindi namin nakikita ang password ng card o e-wallet mo. Seller: shop profile, listing at larawan nito, at tala ng ani at benta. Device: notification token kung pinayagan mo ang abiso.',
+          ),
+          (
+            title: 'Lokasyon',
+            body: 'Kapag pinindot mo lang ang Near me, ipinapadala nang isang beses ang lokasyon ng phone mo para ayusin ang mga farm ayon sa layo. Hindi ito iniimbak.',
+          ),
+          (
+            title: 'Bakit namin ito ginagamit',
+            body: 'Para patakbuhin ang mga order, reserbasyon at chat; magpadala ng verification at reset code sa email; magpadala ng abisong binuksan mo; panatilihing ligtas ang palengke (report at pagsuspinde); at ipakita sa seller ang buod ng benta nila.',
+          ),
+          (
+            title: 'Sino ang nakakakita',
+            body: 'Nakikita ng seller ang pangalan, phone at mensahe mo para sa iyong mga order. Nakikita ng buyer ang pangalan ng shop, profile at listing ng seller. Nakikita ng admin ang kailangan lang para suportahan ang app at asikasuhin ang report. Hindi namin ibinebenta o pinauupahan ang data mo, at walang ads.',
+          ),
+          (
+            title: 'Gaano katagal itinatago',
+            body: 'Habang aktibo ang account mo. Kapag binura ang account mo, aalisin ang pangalan, email, phone at mga larawan mo; mananatili ang mga order nang wala ang mga detalye mo para tama ang tala ng benta ng farm.',
+          ),
+          (
+            title: 'Ang mga karapatan mo',
+            body: 'Puwede mong tingnan at itama ang profile mo, mag-download ng kopya ng data mo, buksan o patayin ang abiso, at humiling na burahin ang account mo, lahat mula sa Settings. Puwede ka ring magreklamo sa National Privacy Commission.',
+          ),
+          (
+            title: 'Pag-iingat sa data',
+            body: 'Naka-encrypt ang password at ang koneksyon (HTTPS). Ang may access lang sa data ay ang mga taong kailangan ito sa trabaho nila.',
+          ),
+          (
+            title: 'Mga tanong at pagbabago',
+            body: 'Para sa tanong tungkol sa privacy, gamitin ang Help sa app. Kapag nagbago ang patakarang ito, hihilingin ng app na basahin at tanggapin mo ang bagong bersyon.',
+          ),
+        ]
+      : const [
+          (
+            title: 'About this policy',
+            body: 'This explains what personal information AniHow collects, why, and how it is protected. We follow the Data Privacy Act of 2012 (Republic Act No. 10173).',
+          ),
+          (
+            title: 'What we collect',
+            body: 'Account: name, email, phone (optional), password (stored scrambled, we cannot read it), and a profile photo (optional). Activity: orders, reservations, reviews, favorites, and chats with sellers. Payments: the screenshot or proof of an online payment that you upload; we never see your card or e-wallet password. Sellers: shop profile, listings and their photos, and harvest and sales records. Device: a notification token if you allow notifications.',
+          ),
+          (
+            title: 'Location',
+            body: 'Only when you tap Near me, your phone\'s location is sent once to sort farms by distance. It is not saved.',
+          ),
+          (
+            title: 'Why we use it',
+            body: 'To run orders, reservations and chats; send verification and reset codes by email; send the notifications you turn on; keep the marketplace safe (reports and suspensions); and show sellers their sales summaries.',
+          ),
+          (
+            title: 'Who can see it',
+            body: 'Sellers see your name, phone and messages for your orders. Buyers see a seller\'s shop name, profile and listings. Admins see only what they need to support the app and handle reports. We do not sell or rent your data, and there are no ads.',
+          ),
+          (
+            title: 'How long we keep it',
+            body: 'While your account is active. If your account is deleted, your name, email, phone and photos are removed; orders stay without your details so the farm\'s sales records remain correct.',
+          ),
+          (
+            title: 'Your rights',
+            body: 'You can view and correct your profile, download a copy of your data, turn notifications on or off, and ask to delete your account, all from Settings. You can also file a complaint with the National Privacy Commission.',
+          ),
+          (
+            title: 'Keeping it safe',
+            body: 'Passwords and the connection (HTTPS) are encrypted. Only the people who need the data for their work can access it.',
+          ),
+          (
+            title: 'Questions and changes',
+            body: 'For privacy questions, use Help in the app. When this policy changes, the app asks you to read and accept the new version.',
           ),
         ];
 

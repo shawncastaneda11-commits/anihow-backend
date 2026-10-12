@@ -40,7 +40,7 @@ class TermsAndPasswordRulesTest extends TestCase
             ->assertJsonPath('data.needs_terms', false);
 
         $user = User::query()->where('email', 'maria@example.com')->firstOrFail();
-        $this->assertSame(1, $user->terms_version);
+        $this->assertSame((int) config('anihow.terms_version'), $user->terms_version);
         $this->assertNotNull($user->terms_accepted_at);
     }
 
@@ -80,7 +80,7 @@ class TermsAndPasswordRulesTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.needs_terms', false);
 
-        config(['anihow.terms_version' => 2]);
+        config(['anihow.terms_version' => (int) config('anihow.terms_version') + 1]);
 
         $this->asUser($buyer)->getJson('/api/auth/user')
             ->assertOk()

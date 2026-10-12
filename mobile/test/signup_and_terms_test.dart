@@ -179,7 +179,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(TermsScreen), findsOneWidget);
-    expect(find.textContaining('What we store'), findsOneWidget);
+    expect(find.textContaining('What we collect'), findsOneWidget);
+    expect(find.textContaining('Near me'), findsOneWidget);
   });
 
   testWidgets('an app user who has not accepted sees the terms first', (

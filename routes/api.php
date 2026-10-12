@@ -2,6 +2,7 @@
 
 use App\Enums\Role;
 use App\Http\Controllers\Api\Admin\CreateFarmerSellerController;
+use App\Http\Controllers\Api\Auth\AcceptTermsController;
 use App\Http\Controllers\Api\Auth\AccountDeletionRequestController;
 use App\Http\Controllers\Api\Auth\ChangePasswordController;
 use App\Http\Controllers\Api\Auth\DeleteUserAvatarController;
@@ -95,6 +96,7 @@ Route::prefix('auth')->group(function (): void {
         Route::delete('user/deletion-request', [AccountDeletionRequestController::class, 'destroy'])
             ->name('auth.user.deletion-request.destroy');
         Route::post('password', ChangePasswordController::class)->name('auth.password');
+        Route::post('terms/accept', AcceptTermsController::class)->name('auth.terms.accept');
         Route::middleware('throttle:auth')->group(function (): void {
             Route::post('email/verification-notification', ResendVerificationController::class)
                 ->name('verification.send');

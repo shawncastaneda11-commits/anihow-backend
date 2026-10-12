@@ -38,8 +38,9 @@ class VerificationAndPasswordResetTest extends TestCase
         $response = $this->postJson('/api/auth/register', [
             'name' => 'Maria Buyer',
             'email' => 'maria@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => 'Secret#123',
+            'password_confirmation' => 'Secret#123',
+            'accept_terms' => true,
         ])->assertCreated();
 
         $user = User::query()->where('email', 'maria@example.com')->first();
@@ -69,8 +70,9 @@ class VerificationAndPasswordResetTest extends TestCase
         $response = $this->postJson('/api/auth/register', [
             'name' => 'Maria Buyer',
             'email' => 'wrongcode@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => 'Secret#123',
+            'password_confirmation' => 'Secret#123',
+            'accept_terms' => true,
         ])->assertCreated();
 
         $user = User::query()->where('email', 'wrongcode@example.com')->first();
@@ -101,8 +103,9 @@ class VerificationAndPasswordResetTest extends TestCase
         $response = $this->postJson('/api/auth/register', [
             'name' => 'Maria Buyer',
             'email' => 'expired@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => 'Secret#123',
+            'password_confirmation' => 'Secret#123',
+            'accept_terms' => true,
         ])->assertCreated();
 
         $user = User::query()->where('email', 'expired@example.com')->first();
@@ -126,8 +129,9 @@ class VerificationAndPasswordResetTest extends TestCase
         $response = $this->postJson('/api/auth/register', [
             'name' => 'Maria Buyer',
             'email' => 'already@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => 'Secret#123',
+            'password_confirmation' => 'Secret#123',
+            'accept_terms' => true,
         ])->assertCreated();
 
         $user = User::query()->where('email', 'already@example.com')->first();
@@ -163,8 +167,9 @@ class VerificationAndPasswordResetTest extends TestCase
         $response = $this->postJson('/api/auth/register', [
             'name' => 'Maria Buyer',
             'email' => 'resend@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => 'Secret#123',
+            'password_confirmation' => 'Secret#123',
+            'accept_terms' => true,
         ])->assertCreated();
 
         $user = User::query()->where('email', 'resend@example.com')->first();
@@ -206,8 +211,9 @@ class VerificationAndPasswordResetTest extends TestCase
         $response = $this->postJson('/api/auth/register', [
             'name' => 'Maria Buyer',
             'email' => 'digits@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => 'Secret#123',
+            'password_confirmation' => 'Secret#123',
+            'accept_terms' => true,
         ])->assertCreated();
 
         $this->withToken($response->json('token'))
@@ -298,8 +304,8 @@ class VerificationAndPasswordResetTest extends TestCase
         $this->postJson('/api/auth/reset-password', [
             'email' => 'resetme@example.com',
             'code' => $code,
-            'password' => 'new-password-123',
-            'password_confirmation' => 'new-password-123',
+            'password' => 'New-Pass#123',
+            'password_confirmation' => 'New-Pass#123',
         ])
             ->assertOk()
             ->assertJsonPath('message', 'Password reset. Sign in with your new password.');
@@ -315,7 +321,7 @@ class VerificationAndPasswordResetTest extends TestCase
 
         $this->postJson('/api/auth/login', [
             'email' => 'resetme@example.com',
-            'password' => 'new-password-123',
+            'password' => 'New-Pass#123',
         ])->assertOk()->assertJsonStructure(['token']);
     }
 
@@ -331,8 +337,8 @@ class VerificationAndPasswordResetTest extends TestCase
         $this->postJson('/api/auth/reset-password', [
             'email' => 'wrongcode@example.com',
             'code' => $wrongCode,
-            'password' => 'new-password-123',
-            'password_confirmation' => 'new-password-123',
+            'password' => 'New-Pass#123',
+            'password_confirmation' => 'New-Pass#123',
         ])
             ->assertUnprocessable()
             ->assertJsonPath('errors.code.0', 'The reset code is invalid or has expired.');
@@ -356,8 +362,8 @@ class VerificationAndPasswordResetTest extends TestCase
         $this->postJson('/api/auth/reset-password', [
             'email' => 'expiredcode@example.com',
             'code' => $code,
-            'password' => 'new-password-123',
-            'password_confirmation' => 'new-password-123',
+            'password' => 'New-Pass#123',
+            'password_confirmation' => 'New-Pass#123',
         ])
             ->assertUnprocessable()
             ->assertJsonPath('errors.code.0', 'The reset code is invalid or has expired.');
@@ -376,16 +382,16 @@ class VerificationAndPasswordResetTest extends TestCase
             $this->postJson('/api/auth/reset-password', [
                 'email' => 'attempts@example.com',
                 'code' => $wrongCode,
-                'password' => 'new-password-123',
-                'password_confirmation' => 'new-password-123',
+                'password' => 'New-Pass#123',
+                'password_confirmation' => 'New-Pass#123',
             ])->assertUnprocessable();
         }
 
         $this->postJson('/api/auth/reset-password', [
             'email' => 'attempts@example.com',
             'code' => $code,
-            'password' => 'new-password-123',
-            'password_confirmation' => 'new-password-123',
+            'password' => 'New-Pass#123',
+            'password_confirmation' => 'New-Pass#123',
         ])
             ->assertUnprocessable()
             ->assertJsonPath('errors.code.0', 'The reset code is invalid or has expired.');
@@ -404,22 +410,22 @@ class VerificationAndPasswordResetTest extends TestCase
         $this->postJson('/api/auth/reset-password', [
             'email' => 'usedcode@example.com',
             'code' => $code,
-            'password' => 'new-password-123',
-            'password_confirmation' => 'new-password-123',
+            'password' => 'New-Pass#123',
+            'password_confirmation' => 'New-Pass#123',
         ])->assertOk();
 
         $this->postJson('/api/auth/reset-password', [
             'email' => 'usedcode@example.com',
             'code' => $code,
-            'password' => 'another-password-123',
-            'password_confirmation' => 'another-password-123',
+            'password' => 'Another#Pass123',
+            'password_confirmation' => 'Another#Pass123',
         ])
             ->assertUnprocessable()
             ->assertJsonPath('errors.code.0', 'The reset code is invalid or has expired.');
 
         $this->postJson('/api/auth/login', [
             'email' => 'usedcode@example.com',
-            'password' => 'new-password-123',
+            'password' => 'New-Pass#123',
         ])->assertOk();
     }
 
@@ -489,8 +495,8 @@ class VerificationAndPasswordResetTest extends TestCase
             $this->postJson('/api/auth/reset-password', [
                 'email' => 'locked@example.com',
                 'code' => '111111',
-                'password' => 'new-password-123',
-                'password_confirmation' => 'new-password-123',
+                'password' => 'New-Pass#123',
+                'password_confirmation' => 'New-Pass#123',
             ])
                 ->assertUnprocessable()
                 ->assertJsonPath('errors.code.0', 'The reset code is invalid or has expired.');
@@ -520,8 +526,8 @@ class VerificationAndPasswordResetTest extends TestCase
             $this->postJson('/api/auth/reset-password', [
                 'email' => 'aftercooldown@example.com',
                 'code' => $code,
-                'password' => 'new-password-123',
-                'password_confirmation' => 'new-password-123',
+                'password' => 'New-Pass#123',
+                'password_confirmation' => 'New-Pass#123',
             ])
                 ->assertOk()
                 ->assertJsonPath('message', 'Password reset. Sign in with your new password.');
@@ -531,7 +537,7 @@ class VerificationAndPasswordResetTest extends TestCase
 
         $this->postJson('/api/auth/login', [
             'email' => 'aftercooldown@example.com',
-            'password' => 'new-password-123',
+            'password' => 'New-Pass#123',
         ])->assertOk();
     }
 
@@ -547,8 +553,8 @@ class VerificationAndPasswordResetTest extends TestCase
         $this->postJson('/api/auth/reset-password', [
             'email' => 'cleared@example.com',
             'code' => $wrongCode,
-            'password' => 'new-password-123',
-            'password_confirmation' => 'new-password-123',
+            'password' => 'New-Pass#123',
+            'password_confirmation' => 'New-Pass#123',
         ])->assertUnprocessable();
 
         $this->assertNotNull(Cache::get(SendPasswordResetCodeAction::FAILURES_PREFIX.$user->getKey()));
@@ -556,8 +562,8 @@ class VerificationAndPasswordResetTest extends TestCase
         $this->postJson('/api/auth/reset-password', [
             'email' => 'cleared@example.com',
             'code' => $code,
-            'password' => 'new-password-123',
-            'password_confirmation' => 'new-password-123',
+            'password' => 'New-Pass#123',
+            'password_confirmation' => 'New-Pass#123',
         ])->assertOk();
 
         $this->assertNull(Cache::get(SendPasswordResetCodeAction::CACHE_PREFIX.$user->getKey()));
@@ -582,8 +588,9 @@ class VerificationAndPasswordResetTest extends TestCase
         $register = $this->postJson('/api/auth/register', [
             'name' => 'Maria Buyer',
             'email' => 'prod.log@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => 'Secret#123',
+            'password_confirmation' => 'Secret#123',
+            'accept_terms' => true,
         ]);
 
         $register->assertStatus(503)
@@ -617,8 +624,9 @@ class VerificationAndPasswordResetTest extends TestCase
         $this->postJson('/api/auth/register', [
             'name' => 'Maria Buyer',
             'email' => 'local.log@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => 'Secret#123',
+            'password_confirmation' => 'Secret#123',
+            'accept_terms' => true,
         ])
             ->assertCreated()
             ->assertJsonStructure(['verification_code']);
@@ -646,8 +654,9 @@ class VerificationAndPasswordResetTest extends TestCase
         $this->postJson('/api/auth/register', [
             'name' => 'Maria Buyer',
             'email' => 'smtp@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => 'Secret#123',
+            'password_confirmation' => 'Secret#123',
+            'accept_terms' => true,
         ])
             ->assertCreated()
             ->assertJsonMissingPath('verification_code');
@@ -703,8 +712,8 @@ class VerificationAndPasswordResetTest extends TestCase
             $this->postJson('/api/auth/reset-password', [
                 'email' => $user->email,
                 'code' => $wrongCode,
-                'password' => 'new-password-123',
-                'password_confirmation' => 'new-password-123',
+                'password' => 'New-Pass#123',
+                'password_confirmation' => 'New-Pass#123',
             ])
                 ->assertUnprocessable()
                 ->assertJsonPath('errors.code.0', 'The reset code is invalid or has expired.');

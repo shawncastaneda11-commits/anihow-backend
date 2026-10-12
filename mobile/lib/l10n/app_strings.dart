@@ -658,6 +658,64 @@ class AppStrings {
   String get phoneOptional => t('Phone (optional)', 'Telepono (opsyonal)');
   String get confirmPassword => t('Confirm password', 'Ulitin ang password');
   String get register => t('Register', 'Magpalista');
+  String get createYourAccount =>
+      t('Create your account', 'Gumawa ng iyong account');
+  String get signUpTagline => t(
+    'Buy fresh produce from local farms.',
+    'Bumili ng sariwang ani mula sa mga lokal na bukid.',
+  );
+  String get passwordMustInclude =>
+      t('Password must include:', 'Dapat mayroon ang password:');
+  String get pwRuleLength =>
+      t('At least 8 characters', 'Hindi bababa sa 8 character');
+  String get pwRuleUpper => t('One uppercase letter', 'Isang malaking titik');
+  String get pwRuleLower => t('One lowercase letter', 'Isang maliit na titik');
+  String get pwRuleNumber => t('One number', 'Isang numero');
+  String get pwRuleSymbol => t(
+    'One special character (like ! @ # ?)',
+    'Isang espesyal na character (gaya ng ! @ # ?)',
+  );
+  String get strengthWeak => t('Weak', 'Mahina');
+  String get strengthAlmost => t('Almost', 'Halos na');
+  String get strengthStrong => t('Strong', 'Matibay');
+  String get passwordsMatch =>
+      t('Passwords match', 'Magkatugma ang password');
+  String get passwordsDontMatch =>
+      t('Passwords do not match yet', 'Hindi pa magkatugma ang password');
+  String get termsOfService =>
+      t('Terms of Service', 'Mga Tuntunin ng Serbisyo');
+  String get privacyPolicy => t('Privacy Policy', 'Patakaran sa Privacy');
+  String get iAgreePrefix => t('I agree to the ', 'Sumasang-ayon ako sa ');
+  String get andWord => t(' and ', ' at ');
+  String stillNeeded(String items) =>
+      t('Still needed: $items.', 'Kailangan pa: $items.');
+  String get needName => t('your name', 'iyong pangalan');
+  String get needEmail => t('your email', 'iyong email');
+  String get needStrongerPassword =>
+      t('a stronger password', 'mas matibay na password');
+  String get needMatchingPasswords =>
+      t('matching passwords', 'magkatugmang password');
+  String get needTerms =>
+      t('agreeing to the terms', 'pagsang-ayon sa mga tuntunin');
+  String get weWillSendCode => t(
+    'We will send a code to verify your email.',
+    'Magpapadala kami ng code para beripikahin ang email mo.',
+  );
+  String get alreadyHaveAccount =>
+      t('Already have an account?', 'May account ka na?');
+  String get logIn => t('Log in', 'Mag-log in');
+  String get beforeYouContinue =>
+      t('Before you continue', 'Bago ka magpatuloy');
+  String get termsGateBody => t(
+    'Please read and accept our Terms of Service and Privacy Policy to keep using AniHow.',
+    'Basahin at tanggapin ang aming Mga Tuntunin ng Serbisyo at Patakaran sa Privacy para patuloy na magamit ang AniHow.',
+  );
+  String get iHaveReadAndAgree => t(
+    'I have read and agree to the Terms of Service and Privacy Policy.',
+    'Nabasa ko at sumasang-ayon ako sa Mga Tuntunin ng Serbisyo at Patakaran sa Privacy.',
+  );
+  String get acceptAndContinue =>
+      t('Accept and continue', 'Tanggapin at magpatuloy');
   String get report => t('Report', 'I-ulat');
   String get reportDetails => t('Details (optional)', 'Detalye (opsyonal)');
   String get reportChooseReason => t('Choose a reason.', 'Pumili ng dahilan.');
@@ -2113,6 +2171,14 @@ class AppStrings {
           ),
           (title: 'Version', body: 'This Android app is AniHow v1.0.0.'),
         ];
+
+  /// Sections 1 to 5 of [termsSections] are the Terms of Service; the rest
+  /// (what we store, what we do not do, questions) are the Privacy Policy.
+  List<({String title, String body})> get termsOfServiceSections =>
+      termsSections.take(5).toList();
+
+  List<({String title, String body})> get privacyPolicySections =>
+      termsSections.skip(5).toList();
 
   List<({String title, String body})> get termsSections => filipino
       ? const [

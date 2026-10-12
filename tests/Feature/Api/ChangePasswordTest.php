@@ -30,17 +30,17 @@ class ChangePasswordTest extends TestCase
         $this->asUser($buyer)
             ->postJson('/api/auth/password', [
                 'current_password' => 'password123',
-                'password' => 'new-password-123',
-                'password_confirmation' => 'new-password-123',
+                'password' => 'New-Pass#123',
+                'password_confirmation' => 'New-Pass#123',
             ])
             ->assertOk()
             ->assertJsonPath('message', 'Password updated.');
 
-        $this->assertTrue(Hash::check('new-password-123', $buyer->fresh()->password));
+        $this->assertTrue(Hash::check('New-Pass#123', $buyer->fresh()->password));
 
         $this->postJson('/api/auth/login', [
             'email' => 'changeme@example.com',
-            'password' => 'new-password-123',
+            'password' => 'New-Pass#123',
         ])->assertOk()->assertJsonStructure(['token']);
     }
 
@@ -51,8 +51,8 @@ class ChangePasswordTest extends TestCase
         $this->asUser($buyer)
             ->postJson('/api/auth/password', [
                 'current_password' => 'wrong-password',
-                'password' => 'new-password-123',
-                'password_confirmation' => 'new-password-123',
+                'password' => 'New-Pass#123',
+                'password_confirmation' => 'New-Pass#123',
             ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('current_password');
@@ -64,8 +64,8 @@ class ChangePasswordTest extends TestCase
     {
         $this->postJson('/api/auth/password', [
             'current_password' => 'password123',
-            'password' => 'new-password-123',
-            'password_confirmation' => 'new-password-123',
+            'password' => 'New-Pass#123',
+            'password_confirmation' => 'New-Pass#123',
         ])->assertUnauthorized();
     }
 }

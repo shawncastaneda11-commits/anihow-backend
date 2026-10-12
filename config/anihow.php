@@ -60,6 +60,18 @@ return [
     ],
 
     /*
+    |--------------------------------------------------------------------------
+    | Terms of Service and Privacy Policy
+    |--------------------------------------------------------------------------
+    |
+    | Raise terms_version when the terms or the privacy policy change. App
+    | users (buyers and farmer-sellers) who accepted an older version are
+    | asked again the next time they open the app.
+    |
+    */
+    'terms_version' => (int) env('TERMS_VERSION', 1),
+
+    /*
     | Who a farmer or a farm emails when they want an account. Phone is
     | optional; an empty value is stored as null so the app can hide Call.
     */

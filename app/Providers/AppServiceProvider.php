@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -31,6 +32,10 @@ class AppServiceProvider extends ServiceProvider
         }
 
         $this->configureRateLimiting();
+
+        // Every password a person sets (sign-up, reset, change, CMS) needs
+        // 8+ characters with upper and lower case, a number and a symbol.
+        Password::defaults(fn (): Password => Password::min(8)->mixedCase()->numbers()->symbols());
         $this->configureBroadcasting();
     }
 

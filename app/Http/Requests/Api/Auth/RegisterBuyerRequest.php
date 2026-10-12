@@ -22,6 +22,7 @@ class RegisterBuyerRequest extends FormRequest
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'confirmed', Password::defaults()],
             'phone' => ['nullable', 'string', 'max:30'],
+            'accept_terms' => ['accepted'],
         ];
     }
 }

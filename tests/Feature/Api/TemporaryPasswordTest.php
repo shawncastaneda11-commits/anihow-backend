@@ -65,15 +65,15 @@ class TemporaryPasswordTest extends TestCase
         $this->withToken($token)
             ->postJson('/api/auth/password', [
                 'current_password' => $plain,
-                'password' => 'new-password-123',
-                'password_confirmation' => 'new-password-123',
+                'password' => 'New-Pass#123',
+                'password_confirmation' => 'New-Pass#123',
             ])
             ->assertOk();
 
         $seller->refresh();
         $this->assertFalse($seller->must_change_password);
         $this->assertNull($seller->temporary_password_expires_at);
-        $this->assertTrue(Hash::check('new-password-123', $seller->password));
+        $this->assertTrue(Hash::check('New-Pass#123', $seller->password));
 
         $this->withToken($token)
             ->getJson('/api/notifications')
@@ -149,15 +149,15 @@ class TemporaryPasswordTest extends TestCase
         $this->postJson('/api/auth/reset-password', [
             'email' => 'reset.flag@example.com',
             'code' => $code,
-            'password' => 'new-password-123',
-            'password_confirmation' => 'new-password-123',
+            'password' => 'New-Pass#123',
+            'password_confirmation' => 'New-Pass#123',
         ])->assertOk();
 
         $buyer->refresh();
 
         $this->assertFalse($buyer->must_change_password);
         $this->assertNull($buyer->temporary_password_expires_at);
-        $this->assertTrue(Hash::check('new-password-123', $buyer->password));
+        $this->assertTrue(Hash::check('New-Pass#123', $buyer->password));
     }
 
     public function test_admin_create_returns_a_temporary_password_once_and_ignores_a_client_password(): void
@@ -199,8 +199,9 @@ class TemporaryPasswordTest extends TestCase
         $this->postJson('/api/auth/register', [
             'name' => 'Maria Buyer',
             'email' => 'maria.plain@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => 'Secret#123',
+            'password_confirmation' => 'Secret#123',
+            'accept_terms' => true,
         ])
             ->assertCreated()
             ->assertJsonPath('data.must_change_password', false)

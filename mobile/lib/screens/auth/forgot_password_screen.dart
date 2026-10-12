@@ -8,6 +8,7 @@ import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/password_field.dart';
+import '../../widgets/password_rules.dart';
 import '../../widgets/primary_button.dart';
 import '../profile/verify_email_screen.dart';
 
@@ -217,6 +218,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               controller: _password,
               label: s.newPassword,
               enabled: !_busy,
+            ),
+            const SizedBox(height: 8),
+            ListenableBuilder(
+              listenable: _password,
+              builder: (context, _) =>
+                  PasswordRulesChecklist(password: _password.text),
             ),
             const SizedBox(height: AniHowSpace.fieldGap),
             PasswordField(

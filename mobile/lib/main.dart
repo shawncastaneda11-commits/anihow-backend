@@ -7,6 +7,7 @@ import 'push/push_open.dart';
 import 'screens/admin_gate_screen.dart';
 import 'screens/buyer/buyer_shell.dart';
 import 'screens/farmer/farmer_shell.dart';
+import 'screens/auth/terms_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/profile/change_password_screen.dart';
 import 'screens/misconfigured_build_screen.dart';
@@ -136,6 +137,9 @@ class _RoleGate extends StatelessWidget {
     }
     if (user.mustChangePassword) {
       return const ChangePasswordScreen(forced: true);
+    }
+    if (user.needsTerms) {
+      return const TermsGateScreen();
     }
     if (user.isFarmerSeller) {
       return const FarmerShell();

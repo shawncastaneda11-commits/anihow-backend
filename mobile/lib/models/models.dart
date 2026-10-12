@@ -47,6 +47,7 @@ class UserAccount {
     this.farmIsOrganicCertified = false,
     this.farmFeatures = const FarmFeatures(),
     this.mustChangePassword = false,
+    this.needsTerms = false,
   });
 
   final int id;
@@ -65,7 +66,15 @@ class UserAccount {
   final FarmFeatures farmFeatures;
   final bool mustChangePassword;
 
-  UserAccount withMustChangePassword(bool value) {
+  /// True until the user accepts the current Terms of Service and Privacy
+  /// Policy. The app shows the terms screen before anything else.
+  final bool needsTerms;
+
+  UserAccount withMustChangePassword(bool value) => _copy(mustChange: value);
+
+  UserAccount withNeedsTerms(bool value) => _copy(terms: value);
+
+  UserAccount _copy({bool? mustChange, bool? terms}) {
     return UserAccount(
       id: id,
       name: name,
@@ -81,7 +90,8 @@ class UserAccount {
       farmName: farmName,
       farmIsOrganicCertified: farmIsOrganicCertified,
       farmFeatures: farmFeatures,
-      mustChangePassword: value,
+      mustChangePassword: mustChange ?? mustChangePassword,
+      needsTerms: terms ?? needsTerms,
     );
   }
 
@@ -110,6 +120,7 @@ class UserAccount {
       farmIsOrganicCertified: farmMap?['is_organic_certified'] == true,
       farmFeatures: FarmFeatures.fromJson(farmMap?['features']),
       mustChangePassword: json['must_change_password'] == true,
+      needsTerms: json['needs_terms'] == true,
     );
   }
 

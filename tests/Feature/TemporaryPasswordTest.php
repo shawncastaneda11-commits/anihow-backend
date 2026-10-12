@@ -62,7 +62,7 @@ class TemporaryPasswordTest extends TestCase
             60,
         );
         $this->assertTrue(Hash::check($plain, $editor->password));
-        $this->assertFalse(Hash::check('new-password-1', $editor->password));
+        $this->assertFalse(Hash::check('New-Pass#1', $editor->password));
         $this->assertTemporaryPasswordModal($component, $plain, $editor->email);
         $this->assertPasswordWasNotNotified($plain);
         $this->assertTrue($this->notificationTitleExists('Created'));
@@ -179,8 +179,8 @@ class TemporaryPasswordTest extends TestCase
             ->test(ChangePassword::class)
             ->fillForm([
                 'current_password' => $plain,
-                'password' => 'new-password-1',
-                'password_confirmation' => 'new-password-1',
+                'password' => 'New-Pass#1',
+                'password_confirmation' => 'New-Pass#1',
             ], 'form')
             ->call('save')
             ->assertHasNoFormErrors()
@@ -190,7 +190,7 @@ class TemporaryPasswordTest extends TestCase
 
         $this->assertFalse($editor->must_change_password);
         $this->assertNull($editor->temporary_password_expires_at);
-        $this->assertTrue(Hash::check('new-password-1', $editor->password));
+        $this->assertTrue(Hash::check('New-Pass#1', $editor->password));
         $this->assertGuest();
     }
 
@@ -236,8 +236,8 @@ class TemporaryPasswordTest extends TestCase
             ->fillForm([
                 'name' => $editor->name,
                 'email' => $editor->email,
-                'password' => 'new-password-1',
-                'password_confirmation' => 'new-password-1',
+                'password' => 'New-Pass#1',
+                'password_confirmation' => 'New-Pass#1',
             ])
             ->call('save')
             ->assertHasNoFormErrors();
@@ -246,7 +246,7 @@ class TemporaryPasswordTest extends TestCase
 
         $this->assertFalse($editor->must_change_password);
         $this->assertNull($editor->temporary_password_expires_at);
-        $this->assertTrue(Hash::check('new-password-1', $editor->password));
+        $this->assertTrue(Hash::check('New-Pass#1', $editor->password));
     }
 
     public function test_the_super_admin_seeder_does_not_flag_the_account(): void

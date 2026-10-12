@@ -29,8 +29,9 @@ class AuthApiTest extends TestCase
         $response = $this->postJson('/api/auth/register', [
             'name' => 'Maria Buyer',
             'email' => 'maria@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => 'Secret#123',
+            'password_confirmation' => 'Secret#123',
+            'accept_terms' => true,
             'phone' => '09171234567',
         ]);
 
@@ -59,8 +60,9 @@ class AuthApiTest extends TestCase
         $response = $this->postJson('/api/auth/register', [
             'name' => 'Sneaky User',
             'email' => 'sneaky@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => 'Secret#123',
+            'password_confirmation' => 'Secret#123',
+            'accept_terms' => true,
             'role' => Role::FarmerSeller->value,
         ]);
 
@@ -78,13 +80,14 @@ class AuthApiTest extends TestCase
         $this->postJson('/api/auth/register', [
             'name' => 'Maria Buyer',
             'email' => 'maria@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => 'Secret#123',
+            'password_confirmation' => 'Secret#123',
+            'accept_terms' => true,
         ])->assertCreated();
 
         $response = $this->postJson('/api/auth/login', [
             'email' => 'maria@example.com',
-            'password' => 'password123',
+            'password' => 'Secret#123',
         ]);
 
         $response

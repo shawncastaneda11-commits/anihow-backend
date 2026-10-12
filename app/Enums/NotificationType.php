@@ -24,6 +24,8 @@ enum NotificationType: string
     case FaqEntryModerated = 'faq_entry_moderated';
     case AccountDeletionRequested = 'account_deletion_requested';
     case AccountDeletionRejected = 'account_deletion_rejected';
+    case IdVerificationApproved = 'id_verification_approved';
+    case IdVerificationRejected = 'id_verification_rejected';
     case ReportSubmitted = 'report_submitted';
     case ReportResolved = 'report_resolved';
     case ReportDismissed = 'report_dismissed';
@@ -61,6 +63,8 @@ enum NotificationType: string
             self::FaqEntryModerated => 'FAQ answer moderated',
             self::AccountDeletionRequested => 'Account deletion requested',
             self::AccountDeletionRejected => 'Account deletion request rejected',
+            self::IdVerificationApproved => 'ID verified',
+            self::IdVerificationRejected => 'ID not verified',
             self::ReportSubmitted => 'New report submitted',
             self::ReportResolved => 'Report resolved',
             self::ReportDismissed => 'Report dismissed',

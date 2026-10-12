@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -59,6 +60,8 @@ use Spatie\Permission\Traits\HasRoles;
     'email_verified_at',
     'terms_accepted_at',
     'terms_version',
+    'requires_id_verification',
+    'id_verified_at',
 ])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser, MustVerifyEmail
@@ -99,6 +102,8 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             'temporary_password_expires_at' => 'datetime',
             'terms_accepted_at' => 'datetime',
             'terms_version' => 'integer',
+            'requires_id_verification' => 'boolean',
+            'id_verified_at' => 'datetime',
         ];
     }
 
@@ -247,6 +252,28 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             'terms_accepted_at' => now(),
             'terms_version' => (int) config('anihow.terms_version'),
         ])->save();
+    }
+
+    /**
+     * True when this buyer must pass an ID check before checking out or
+     * reserving. Only accounts made through sign-up after the feature
+     * launched are required; older accounts are never blocked.
+     */
+    public function mustVerifyIdToOrder(): bool
+    {
+        return (bool) config('anihow.require_id_verification')
+            && $this->requires_id_verification
+            && $this->id_verified_at === null;
+    }
+
+    public function idVerifications(): HasMany
+    {
+        return $this->hasMany(IdVerification::class);
+    }
+
+    public function latestIdVerification(): HasOne
+    {
+        return $this->hasOne(IdVerification::class)->latestOfMany();
     }
 
     public function isFarmerSeller(): bool

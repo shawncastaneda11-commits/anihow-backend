@@ -30,6 +30,53 @@ class FarmFeatures {
   }
 }
 
+/// Where a buyer is with the ID check. `required` is only true for accounts
+/// that must verify before ordering (new sign-ups); older accounts can still
+/// verify for the badge.
+class IdVerificationInfo {
+  const IdVerificationInfo({
+    this.required = false,
+    this.verified = false,
+    this.status = 'none',
+    this.idType,
+    this.rejectionReason,
+    this.submittedAt,
+    this.reviewedAt,
+  });
+
+  final bool required;
+  final bool verified;
+
+  /// none, pending, rejected or approved.
+  final String status;
+  final String? idType;
+  final String? rejectionReason;
+  final DateTime? submittedAt;
+  final DateTime? reviewedAt;
+
+  bool get isPending => status == 'pending';
+  bool get isRejected => status == 'rejected';
+
+  /// True when the buyer still has to verify before checking out.
+  bool get blocksOrders => required && !verified;
+
+  static IdVerificationInfo? fromJson(Object? json) {
+    if (json is! Map) {
+      return null;
+    }
+    final map = Map<String, dynamic>.from(json);
+    return IdVerificationInfo(
+      required: map['required'] == true,
+      verified: map['verified'] == true,
+      status: map['status'] as String? ?? 'none',
+      idType: map['id_type'] as String?,
+      rejectionReason: map['rejection_reason'] as String?,
+      submittedAt: DateTime.tryParse(map['submitted_at']?.toString() ?? ''),
+      reviewedAt: DateTime.tryParse(map['reviewed_at']?.toString() ?? ''),
+    );
+  }
+}
+
 class UserAccount {
   const UserAccount({
     required this.id,
@@ -48,6 +95,7 @@ class UserAccount {
     this.farmFeatures = const FarmFeatures(),
     this.mustChangePassword = false,
     this.needsTerms = false,
+    this.idVerification,
   });
 
   final int id;
@@ -69,6 +117,9 @@ class UserAccount {
   /// True until the user accepts the current Terms of Service and Privacy
   /// Policy. The app shows the terms screen before anything else.
   final bool needsTerms;
+
+  /// Null for anyone who is not a buyer.
+  final IdVerificationInfo? idVerification;
 
   UserAccount withMustChangePassword(bool value) => _copy(mustChange: value);
 
@@ -92,6 +143,7 @@ class UserAccount {
       farmFeatures: farmFeatures,
       mustChangePassword: mustChange ?? mustChangePassword,
       needsTerms: terms ?? needsTerms,
+      idVerification: idVerification,
     );
   }
 
@@ -121,6 +173,7 @@ class UserAccount {
       farmFeatures: FarmFeatures.fromJson(farmMap?['features']),
       mustChangePassword: json['must_change_password'] == true,
       needsTerms: json['needs_terms'] == true,
+      idVerification: IdVerificationInfo.fromJson(json['id_verification']),
     );
   }
 
@@ -130,6 +183,8 @@ class UserAccount {
       isFarmerSeller && permissions.contains('record_walk_in_sales');
   bool get isSuperAdmin => roles.contains('super_admin');
   bool get isVerified => emailVerifiedAt != null && emailVerifiedAt!.isNotEmpty;
+  bool get isIdVerified => idVerification?.verified == true;
+  bool get mustVerifyIdToOrder => idVerification?.blocksOrders == true;
   String get roleLabel =>
       roles.isEmpty ? 'unknown' : roles.first.replaceAll('_', ' ');
 }

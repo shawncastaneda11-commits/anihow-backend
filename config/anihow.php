@@ -69,7 +69,19 @@ return [
     | asked again the next time they open the app.
     |
     */
-    'terms_version' => (int) env('TERMS_VERSION', 2),
+    'terms_version' => (int) env('TERMS_VERSION', 3),
+
+    /*
+    |--------------------------------------------------------------------------
+    | ID verification
+    |--------------------------------------------------------------------------
+    |
+    | Buyers who sign up must have their ID approved before they can check out
+    | or reserve. Accounts created before this feature are never asked. Set to
+    | false to turn the requirement off everywhere.
+    |
+    */
+    'require_id_verification' => (bool) env('REQUIRE_ID_VERIFICATION', true),
 
     /*
     | Who a farmer or a farm emails when they want an account. Phone is

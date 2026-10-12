@@ -3,6 +3,7 @@
 namespace App\Actions\Privacy;
 
 use App\Models\HarvestRecord;
+use App\Models\IdVerification;
 use App\Models\Listing;
 use App\Models\Order;
 use App\Models\PaymentProof;
@@ -36,6 +37,15 @@ class ExportOwnDataAction
             'orders' => $orders->map(fn (Order $order): array => $this->order($order, $user))->values()->all(),
             'payment_proofs' => $this->paymentProofs($user),
             'payment_qrs' => $this->paymentQrs($user),
+            'id_verifications' => $user->idVerifications()->orderBy('id')->get()
+                ->map(fn (IdVerification $verification): array => [
+                    'id_type' => $verification->id_type->value,
+                    'status' => $verification->status->value,
+                    'rejection_reason' => $verification->rejection_reason,
+                    'consented_at' => $verification->consented_at?->toIso8601String(),
+                    'submitted_at' => $verification->created_at?->toIso8601String(),
+                    'reviewed_at' => $verification->reviewed_at?->toIso8601String(),
+                ])->all(),
             'reviews_written' => $user->reviewsWritten()->with('farmerSeller:id,name,shop_name')->get()
                 ->map(fn ($review): array => [
                     'id' => $review->id,

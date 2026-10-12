@@ -5,6 +5,7 @@ namespace App\Actions\Privacy;
 use App\Actions\Reservations\CancelReservation;
 use App\Enums\ReservationCancellationReason;
 use App\Enums\UserStatus;
+use App\Models\IdVerification;
 use App\Models\PaymentProof;
 use App\Models\SellerPaymentQr;
 use App\Models\StallMessage;
@@ -70,6 +71,14 @@ class AnonymizeUserAction
                 ])->save();
             });
 
+        $user->idVerifications()
+            ->orderBy('id')
+            ->each(function (IdVerification $verification) use ($images, $disk): void {
+                $images->delete($verification->front_path, $disk);
+                $images->delete($verification->selfie_path, $disk);
+                $verification->delete();
+            });
+
         StallMessage::query()
             ->where('user_id', $user->id)
             ->whereNotNull('attachment_path')
@@ -106,6 +115,7 @@ class AnonymizeUserAction
             'suspended_at' => now(),
             'suspension_reason' => 'Account deletion completed',
             'email_verified_at' => null,
+            'id_verified_at' => null,
             'remember_token' => Str::random(40),
         ])->save();
 

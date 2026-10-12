@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Auth\ChangePasswordController;
 use App\Http\Controllers\Api\Auth\DeleteUserAvatarController;
 use App\Http\Controllers\Api\Auth\ExportOwnDataController;
 use App\Http\Controllers\Api\Auth\ForgotPasswordController;
+use App\Http\Controllers\Api\Auth\IdVerificationController;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\LogoutController;
 use App\Http\Controllers\Api\Auth\MeController;
@@ -97,6 +98,9 @@ Route::prefix('auth')->group(function (): void {
             ->name('auth.user.deletion-request.destroy');
         Route::post('password', ChangePasswordController::class)->name('auth.password');
         Route::post('terms/accept', AcceptTermsController::class)->name('auth.terms.accept');
+        Route::post('id-verification', [IdVerificationController::class, 'store'])
+            ->middleware('throttle:auth')
+            ->name('auth.id-verification.store');
         Route::middleware('throttle:auth')->group(function (): void {
             Route::post('email/verification-notification', ResendVerificationController::class)
                 ->name('verification.send');
@@ -293,14 +297,18 @@ Route::middleware([
 
     Route::middleware('verified')->group(function (): void {
         Route::post('cart', [CartController::class, 'store'])->name('buyer.cart.store');
-        Route::post('reservations', [BuyerReservationController::class, 'store'])->name('buyer.reservations.store');
+        Route::post('reservations', [BuyerReservationController::class, 'store'])
+            ->middleware('id.verified')
+            ->name('buyer.reservations.store');
         Route::patch('reservations/{reservation}', [BuyerReservationController::class, 'cancel'])
             ->name('buyer.reservations.cancel');
         Route::patch('cart/{cartItem}', [CartController::class, 'update'])->name('buyer.cart.update');
         Route::delete('cart/{cartItem}', [CartController::class, 'destroy'])->name('buyer.cart.destroy');
 
         // Splits the cart into one order per farmer-seller.
-        Route::post('checkout', CheckoutController::class)->name('buyer.checkout');
+        Route::post('checkout', CheckoutController::class)
+            ->middleware('id.verified')
+            ->name('buyer.checkout');
 
         Route::patch('orders/{order}/cancel', [BuyerOrderController::class, 'cancel'])
             ->name('buyer.orders.cancel');

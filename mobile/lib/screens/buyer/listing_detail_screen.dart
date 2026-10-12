@@ -16,6 +16,7 @@ import '../../widgets/cart_icon_button.dart';
 import '../../widgets/chat_with_stall_button.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/growing_badge.dart';
+import '../../widgets/id_verification_card.dart';
 import '../../widgets/order_quantity_stepper.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/produce_card.dart';
@@ -81,6 +82,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   }
 
   Future<void> _openReserve(ListingItem listing) async {
+    if (!await ensureIdForOrdering(context) || !mounted) {
+      return;
+    }
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,

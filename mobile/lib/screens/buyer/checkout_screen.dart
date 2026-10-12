@@ -6,6 +6,7 @@ import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../services/cart_requests.dart';
 import '../../push/push_permission.dart';
+import '../../state/auth_controller.dart';
 import '../../state/cart_controller.dart';
 import '../../state/preferences_controller.dart';
 import '../../support/crop_language.dart';
@@ -13,6 +14,7 @@ import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/hint_card.dart';
+import '../../widgets/id_verification_card.dart';
 import '../../widgets/order_look.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
@@ -123,6 +125,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final language = context.watch<PreferencesController>().language;
     final s = AppStrings.of(context);
     final groups = cart.snapshot.groupsBySeller;
+    final idCheck = context.watch<AuthController>().user?.idVerification;
+    final needsId = idCheck?.blocksOrders == true;
     return Scaffold(
       appBar: AppBar(title: Text(s.checkout)),
       body: cart.loading
@@ -212,9 +216,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       ),
                     ],
                     const SizedBox(height: AniHowSpace.section),
+                    if (needsId) ...[
+                      IdOrderGate(info: idCheck!),
+                      const SizedBox(height: AniHowSpace.cardGap),
+                    ],
                     PrimaryButton(
+                      key: const ValueKey('checkout-place'),
                       label: groups.length > 1 ? s.placeOrders(groups.length) : s.placeOrder,
-                      onPressed: _place,
+                      onPressed: needsId ? null : _place,
                       busy: _busy,
                     ),
                   ],

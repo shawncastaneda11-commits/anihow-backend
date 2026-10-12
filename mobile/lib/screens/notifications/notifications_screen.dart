@@ -23,6 +23,7 @@ import '../farmer/farm_announcements_screen.dart';
 import '../farmer/stock_history_screen.dart';
 import '../farmer/listing_form_screen.dart';
 import '../farmer/listings_screen.dart';
+import '../profile/profile_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -538,6 +539,20 @@ Future<void> openNotificationTarget(
   AppNotification item,
 ) async {
   if (item.isReportNotice) {
+    return;
+  }
+
+  if ((item.type ?? '').startsWith('id_verification_')) {
+    final auth = context.read<AuthController>();
+    try {
+      await auth.refreshUser();
+    } catch (_) {}
+    if (!context.mounted) {
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
+    );
     return;
   }
 

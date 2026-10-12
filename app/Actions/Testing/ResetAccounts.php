@@ -169,6 +169,7 @@ class ResetAccounts
             'in_app_notifications' => fn (Builder $query): Builder => $query->whereIn('user_id', $this->removedUserIds()),
             'device_tokens' => fn (Builder $query): Builder => $query->whereIn('user_id', $this->removedUserIds()),
             'account_deletion_requests' => fn (Builder $query): Builder => $query->whereIn('user_id', $this->removedUserIds()),
+            'id_verifications' => fn (Builder $query): Builder => $query->whereIn('user_id', $this->removedUserIds()),
             'export_logs' => fn (Builder $query): Builder => $query->whereIn('user_id', $this->removedUserIds()),
             'farmer_crop_types' => fn (Builder $query): Builder => $query->where(function (Builder $inner): void {
                 $inner->whereIn('user_id', $this->removedUserIds())
@@ -282,6 +283,8 @@ class ResetAccounts
             $inner->whereIn('user_id', $this->removedUserIds())
                 ->orWhereIn('stall_conversation_id', $this->removedConversationIds());
         })));
+        $push('local', $this->paths('id_verifications', 'front_path', fn (Builder $query): Builder => $query->whereIn('user_id', $this->removedUserIds())));
+        $push('local', $this->paths('id_verifications', 'selfie_path', fn (Builder $query): Builder => $query->whereIn('user_id', $this->removedUserIds())));
 
         $push($listingDisk, $this->paths('listings', 'image_path', fn (Builder $query): Builder => $query->whereIn('id', $this->removedListingIds())));
         $push($listingDisk, $this->paths('listing_photos', 'path', fn (Builder $query): Builder => $query->whereIn('listing_id', $this->removedListingIds())));
@@ -338,6 +341,8 @@ class ResetAccounts
             ['payment_proofs', 'screenshot_path'],
             ['seller_payment_qrs', 'image_path'],
             ['stall_messages', 'attachment_path'],
+            ['id_verifications', 'front_path'],
+            ['id_verifications', 'selfie_path'],
         ];
         $listing = [
             ['listings', 'image_path'],

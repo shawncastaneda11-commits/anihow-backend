@@ -9,6 +9,7 @@ use App\Mail\ListingLowStockMail;
 use App\Models\AccountDeletionRequest;
 use App\Models\Farm;
 use App\Models\FarmAnnouncement;
+use App\Models\IdVerification;
 use App\Models\InAppNotification;
 use App\Models\Listing;
 use App\Models\Order;
@@ -347,6 +348,30 @@ class InAppNotifier
             NotificationType::AccountDeletionRejected->label(),
             "Your account deletion request was rejected.{$suffix}",
             $request,
+        );
+    }
+
+    public function idVerificationApproved(User $user, IdVerification $verification): InAppNotification
+    {
+        return $this->send(
+            $user,
+            NotificationType::IdVerificationApproved,
+            NotificationType::IdVerificationApproved->label(),
+            'Your ID is verified. You can now place orders. Your ID photo has been deleted.',
+            $verification,
+        );
+    }
+
+    public function idVerificationRejected(User $user, IdVerification $verification): InAppNotification
+    {
+        $reason = filled($verification->rejection_reason) ? " Reason: {$verification->rejection_reason}" : '';
+
+        return $this->send(
+            $user,
+            NotificationType::IdVerificationRejected,
+            NotificationType::IdVerificationRejected->label(),
+            "We could not verify your ID.{$reason} Please try again from your profile.",
+            $verification,
         );
     }
 

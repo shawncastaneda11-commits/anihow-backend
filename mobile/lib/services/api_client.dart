@@ -1332,6 +1332,30 @@ class ApiClient {
     }
   }
 
+  /// Sends the buyer's ID photos for review. The server keeps them only until
+  /// an admin approves or rejects the check.
+  Future<UserAccount> submitIdVerification({
+    required String idType,
+    required String frontPath,
+    String? selfiePath,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/auth/id-verification',
+        data: FormData.fromMap({
+          'id_type': idType,
+          'consent': '1',
+          'front': await MultipartFile.fromFile(frontPath),
+          if (selfiePath != null)
+            'selfie': await MultipartFile.fromFile(selfiePath),
+        }),
+      );
+      return UserAccount.fromJson(_asMap(_asMap(response.data)['data']));
+    } on DioException catch (error) {
+      throw ApiException(_messageFrom(error));
+    }
+  }
+
   Future<UserAccount> deleteAvatar() async {
     try {
       final response = await _dio.delete('/auth/user/avatar');

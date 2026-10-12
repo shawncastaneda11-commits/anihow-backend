@@ -48,6 +48,14 @@ try {
         throw "No dart defines file for server '$Server' at $Defines"
     }
 
+    if ($Server -eq 'staging') {
+        $services = Join-Path $MobileRoot 'android\app\google-services.json'
+        if (-not (Test-Path -LiteralPath $services) -or
+            -not (Select-String -LiteralPath $services -SimpleMatch '"com.anihow.anihow.staging"' -Quiet)) {
+            throw 'google-services.json has no com.anihow.anihow.staging app. In Firebase, add an Android app with that package name, then download google-services.json again into mobile\android\app.'
+        }
+    }
+
     Write-Host "Building AniHow release APK for $Server"
     Set-Location -LiteralPath $MobileRoot
     if ($null -ne $mappedDrive) {

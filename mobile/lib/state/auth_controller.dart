@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
@@ -74,7 +76,38 @@ class AuthController extends ChangeNotifier {
       );
       user = result.user;
       notifyListeners();
+      // Saved in the background: login never waits on device storage.
+      unawaited(_rememberEmail(remember ? email : null));
       await PushRuntime.register(api);
+      return true;
+    } on ApiException catch (e) {
+      error = e.message;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Email to pre-fill on the login screen, or null.
+  Future<String?> rememberedEmail() async {
+    try {
+      return await api.readRememberedEmail();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _rememberEmail(String? email) async {
+    try {
+      await api.saveRememberedEmail(email);
+    } catch (_) {}
+  }
+
+  /// Accepts the current terms. Returns false and sets [error] on failure.
+  Future<bool> acceptTerms() async {
+    error = null;
+    try {
+      user = await api.acceptTerms();
+      notifyListeners();
       return true;
     } on ApiException catch (e) {
       error = e.message;

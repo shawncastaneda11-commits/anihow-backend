@@ -29,6 +29,21 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _remember = true;
 
   @override
+  void initState() {
+    super.initState();
+    _prefillEmail();
+  }
+
+  /// With Remember me on, the last email is filled in for the next login.
+  Future<void> _prefillEmail() async {
+    final email = await context.read<AuthController>().rememberedEmail();
+    if (!mounted || email == null || email.isEmpty || _email.text.isNotEmpty) {
+      return;
+    }
+    setState(() => _email.text = email);
+  }
+
+  @override
   void dispose() {
     _email.dispose();
     _password.dispose();

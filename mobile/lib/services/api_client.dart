@@ -180,6 +180,7 @@ class ApiClient {
   }
 
   static const _tokenKey = 'anihow_token';
+  static const _emailKey = 'anihow_remembered_email';
   static const _storage = FlutterSecureStorage();
 
   final Dio _dio;
@@ -261,6 +262,7 @@ class ApiClient {
       'password': password,
       'password_confirmation': passwordConfirmation,
       if (phone != null && phone.isNotEmpty) 'phone': phone,
+      'accept_terms': true,
       'device_name': 'anihow-mobile',
     });
     final token = response['token'] as String;
@@ -270,6 +272,24 @@ class ApiClient {
       token: token,
       verificationCode: response['verification_code'] as String?,
     );
+  }
+
+  /// Records that the signed-in user accepted the current terms.
+  Future<UserAccount> acceptTerms() async {
+    final response = await _post('/auth/terms/accept', {'accept_terms': true});
+    return UserAccount.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  /// The email kept for the login screen when Remember me is on. The password
+  /// is never stored.
+  Future<String?> readRememberedEmail() => _storage.read(key: _emailKey);
+
+  Future<void> saveRememberedEmail(String? email) async {
+    if (email == null || email.isEmpty) {
+      await _storage.delete(key: _emailKey);
+      return;
+    }
+    await _storage.write(key: _emailKey, value: email);
   }
 
   Future<UserAccount> currentUser() async {

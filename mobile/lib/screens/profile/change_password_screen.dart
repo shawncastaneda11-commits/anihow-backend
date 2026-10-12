@@ -6,6 +6,7 @@ import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/password_field.dart';
+import '../../widgets/password_rules.dart';
 import '../../widgets/primary_button.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
@@ -95,6 +96,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               controller: _next,
               label: s.newPassword,
               enabled: !_busy,
+            ),
+            const SizedBox(height: 8),
+            ListenableBuilder(
+              listenable: _next,
+              builder: (context, _) =>
+                  PasswordRulesChecklist(password: _next.text),
             ),
             const SizedBox(height: AniHowSpace.fieldGap),
             PasswordField(

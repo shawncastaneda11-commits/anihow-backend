@@ -1,520 +1,266 @@
-# AniHow API
+# AniHow
 
 [![CI](https://github.com/shawncastaneda11-commits/anihow-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/shawncastaneda11-commits/anihow-backend/actions/workflows/ci.yml)
 
-Laravel REST API for a farmers' digital market hub in General Trias, Cavite.
+A digital market hub for farmers in Cavite. Buyers order fresh produce and value-added products from partner farms; farmer-sellers manage listings, harvests, orders and payments; farm staff and the administrator run everything from a web CMS.
 
-Mobile clients are Flutter (Android). The single `super_admin` uses the Filament web panel at `/admin`.
+This repository holds all three parts:
 
-Current scope is **Phase 5**: Phases 1–4 product APIs plus production hardening (email verification, password reset, queued notification email, rate limits, S3 listing images, Railway-ready config). Push notifications and descriptive-analytics summaries are not built yet.
+- **API and CMS**: Laravel 13 REST API with a Filament 5 admin panel at `/admin`.
+- **Mobile app**: Flutter (Android) in [`mobile/`](mobile).
+- **Server scripts**: VPS provisioning, deploy and backup in [`scripts/vps/`](scripts/vps), plus Windows helper scripts in [`scripts/`](scripts).
+
+Live server: `https://anihow.tech` (API at `/api`, CMS at `/admin`).
+
+## Features
+
+**Buyer (mobile app)**
+
+- Sign up with a strong password and accept the Terms of Service and Privacy Policy; existing users accept again when the terms change.
+- Email verification by 6-digit code; new buyers also verify a government ID (reviewed by an admin, photos deleted after review) before their first order or reservation.
+- Marketplace with fresh and value-added categories, search, filters and a daily "fair mix" order; farm pages, shops, favorites and farm updates.
+- Cart split by seller, checkout with pickup or delivery, cash or online payment with the seller's QR code and payment proof.
+- Reservations for upcoming harvests (paid first, refunds on a shortfall), order tracking, reviews and reports.
+- Chats with sellers (photos and PDFs), notifications with categories, push notifications, Filipino or English, light or dark mode, data download and account deletion.
+
+**Farmer-seller (mobile app)**
+
+- Accounts are created by the Super Admin with a temporary password that must be changed at first sign-in.
+- Listings with a stepped form, stock bar and filters; harvest records, add or remove stock, stock history and production cost.
+- Incoming orders, payment checks, refunds, walk-in sales, tawad (discount) rules and reservations.
+- My Sales with date ranges, sales and harvest charts; crop-care guides, farm news and buyer chats.
+
+**Content Editor (CMS, one farm)**
+
+- My Farm profile (logo, cover, map pin, contact, pickup point, farm feature switches), farm photos, price guards and seller crop lists.
+- Crop types, crop-care articles, announcements, FAQ answers and the farm's analytics dashboard with a yearly CSV.
+
+**Super Admin (CMS)**
+
+- Accounts (approve, suspend, temporary passwords), ID verifications, account deletion requests.
+- Farms, crop types, listings, orders, payments, reservations, reviews, reports, moderation and analytics exports.
 
 ## Stack
 
-| Package | Version (installed) |
+| Part | Version |
 | --- | --- |
-| PHP | 8.3+ (developed on 8.4) |
-| Laravel | 13.x |
-| MySQL | 8.x (application database) |
-| Laravel Sanctum | 4.x (token auth for Flutter) |
-| Spatie laravel-permission | 8.x |
-| Filament | 5.x |
-
-PHPUnit tests use in-memory SQLite (`phpunit.xml`). GitHub Actions CI runs Pint and the PHP suite, plus `flutter analyze` and `flutter test` in `/mobile`.
+| PHP | 8.4 |
+| Laravel | 13 |
+| Filament | 5 |
+| Laravel Sanctum | 4 (token auth for the app) |
+| Laravel Reverb | live chat and order updates |
+| Spatie laravel-permission | 8 (roles and permissions) |
+| Database | MySQL 8 in production, SQLite for local work and tests |
+| Flutter | Android app in `mobile/` |
+| Firebase Cloud Messaging | push notifications |
 
 ## Roles
 
-There are exactly four roles:
+1. **`super_admin`**: full CMS access. Not self-registered.
+2. **`content_editor`**: CMS access for one farm. Created by the Super Admin; one per farm.
+3. **`farmer_seller`**: mobile seller account. Created by the Super Admin only.
+4. **`buyer`**: mobile buyer account. Signs up in the app.
 
-1. **`super_admin`** — Filament web panel. Accounts, approvals, economic guardrails, moderation. Not self-registered.
-2. **`content_editor`** — Filament web panel, scoped to one farm. Crop-care reference content and that farm's catalog participation. Not self-registered.
-3. **`farmer_seller`** — mobile seller account. **Must not self-register.** Created only by `super_admin`. Manages own listings, incoming orders, tawad, and shop profile.
-4. **`buyer`** — mobile buyer account. **Can self-register** with email + password. Browses the marketplace, checks out, tracks orders, and reviews completed handovers.
+## Run it locally (Windows)
 
-## Out of scope
-
-- Crop-cycle / growth tracking (removed)
-- Push notifications (`TODO(push-notifications)` — in-app + queued email are live)
-- Descriptive-analytics sales summary (deferred; reservation and POS totals are stored)
-
-## Setup
+Local testing uses its own database, so nothing you do reaches the live server.
 
 ### 1. Requirements
 
-- PHP 8.3+ with extensions: `curl`, `fileinfo`, `gd`, `intl`, `mbstring`, `openssl`, `pdo_mysql`, `zip`
+- PHP 8.4 with these extensions enabled in `php.ini`: `sodium`, `gd`, `intl`, `mbstring`, `fileinfo`, `zip`, `curl`, `openssl`, `pdo_sqlite` (or `pdo_mysql`). Check with `php -m`.
 - Composer 2
-- MySQL 8
+- Flutter, Android Studio and an Android emulator
 
 ### 2. Install
 
-```bash
+```powershell
 composer install
-copy .env.example .env   # Windows
+copy .env.example .env
 php artisan key:generate
 php artisan storage:link
 ```
 
-Listing images use `LISTING_DISK` (`public` locally → `storage/app/public/listings` after `storage:link`; `s3` on Railway).
+For SQLite, set `DB_CONNECTION=sqlite` in `.env` and remove the other `DB_*` lines. For MySQL, create an empty `anihow` database and fill in `DB_*`.
 
-### 3. Database
-
-Create an empty MySQL database, then point `.env` at it:
-
-```ini
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=anihow
-DB_USERNAME=root
-DB_PASSWORD=
+```powershell
+php artisan migrate
 ```
 
-```sql
-CREATE DATABASE anihow CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+### 3. Load test data
+
+```powershell
+php artisan anihow:test-fixtures
 ```
 
-```bash
-php artisan migrate --seed
-```
+This creates the [test accounts](#test-accounts), the client farms and the listings, orders, reservations and reports the test instruments use. It is safe to run again: anything that exists is left alone.
 
-`migrate --seed` only creates roles and permissions. It does **not** create any login. Juan, Maria, Pedro, Ana, and Ben from earlier drafts are not seeded and will fail with "These credentials do not match our records."
+Other commands:
 
-Create the accounts you can actually sign in with:
+| Command | What it does |
+| --- | --- |
+| `php artisan anihow:test-fixtures --dry-run` | Shows what would be created, changes nothing |
+| `php artisan anihow:reset-accounts --execute` | Removes every account and its data except Super Admins, and keeps the three client farms. Run without `--execute` to preview |
+| `php artisan anihow:demo-data` | Six months of demo history for the client farms (accounts end in `@demo.anihow.local`) |
 
-```bash
-php artisan db:seed --class=SuperAdminSeeder
-php artisan db:seed --class=SmokeTestSeeder
-php artisan db:seed --class=DemoSeeder
-```
+On the production server these commands refuse to run unless you add `--force`.
 
-For a local hand-test / panel demo, **use the Demo accounts** below (PYAP Manggahan Chapter). Smoke accounts are thin fixtures for automated tests.
+### 4. Start the server
 
-### 4. Run
+Run each command in its own terminal tab:
 
-```bash
-php artisan serve
+```powershell
+php artisan serve --host=127.0.0.1 --port=8000
 php artisan reverb:start
 php artisan queue:work
 php artisan schedule:work
 ```
 
-- `php artisan serve` — API + Filament. Without it, the app and `/admin` have nothing to talk to.
-- `php artisan reverb:start` — live order chat. Without it, the app falls back to 8s polling.
-- `php artisan queue:work` — queued emails (OTP, password reset, low-stock). Without it, those mails sit in the `jobs` table.
-- `php artisan schedule:work` — scheduled farm announcements (later the stale-order sweep). Without it, a future `starts_at` never notifies.
+| Process | Needed for |
+| --- | --- |
+| `serve` | The API and the CMS at `http://127.0.0.1:8000/admin` |
+| `reverb:start` | Live chat and order updates |
+| `queue:work` | Notifications, emails and other background jobs |
+| `schedule:work` | Payment deadlines, harvest reminders, opening reservations and other timed tasks |
 
-- API: `http://localhost:8000/api`
-- Filament admin: `http://localhost:8000/admin`
-- Reverb (order chat): `ws://localhost:8080` — Android emulator uses `10.0.2.2:8080`
+`scripts\start-anihow-all.cmd` starts the server, Reverb, the CMS and the emulator in one step. It does not start `queue:work` or `schedule:work`.
 
-Settings → Help & contact opens the scripted FAQ bot (no LLM).
+### 5. Run the app on the emulator
 
-## Logins (copy these)
+Uninstall any release build first. A release build talks to the live server and has the same package name:
 
-**Shared password for every seeded account below: `password`**  
-(unless you set `SUPER_ADMIN_PASSWORD` in `.env` before running `SuperAdminSeeder`).
-
-All demo emails are already verified. Do **not** use old draft emails like `juan@anihow.local`, `ana.buyer@anihow.local`, or `ben.buyer@anihow.local` — those seeders are not called and will fail login.
-
-### Filament CMS (`http://localhost:8000/admin`)
-
-| Role | Name | Email | Password | Notes |
-| --- | --- | --- | --- | --- |
-| `super_admin` | AniHow Super Admin | `admin@anihow.local` | `password` | Full CMS. From `SuperAdminSeeder`. |
-| `content_editor` | Elena Ramos | `elena.ramos@demo.anihow.local` | `password` | Farm-scoped CMS for **PYAP Manggahan Chapter**. From `DemoSeeder`. |
-| `content_editor` | Smoke Content Editor | `smoke.editor@anihow.local` | `password` | Farm-scoped CMS for **Smoke Test Farm**. From `SmokeTestSeeder`. |
-
-### Android app — Demo (use these for hand-testing)
-
-Seeded by `DemoSeeder`. Farm: **PYAP Manggahan Chapter**. Password: **`password`**.
-
-| Role | Name | Email | Password | Notes |
-| --- | --- | --- | --- | --- |
-| `buyer` | Carla Santos | `carla.santos@demo.anihow.local` | `password` | Primary demo buyer |
-| `buyer` | Miguel Reyes | `miguel.reyes@demo.anihow.local` | `password` | Verified |
-| `buyer` | Ana Dela Cruz | `ana.delacruz@demo.anihow.local` | `password` | Verified |
-| `buyer` | Paolo Garcia | `paolo.garcia@demo.anihow.local` | `password` | Verified |
-| `buyer` | Liza Ramos | `liza.ramos@demo.anihow.local` | `password` | Verified |
-| `buyer` | Benito Cruz | `benito.cruz@demo.anihow.local` | `password` | Verified |
-| `farmer_seller` | Nena Villanueva | `nena.villanueva@demo.anihow.local` | `password` | Shop: **Aling Nena Produce** |
-| `farmer_seller` | Antonio Ramirez | `antonio.ramirez@demo.anihow.local` | `password` | Shop: **Mang Tonyo Farm** |
-| `farmer_seller` | Rosa Mendoza | `rosa.mendoza@demo.anihow.local` | `password` | Shop: **Ka Rosa Gulay** |
-| `farmer_seller` | Jun Bautista | `jun.bautista@demo.anihow.local` | `password` | Shop: **Kuya Jun Harvest** |
-
-Quick picks: buyer `carla.santos@demo.anihow.local` / farmer `nena.villanueva@demo.anihow.local` / admin `admin@anihow.local` — all password `password`.
-
-### Android app — Smoke (automated tests only)
-
-Seeded by `SmokeTestSeeder`. Farm: **Smoke Test Farm**. Password: **`password`**.
-
-| Role | Name | Email | Password | Notes |
-| --- | --- | --- | --- | --- |
-| `farmer_seller` | Smoke Seller A | `smoke.sellera@anihow.local` | `password` | Shop: Aling Nena Produce |
-| `farmer_seller` | Smoke Seller B | `smoke.sellerb@anihow.local` | `password` | Shop: Mang Tonyo Farm |
-| `buyer` | Smoke Buyer | `smoke.buyer@anihow.local` | `password` | Email already verified |
-
-## Demo data
-
-Realistic Cavite fixtures for a local defense: PYAP Manggahan Chapter, four farmer-sellers, crop types, listings, ~35 days of checkout/OSM order history, reviews, announcements, crop-care articles, and a farm FAQ override.
-
-**Never run this on the production server.** It is not called from `DatabaseSeeder`.
-
-```bash
-php artisan db:seed --class=DemoSeeder
+```powershell
+& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" uninstall com.anihow.anihow
 ```
 
-Safe to re-run (updateOrCreate / firstOrCreate; order history is written once). Account table is under [Logins (copy these)](#logins-copy-these) above.
+Then build a debug build. A debug build talks to your computer (`10.0.2.2:8000` from the emulator).
 
-## Auth API (Sanctum)
+If the project folder name has spaces or brackets, the Android build fails with "is not recognized as an internal or external command". Map the folder to a spare drive letter first:
 
-Send `Accept: application/json`. After login/register, send `Authorization: Bearer {token}`.
-
-Buyer **writes** (create/cancel reservation, review, add/remove favorite) require a verified email (`403` with `"Your email address is not verified."`). Browse endpoints work before verification. Farmer-seller accounts created by admin are already verified.
-
-| Method | Path | Who | Purpose |
-| --- | --- | --- | --- |
-| POST | `/api/auth/register` | guest | Buyer self-registration (sends verification email) |
-| POST | `/api/auth/login` | guest | Login for all roles |
-| POST | `/api/auth/logout` | authenticated | Revoke current token |
-| GET | `/api/auth/user` | authenticated | Current user |
-| GET | `/api/auth/email/verify/{id}/{hash}` | signed link | Verify buyer email |
-| POST | `/api/auth/email/verification-notification` | authenticated | Resend verification email |
-| POST | `/api/auth/forgot-password` | guest | Request password reset email |
-| POST | `/api/auth/reset-password` | guest | `{ email, token, password, password_confirmation }` |
-| POST | `/api/admin/farmer-sellers` | `super_admin` | Create a pre-verified farmer-seller |
-
-Auth routes are throttled (`RATE_LIMIT_AUTH`, default 5/min). The rest of the API uses `RATE_LIMIT_API` (default 240/min per account; the app polls orders, chats and the notification count).
-
-### Verify email
-
-The verification link is a signed API URL. Opening it marks the buyer verified. Flutter can open it in a browser or intercept it.
-
-### Reset password
-
-```json
-POST /api/auth/forgot-password
-{ "email": "smoke.buyer@anihow.local" }
+```powershell
+subst X: "C:\path\to\anihow-backend"
+$env:PUB_CACHE = "X:\mobile\.dart_tool\apk-pub-cache"
+cd X:\mobile
+flutter pub get
+flutter run -d emulator-5554
 ```
 
-The email contains `FRONTEND_URL/reset-password?token=...&email=...`. The app then POSTs `/api/auth/reset-password`. Unknown emails still return 200 so accounts are not enumerated.
+When you are done, remove the drive with `subst X: /D`.
 
-Farmer-seller create/register bodies may include optional `location` (shown on marketplace product details).
+### Local differences
 
-## Marketplace + listings (Phase 2)
+- Email codes are shown in the app instead of being emailed (`MAIL_MAILER=log`).
+- Lock-screen push notifications do not arrive; in-app notifications work.
 
-| Method | Path | Who | Purpose |
-| --- | --- | --- | --- |
-| GET | `/api/categories` | authenticated | Active categories |
-| GET | `/api/farmer/listings` | `farmer_seller` | Own listings only |
-| POST | `/api/farmer/listings` | `farmer_seller` | Create listing (`multipart/form-data` if attaching `image`) |
-| GET | `/api/farmer/listings/{listing}` | `farmer_seller` | Show own listing |
-| PUT/PATCH/POST | `/api/farmer/listings/{listing}` | `farmer_seller` | Update own listing (POST is for multipart image updates) |
-| DELETE | `/api/farmer/listings/{listing}` | `farmer_seller` | Delete own listing |
-| PATCH | `/api/farmer/listings/{listing}/active` | `farmer_seller` | Toggle or set `is_active` |
-| GET | `/api/buyer/marketplace` | `buyer` | Browse active listings (`category_id`, `search`) |
-| GET | `/api/buyer/marketplace/{listing}` | `buyer` | Product detail (seller name + location) |
+## Test accounts
 
-A farmer-seller cannot read, update, or delete another farmer's listing (403). Buyers only see active listings from active sellers (inactive listings 404). Produce is stored as **listings** (`listing_id`); there is no separate products table.
+Created by `php artisan anihow:test-fixtures`. All of them share one test password, which is kept out of this repository; ask the project lead. Accounts created during testing must follow the password rules: 8+ characters, upper and lower case, a number and a symbol.
 
-### Create listing (farmer)
-
-`multipart/form-data`:
-
-- `name`, `category_id`, `unit` (`kg`, `g`, `piece`, `bundle`, `sack`, `tray`, `liter`)
-- `price_per_unit`, `quantity_available`
-- `description` (optional), `is_active` (optional), `image` (optional, max 2 MB)
-
-### Browse marketplace (buyer)
-
-```
-GET /api/buyer/marketplace?category_id=1&search=tomato
-```
-
-## Reservations (Phase 3)
-
-A reservation holds items from **one** farmer-seller only. Status is `pending` → `ready_for_pickup` → `completed`, plus `cancelled`. Jumps are rejected. Stock decrements when the reservation is created and is restored on cancellation.
-
-| Method | Path | Who | Purpose |
-| --- | --- | --- | --- |
-| GET | `/api/buyer/reservations` | `buyer` | Own reservations |
-| POST | `/api/buyer/reservations` | `buyer` | Create from marketplace listings |
-| GET | `/api/buyer/reservations/{reservation}` | `buyer` | Show own reservation |
-| PATCH | `/api/buyer/reservations/{reservation}/cancel` | `buyer` | Cancel while `pending` |
-| GET | `/api/farmer/reservations` | `farmer_seller` | Incoming reservations |
-| GET | `/api/farmer/reservations/{reservation}` | `farmer_seller` | Show incoming reservation |
-| PATCH | `/api/farmer/reservations/{reservation}/ready` | `farmer_seller` | `pending` → `ready_for_pickup` |
-| PATCH | `/api/farmer/reservations/{reservation}/complete` | `farmer_seller` | `ready_for_pickup` → `completed` |
-| PATCH | `/api/farmer/reservations/{reservation}/cancel` | `farmer_seller` | Cancel `pending` or `ready_for_pickup` (`reason` required) |
-
-### Create reservation (buyer)
-
-```json
-{
-  "notes": "Pickup Saturday morning",
-  "items": [
-    { "listing_id": 1, "quantity": 2 }
-  ]
-}
-```
-
-`unit_price` is captured from the listing at reservation time. Overselling and mixed-seller carts return 422.
-
-## POS / walk-in sales (Phase 3)
-
-POS sales are **separate** records from reservations. They are not tied to a buyer account. Stock decrements in a transaction.
-
-| Method | Path | Who | Purpose |
-| --- | --- | --- | --- |
-| GET | `/api/farmer/sales` | `farmer_seller` | Own walk-in sales |
-| POST | `/api/farmer/sales` | `farmer_seller` | Record a walk-in sale |
-| GET | `/api/farmer/sales/{sale}` | `farmer_seller` | Show own sale |
-
-```json
-{
-  "notes": "Walk-in cash",
-  "items": [
-    { "listing_id": 1, "quantity": 1.5 }
-  ]
-}
-```
-
-A farmer-seller can only sell their own listings (inactive listings are allowed at the stall). Overselling returns 422.
-
-## Crop-care mobile (Phase 4)
-
-Admin-authored articles only. Farmer-sellers can browse and search; they cannot create or edit from the app.
-
-| Method | Path | Who | Purpose |
-| --- | --- | --- | --- |
-| GET | `/api/farmer/crop-care` | `farmer_seller` | List articles (`category_id`, `search`) |
-| GET | `/api/farmer/crop-care/{article}` | `farmer_seller` | View one active article |
-
-## In-app notifications (Phase 4)
-
-In-app records plus queued email (no push). Created when a buyer places a reservation (farmer), when reservation status changes (buyer), and when listing stock crosses below `LOW_STOCK_THRESHOLD` (farmer). `MAIL_MAILER=log` locally; SMTP in production.
-
-| Method | Path | Who | Purpose |
-| --- | --- | --- | --- |
-| GET | `/api/notifications` | authenticated | My notifications |
-| GET | `/api/notifications/unread-count` | authenticated | Unread count |
-| PATCH | `/api/notifications/{notification}/read` | authenticated | Mark one as read |
-| POST | `/api/notifications/read-all` | authenticated | Mark all as read |
-
-## Shop profiles, reviews, favorites (Phase 4)
-
-| Method | Path | Who | Purpose |
-| --- | --- | --- | --- |
-| GET | `/api/farmer/shop` | `farmer_seller` | Own shop profile |
-| PUT/PATCH | `/api/farmer/shop` | `farmer_seller` | Update `shop_name`, `bio`, `location`, `contact` |
-| GET | `/api/buyer/shops` | `buyer` | Browse farmer-seller shops |
-| GET | `/api/buyer/shops/{farmerSeller}` | `buyer` | Shop profile + active listings + average rating |
-| GET | `/api/buyer/shops/{farmerSeller}/reviews` | `buyer` | Reviews + average rating |
-| POST | `/api/buyer/reviews` | `buyer` | Review a **completed** reservation (once) |
-| GET | `/api/buyer/favorites` | `buyer` | My favorite listings |
-| POST | `/api/buyer/favorites` | `buyer` | `{ "listing_id": 1 }` |
-| DELETE | `/api/buyer/favorites/{listing}` | `buyer` | Remove a favorite |
-
-### Create review (buyer)
-
-```json
-{
-  "reservation_id": 1,
-  "rating": 5,
-  "comment": "Fresh kamote, easy pickup."
-}
-```
-
-## Order history (Phase 4)
-
-| Method | Path | Who | Purpose |
-| --- | --- | --- | --- |
-| GET | `/api/buyer/orders` | `buyer` | Completed and cancelled reservations with items |
-| GET | `/api/buyer/orders/{reservation}/receipt` | `buyer` | Receipt-style line items + total |
-
-## Filament
-
-`/admin` is limited to active `super_admin` users. Resources:
-
-- **Accounts** — users, including farmer-seller `location`, `shop_name`, `bio`, `contact`
-- **Categories** — marketplace categories
-- **Listings** — all produce listings
-- **Crop care** — title, body, optional category (not crop-cycle tracking; mobile read API is Phase 4)
-
-## Environment
-
-Copy `.env.example`. Important variables:
-
-| Variable | Local | Railway / production |
+| Email | Role | Notes |
 | --- | --- | --- |
-| `APP_KEY` | `php artisan key:generate` | generate once, store as secret |
-| `APP_URL` | `http://localhost:8000` | `https://<your-app>.up.railway.app` |
-| `APP_TIMEZONE` | `Asia/Manila` | `Asia/Manila` |
-| `APP_ENV` / `APP_DEBUG` | `local` / `true` | `production` / `false` |
-| `FORCE_HTTPS` | `false` | `true` (also implied when `APP_ENV=production`) |
-| `FRONTEND_URL` | same as app or Flutter deep-link base | password-reset landing URL |
-| `DB_*` | MySQL 8 | Railway MySQL plugin |
-| `MAIL_MAILER` | `log` | `smtp` |
-| `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` / `MAIL_FROM_ADDRESS` | unused with `log` | your SMTP provider |
-| `LISTING_DISK` | `public` | `s3` |
-| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_DEFAULT_REGION` / `AWS_BUCKET` | empty | S3-compatible bucket (R2, Tigris, AWS) |
-| `AWS_ENDPOINT` / `AWS_URL` / `AWS_USE_PATH_STYLE_ENDPOINT` | empty | set for R2 / MinIO-style APIs |
-| `QUEUE_CONNECTION` | `database` (run `queue:work`) | `database` + a worker service |
-| `CORS_ALLOWED_ORIGINS` | `*` | your Flutter web origin(s), comma-separated |
-| `RATE_LIMIT_AUTH` / `RATE_LIMIT_API` | `5` / `240` | same unless you need to tune |
-| `SUPER_ADMIN_*` | seed credentials | change the password |
+| `admin01@gmail.com` | Super Admin | CMS |
+| `editor01@gmail.com` | Content Editor | CMS, PYAP Manggahan Chapter |
+| `susp03@gmail.com` | Content Editor | Suspended, no farm |
+| `kuyajun@gmail.com` | Farmer-seller | Kuya Jun Harvest, accepts online payment |
+| `alingnena@gmail.com` | Farmer-seller | Aling Nena Produce, cash only, sells the value-added Tuyong mangga |
+| `pending01@gmail.com` | Farmer-seller | Waiting for approval |
+| `susp02@gmail.com` | Farmer-seller | Suspended |
+| `buyer01@gmail.com` | Buyer | Has completed and pending orders |
+| `buyer02@gmail.com` | Buyer | Has reservations and reports |
+| `delete01@gmail.com` | Buyer | Has a pending account deletion request |
+| `susp01@gmail.com` | Buyer | Suspended |
 
-## Deploy on a VPS
+Accounts made before ID verification existed, including all of these, are never blocked from ordering; only new sign-ups must verify an ID.
 
-Nginx + PHP-FPM serving `public/`. HTTPS is required.
+## Build the Android app
 
-### Supervisor
+From the project root on Windows:
 
-Two programs, both with autorestart. Same working directory and `.env` as the app.
-
-`queue-work` — queued emails (OTP, password reset, low-stock):
-
-```ini
-[program:anihow-queue]
-command=php artisan queue:work --sleep=1 --tries=3
-directory=/path/to/anihow-backend
-autostart=true
-autorestart=true
-user=www-data
-redirect_stderr=true
-stdout_logfile=/var/log/anihow-queue.log
+```powershell
+.\scripts\build-anihow-apk.cmd -Server vps
+& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" install -r dist\AniHow-vps.apk
 ```
 
-`reverb` — live order chat:
+The server address and Reverb settings come from `mobile/dart_defines/<server>.json`. A release build without them shows a "not connected to a server" screen. The build script handles folder names with spaces or brackets on its own.
 
-```ini
-[program:anihow-reverb]
-command=php artisan reverb:start
-directory=/path/to/anihow-backend
-autostart=true
-autorestart=true
-user=www-data
-redirect_stderr=true
-stdout_logfile=/var/log/anihow-reverb.log
-```
+Push notifications need `mobile/android/app/google-services.json` from Firebase. It is ignored by git; never commit it.
 
-### Cron
+## Production (VPS)
 
-```
-* * * * * cd /path/to/anihow-backend && php artisan schedule:run >> /dev/null 2>&1
-```
+The live server is an Ubuntu VPS running Nginx, PHP-FPM 8.4, MySQL 8 and Supervisor (queue worker and Reverb). Scripts in `scripts/vps/`:
 
-That ticks `announcements:notify-due` (and later the stale-order sweep).
+| Script | Purpose |
+| --- | --- |
+| `provision.sh` | One-time server setup: packages, MySQL database, Nginx, Supervisor, cron |
+| `deploy.sh` | Pulls `main`, installs, migrates, caches config and routes, restarts the queue and Reverb |
+| `backup.sh` | Nightly MySQL dump |
 
-### Reverb over Nginx
-
-Prefer a dedicated subdomain (e.g. `ws.example.com`) whose server block proxies `location /` to `127.0.0.1:${REVERB_SERVER_PORT}` with the `Upgrade` / `Connection` headers. That way both the WebSocket path (`/app`) and Laravel's HTTP publish path (`/apps`) reach Reverb.
-
-```nginx
-server {
-    listen 443 ssl;
-    server_name ws.example.com;
-
-    location / {
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "Upgrade";
-        proxy_pass http://127.0.0.1:8080;
-    }
-}
-```
-
-On a shared domain instead, proxy **both** `/app` and `/apps` the same way:
-
-```nginx
-location /app {
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "Upgrade";
-    proxy_pass http://127.0.0.1:8080;
-}
-
-location /apps {
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "Upgrade";
-    proxy_pass http://127.0.0.1:8080;
-}
-```
-
-`REVERB_HOST` / `REVERB_PORT` / `REVERB_SCHEME` in the **server** `.env` are what Laravel uses to publish to Reverb. Set them to the public wss endpoint (e.g. `ws.example.com` / `443` / `https`), not `localhost`. The Android app's endpoints are set at build time (see Flutter release build below), not from this `.env`.
-
-### Post-deploy
+Deploy after merging to `main`:
 
 ```bash
-composer install --no-dev --optimize-autoloader
-php artisan migrate --force
-php artisan storage:link
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-php artisan queue:restart
-php artisan reverb:restart
+ssh anihow@<server> "bash /var/www/anihow/scripts/vps/deploy.sh"
 ```
 
-### Environment
+Scheduled tasks (cron runs `php artisan schedule:run` every minute):
 
-- `APP_ENV=production` so smoke seeders never run
-- `APP_DEBUG=false`
-- `APP_TIMEZONE=Asia/Manila`
-- `MAIL_*` for Gmail SMTP. `MAIL_*` must be set before going live; without it, buyer verification is disabled.
-- `RATE_LIMIT_AUTH` left at `5`
+| Command | Purpose |
+| --- | --- |
+| `announcements:notify-due` | Sends scheduled farm announcements |
+| `reservations:open-due` | Turns reservations into orders when a listing opens |
+| `listings:harvest-upkeep` | Harvest reminders and expired stock |
+| `orders:sweep-stale` | Cleans up stale orders |
+| `payments:upkeep` | Payment deadlines, reminders and expiry |
+| `payments:purge-proof-files` | Deletes old payment proof screenshots |
+| `sanctum:prune-expired` | Removes expired sign-in tokens |
 
-## Deploy on Railway
+Push notifications on the server need the Firebase service-account key at the path set in `FIREBASE_CREDENTIALS`. Keep it outside the web root and out of git.
 
-1. Create a Railway project and attach a **MySQL** plugin. Copy `MYSQLHOST`, `MYSQLPORT`, `MYSQLDATABASE`, `MYSQLUSER`, `MYSQLPASSWORD` into `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`.
-2. Add the env vars from the table above. Generate `APP_KEY` (`php artisan key:generate --show`) and set `APP_URL` to the public HTTPS URL.
-3. Set `LISTING_DISK=s3` and fill AWS/R2 credentials. Railway's filesystem is ephemeral — do not use `public` disk in production.
-4. Set `MAIL_MAILER=smtp` and real SMTP credentials. Keep `MAIL_FROM_ADDRESS` on a domain the provider allows.
-5. Deploy this repo. `railway.json` runs `php artisan migrate --force` then `php artisan serve` on `$PORT`. Trust proxies and HTTPS are enabled in production.
-6. Add a **second service** (same image/repo) with start command `php artisan queue:work --sleep=1 --tries=3` so verification, password reset, and reservation emails actually send.
-7. Optional demo logins: `php artisan db:seed --class=SuperAdminSeeder` then `php artisan db:seed --class=SmokeTestSeeder`. Change `SUPER_ADMIN_PASSWORD` first. `php artisan db:seed` alone does not create users.
+## Configuration
 
-Worker service needs the same env vars (especially `APP_KEY`, database, and mail).
+Copy `.env.example` to `.env`. The variables that matter most:
+
+| Variable | Purpose |
+| --- | --- |
+| `APP_URL`, `APP_ENV`, `APP_DEBUG` | Site address and mode (`production` / `false` on the server) |
+| `DB_*` | Database connection |
+| `MAIL_*` | Gmail SMTP on the server; `MAIL_MAILER=log` locally |
+| `QUEUE_CONNECTION` | `database`, with a queue worker running |
+| `REVERB_*` | Live chat server; on the server, the public `wss` address |
+| `LISTING_DISK` | Where listing photos are stored |
+| `FIREBASE_CREDENTIALS` | Path to the Firebase service-account key for push |
+| `TERMS_VERSION` | Raise it when the Terms of Service or Privacy Policy change; app users accept again |
+| `REQUIRE_ID_VERIFICATION` | `true` makes new buyers verify an ID before ordering |
+| `RATE_LIMIT_AUTH`, `RATE_LIMIT_API` | Requests per minute for sign-in and for the rest of the API |
+| `ANIHOW_SELLER_HELP_*` | Contact details shown on the "Want to be a seller?" screen |
+| `SUPER_ADMIN_*` | Account created by `SuperAdminSeeder`; set your own password |
+
+Never commit `.env`, `google-services.json` or the Firebase key.
+
+## API
+
+All endpoints are under `/api`. Send `Accept: application/json`, and after signing in send `Authorization: Bearer {token}`.
+
+| Prefix | Who |
+| --- | --- |
+| `/api/auth` | Sign up, sign in, email verification, password reset, terms, ID verification, profile |
+| `/api/buyer` | Cart, checkout, orders, reservations, payments, favorites, reviews |
+| `/api/farmer` | Listings, stock, harvests, orders, payments, walk-in sales, analytics |
+| `/api/admin` | Admin-only actions used outside the CMS |
+| other `/api` routes | Marketplace, farms, shops, chats, notifications, reports, FAQ |
+
+List every route with:
+
+```bash
+php artisan route:list --path=api
+```
 
 ## Tests
 
 ```bash
-php artisan test
-```
-
-### Flutter release build
-
-Endpoints are compile-time `--dart-define` values. Omit them for emulator defaults (`10.0.2.2:8000`, Reverb `ws` on `8080`).
-
-```bash
-flutter build apk --release \
-  --dart-define=API_BASE_URL=https://api.example.com \
-  --dart-define=REVERB_HOST=ws.example.com \
-  --dart-define=REVERB_PORT=443 \
-  --dart-define=REVERB_SCHEME=wss \
-  --dart-define=REVERB_APP_KEY=...
-```
-
-A release build without these defines shows a "not connected to a server" screen by design.
-
-### Flutter testing
-
-Everyday (skips live API tests):
-
-```bash
+php artisan test            # PHP tests (in-memory SQLite)
+vendor/bin/pint --test      # PHP formatting
+cd mobile
+flutter analyze
 flutter test
 ```
 
-Live tests need a local API and smoke accounts. Local only:
-
-```bash
-php artisan migrate:fresh --seed
-flutter test --tags live --run-skipped --concurrency=1
-```
-
-See [CHANGELOG.md](CHANGELOG.md) for what each phase added.
+GitHub Actions runs all of these on every pull request.

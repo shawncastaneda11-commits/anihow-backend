@@ -14,6 +14,7 @@ use App\Enums\HarvestRecordKind;
 use App\Enums\ListingUnit;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentWallet;
+use App\Enums\ProductCategory;
 use App\Enums\ReportReason;
 use App\Enums\ReportStatus;
 use App\Enums\Role;
@@ -47,6 +48,13 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class CreateTestFixtures
 {
+    /**
+     * The value-added product the test instruments use.
+     *
+     * @var list<string>
+     */
+    private const VALUE_ADDED_NAMES = ['Tuyong mangga', 'Dried mango'];
+
     /** @var list<array{item: string, status: string}> */
     private array $rows = [];
 
@@ -114,6 +122,8 @@ class CreateTestFixtures
         $this->listing($jun, 'kuyajun@gmail.com', $pyap, 'Pechay (opens in 3 days)', ['Pechay'], ListingUnit::Bundle, 20.00, 20, 1, 1, 3, null);
         $okra = $this->listing($nena, 'alingnena@gmail.com', $pyap, 'Okra Sariwa', ['Okra'], ListingUnit::Kilogram, 25.00, 15, 1, 1, null, null);
         $squash = $this->listing($nena, 'alingnena@gmail.com', $pyap, 'squashy baby', ['Squash', 'Kalabasa'], ListingUnit::Kilogram, 20.00, 12, 1, 1, 3, null);
+        $this->valueAddedCropType($pyap);
+        $this->listing($nena, 'alingnena@gmail.com', $pyap, 'Tuyong mangga', self::VALUE_ADDED_NAMES, ListingUnit::Pack, 120.00, 20, 1, 1, null, null);
 
         $this->reservation($buyer02, 'buyer02@gmail.com', $squash, 'squashy baby', 2);
         $this->reservation($buyer02, 'buyer02@gmail.com', $okraNext, 'Okra (next week)', 3);
@@ -367,6 +377,13 @@ class CreateTestFixtures
 
         $crop = $this->cropType($farm, $cropNames);
 
+        if ($crop === null && $this->dryRun && $this->wasPlanned('crop:'.$cropNames[0])) {
+            $this->plan('listing:'.$sellerEmail.':'.$title);
+            $this->record($item, 'would create');
+
+            return null;
+        }
+
         if ($crop === null) {
             $this->record($item, 'skipped: crop type '.implode(' / ', $cropNames).' does not exist');
 
@@ -510,6 +527,68 @@ class CreateTestFixtures
     }
 
     /**
+     * Adds the value-added crop type to the catalog the farm already uses: its
+     * own rows when it has any, otherwise the shared catalog. A farm that owns
+     * crop types sees only those, so a farm row is never added on its own.
+     */
+    private function valueAddedCropType(?Farm $farm): void
+    {
+        $name = self::VALUE_ADDED_NAMES[0];
+        $item = "Crop type {$name}";
+
+        if ($farm === null) {
+            if ($this->dryRun) {
+                $this->plan('crop:'.$name);
+            }
+            $this->record($item, $this->dryRun ? 'would create' : 'skipped: farm is missing');
+
+            return;
+        }
+
+        if ($this->cropType($farm, self::VALUE_ADDED_NAMES) !== null) {
+            $this->record($item, 'exists');
+
+            return;
+        }
+
+        $farmId = CropType::query()->where('farm_id', $farm->id)->exists() ? $farm->id : null;
+        $slug = 'fixture-tuyong-mangga';
+
+        $turnedOff = CropType::query()
+            ->when($farmId === null, fn (Builder $query) => $query->whereNull('farm_id'), fn (Builder $query) => $query->where('farm_id', $farmId))
+            ->where('slug', $slug)
+            ->exists();
+
+        if ($turnedOff) {
+            $this->record($item, 'skipped: crop type is turned off');
+
+            return;
+        }
+
+        if ($this->dryRun) {
+            $this->plan('crop:'.$name);
+            $this->record($item, 'would create');
+
+            return;
+        }
+
+        CropType::query()->create([
+            'farm_id' => $farmId,
+            'name' => $name,
+            'slug' => $slug,
+            'label_en' => self::VALUE_ADDED_NAMES[1],
+            'label_fil' => $name,
+            'description' => 'Dried mango slices made by the farm.',
+            'unit_of_measure' => ListingUnit::Pack,
+            'category' => ProductCategory::ValueAdded,
+            'floor_price' => 80.00,
+            'max_discount' => 15.00,
+            'is_active' => true,
+        ]);
+        $this->record($item, 'created');
+    }
+
+    /**
      * @param  list<string>  $names
      */
     private function cropType(?Farm $farm, array $names): ?CropType
@@ -527,6 +606,10 @@ class CreateTestFixtures
 
     private function listingProblem(?User $seller, ?Farm $farm, CropType $crop, ListingUnit $unit, float $price, float $min, float $step): ?string
     {
+        if ($crop->category === ProductCategory::ValueAdded && $farm !== null && ! $farm->allowsValueAdded()) {
+            return "value-added products are turned off for {$farm->name}";
+        }
+
         if (! $this->units->accepts($crop, $unit, $farm?->id ?? $seller?->farm_id)) {
             return $this->units->refusalMessage($crop, $farm?->id ?? $seller?->farm_id);
         }

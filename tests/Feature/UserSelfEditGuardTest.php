@@ -39,8 +39,8 @@ class UserSelfEditGuardTest extends TestCase
                 'name' => 'Edited Editor',
                 'email' => $editor->email,
                 'phone' => '09170001111',
-                'password' => 'new-password-1',
-                'password_confirmation' => 'new-password-1',
+                'password' => 'New-Pass#123',
+                'password_confirmation' => 'New-Pass#123',
             ])
             ->set('data.farm_id', $otherFarm->id)
             ->set('data.status', UserStatus::Suspended->value)
@@ -52,7 +52,7 @@ class UserSelfEditGuardTest extends TestCase
 
         $this->assertSame('Edited Editor', $editor->name);
         $this->assertSame('09170001111', $editor->phone);
-        $this->assertTrue(Hash::check('new-password-1', $editor->password));
+        $this->assertTrue(Hash::check('New-Pass#123', $editor->password));
         $this->assertSame($farm->id, $editor->farm_id);
         $this->assertSame(UserStatus::Active, $editor->status);
         $this->assertTrue($editor->hasRole(Role::ContentEditor));
@@ -84,6 +84,22 @@ class UserSelfEditGuardTest extends TestCase
         $this->assertSame(UserStatus::Suspended, $editor->status);
         $this->assertTrue($editor->hasRole(Role::FarmerSeller));
         $this->assertFalse($editor->hasRole(Role::ContentEditor));
+    }
+
+    public function test_a_new_password_on_your_own_account_must_meet_the_rules(): void
+    {
+        $editor = $this->staff(Role::ContentEditor, Farm::factory()->create());
+        $oldHash = $editor->password;
+
+        $this->openEditor($editor)
+            ->fillForm([
+                'password' => 'weakpass1',
+                'password_confirmation' => 'weakpass1',
+            ])
+            ->call('save')
+            ->assertHasFormErrors(['password']);
+
+        $this->assertSame($oldHash, $editor->fresh()->password);
     }
 
     private function staff(Role $role, ?Farm $farm = null): User

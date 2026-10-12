@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\ListingUnit;
 use App\Enums\OrderStatus;
+use App\Enums\ProductCategory;
 use App\Enums\Role;
 use App\Enums\UserStatus;
 use App\Models\AccountDeletionRequest;
@@ -61,7 +62,7 @@ class AnihowTestFixturesTest extends TestCase
         $this->assertNull($sanctuario?->municipality);
         $this->assertNull($sanctuario?->barangay);
         $this->assertNull($sanctuario?->contentEditor);
-        $this->assertSame(8, Listing::query()->count());
+        $this->assertSame(9, Listing::query()->count());
         $this->assertSame(2, Reservation::query()->count());
         $opensInThreeDays = Listing::query()->where('title', 'Pechay (opens in 3 days)')->first();
         $this->assertNotNull($opensInThreeDays);
@@ -85,6 +86,13 @@ class AnihowTestFixturesTest extends TestCase
         $this->assertSame('Ang bagal, walang kwentang seller!!', $okra?->review?->comment);
         $this->assertSame(OrderStatus::Placed, $kalabasa?->status);
 
+        $mango = Listing::query()->where('title', 'Tuyong mangga')->first();
+        $this->assertSame('alingnena@gmail.com', $mango?->farmerSeller?->email);
+        $this->assertSame(ProductCategory::ValueAdded, $mango?->cropType?->category);
+        $this->assertSame(ListingUnit::Pack, $mango?->unit);
+        $this->assertNull($mango?->cropType?->farm_id);
+        $this->assertTrue($mango?->harvestRecords()->exists());
+
         $delete = User::query()->where('email', 'delete01@gmail.com')->first();
         $this->assertSame(0, $delete?->orders()->count());
         $this->assertTrue($delete?->accountDeletionRequests()->exists());
@@ -96,7 +104,7 @@ class AnihowTestFixturesTest extends TestCase
             ->assertSuccessful();
 
         $this->assertSame(11, User::query()->count());
-        $this->assertSame(8, Listing::query()->count());
+        $this->assertSame(9, Listing::query()->count());
         $this->assertSame(3, Order::query()->count());
         $this->assertSame(1, Review::query()->count());
     }
@@ -164,6 +172,33 @@ class AnihowTestFixturesTest extends TestCase
         $this->assertSame(0, Farm::query()->count());
         $this->assertSame(0, Listing::query()->count());
         $this->assertSame(0, Order::query()->count());
+    }
+
+    public function test_the_value_added_crop_joins_a_farm_that_has_its_own_crop_types(): void
+    {
+        $pyap = Farm::factory()->create(['name' => 'PYAP Manggahan Chapter', 'slug' => 'pyap-manggahan-chapter']);
+        CropType::query()->whereNull('farm_id')->get()->each(
+            fn (CropType $crop) => $crop->replicate()->forceFill(['farm_id' => $pyap->id])->save(),
+        );
+
+        $this->artisan('anihow:test-fixtures')->assertSuccessful();
+
+        $mango = CropType::query()->where('name', 'Tuyong mangga')->sole();
+        $this->assertSame($pyap->id, $mango->farm_id);
+        $this->assertSame($mango->id, Listing::query()->where('title', 'Tuyong mangga')->value('crop_type_id'));
+    }
+
+    public function test_the_value_added_listing_is_skipped_when_the_farm_turns_value_added_off(): void
+    {
+        $this->artisan('anihow:test-fixtures')->assertSuccessful();
+        Listing::query()->where('title', 'Tuyong mangga')->forceDelete();
+        Farm::query()->where('slug', 'pyap-manggahan-chapter')->update(['value_added_enabled' => false]);
+
+        $this->artisan('anihow:test-fixtures')
+            ->expectsOutputToContain('value-added products are turned off')
+            ->assertSuccessful();
+
+        $this->assertFalse(Listing::query()->where('title', 'Tuyong mangga')->exists());
     }
 
     private function seedCropTypes(): void

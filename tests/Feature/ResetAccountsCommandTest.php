@@ -238,7 +238,7 @@ class ResetAccountsCommandTest extends TestCase
 
         $this->assertSame(11, User::query()->count());
         $this->assertSame(3, Farm::query()->count());
-        $this->assertSame(8, Listing::query()->count());
+        $this->assertSame(9, Listing::query()->count());
         $this->assertNull(User::query()->where('email', 'susp03@gmail.com')->value('farm_id'));
     }
 

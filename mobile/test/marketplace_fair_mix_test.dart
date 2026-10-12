@@ -13,9 +13,10 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FairApi extends ApiClient {
-  _FairApi({required this.listings}) : super(onUnauthorized: () {});
+  _FairApi({required this.listings, this.total}) : super(onUnauthorized: () {});
 
   final List<ListingItem> listings;
+  final int? total;
   final String mixDay = '2026-10-06';
   final calls = <Map<String, Object?>>[];
 
@@ -39,7 +40,7 @@ class _FairApi extends ApiClient {
       'search': search,
       'category': category,
     });
-    return MarketplaceFeed(items: listings, mixDay: this.mixDay);
+    return MarketplaceFeed(items: listings, mixDay: this.mixDay, total: total);
   }
 
   @override
@@ -117,6 +118,35 @@ void main() {
     expect(api.calls[1]['page'], 2);
     expect(api.calls[1]['mixDay'], '2026-10-06');
   });
+
+  testWidgets(
+    'the count shows every matching listing, not just the loaded page',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await tester.binding.setSurfaceSize(const Size(400, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        _app(
+          _FairApi(
+            listings: [for (var id = 1; id <= 15; id++) _listing(id)],
+            total: 38,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('38 listings'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(
+        _app(
+          _FairApi(listings: [for (var id = 1; id <= 3; id++) _listing(id)]),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('3 listings'), findsOneWidget);
+    },
+  );
 
   testWidgets('the sort sheet hides fair mix and leaves no sort highlighted', (
     tester,

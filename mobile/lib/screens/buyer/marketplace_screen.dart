@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -51,6 +52,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   bool _loadingMore = false;
   bool _hasMore = false;
   int _page = 1;
+
+  /// Every listing that matches, from the server. Null until a page says so.
+  int? _total;
   Object? _error;
   List<ListingItem> _items = const [];
   List<BuyerFarmAnnouncement> _updates = const [];
@@ -165,6 +169,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       _error = null;
       _page = 1;
       _mixDay = null;
+      _total = null;
     });
     try {
       final feed = await api.marketplace(
@@ -182,6 +187,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       setState(() {
         _items = feed.items;
         _mixDay = feed.mixDay;
+        _total = feed.total;
         _hasMore = feed.items.length >= _pageSize;
         _loading = false;
       });
@@ -244,6 +250,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       setState(() {
         _page = nextPage;
         _items = [..._items, ...feed.items];
+        _total = feed.total ?? _total;
         _hasMore = feed.items.length >= _pageSize;
         _loadingMore = false;
       });
@@ -587,7 +594,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
             AniHowSpace.cardGap,
           ),
           child: Text(
-            s.listingsCount(_items.length),
+            s.listingsCount(math.max(_total ?? 0, _items.length)),
             key: const Key('marketplace-listing-count'),
             style: Theme.of(context).textTheme.titleSmall,
           ),

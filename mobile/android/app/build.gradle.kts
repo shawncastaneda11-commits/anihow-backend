@@ -5,6 +5,17 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+// Builds from dart_defines/staging.json set APP_VARIANT=staging. They get their
+// own app ID and name, so the test app installs next to the live one.
+val dartDefines: Map<String, String> = (findProperty("dart-defines") as String?)
+    .orEmpty()
+    .split(",")
+    .filter { it.isNotBlank() }
+    .map { String(java.util.Base64.getDecoder().decode(it)) }
+    .filter { it.contains("=") }
+    .associate { it.substringBefore("=") to it.substringAfter("=") }
+val isStagingBuild = dartDefines["APP_VARIANT"] == "staging"
+
 android {
     namespace = "com.anihow.anihow"
     compileSdk = flutter.compileSdkVersion
@@ -18,7 +29,8 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.anihow.anihow"
+        applicationId = if (isStagingBuild) "com.anihow.anihow.staging" else "com.anihow.anihow"
+        manifestPlaceholders["appLabel"] = if (isStagingBuild) "AniHow Staging" else "AniHow"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

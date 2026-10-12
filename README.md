@@ -193,6 +193,8 @@ The live server is an Ubuntu VPS running Nginx, PHP-FPM 8.4, MySQL 8 and Supervi
 | `provision.sh` | One-time server setup: packages, MySQL database, Nginx, Supervisor, cron |
 | `deploy.sh` | Pulls `main`, installs, migrates, caches config and routes, restarts the queue and Reverb |
 | `backup.sh` | Nightly MySQL dump |
+| `staging-setup.sh` | One-time setup of the test copy (see below) |
+| `deploy-staging.sh` | Puts `main` or any branch on the test copy |
 
 Deploy after merging to `main`:
 
@@ -234,6 +236,42 @@ Copy `.env.example` to `.env`. The variables that matter most:
 | `SUPER_ADMIN_*` | Account created by `SuperAdminSeeder`; set your own password |
 
 Never commit `.env`, `google-services.json` or the Firebase key.
+
+## Test copy (staging)
+
+`https://staging.anihow.tech` is a second copy of AniHow on the same VPS for testing. It has its own folder (`/var/www/anihow-staging`), its own database (`anihow_staging`, whose user cannot read the live database), its own Reverb, queue worker and scheduled tasks, and `APP_ENV=staging`. Real email and push notifications work, like on the live site. Nothing done there reaches the live site or the pilot users.
+
+The matching phone app is **AniHow Staging** (`com.anihow.anihow.staging`). It installs next to the live AniHow app.
+
+### Set it up once
+
+1. Add a DNS `A` record for `staging` pointing at the VPS address, and wait until it resolves.
+2. In Firebase, add an Android app with the package name `com.anihow.anihow.staging`, then download `google-services.json` again into `mobile/android/app/`. The file now covers both apps.
+3. On the VPS, as root:
+
+   ```bash
+   bash /var/www/anihow/scripts/vps/staging-setup.sh staging.anihow.tech
+   ```
+
+   It creates the database, copies the live `.env` with the staging values swapped in (nothing is printed), sets up HTTPS, the queue worker, Reverb and the cron line, and fills the empty database with `anihow:demo-data` and `anihow:test-fixtures`. Running it again is safe.
+
+### Use it
+
+```bash
+# Put main, or a pull request branch before merging, on staging:
+ssh anihow@<server> "bash /var/www/anihow-staging/scripts/vps/deploy-staging.sh"
+ssh anihow@<server> "bash /var/www/anihow-staging/scripts/vps/deploy-staging.sh my-branch"
+
+# Start the test data over (no --force needed on staging):
+ssh anihow@<server> "cd /var/www/anihow-staging && php artisan anihow:reset-accounts --execute && php artisan anihow:test-fixtures"
+```
+
+Build and install the staging app on Windows:
+
+```powershell
+.\scripts\build-anihow-apk.cmd -Server staging
+& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" install -r dist\AniHow-staging.apk
+```
 
 ## API
 

@@ -1,0 +1,8 @@
+{
+  "API_BASE_URL": "https://staging.anihow.tech",
+  "REVERB_HOST": "staging.anihow.tech",
+  "REVERB_PORT": "443",
+  "REVERB_SCHEME": "wss",
+  "REVERB_APP_KEY": "anihow-reverb-key",
+  "APP_VARIANT": "staging"
+}

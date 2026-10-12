@@ -66,8 +66,9 @@ class RememberMeTokenTest extends TestCase
         $this->postJson('/api/auth/register', [
             'name' => 'Maria Buyer',
             'email' => 'maria@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'password' => 'Secret#123',
+            'password_confirmation' => 'Secret#123',
+            'accept_terms' => true,
         ])->assertCreated();
 
         $buyer = User::query()->where('email', 'maria@example.com')->firstOrFail();

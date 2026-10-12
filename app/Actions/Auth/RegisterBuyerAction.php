@@ -27,6 +27,7 @@ class RegisterBuyerAction
         ]);
 
         $user->assignRole(Role::Buyer);
+        $user->acceptCurrentTerms();
         $code = app(SendEmailVerificationCodeAction::class)->handle($user);
 
         return [

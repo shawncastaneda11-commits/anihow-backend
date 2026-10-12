@@ -57,6 +57,8 @@ use Spatie\Permission\Traits\HasRoles;
     'suspended_at',
     'suspension_reason',
     'email_verified_at',
+    'terms_accepted_at',
+    'terms_version',
 ])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser, MustVerifyEmail
@@ -95,6 +97,8 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             'suspended_at' => 'datetime',
             'must_change_password' => 'boolean',
             'temporary_password_expires_at' => 'datetime',
+            'terms_accepted_at' => 'datetime',
+            'terms_version' => 'integer',
         ];
     }
 
@@ -221,6 +225,28 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     public function isContentEditor(): bool
     {
         return $this->hasRole(Role::ContentEditor);
+    }
+
+    /**
+     * App users must accept the current terms before using the app. CMS-only
+     * staff (admins and content editors) are not asked.
+     */
+    public function needsTermsAcceptance(): bool
+    {
+        if (! $this->isBuyer() && ! $this->isFarmerSeller()) {
+            return false;
+        }
+
+        return $this->terms_version === null
+            || $this->terms_version < (int) config('anihow.terms_version');
+    }
+
+    public function acceptCurrentTerms(): void
+    {
+        $this->forceFill([
+            'terms_accepted_at' => now(),
+            'terms_version' => (int) config('anihow.terms_version'),
+        ])->save();
     }
 
     public function isFarmerSeller(): bool

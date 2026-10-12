@@ -1,3 +1,5 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -11,7 +13,7 @@ val dartDefines: Map<String, String> = (findProperty("dart-defines") as String?)
     .orEmpty()
     .split(",")
     .filter { it.isNotBlank() }
-    .map { String(java.util.Base64.getDecoder().decode(it)) }
+    .map { String(Base64.getDecoder().decode(it)) }
     .filter { it.contains("=") }
     .associate { it.substringBefore("=") to it.substringAfter("=") }
 val isStagingBuild = dartDefines["APP_VARIANT"] == "staging"

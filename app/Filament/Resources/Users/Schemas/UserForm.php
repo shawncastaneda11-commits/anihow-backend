@@ -13,6 +13,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Validation\Rules\Password;
 use Spatie\Permission\Models\Role as RoleModel;
 
 class UserForm
@@ -110,6 +111,7 @@ class UserForm
                     ->visible(fn (string $operation, mixed $record): bool => self::showsOwnPassword($operation, $record))
                     ->formatStateUsing(fn (): ?string => null)
                     ->dehydrated(fn (string $operation, mixed $state, mixed $record): bool => self::showsOwnPassword($operation, $record) && filled($state))
+                    ->rule(Password::defaults())
                     ->confirmed(),
                 TextInput::make('password_confirmation')
                     ->password()

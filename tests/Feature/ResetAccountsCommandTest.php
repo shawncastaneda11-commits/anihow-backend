@@ -231,13 +231,15 @@ class ResetAccountsCommandTest extends TestCase
         Storage::fake(ListingStorage::diskName());
         $this->artisan('anihow:test-fixtures')->assertSuccessful();
         $this->artisan('anihow:reset-accounts', ['--execute' => true])->assertSuccessful();
+        $this->assertDatabaseMissing('farms', ['slug' => 'sta-clara-farm']);
 
         $this->artisan('anihow:test-fixtures')
             ->expectsOutputToContain('created')
             ->assertSuccessful();
 
         $this->assertSame(11, User::query()->count());
-        $this->assertSame(3, Farm::query()->count());
+        $this->assertSame(4, Farm::query()->count());
+        $this->assertDatabaseHas('farms', ['slug' => 'sta-clara-farm']);
         $this->assertSame(9, Listing::query()->count());
         $this->assertNull(User::query()->where('email', 'susp03@gmail.com')->value('farm_id'));
     }

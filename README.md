@@ -155,6 +155,8 @@ When you are done, remove the drive with `subst X: /D`.
 
 Created by `php artisan anihow:test-fixtures`. All of them share one test password, which is kept out of this repository; ask the project lead. Accounts created during testing must follow the password rules: 8+ characters, upper and lower case, a number and a symbol.
 
+Outside production the same command also creates Sta. Clara Farm, a test farm with an address but no map pin, and sets the crop floor prices and maximum tawad the test cases expect (Pechay, Kamatis, Kalabasa, Talong, Okra). In production it skips both.
+
 | Email | Role | Notes |
 | --- | --- | --- |
 | `admin01@gmail.com` | Super Admin | CMS |

@@ -55,6 +55,35 @@ class CreateTestFixtures
      */
     private const VALUE_ADDED_NAMES = ['Tuyong mangga', 'Dried mango'];
 
+    /**
+     * The test farm for cases that must not touch the pilot farms. It has an address but no map pin,
+     * no Content Editor, and no sellers. The reset command removes it with every non-client farm.
+     *
+     * @var array{slug: string, name: string, municipality: string, barangay: string, address: string, description: string}
+     */
+    private const TEST_FARM = [
+        'slug' => 'sta-clara-farm',
+        'name' => 'Sta. Clara Farm',
+        'municipality' => 'General Trias',
+        'barangay' => 'Sta. Clara',
+        'address' => 'Barangay Sta. Clara, General Trias, Cavite',
+        'description' => 'Test farm for the test instruments. Not a real farm.',
+    ];
+
+    /**
+     * The system price guards the test cases expect (Test Data Setup, section 4). A null value is one
+     * no test case depends on, so it is left as it is. min_discount means "at least this much".
+     *
+     * @var list<array{names: list<string>, floor: ?float, max_discount: ?float, min_discount: ?float}>
+     */
+    private const PRICE_GUARDS = [
+        ['names' => ['Pechay'], 'floor' => 12.00, 'max_discount' => null, 'min_discount' => null],
+        ['names' => ['Kamatis', 'Tomato'], 'floor' => null, 'max_discount' => 15.00, 'min_discount' => null],
+        ['names' => ['Kalabasa', 'Squash'], 'floor' => 20.00, 'max_discount' => null, 'min_discount' => null],
+        ['names' => ['Talong', 'Eggplant'], 'floor' => null, 'max_discount' => null, 'min_discount' => 5.00],
+        ['names' => ['Okra'], 'floor' => null, 'max_discount' => null, 'min_discount' => 5.00],
+    ];
+
     /** @var list<array{item: string, status: string}> */
     private array $rows = [];
 
@@ -91,6 +120,14 @@ class CreateTestFixtures
         }
 
         $pyap = $farms[ClientFarms::PYAP_SLUG];
+
+        if (app()->environment('production')) {
+            $this->record('Farm '.self::TEST_FARM['name'], 'skipped: test farm is not made in production');
+            $this->record('Price guards', 'skipped: price guards are not changed in production');
+        } else {
+            $this->testFarm();
+            $this->priceGuards($pyap);
+        }
 
         $admin = $this->account('admin01@gmail.com', 'Admin 01', 'Admin@1234', Role::SuperAdmin, null, UserStatus::Active);
         $editor = $this->editor('editor01@gmail.com', 'Editor 01', 'password', $pyap, ClientFarms::PYAP_SLUG, UserStatus::Active, null);
@@ -524,6 +561,102 @@ class CreateTestFixtures
             'is_active' => true,
         ]);
         $this->record($item, 'created');
+    }
+
+    private function testFarm(): void
+    {
+        $item = 'Farm '.self::TEST_FARM['name'];
+
+        if (Farm::query()->where('slug', self::TEST_FARM['slug'])->exists()) {
+            $this->record($item, 'exists');
+
+            return;
+        }
+
+        if ($this->dryRun) {
+            $this->record($item, 'would create');
+
+            return;
+        }
+
+        Farm::query()->create([...self::TEST_FARM, 'is_active' => true]);
+        $this->record($item, 'created');
+    }
+
+    /**
+     * Brings the system floor price and maximum tawad of the crops the test cases use to the values the
+     * setup sheet lists. Values a case does not depend on are left alone.
+     */
+    private function priceGuards(?Farm $farm): void
+    {
+        foreach (self::PRICE_GUARDS as $guard) {
+            $item = "Price guards {$guard['names'][0]}";
+            $crop = $this->cropType($farm, $guard['names']);
+
+            if ($crop === null) {
+                $this->record($item, 'skipped: crop type is missing');
+
+                continue;
+            }
+
+            $changes = [];
+
+            if ($guard['floor'] !== null && (float) $crop->floor_price !== $guard['floor']) {
+                $changes['floor_price'] = $guard['floor'];
+            }
+
+            if ($guard['max_discount'] !== null && (float) $crop->max_discount !== $guard['max_discount']) {
+                $changes['max_discount'] = $guard['max_discount'];
+            }
+
+            if ($guard['min_discount'] !== null && (float) $crop->max_discount < $guard['min_discount']) {
+                $changes['max_discount'] = $guard['min_discount'];
+            }
+
+            if ($changes === []) {
+                $this->record($item, 'exists');
+
+                continue;
+            }
+
+            $floor = $changes['floor_price'] ?? (float) $crop->floor_price;
+            $maxDiscount = $changes['max_discount'] ?? (float) $crop->max_discount;
+
+            if ($maxDiscount >= $floor) {
+                $this->record($item, 'skipped: the maximum tawad must stay below the floor price of ₱'.number_format($floor, 2));
+
+                continue;
+            }
+
+            $summary = $this->priceGuardSummary($changes);
+
+            if ($this->dryRun) {
+                $this->record($item, "would update {$summary}");
+
+                continue;
+            }
+
+            $crop->update($changes);
+            $this->record($item, "updated {$summary}");
+        }
+    }
+
+    /**
+     * @param  array{floor_price?: float, max_discount?: float}  $changes
+     */
+    private function priceGuardSummary(array $changes): string
+    {
+        $parts = [];
+
+        if (isset($changes['floor_price'])) {
+            $parts[] = 'floor price to ₱'.number_format($changes['floor_price'], 2);
+        }
+
+        if (isset($changes['max_discount'])) {
+            $parts[] = 'maximum tawad to ₱'.number_format($changes['max_discount'], 2);
+        }
+
+        return implode(', ', $parts);
     }
 
     /**

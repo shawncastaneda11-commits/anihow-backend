@@ -51,7 +51,14 @@ class AnihowTestFixturesTest extends TestCase
         $this->assertNull(User::query()->where('email', 'susp03@gmail.com')->value('farm_id'));
         $this->assertSame(0, User::query()->where('must_change_password', true)->count());
         $this->assertSame(0, User::query()->whereNotNull('temporary_password_expires_at')->count());
-        $this->assertSame(3, Farm::query()->count());
+        $this->assertSame(4, Farm::query()->count());
+        $staClara = Farm::query()->where('slug', 'sta-clara-farm')->first();
+        $this->assertSame('Sta. Clara Farm', $staClara?->name);
+        $this->assertTrue($staClara?->is_active);
+        $this->assertNotNull($staClara?->address);
+        $this->assertNull($staClara?->latitude);
+        $this->assertNull($staClara?->contentEditor);
+        $this->assertSame(0, User::query()->where('farm_id', $staClara?->id)->count());
         $this->assertDatabaseMissing('farms', ['slug' => 'mang-tonyo-farm']);
         $this->assertDatabaseMissing('farms', ['slug' => 'anihow-test-farm']);
         $truofa = Farm::query()->where('slug', 'truofa')->first();
@@ -148,6 +155,47 @@ class AnihowTestFixturesTest extends TestCase
         $this->assertSame(1, $farm->contentEditor()->count());
     }
 
+    public function test_price_guards_are_brought_to_the_values_the_test_cases_expect(): void
+    {
+        CropType::query()->where('name', 'Pechay')->update(['floor_price' => 30.00]);
+        CropType::query()->where('name', 'Kamatis')->update(['max_discount' => 5.00]);
+        CropType::query()->where('name', 'Talong')->update(['max_discount' => 2.00]);
+
+        $this->artisan('anihow:test-fixtures')
+            ->expectsOutputToContain('updated floor price to ₱12.00')
+            ->assertSuccessful();
+
+        $this->assertSame(12.0, (float) CropType::query()->where('name', 'Pechay')->value('floor_price'));
+        $this->assertSame(15.0, (float) CropType::query()->where('name', 'Kamatis')->value('max_discount'));
+        $this->assertSame(5.0, (float) CropType::query()->where('name', 'Talong')->value('max_discount'));
+        $this->assertSame(10.0, (float) CropType::query()->where('name', 'Okra')->value('max_discount'));
+        $this->assertTrue(Listing::query()->where('title', 'Pechay, sariwa')->exists());
+    }
+
+    public function test_a_maximum_tawad_that_would_reach_the_floor_is_left_alone(): void
+    {
+        CropType::query()->where('name', 'Kamatis')->update(['floor_price' => 15.00, 'max_discount' => 5.00]);
+
+        $this->artisan('anihow:test-fixtures')
+            ->expectsOutputToContain('the maximum tawad must stay below the floor price')
+            ->assertSuccessful();
+
+        $this->assertSame(5.0, (float) CropType::query()->where('name', 'Kamatis')->value('max_discount'));
+    }
+
+    public function test_production_makes_no_test_farm_and_changes_no_price_guards(): void
+    {
+        $this->app['env'] = 'production';
+        CropType::query()->where('name', 'Pechay')->update(['floor_price' => 30.00]);
+
+        $this->artisan('anihow:test-fixtures', ['--force' => true])
+            ->expectsOutputToContain('test farm is not made in production')
+            ->assertSuccessful();
+
+        $this->assertDatabaseMissing('farms', ['slug' => 'sta-clara-farm']);
+        $this->assertSame(30.0, (float) CropType::query()->where('name', 'Pechay')->value('floor_price'));
+    }
+
     public function test_production_refuses_to_run_without_force(): void
     {
         $this->app['env'] = 'production';
@@ -172,6 +220,17 @@ class AnihowTestFixturesTest extends TestCase
         $this->assertSame(0, Farm::query()->count());
         $this->assertSame(0, Listing::query()->count());
         $this->assertSame(0, Order::query()->count());
+    }
+
+    public function test_dry_run_reports_price_guard_changes_without_making_them(): void
+    {
+        CropType::query()->where('name', 'Pechay')->update(['floor_price' => 30.00]);
+
+        $this->artisan('anihow:test-fixtures', ['--dry-run' => true])
+            ->expectsOutputToContain('would update floor price to ₱12.00')
+            ->assertSuccessful();
+
+        $this->assertSame(30.0, (float) CropType::query()->where('name', 'Pechay')->value('floor_price'));
     }
 
     public function test_the_value_added_crop_joins_a_farm_that_has_its_own_crop_types(): void

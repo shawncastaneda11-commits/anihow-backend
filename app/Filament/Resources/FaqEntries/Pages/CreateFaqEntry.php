@@ -4,11 +4,14 @@ namespace App\Filament\Resources\FaqEntries\Pages;
 
 use App\Enums\Permission;
 use App\Enums\Role;
+use App\Filament\Concerns\RedirectsToIndexAfterCreate;
 use App\Filament\Resources\FaqEntries\FaqEntryResource;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateFaqEntry extends CreateRecord
 {
+    use RedirectsToIndexAfterCreate;
+
     protected static string $resource = FaqEntryResource::class;
 
     /**

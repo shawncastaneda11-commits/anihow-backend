@@ -4,12 +4,15 @@ namespace App\Filament\Resources\FarmAnnouncements\Pages;
 
 use App\Actions\Announcements\NotifyFarmAnnouncementRecipientsAction;
 use App\Enums\Permission;
+use App\Filament\Concerns\RedirectsToIndexAfterCreate;
 use App\Filament\Resources\FarmAnnouncements\FarmAnnouncementResource;
 use App\Models\FarmAnnouncement;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateFarmAnnouncement extends CreateRecord
 {
+    use RedirectsToIndexAfterCreate;
+
     protected static string $resource = FarmAnnouncementResource::class;
 
     /**

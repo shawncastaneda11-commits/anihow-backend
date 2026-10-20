@@ -3,11 +3,14 @@
 namespace App\Filament\Resources\CropCareArticles\Pages;
 
 use App\Enums\ArticleStatus;
+use App\Filament\Concerns\RedirectsToIndexAfterCreate;
 use App\Filament\Resources\CropCareArticles\CropCareArticleResource;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateCropCareArticle extends CreateRecord
 {
+    use RedirectsToIndexAfterCreate;
+
     protected static string $resource = CropCareArticleResource::class;
 
     /**

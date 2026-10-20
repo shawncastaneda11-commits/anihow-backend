@@ -69,7 +69,7 @@ class TemporaryPasswordTest extends TestCase
 
         $component
             ->callMountedAction()
-            ->assertRedirect(UserResource::getUrl('view', ['record' => $editor]));
+            ->assertRedirect(UserResource::getUrl('index'));
 
         auth()->logout();
 

@@ -106,6 +106,11 @@ trait UsesDashboardFilters
         return $formatted.'%';
     }
 
+    protected function countText(int $count, string $noun): string
+    {
+        return $count.' '.($count === 1 ? $noun : $noun.'s');
+    }
+
     /**
      * @param  array{start: string, end: string}  $bucket
      */

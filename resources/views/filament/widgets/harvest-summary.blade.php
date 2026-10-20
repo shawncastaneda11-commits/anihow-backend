@@ -2,7 +2,7 @@
     <div class="anihow-analytics">
         <div class="anihow-analytics-heading">
             <h2 class="anihow-analytics-title">Harvest</h2>
-            <p class="anihow-muted">Harvests recorded {{ $window }}, and what those listings have sold so far.</p>
+            <p class="anihow-muted">Harvests recorded {{ $window }}, and what those listings have sold so far. Sales above also count stock harvested earlier, so the two sections can differ.</p>
         </div>
 
         @if ($empty)

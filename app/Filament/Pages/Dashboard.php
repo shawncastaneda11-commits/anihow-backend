@@ -8,6 +8,7 @@ use App\Enums\Permission;
 use App\Models\Farm;
 use App\Models\User;
 use App\Services\AnalyticsService;
+use App\Support\Analytics\AnalyticsRange;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Component;
 use Filament\Forms\Components\DatePicker;
@@ -15,6 +16,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Pages\Dashboard\Concerns\HasFiltersForm;
+use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -86,7 +88,17 @@ class Dashboard extends BaseDashboard
                 ->prefixIcon(Heroicon::OutlinedLockClosed)
                 ->default(fn (): string => (string) (auth()->user()?->farm?->name ?? ''))
                 ->visible(fn (): bool => $this->locksOwnFarm()),
+            Text::make(fn (Get $get): string => $this->filterSummary($get))
+                ->columnSpanFull(),
         ]);
+    }
+
+    /**
+     * @return int|array<string, ?int>
+     */
+    public function getColumns(): int|array
+    {
+        return ['default' => 1, 'xl' => 3];
     }
 
     protected function getHeaderActions(): array
@@ -204,6 +216,73 @@ class Dashboard extends BaseDashboard
         }
 
         return (int) $farmId;
+    }
+
+    /**
+     * One line under the filters naming the window, category and farm the
+     * widgets below are showing.
+     */
+    private function filterSummary(Get $get): string
+    {
+        $year = $get('year');
+        $range = AnalyticsRange::fromValues(
+            (string) ($get('range') ?? 'month'),
+            $this->summaryDate($get('from')),
+            $this->summaryDate($get('to')),
+            $year === null || $year === '' ? null : (int) $year,
+            (string) ($get('category') ?? 'all'),
+            true,
+        );
+
+        $parts = [$range->from->format('M j').' – '.$range->to->format('M j, Y')];
+
+        if ($this->showCategoryFilter()) {
+            $parts[] = match ($range->category) {
+                'fresh' => 'Fresh only',
+                'value_added' => 'Value-added only',
+                default => 'All categories',
+            };
+        }
+
+        $farm = $this->summaryFarm($get('farm_id'));
+
+        if ($farm !== '') {
+            $parts[] = $farm;
+        }
+
+        return 'Showing '.implode(' · ', $parts);
+    }
+
+    private function summaryFarm(mixed $farmId): string
+    {
+        if ($this->locksOwnFarm()) {
+            return (string) (auth()->user()?->farm?->name ?? '');
+        }
+
+        if (! (auth()->user()?->can(Permission::ViewSystemAnalytics->value) ?? false)) {
+            return '';
+        }
+
+        $chosen = $this->chosenFarmId($farmId);
+
+        if ($chosen === null) {
+            return 'All farms';
+        }
+
+        return (string) (Farm::query()->whereKey($chosen)->value('name') ?? 'All farms');
+    }
+
+    private function summaryDate(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}/', (string) $value, $match) === 1) {
+            return $match[0];
+        }
+
+        return null;
     }
 
     private function showCategoryFilter(): bool

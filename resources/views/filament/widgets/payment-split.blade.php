@@ -1,7 +1,5 @@
 <x-filament-widgets::widget>
     <div class="anihow-analytics">
-        <h2 class="anihow-analytics-window">{{ $window }}</h2>
-
         <div class="anihow-split-grid">
             @foreach ($cards as $card)
                 <x-filament::section>

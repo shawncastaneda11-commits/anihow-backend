@@ -16,15 +16,35 @@ final class HarvestCropNotes
     public static function format(array $crop): string
     {
         $parts = [];
-        $unit = (string) ($crop['unit'] ?? '');
+        $rejected = self::rejected($crop);
+        $removed = self::removed($crop);
 
+        if ($rejected !== []) {
+            $parts[] = 'Rejected: '.implode(', ', $rejected);
+        }
+
+        if ($removed !== []) {
+            $parts[] = 'Removed: '.implode(', ', $removed);
+        }
+
+        return implode(' · ', $parts);
+    }
+
+    /**
+     * Rejected stock by reason, such as "Spoiled 5 kg".
+     *
+     * @param  array<string, mixed>  $crop
+     * @return list<string>
+     */
+    public static function rejected(array $crop): array
+    {
         $rejected = $crop['rejected_by_reason'] ?? [];
 
         if (is_object($rejected)) {
             $rejected = (array) $rejected;
         }
 
-        $rejectedBits = [];
+        $bits = [];
 
         foreach ($rejected as $reason => $quantity) {
             if ((float) $quantity == 0.0) {
@@ -32,14 +52,21 @@ final class HarvestCropNotes
             }
 
             $label = HarvestRejectionReason::tryFrom((string) $reason)?->label() ?? (string) $reason;
-            $rejectedBits[] = $label.' '.self::quantity((float) $quantity).' '.$unit;
+            $bits[] = $label.' '.self::amount((float) $quantity, (string) ($crop['unit'] ?? ''));
         }
 
-        if ($rejectedBits !== []) {
-            $parts[] = 'Rejected: '.implode(', ', $rejectedBits);
-        }
+        return $bits;
+    }
 
-        $removedBits = [];
+    /**
+     * Stock removed from the listing after harvest, by reason.
+     *
+     * @param  array<string, mixed>  $crop
+     * @return list<string>
+     */
+    public static function removed(array $crop): array
+    {
+        $bits = [];
 
         foreach ($crop['removed_by_reason'] ?? [] as $reason => $quantity) {
             if ((float) $quantity == 0.0) {
@@ -47,14 +74,24 @@ final class HarvestCropNotes
             }
 
             $label = StockRemovalReason::tryFrom((string) $reason)?->label() ?? (string) $reason;
-            $removedBits[] = $label.' '.self::quantity((float) $quantity).' '.$unit;
+            $bits[] = $label.' '.self::amount((float) $quantity, (string) ($crop['unit'] ?? ''));
         }
 
-        if ($removedBits !== []) {
-            $parts[] = 'Removed: '.implode(', ', $removedBits);
+        return $bits;
+    }
+
+    /**
+     * A quantity with its unit, plural where the unit is a counted thing: "2 bundles", "1.5 kg".
+     */
+    public static function amount(float $quantity, string $unit): string
+    {
+        $formatted = self::quantity($quantity);
+
+        if ($unit === '' || in_array($unit, ['kg', 'g', 'ml', 'dozen'], true) || $formatted === '1') {
+            return trim($formatted.' '.$unit);
         }
 
-        return implode(' · ', $parts);
+        return $formatted.' '.$unit.'s';
     }
 
     public static function quantity(float $quantity): string

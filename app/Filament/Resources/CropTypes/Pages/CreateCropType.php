@@ -3,11 +3,14 @@
 namespace App\Filament\Resources\CropTypes\Pages;
 
 use App\Enums\Permission;
+use App\Filament\Concerns\RedirectsToIndexAfterCreate;
 use App\Filament\Resources\CropTypes\CropTypeResource;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateCropType extends CreateRecord
 {
+    use RedirectsToIndexAfterCreate;
+
     protected static string $resource = CropTypeResource::class;
 
     /**

@@ -6,11 +6,16 @@ use App\Filament\Widgets\Concerns\ScopedAnalytics;
 use App\Filament\Widgets\Concerns\UsesDashboardFilters;
 use App\Support\Analytics\HarvestCropNotes;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ViewColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\TableWidget;
 use Illuminate\Support\Collection;
 
+/**
+ * What each crop harvested in the period has sold, how much was rejected
+ * or removed, and the value of its stock. Highest stock value first.
+ */
 class HarvestByCropTable extends TableWidget
 {
     use InteractsWithPageFilters;
@@ -25,21 +30,30 @@ class HarvestByCropTable extends TableWidget
     {
         return $table
             ->heading('Harvest by crop')
-            ->description(fn (): string => $this->windowLabel())
+            ->description(fn (): string => 'What each crop harvested '.$this->windowLabel().' has sold, and how much was rejected. Highest stock value first.')
             ->paginated(false)
             ->records(fn (): Collection => $this->rows())
             ->columns([
-                TextColumn::make('crop')->label('Crop'),
-                TextColumn::make('unit')->label('Unit'),
+                TextColumn::make('crop')->label('Crop')->weight('semibold'),
                 TextColumn::make('harvested')->label('Harvested')->alignEnd(),
-                TextColumn::make('rejected')->label('Rejected')->alignEnd(),
-                TextColumn::make('sold')->label('Sold')->alignEnd(),
-                TextColumn::make('waiting')->label('Waiting')->alignEnd(),
-                TextColumn::make('removed')->label('Removed')->alignEnd(),
-                TextColumn::make('left')->label('Left')->alignEnd(),
-                TextColumn::make('expected')->label('Expected')->alignEnd(),
-                TextColumn::make('actual')->label('Actual')->alignEnd(),
-                TextColumn::make('notes')->label('Notes'),
+                TextColumn::make('sold')
+                    ->label('Sold')
+                    ->alignEnd()
+                    ->wrap()
+                    ->description(fn (array $record): ?string => $record['waiting']),
+                TextColumn::make('rejected')
+                    ->label('Rejected')
+                    ->alignEnd()
+                    ->wrap()
+                    ->description(fn (array $record): ?string => $record['removed']),
+                ViewColumn::make('sold_percent')
+                    ->label('Sold so far')
+                    ->view('filament.widgets.columns.sold-share'),
+                TextColumn::make('value')
+                    ->label('Stock value')
+                    ->alignEnd()
+                    ->weight('semibold')
+                    ->description(fn (array $record): string => $record['earned']),
             ])
             ->emptyStateHeading('No harvests recorded in this period.')
             ->emptyStateDescription(null)
@@ -47,28 +61,38 @@ class HarvestByCropTable extends TableWidget
     }
 
     /**
-     * @return Collection<string, array<string, string>>
+     * @return Collection<string, array<string, mixed>>
      */
     private function rows(): Collection
     {
         return collect($this->harvest()['crops'])
+            ->sortByDesc(fn (array $crop): float => (float) $crop['potential_income'])
             ->values()
             ->mapWithKeys(function (array $crop, int $index): array {
+                $unit = (string) $crop['unit'];
+                $good = (float) $crop['good'];
+                $rejected = HarvestCropNotes::rejected($crop);
+                $removed = HarvestCropNotes::removed($crop);
+                $waiting = (float) $crop['waiting'];
+
                 return [
                     (string) ($index + 1) => [
                         'crop' => (string) $crop['crop'],
-                        'unit' => (string) $crop['unit'],
-                        'harvested' => HarvestCropNotes::quantity((float) $crop['harvested']),
-                        'rejected' => HarvestCropNotes::quantity((float) $crop['rejected']),
-                        'sold' => HarvestCropNotes::quantity((float) $crop['sold']),
-                        'waiting' => HarvestCropNotes::quantity((float) $crop['waiting']),
-                        'removed' => HarvestCropNotes::quantity((float) $crop['removed']),
-                        'left' => HarvestCropNotes::quantity((float) $crop['remaining']),
-                        'expected' => $this->peso((float) $crop['potential_income']),
-                        'actual' => $this->peso((float) $crop['actual_income']),
-                        'notes' => HarvestCropNotes::format($crop),
+                        'harvested' => $this->amount((float) $crop['harvested'], $unit),
+                        'sold' => $this->amount((float) $crop['sold'], $unit),
+                        'waiting' => $waiting > 0 ? $this->amount($waiting, $unit).' in pending orders' : null,
+                        'rejected' => $rejected === [] ? 'None' : implode(', ', $rejected),
+                        'removed' => $removed === [] ? null : 'Removed: '.implode(', ', $removed),
+                        'sold_percent' => $good > 0 ? min(100.0, round((float) $crop['sold'] / $good * 100)) : 0.0,
+                        'value' => $this->peso((float) $crop['potential_income']),
+                        'earned' => $this->peso((float) $crop['actual_income']).' earned',
                     ],
                 ];
             });
+    }
+
+    private function amount(float $quantity, string $unit): string
+    {
+        return HarvestCropNotes::amount($quantity, $unit);
     }
 }

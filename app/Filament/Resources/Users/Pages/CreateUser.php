@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users\Pages;
 
+use App\Filament\Concerns\RedirectsToIndexAfterCreate;
 use App\Filament\Resources\Users\Actions\TemporaryPasswordAction;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
@@ -12,6 +13,8 @@ use Illuminate\Support\Str;
 
 class CreateUser extends CreateRecord
 {
+    use RedirectsToIndexAfterCreate;
+
     protected static string $resource = UserResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array

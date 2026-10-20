@@ -2,8 +2,11 @@
 
 namespace App\Filament\Resources\Orders\Schemas;
 
+use App\Enums\FulfillmentPreference;
+use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Models\Order;
+use BackedEnum;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -25,14 +28,14 @@ class OrderForm
                     ->content('Yes')
                     ->visible(fn (?Order $record): bool => $record?->reservation_id !== null),
                 TextInput::make('status')
-                    ->formatStateUsing(fn ($state): string => $state?->label() ?? '')
+                    ->formatStateUsing(fn (mixed $state): string => self::enumLabel(OrderStatus::class, $state))
                     ->disabled(),
                 TextInput::make('buyer.name')->label('Buyer')->disabled(),
                 TextInput::make('farmerSeller.name')->label('Seller')->disabled(),
                 TextInput::make('farm.name')->label('Farm')->disabled(),
                 TextInput::make('fulfillment_preference')
                     ->label('Fulfillment')
-                    ->formatStateUsing(fn ($state): string => $state?->label() ?? '')
+                    ->formatStateUsing(fn (mixed $state): string => self::enumLabel(FulfillmentPreference::class, $state))
                     ->disabled(),
                 Textarea::make('fulfillment_note')
                     ->label('Arrangement note')
@@ -41,11 +44,7 @@ class OrderForm
                     ->columnSpanFull(),
                 TextInput::make('payment_method')
                     ->label('Payment')
-                    ->formatStateUsing(function (mixed $state): string {
-                        $value = $state instanceof PaymentMethod ? $state->value : (string) $state;
-
-                        return PaymentMethod::tryFrom($value)?->label() ?? $value;
-                    })
+                    ->formatStateUsing(fn (mixed $state): string => self::enumLabel(PaymentMethod::class, $state))
                     ->disabled(),
                 TextInput::make('subtotal')->prefix('PHP')->disabled(),
                 TextInput::make('tawad_total')->label('Tawad')->prefix('PHP')->disabled(),
@@ -70,6 +69,23 @@ class OrderForm
                     ->content(fn (?Order $record): HtmlString => self::chatContent($record))
                     ->columnSpanFull(),
             ]);
+    }
+
+    /**
+     * The form state holds the enum on the first render and its plain value
+     * after Livewire round-trips it, so accept either.
+     *
+     * @param  class-string<OrderStatus|FulfillmentPreference|PaymentMethod>  $enum
+     */
+    private static function enumLabel(string $enum, mixed $state): string
+    {
+        if ($state instanceof $enum) {
+            return $state->label();
+        }
+
+        $value = $state instanceof BackedEnum ? (string) $state->value : (string) $state;
+
+        return $enum::tryFrom($value)?->label() ?? $value;
     }
 
     private static function chatContent(?Order $record): HtmlString

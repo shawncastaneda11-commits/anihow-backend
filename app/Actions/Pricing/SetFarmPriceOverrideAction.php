@@ -105,7 +105,7 @@ class SetFarmPriceOverrideAction
 
         if ($maxDiscount !== null
             && PriceGuard::centavos($maxDiscount) > PriceGuard::centavos($cropType->max_discount)) {
-            $errors['max_discount'] = 'The farm maximum peso discount cannot exceed the system maximum of PHP '
+            $errors['max_discount'] = 'The farm maximum tawad cannot exceed the system maximum of PHP '
                 .number_format((float) $cropType->max_discount, 2).'.';
         }
 

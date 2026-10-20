@@ -579,6 +579,17 @@ class AppStrings {
       ? t('(1 review)', '(1 review)')
       : t('($count reviews)', '($count review)');
   String get chats => t('Chats', 'Mga chat');
+
+  // Bottom-bar labels. A tab has room for about one word, so these stay
+  // short in Filipino; the full name is the tab's tooltip and page title.
+  String get navListings => t('Listings', 'Listing');
+  String get navOrders => t('Orders', 'Order');
+  String get navMySales => t('My Sales', 'Benta');
+  String get navCropCare => t('Crop care', 'Gabay');
+  String get navChats => t('Chats', 'Chat');
+  String get navFarms => t('Farms', 'Bukid');
+  String get navMarket => t('Market', 'Palengke');
+  String get navFavorites => t('Favorites', 'Paborito');
   String get noOpenChats => t('No chats yet', 'Wala pang chat');
   String get noChatsYet => t(
     'Chats with a stall stay here, including finished orders.',
@@ -953,6 +964,8 @@ class AppStrings {
   String get ready => t('Ready', 'Ready');
   String get completed => t('Completed', 'Completed');
   String get cancelled => t('Cancelled', 'Cancelled');
+  String get ordersTabCompleted => t('Completed', 'Tapos na');
+  String get ordersTabCancelled => t('Cancelled', 'Kinansela');
   String get fulfillment => t('Fulfillment', 'Pagsalo');
   String get buyerPicksUp => t('Buyer picks up', 'Buyer ang susalo');
   String get sellerDelivers =>

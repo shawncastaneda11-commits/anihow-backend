@@ -49,6 +49,7 @@ class _ReportBottomSheetState extends State<ReportBottomSheet> {
   final _details = TextEditingController();
   String? _reason;
   String? _reasonError;
+  String? _submitError;
   bool _sending = false;
 
   @override
@@ -69,6 +70,7 @@ class _ReportBottomSheetState extends State<ReportBottomSheet> {
     setState(() {
       _sending = true;
       _reasonError = null;
+      _submitError = null;
     });
     final details = _details.text.trim();
     try {
@@ -88,8 +90,9 @@ class _ReportBottomSheetState extends State<ReportBottomSheet> {
         Navigator.of(context).pop();
       }
     } on ApiException catch (error) {
+      // A snackbar would sit behind this sheet, so the error shows inside it.
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        setState(() => _submitError = error.message);
       }
     } finally {
       if (mounted) {
@@ -101,8 +104,9 @@ class _ReportBottomSheetState extends State<ReportBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
+    // Scrolls so Submit stays reachable on a small phone with the keyboard up.
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: AniHowSpace.screenPadding,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -152,6 +156,15 @@ class _ReportBottomSheetState extends State<ReportBottomSheet> {
               enabled: !_sending,
               decoration: InputDecoration(labelText: s.reportDetails),
             ),
+            if (_submitError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: AniHowSpace.labelGap),
+                child: Text(
+                  _submitError!,
+                  key: const ValueKey('report-error'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
             const SizedBox(height: AniHowSpace.fieldGap),
             PrimaryButton(
               key: const ValueKey('report-submit'),

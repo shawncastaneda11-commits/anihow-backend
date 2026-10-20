@@ -6,6 +6,7 @@ use App\Actions\Pricing\SetFarmPriceOverrideAction;
 use App\Models\CropType;
 use App\Models\Farm;
 use App\Models\FarmCropTypeOverride;
+use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -18,6 +19,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\ValidationException;
 
 /**
  * A farm's tighten-only price guards, one row per crop type the farm has moved
@@ -112,12 +114,12 @@ class CropTypeOverridesRelationManager extends RelationManager
             ->headerActions([
                 CreateAction::make()
                     ->label('Tighten a crop type')
-                    ->using(fn (array $data, RelationManager $livewire): Model => self::save($livewire, $data['crop_type_id'], $data)
+                    ->using(fn (array $data, RelationManager $livewire, Action $action): Model => self::save($livewire, $data['crop_type_id'], $data, $action)
                         ?? throw new \LogicException('A price guard needs a floor, a maximum tawad, or both.')),
             ])
             ->recordActions([
                 EditAction::make()
-                    ->using(fn (FarmCropTypeOverride $record, array $data, RelationManager $livewire): Model => self::save($livewire, $record->crop_type_id, $data)
+                    ->using(fn (FarmCropTypeOverride $record, array $data, RelationManager $livewire, Action $action): Model => self::save($livewire, $record->crop_type_id, $data, $action)
                         ?? $record),
 
                 // Removing the row is the same as saving both sides blank: the
@@ -139,9 +141,13 @@ class CropTypeOverridesRelationManager extends RelationManager
     }
 
     /**
+     * The action reports a bound it refuses under the bare field name. Inside
+     * the modal the field lives under the action's state path, so the error is
+     * moved there to show under the field instead of being lost.
+     *
      * @param  array<string, mixed>  $data
      */
-    private static function save(RelationManager $livewire, int|string $cropTypeId, array $data): ?FarmCropTypeOverride
+    private static function save(RelationManager $livewire, int|string $cropTypeId, array $data, ?Action $action = null): ?FarmCropTypeOverride
     {
         /** @var Farm $farm */
         $farm = $livewire->getOwnerRecord();
@@ -153,12 +159,26 @@ class CropTypeOverridesRelationManager extends RelationManager
             403,
         );
 
-        return app(SetFarmPriceOverrideAction::class)->execute(
-            $farm,
-            CropType::findOrFail($cropTypeId),
-            $data['floor_price'] ?? null,
-            $data['max_discount'] ?? null,
-        );
+        try {
+            return app(SetFarmPriceOverrideAction::class)->execute(
+                $farm,
+                CropType::findOrFail($cropTypeId),
+                $data['floor_price'] ?? null,
+                $data['max_discount'] ?? null,
+            );
+        } catch (ValidationException $exception) {
+            if ($action === null) {
+                throw $exception;
+            }
+
+            $statePath = 'mountedActions.'.($action->getNestingIndex() ?? 0).'.data.';
+
+            throw ValidationException::withMessages(
+                collect($exception->errors())
+                    ->mapWithKeys(fn (array $messages, string $field): array => [$statePath.$field => $messages])
+                    ->all(),
+            );
+        }
     }
 
     /**

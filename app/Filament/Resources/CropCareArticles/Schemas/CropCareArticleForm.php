@@ -67,7 +67,8 @@ class CropCareArticleForm
                 TextInput::make('excerpt')
                     ->maxLength(300)
                     ->columnSpanFull()
-                    ->helperText('Optional. Leave blank and the list view derives one from the body.'),
+                    ->placeholder('e.g. How to keep kamatis from splitting after heavy rain.')
+                    ->helperText('Optional. One short sentence that tells farmers what the article is about. It shows under the title in the app\'s crop care list, and only the first 90 characters fit. Leave blank to use the first line of the body.'),
 
                 Textarea::make('body')
                     ->required()

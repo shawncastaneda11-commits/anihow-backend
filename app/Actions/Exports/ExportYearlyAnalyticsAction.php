@@ -9,8 +9,8 @@ use App\Models\Farm;
 use App\Models\User;
 use App\Services\FarmerSalesAnalytics;
 use App\Services\HarvestAnalytics;
+use App\Support\Analytics\AnalyticsCsvSections;
 use App\Support\Analytics\AnalyticsRange;
-use App\Support\Analytics\HarvestCropNotes;
 use App\Support\CsvDownload;
 use Illuminate\Support\Carbon;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -87,84 +87,30 @@ class ExportYearlyAnalyticsAction
         };
         $best = $sales['year_total']['best_month'] ?? null;
         $bestMonth = is_array($best)
-            ? Carbon::createFromFormat('!Y-m', (string) $best['key'])->format('M')
-            : '';
+            ? [Carbon::createFromFormat('!Y-m', (string) $best['key'])->format('M'), $best['sales']]
+            : ['', ''];
 
-        $lines = [
+        return [
             ['AniHow yearly analytics'],
             ['Year', $year],
             ['Farm', $farm],
-            ['Product type', $product],
+            ['Category', $product],
             ['Generated at', now()->timezone('Asia/Manila')->format('M j, Y g:i A')],
             [],
-            ['Summary'],
-            ['Total sales', $sales['totals']['sales']],
-            ['Completed orders', $sales['totals']['orders']],
-            ['Average order', $sales['totals']['average_order']],
-            ['Average tawad', $sales['totals']['average_tawad']],
-            ['Best month', $bestMonth, is_array($best) ? $best['sales'] : ''],
+            ...AnalyticsCsvSections::sales($sales, $bestMonth),
             [],
-            ['Monthly sales'],
-            ['Month', 'Orders', 'Sales', 'Online sales', 'Cash sales', 'App sales', 'Walk-in sales'],
+            ['Sales over time'],
+            ['Month', 'Orders', 'Sales', 'Cash sales', 'Online sales', 'App sales', 'Walk-in sales'],
+            ...$this->months($actor, $year, $farmId, $category),
+            [],
+            ...AnalyticsCsvSections::topCrops($sales),
+            [],
+            ...AnalyticsCsvSections::splits($sales),
+            [],
+            ...AnalyticsCsvSections::harvest($harvest),
+            [],
+            ...AnalyticsCsvSections::harvestByCrop($harvest),
         ];
-
-        foreach ($this->months($actor, $year, $farmId, $category) as $month) {
-            $lines[] = $month;
-        }
-
-        $lines[] = [];
-        $lines[] = ['Best sellers'];
-        $lines[] = ['Crop', 'Sales', 'Percent'];
-
-        foreach ($sales['pie']['slices'] as $slice) {
-            $lines[] = [$slice['crop'], $slice['sales'], $slice['percent']];
-        }
-
-        if (is_array($sales['pie']['others'])) {
-            $others = $sales['pie']['others'];
-            $lines[] = ['Others ('.$others['crops'].' crops)', $others['sales'], $others['percent']];
-        }
-
-        $lines[] = [];
-        $lines[] = ['Top crops'];
-        $lines[] = ['Crop', 'Unit', 'Quantity', 'Sales'];
-
-        foreach ($sales['top_crops'] as $crop) {
-            $lines[] = [$crop['crop'], $crop['unit'], $crop['quantity'], $crop['sales']];
-        }
-
-        $lines[] = [];
-        $lines[] = ['Harvest by crop'];
-        $lines[] = ['Crop', 'Unit', 'Harvested', 'Rejected', 'Good', 'Sold', 'Waiting', 'Removed', 'Left', 'Expected income', 'Actual income', 'Notes'];
-
-        foreach ($harvest['crops'] as $crop) {
-            $lines[] = [
-                $crop['crop'],
-                $crop['unit'],
-                $crop['harvested'],
-                $crop['rejected'],
-                $crop['good'],
-                $crop['sold'],
-                $crop['waiting'],
-                $crop['removed'],
-                $crop['remaining'],
-                $crop['potential_income'],
-                $crop['actual_income'],
-                HarvestCropNotes::format($crop),
-            ];
-        }
-
-        $cost = $harvest['cost'];
-        $lines[] = [];
-        $lines[] = ['Harvest totals'];
-        $lines[] = ['Expected income', $harvest['income']['potential']];
-        $lines[] = ['Actual income', $harvest['income']['actual']];
-        $lines[] = ['Cost', (int) $cost['records_with_cost'] === 0 ? 'No cost recorded' : $cost['cost_total']];
-        $lines[] = ['Expected profit', $cost['potential_profit'] ?? ''];
-        $lines[] = ['Profit so far', $cost['actual_profit'] ?? ''];
-        $lines[] = ['Harvests with cost', $cost['records_with_cost'].' of '.$harvest['records']];
-
-        return $lines;
     }
 
     /**
@@ -196,8 +142,8 @@ class ExportYearlyAnalyticsAction
                 $label,
                 $built['totals']['orders'],
                 $built['totals']['sales'],
-                $built['payment_split']['online']['sales'],
                 $built['payment_split']['cash']['sales'],
+                $built['payment_split']['online']['sales'],
                 $built['source_split']['app']['sales'],
                 $built['source_split']['walk_in']['sales'],
             ];

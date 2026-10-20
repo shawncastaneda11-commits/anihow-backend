@@ -26,7 +26,7 @@ class SalesSummaryStats extends StatsOverviewWidget
 
     protected function getDescription(): ?string
     {
-        return $this->windowLabel().' · completed orders, walk-ins included, after tawad';
+        return 'Completed app orders and walk-in sales, after tawad. '.$this->windowLabel().'.';
     }
 
     /**
@@ -35,8 +35,10 @@ class SalesSummaryStats extends StatsOverviewWidget
     protected function getStats(): array
     {
         $sales = $this->sales();
+        $source = $sales['source_split'];
 
-        $total = Stat::make('Total sales', $this->peso((float) $sales['totals']['sales']));
+        $total = Stat::make('Total sales', $this->peso((float) $sales['totals']['sales']))
+            ->description('Money received in this period');
 
         if ($sales['totals']['orders'] === 0) {
             $total->description('No completed sales in this period.');
@@ -50,10 +52,12 @@ class SalesSummaryStats extends StatsOverviewWidget
 
         return [
             $total,
-            Stat::make('Completed orders', (string) $sales['totals']['orders']),
-            Stat::make('Average order', $this->peso((float) $sales['totals']['average_order'])),
+            Stat::make('Completed orders', (string) $sales['totals']['orders'])
+                ->description($this->countText((int) $source['app']['orders'], 'app order').', '.$this->countText((int) $source['walk_in']['orders'], 'walk-in sale')),
+            Stat::make('Average order', $this->peso((float) $sales['totals']['average_order']))
+                ->description('Total sales ÷ completed orders'),
             Stat::make('Average tawad', $this->peso((float) $sales['totals']['average_tawad']))
-                ->description($this->peso((float) $sales['totals']['tawad_total']).' tawad in total'),
+                ->description($this->peso((float) $sales['totals']['tawad_total']).' tawad given in total'),
         ];
     }
 }

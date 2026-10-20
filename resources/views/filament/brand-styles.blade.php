@@ -267,6 +267,64 @@
         color: var(--gray-700);
     }
 
+    .anihow-tone-neutral {
+        background: var(--gray-400);
+    }
+
+    .anihow-rank-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.875rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .anihow-rank-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.375rem;
+    }
+
+    .anihow-rank-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        font-size: 0.875rem;
+    }
+
+    .anihow-rank-crop,
+    .anihow-rank-sales {
+        font-weight: 600;
+        color: var(--gray-950);
+    }
+
+    .anihow-rank-sales {
+        white-space: nowrap;
+    }
+
+    .anihow-rank-others {
+        font-weight: 400;
+        color: var(--gray-700);
+    }
+
+    .anihow-rank-share {
+        width: 3rem;
+    }
+
+    .dark .anihow-rank-crop,
+    .dark .anihow-rank-sales {
+        color: #fff;
+    }
+
+    .dark .anihow-rank-others {
+        color: var(--gray-300);
+    }
+
+    .dark .anihow-tone-neutral {
+        background: var(--gray-500);
+    }
+
     .dark .anihow-analytics-window,
     .dark .anihow-analytics-title,
     .dark .anihow-split-amount,

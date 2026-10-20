@@ -13,7 +13,8 @@ use App\Models\ExportLog;
 use App\Models\Farm;
 use App\Models\Order;
 use App\Models\User;
-use App\Services\AnalyticsService;
+use App\Services\FarmerSalesAnalytics;
+use App\Support\Analytics\AnalyticsRange;
 use App\Support\CsvDownload;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -137,26 +138,27 @@ class ExportCsvTest extends TestCase
 
         $since = now()->startOfDay()->subDays(29);
         $until = now()->endOfDay();
-        $analytics = app(AnalyticsService::class);
 
         $csv = $this->csvBody(app(ExportAnalyticsAction::class)->download($admin, $since, $until));
 
         $this->assertStringContainsString('anihow-analytics-2026-09-24.csv', (string) $this->lastDisposition);
-        $this->assertStringContainsString('Units sold per crop type', $csv);
-        $this->assertStringContainsString('Sales per period', $csv);
-        $this->assertStringContainsString('Best-selling produce', $csv);
-        $this->assertStringContainsString('Average discount', $csv);
 
-        $units = $analytics->unitsSoldPerCropType($admin, since: $since, until: $until);
-        $sales = $analytics->salesPerPeriod($admin, 'day', since: $since, until: $until);
-        $discount = $analytics->averageDiscount($admin, since: $since, until: $until);
+        foreach (['AniHow analytics', 'Sales over time', 'Top crops', 'How buyers paid', 'Where sales came from', 'Harvest by crop', 'No cost recorded'] as $section) {
+            $this->assertStringContainsString($section, $csv);
+        }
 
-        $this->assertEquals($units->sum('units'), $this->sectionSum($csv, 'Units sold per crop type', 2));
-        $this->assertEquals($units->sum('revenue'), $this->sectionSum($csv, 'Units sold per crop type', 3));
-        $this->assertEquals($sales->sum('revenue'), $this->sectionSum($csv, 'Sales per period', 2));
-        $this->assertEquals($sales->sum('orders'), $this->sectionSum($csv, 'Sales per period', 1));
-        $this->assertStringContainsString((string) $discount['average'], $csv);
-        $this->assertStringContainsString((string) $discount['orders'], $csv);
+        $built = app(FarmerSalesAnalytics::class)->build(
+            $admin,
+            AnalyticsRange::fromValues('custom', $since->toDateString(), $until->toDateString(), null, 'all'),
+        );
+
+        $this->assertEquals(80, $built['totals']['sales']);
+        $this->assertEquals($built['totals']['sales'], $this->labeledRow($csv, 'Total sales')[1]);
+        $this->assertEquals($built['totals']['orders'], $this->labeledRow($csv, 'Completed orders')[1]);
+        $this->assertEquals($built['totals']['sales'], $this->sectionSum($csv, 'Top crops', 4));
+        $this->assertEquals($built['totals']['sales'], $this->sectionSum($csv, 'Sales over time', 2));
+        $this->assertEquals($built['totals']['orders'], $this->sectionSum($csv, 'Sales over time', 1));
+        $this->assertSame(['Cash', '1', '80', '100'], $this->labeledRow($csv, 'Cash'));
 
         $this->assertSame(ExportType::Analytics, ExportLog::query()->first()->type);
         $this->assertGreaterThan(0, ExportLog::query()->first()->row_count);
@@ -276,8 +278,8 @@ class ExportCsvTest extends TestCase
         $this->assertSame(["'@Nightshade", 2.0], $sanitiser->row(['@Nightshade', 2.0]));
         $this->assertSame([-10.5], $sanitiser->row([-10.5]));
 
-        $units = $this->sectionSum($csv, 'Units sold per crop type', 2);
-        $revenue = $this->sectionSum($csv, 'Units sold per crop type', 3);
+        $units = $this->sectionSum($csv, 'Top crops', 3);
+        $revenue = $this->sectionSum($csv, 'Top crops', 4);
         $this->assertEquals(2, $units);
         $this->assertEquals(80, $revenue);
     }
@@ -338,6 +340,22 @@ class ExportCsvTest extends TestCase
         }
 
         $this->fail('Expected a ledger data row.');
+    }
+
+    /**
+     * @return list<string|null>
+     */
+    private function labeledRow(string $csv, string $label): array
+    {
+        foreach (preg_split('/\R/', ltrim($csv, "\xEF\xBB\xBF")) ?: [] as $line) {
+            $cells = str_getcsv($line);
+
+            if (($cells[0] ?? null) === $label) {
+                return $cells;
+            }
+        }
+
+        $this->fail('Missing CSV row '.$label);
     }
 
     private function sectionSum(string $csv, string $heading, int $column): float

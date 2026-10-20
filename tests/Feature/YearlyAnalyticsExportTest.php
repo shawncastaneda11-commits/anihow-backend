@@ -119,7 +119,7 @@ class YearlyAnalyticsExportTest extends TestCase
         $this->assertStringContainsString('anihow-analytics-2026.csv', (string) $response->headers->get('Content-Disposition'));
         $this->assertStringNotContainsString('-farm-', (string) $response->headers->get('Content-Disposition'));
 
-        foreach (['AniHow yearly analytics', 'Summary', 'Monthly sales', 'Best sellers', 'Top crops', 'Harvest by crop', 'Harvest totals', 'No cost recorded', 'All farms'] as $section) {
+        foreach (['AniHow yearly analytics', 'Sales over time', 'Top crops', 'How buyers paid', 'Where sales came from', 'Harvest by crop', 'No cost recorded', 'All farms'] as $section) {
             $this->assertStringContainsString($section, $csv);
         }
 
@@ -150,6 +150,9 @@ class YearlyAnalyticsExportTest extends TestCase
         }
 
         $this->assertEquals(80, $yearly['totals']['sales']);
+        $this->assertEquals(40, $this->labeled($parsed, 'Value of harvested stock')[1]);
+        $this->assertSame(['Cash', '2', '80', '100'], $this->labeled($parsed, 'Cash'));
+        $this->assertSame(['Best month', 'Jun', '80'], $this->labeled($parsed, 'Best month'));
 
         $oneFarm = app(ExportYearlyAnalyticsAction::class)->download($admin, 2026, $farm->id, 'all');
         $farmCsv = $this->csvBody($oneFarm);

@@ -8,13 +8,12 @@ use App\Enums\OrderStatus;
 use App\Enums\Permission;
 use App\Enums\Role;
 use App\Filament\Pages\Dashboard;
-use App\Filament\Widgets\BestSellersChart;
 use App\Filament\Widgets\HarvestByCropTable;
 use App\Filament\Widgets\HarvestSummaryStats;
 use App\Filament\Widgets\PaymentSplitStats;
 use App\Filament\Widgets\SalesOverTimeChart;
 use App\Filament\Widgets\SalesSummaryStats;
-use App\Filament\Widgets\TopCropsTable;
+use App\Filament\Widgets\TopCropsList;
 use App\Models\CropType;
 use App\Models\Farm;
 use App\Models\HarvestRecord;
@@ -163,7 +162,9 @@ class CmsAnalyticsDashboardTest extends TestCase
             ->test(SalesSummaryStats::class, ['pageFilters' => ['range' => 'month', 'category' => 'all']])
             ->assertSee('₱'.number_format($built['totals']['sales'], 2))
             ->assertSee((string) $built['totals']['orders'])
-            ->assertSee('₱'.number_format($built['totals']['tawad_total'], 2).' tawad in total');
+            ->assertSee('₱'.number_format($built['totals']['tawad_total'], 2).' tawad given in total')
+            ->assertSee('1 app order, 1 walk-in sale')
+            ->assertSee('Total sales ÷ completed orders');
 
         Livewire::actingAs($admin)
             ->test(PaymentSplitStats::class, ['pageFilters' => ['range' => 'month', 'category' => 'all']])
@@ -184,9 +185,12 @@ class CmsAnalyticsDashboardTest extends TestCase
             ])
             ->instance();
         $data = (new ReflectionMethod($chart, 'getData'))->invoke($chart);
+        $bestDay = array_search('Oct 3', $data['labels'], true);
 
-        $this->assertContains('Oct 3', $data['labels']);
+        $this->assertNotFalse($bestDay);
         $this->assertEquals(0, $data['datasets'][0]['data'][array_search('Oct 10', $data['labels'], true)]);
+        $this->assertSame('#58A67D', $data['datasets'][0]['backgroundColor'][$bestDay]);
+        $this->assertSame('Per day · Best day: Oct 3 · ₱40.00 · 8 days with no sales', $chart->getDescription());
 
         $yearlyChart = Livewire::actingAs($admin)
             ->test(SalesOverTimeChart::class, [
@@ -200,12 +204,14 @@ class CmsAnalyticsDashboardTest extends TestCase
         $this->assertEquals(0, $yearlyData['datasets'][0]['data'][$november]);
 
         Livewire::actingAs($admin)
-            ->test(TopCropsTable::class, ['pageFilters' => ['range' => 'month', 'category' => 'all']])
-            ->assertSee('Pechay')
-            ->assertSee('₱65.00');
+            ->test(TopCropsList::class, ['pageFilters' => ['range' => 'month', 'category' => 'all']])
+            ->assertSee('1. Pechay')
+            ->assertSee('₱65.00')
+            ->assertSee('100%')
+            ->assertSee('Share of ₱65.00 in sales');
     }
 
-    public function test_best_sellers_keep_five_colors_and_an_others_slice(): void
+    public function test_top_crops_rank_five_crops_and_group_the_rest_as_others(): void
     {
         $admin = $this->staff(Role::SuperAdmin);
         $farmer = $this->farmer();
@@ -216,14 +222,10 @@ class CmsAnalyticsDashboardTest extends TestCase
             $this->sale($farmer, $crop, $listing, 1, 10 * $index, Carbon::parse('2026-10-0'.$index.' 09:00:00', 'Asia/Manila'));
         }
 
-        $chart = Livewire::actingAs($admin)
-            ->test(BestSellersChart::class, ['pageFilters' => ['range' => 'month', 'category' => 'all']])
-            ->instance();
-        $data = (new ReflectionMethod($chart, 'getData'))->invoke($chart);
-
-        $this->assertContains('Others (1 crops)', $data['labels']);
-        $this->assertSame('#58A67D', $data['datasets'][0]['backgroundColor'][0]);
-        $this->assertSame('#8C948F', $data['datasets'][0]['backgroundColor'][5]);
+        Livewire::actingAs($admin)
+            ->test(TopCropsList::class, ['pageFilters' => ['range' => 'month', 'category' => 'all']])
+            ->assertSeeInOrder(['1. Crop 6', '₱60.00', '5. Crop 2', 'Others (1 crop)', '₱10.00'])
+            ->assertDontSee('6. Crop 1');
     }
 
     public function test_the_cash_row_mentions_walk_ins_only_when_there_are_some(): void
@@ -322,13 +324,14 @@ class CmsAnalyticsDashboardTest extends TestCase
 
         Livewire::actingAs($editor)
             ->test(Dashboard::class)
-            ->assertSee($farm->name)
+            ->assertSee('Showing Oct 1 – Oct 10, 2026 · '.$farm->name)
             ->assertDontSee('All farms');
 
         Livewire::actingAs($admin)
             ->test(Dashboard::class)
             ->assertSee('All farms')
-            ->assertSee('This month');
+            ->assertSee('This month')
+            ->assertSee('Showing Oct 1 – Oct 10, 2026 · All categories · All farms');
     }
 
     public function test_the_old_export_stays_on_the_dashboard_and_yearly_csv_follows_the_role(): void
@@ -371,8 +374,7 @@ class CmsAnalyticsDashboardTest extends TestCase
         return [
             SalesSummaryStats::class,
             SalesOverTimeChart::class,
-            BestSellersChart::class,
-            TopCropsTable::class,
+            TopCropsList::class,
             PaymentSplitStats::class,
             HarvestSummaryStats::class,
             HarvestByCropTable::class,

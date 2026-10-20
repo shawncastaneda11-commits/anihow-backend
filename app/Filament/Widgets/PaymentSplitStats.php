@@ -25,7 +25,6 @@ class PaymentSplitStats extends Widget
 
     /**
      * @return array{
-     *     window: string,
      *     total: string,
      *     orders: string,
      *     cards: list<array{title: string, rows: list<array{label: string, amount: string, detail: string, percent: float, tone: string}>}>
@@ -39,16 +38,15 @@ class PaymentSplitStats extends Widget
         $source = $sales['source_split'];
         $walkIns = (int) $source['walk_in']['orders'];
 
-        $cashDetail = $this->orderCount((int) $payment['cash']['orders'], 'order').' · '.$this->shareText((float) $payment['cash']['sales'], $total);
+        $cashDetail = $this->countText((int) $payment['cash']['orders'], 'order').' · '.$this->shareText((float) $payment['cash']['sales'], $total);
 
         if ($walkIns > 0) {
-            $cashDetail .= ' · includes '.$this->orderCount($walkIns, 'walk-in sale');
+            $cashDetail .= ' · includes '.$this->countText($walkIns, 'walk-in sale');
         }
 
         return [
-            'window' => $this->windowLabel(),
             'total' => $this->peso($total),
-            'orders' => $this->orderCount((int) $sales['totals']['orders'], 'order'),
+            'orders' => $this->countText((int) $sales['totals']['orders'], 'order'),
             'cards' => [
                 [
                     'title' => 'How buyers paid',
@@ -58,7 +56,7 @@ class PaymentSplitStats extends Widget
                             'Online (GCash, Maya)',
                             (float) $payment['online']['sales'],
                             $total,
-                            $this->orderCount((int) $payment['online']['orders'], 'order').' · '.$this->shareText((float) $payment['online']['sales'], $total),
+                            $this->countText((int) $payment['online']['orders'], 'order').' · '.$this->shareText((float) $payment['online']['sales'], $total),
                             'secondary',
                         ),
                     ],
@@ -70,14 +68,14 @@ class PaymentSplitStats extends Widget
                             'App orders',
                             (float) $source['app']['sales'],
                             $total,
-                            $this->orderCount((int) $source['app']['orders'], 'order').' · '.$this->shareText((float) $source['app']['sales'], $total),
+                            $this->countText((int) $source['app']['orders'], 'order').' · '.$this->shareText((float) $source['app']['sales'], $total),
                             'primary',
                         ),
                         $this->row(
                             'Walk-in sales',
                             (float) $source['walk_in']['sales'],
                             $total,
-                            $this->orderCount($walkIns, 'sale').' · '.$this->shareText((float) $source['walk_in']['sales'], $total),
+                            $this->countText($walkIns, 'sale').' · '.$this->shareText((float) $source['walk_in']['sales'], $total),
                             'secondary',
                         ),
                     ],
@@ -98,10 +96,5 @@ class PaymentSplitStats extends Widget
             'percent' => $total > 0 ? round($amount / $total * 100, 1) : 0.0,
             'tone' => $tone,
         ];
-    }
-
-    private function orderCount(int $count, string $noun): string
-    {
-        return $count.' '.($count === 1 ? $noun : $noun.'s');
     }
 }

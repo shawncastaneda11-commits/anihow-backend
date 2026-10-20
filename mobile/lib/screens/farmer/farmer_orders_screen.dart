@@ -409,8 +409,8 @@ List<Widget> _statusTabs(AppStrings s, int activeCount) {
         ],
       ),
     ),
-    Tab(height: AniHowSpace.tabHeight, text: s.completed),
-    Tab(height: AniHowSpace.tabHeight, text: s.cancelled),
+    Tab(height: AniHowSpace.tabHeight, text: s.ordersTabCompleted),
+    Tab(height: AniHowSpace.tabHeight, text: s.ordersTabCancelled),
   ];
 }
 

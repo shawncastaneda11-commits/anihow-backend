@@ -99,32 +99,41 @@ class _BuyerShellState extends State<BuyerShell> {
               top: BorderSide(color: Theme.of(context).dividerColor),
             ),
           ),
-          child: NavigationBar(
-            selectedIndex: _index,
-            onDestinationSelected: (value) {
-              dismissAniHowSnackBars();
-              setState(() => _index = value);
-            },
-            destinations: [
-              NavigationDestination(
-                icon: const Icon(Icons.agriculture_outlined),
-                selectedIcon: const Icon(Icons.agriculture),
-                label: s.shops,
-              ),
-              NavigationDestination(
-                icon: const Icon(Icons.storefront_outlined),
-                selectedIcon: const Icon(Icons.storefront),
-                label: s.market,
-              ),
-              NavigationDestination(
-                icon: const Icon(Icons.receipt_long_outlined),
-                label: s.orders,
-              ),
-              NavigationDestination(
-                icon: const Icon(Icons.favorite_outline),
-                label: s.favorites,
-              ),
-            ],
+          // Labels may grow with the phone's text size only so far, so a long
+          // word cannot push the bar onto three lines.
+          child: MediaQuery.withClampedTextScaling(
+            maxScaleFactor: 1.15,
+            child: NavigationBar(
+              selectedIndex: _index,
+              onDestinationSelected: (value) {
+                dismissAniHowSnackBars();
+                setState(() => _index = value);
+              },
+              destinations: [
+                NavigationDestination(
+                  icon: const Icon(Icons.agriculture_outlined),
+                  selectedIcon: const Icon(Icons.agriculture),
+                  label: s.navFarms,
+                  tooltip: s.shops,
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.storefront_outlined),
+                  selectedIcon: const Icon(Icons.storefront),
+                  label: s.navMarket,
+                  tooltip: s.market,
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.receipt_long_outlined),
+                  label: s.navOrders,
+                  tooltip: s.orders,
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.favorite_outline),
+                  label: s.navFavorites,
+                  tooltip: s.favorites,
+                ),
+              ],
+            ),
           ),
         ),
       ),

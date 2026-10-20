@@ -1,6 +1,7 @@
 import 'package:anihow/l10n/app_strings.dart';
 import 'package:anihow/models/models.dart';
 import 'package:anihow/screens/buyer/listing_detail_screen.dart';
+import 'package:anihow/services/api_client.dart';
 import 'package:anihow/state/auth_controller.dart';
 import 'package:anihow/state/cart_controller.dart';
 import 'package:anihow/state/preferences_controller.dart';
@@ -118,5 +119,73 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text(s.reportSubmitted), findsOneWidget);
+  });
+
+  testWidgets('submit stays reachable on a small phone with the keyboard open', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.viewInsets = FakeViewPadding(bottom: 300 * tester.view.devicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+
+    String? sentReason;
+    await tester.pumpWidget(
+      _app(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () => showReportSheet(
+                  context,
+                  targetType: 'listing',
+                  targetId: 4,
+                  submit: (reason, _) async => sentReason = reason,
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('report-reason-spam_or_fake')));
+    await tester.ensureVisible(find.byKey(const ValueKey('report-submit')));
+    await tester.pumpAndSettle();
+
+    // The keyboard covers the bottom 300 px, so Submit must end above y = 340.
+    expect(tester.getRect(find.byKey(const ValueKey('report-submit'))).bottom, lessThanOrEqualTo(340));
+
+    await tester.tap(find.byKey(const ValueKey('report-submit')));
+    await tester.pumpAndSettle();
+
+    expect(sentReason, 'spam_or_fake');
+  });
+
+  testWidgets('a refused report shows the reason inside the sheet', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _app(
+        home: Scaffold(
+          body: ReportBottomSheet(
+            targetType: 'listing',
+            targetId: 4,
+            submit: (_, _) async => throw ApiException('That listing is not available to report.'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('report-reason-spam_or_fake')));
+    await tester.ensureVisible(find.byKey(const ValueKey('report-submit')));
+    await tester.tap(find.byKey(const ValueKey('report-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('report-error')), findsOneWidget);
+    expect(find.text('That listing is not available to report.'), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
   });
 }

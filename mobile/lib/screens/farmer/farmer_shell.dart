@@ -61,35 +61,45 @@ class _FarmerShellState extends State<FarmerShell> {
             top: BorderSide(color: Theme.of(context).dividerColor),
           ),
         ),
-        child: NavigationBar(
-          selectedIndex: _index,
-          onDestinationSelected: (value) {
-            dismissAniHowSnackBars();
-            setState(() => _index = value);
-          },
-          destinations: [
-            NavigationDestination(
-              icon: const Icon(Icons.inventory_2_outlined),
-              label: s.listings,
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.inbox_outlined),
-              label: s.orders,
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.insights_outlined),
-              label: s.mySales,
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.menu_book_outlined),
-              label: s.cropCare,
-            ),
-            NavigationDestination(
-              icon: const ChatBubbleMark(size: 24),
-              selectedIcon: const ChatBubbleMark(size: 24),
-              label: s.chats,
-            ),
-          ],
+        // Labels may grow with the phone's text size only so far, so a long
+        // word cannot push the bar onto three lines.
+        child: MediaQuery.withClampedTextScaling(
+          maxScaleFactor: 1.15,
+          child: NavigationBar(
+            selectedIndex: _index,
+            onDestinationSelected: (value) {
+              dismissAniHowSnackBars();
+              setState(() => _index = value);
+            },
+            destinations: [
+              NavigationDestination(
+                icon: const Icon(Icons.inventory_2_outlined),
+                label: s.navListings,
+                tooltip: s.listings,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.inbox_outlined),
+                label: s.navOrders,
+                tooltip: s.orders,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.insights_outlined),
+                label: s.navMySales,
+                tooltip: s.mySales,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.menu_book_outlined),
+                label: s.navCropCare,
+                tooltip: s.cropCare,
+              ),
+              NavigationDestination(
+                icon: const ChatBubbleMark(size: 24),
+                selectedIcon: const ChatBubbleMark(size: 24),
+                label: s.navChats,
+                tooltip: s.chats,
+              ),
+            ],
+          ),
         ),
       ),
     );

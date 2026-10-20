@@ -14,6 +14,7 @@ import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/farm_map_card.dart';
+import '../../widgets/linked_text.dart';
 import '../../widgets/produce_card.dart';
 import '../../widgets/profile_avatar_button.dart';
 import 'listing_detail_screen.dart';
@@ -1602,7 +1603,7 @@ class _AboutCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 for (final line in body.split('\n'))
-                  if (line.trim().isNotEmpty) Text(line),
+                  if (line.trim().isNotEmpty) LinkedText(line),
                 if (extra != null && extra!.trim().isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Text(

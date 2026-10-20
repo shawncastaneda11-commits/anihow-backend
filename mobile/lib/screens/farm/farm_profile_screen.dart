@@ -11,6 +11,7 @@ import '../../theme/anihow_theme.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/farm_map_card.dart';
 import '../../widgets/hint_card.dart';
+import '../../widgets/linked_text.dart';
 import '../../widgets/profile_avatar_button.dart';
 import '../buyer/farm_page_screen.dart';
 import '../buyer/shop_profile_screen.dart';
@@ -214,7 +215,7 @@ class FarmProfileContent extends StatelessWidget {
               ],
               if (description != null && description.isNotEmpty) ...[
                 const SizedBox(height: AniHowSpace.cardGap),
-                Text(description, style: theme.textTheme.bodyMedium),
+                LinkedText(description, style: theme.textTheme.bodyMedium),
               ],
               if (pickup != null && pickup.isNotEmpty) ...[
                 const SizedBox(height: AniHowSpace.section),

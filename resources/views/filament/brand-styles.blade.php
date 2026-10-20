@@ -77,4 +77,227 @@
         align-items: center;
         margin-inline-end: 0.5rem;
     }
+
+    /* Dashboard analytics: payment split, harvest summary and harvest by crop. */
+    .anihow-analytics {
+        display: flex;
+        flex-direction: column;
+        gap: 0.875rem;
+    }
+
+    .anihow-analytics-window,
+    .anihow-analytics-title {
+        margin: 0;
+        font-weight: 600;
+        color: var(--gray-950);
+    }
+
+    .anihow-analytics-window {
+        font-size: 0.9375rem;
+    }
+
+    .anihow-analytics-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+    }
+
+    .anihow-analytics-heading {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .anihow-muted {
+        margin: 0;
+        font-size: 0.8125rem;
+        line-height: 1.45;
+        color: var(--gray-600);
+    }
+
+    .anihow-split-grid,
+    .anihow-harvest-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    @media (min-width: 768px) {
+        .anihow-split-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .anihow-harvest-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (min-width: 1280px) {
+        .anihow-harvest-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+    }
+
+    .anihow-split-card,
+    .anihow-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .anihow-stat {
+        gap: 0.5rem;
+    }
+
+    .anihow-split-head {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 0.5rem 1rem;
+    }
+
+    .anihow-split-title,
+    .anihow-stat-label {
+        margin: 0;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--gray-700);
+    }
+
+    .anihow-split-title {
+        font-weight: 600;
+    }
+
+    .anihow-split-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 0.625rem;
+    }
+
+    .anihow-split-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.4fr);
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .anihow-split-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.625rem;
+        font-size: 0.875rem;
+        color: var(--gray-800);
+    }
+
+    .anihow-split-amount {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--gray-950);
+    }
+
+    .anihow-split-detail {
+        text-align: end;
+    }
+
+    .anihow-stat-value {
+        font-size: 1.875rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--gray-950);
+    }
+
+    .anihow-stat-none {
+        color: var(--gray-400);
+    }
+
+    .anihow-stat-loss {
+        color: var(--danger-600);
+    }
+
+    .anihow-swatch {
+        width: 0.625rem;
+        height: 0.625rem;
+        border-radius: 0.1875rem;
+        flex-shrink: 0;
+    }
+
+    .anihow-bar {
+        display: flex;
+        height: 0.625rem;
+        overflow: hidden;
+        border-radius: 999px;
+        background: var(--gray-200);
+    }
+
+    .anihow-bar-thin {
+        height: 0.5rem;
+    }
+
+    .anihow-bar-part {
+        height: 100%;
+    }
+
+    .anihow-bar-min:not([style*="width: 0%"]) {
+        min-width: 0.375rem;
+    }
+
+    .anihow-tone-primary {
+        background: var(--primary-600);
+    }
+
+    .anihow-tone-secondary {
+        background: var(--info-400);
+    }
+
+    .anihow-share {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+        min-width: 7.5rem;
+    }
+
+    .anihow-share .anihow-bar {
+        flex: 1;
+    }
+
+    .anihow-share-label {
+        width: 2.5rem;
+        text-align: end;
+        font-size: 0.875rem;
+        color: var(--gray-700);
+    }
+
+    .dark .anihow-analytics-window,
+    .dark .anihow-analytics-title,
+    .dark .anihow-split-amount,
+    .dark .anihow-stat-value {
+        color: #fff;
+    }
+
+    .dark .anihow-muted {
+        color: var(--gray-400);
+    }
+
+    .dark .anihow-split-title,
+    .dark .anihow-stat-label,
+    .dark .anihow-split-label,
+    .dark .anihow-share-label {
+        color: var(--gray-300);
+    }
+
+    .dark .anihow-stat-none {
+        color: var(--gray-500);
+    }
+
+    .dark .anihow-stat-loss {
+        color: var(--danger-400);
+    }
+
+    .dark .anihow-bar {
+        background: var(--gray-800);
+    }
+
+    .dark .anihow-tone-secondary {
+        background: var(--info-300);
+    }
 </style>

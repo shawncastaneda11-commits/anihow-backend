@@ -5,10 +5,13 @@ namespace App\Filament\Widgets;
 use App\Filament\Widgets\Concerns\ScopedAnalytics;
 use App\Filament\Widgets\Concerns\UsesDashboardFilters;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
-use Filament\Widgets\StatsOverviewWidget;
-use Filament\Widgets\StatsOverviewWidget\Stat;
+use Filament\Widgets\Widget;
 
-class PaymentSplitStats extends StatsOverviewWidget
+/**
+ * Two cards that split the same completed sales two ways: how buyers paid
+ * (cash or online) and where the sale was made (app or walk-in).
+ */
+class PaymentSplitStats extends Widget
 {
     use InteractsWithPageFilters;
     use ScopedAnalytics;
@@ -18,33 +21,87 @@ class PaymentSplitStats extends StatsOverviewWidget
 
     protected int|string|array $columnSpan = 'full';
 
-    protected function getHeading(): ?string
+    protected string $view = 'filament.widgets.payment-split';
+
+    /**
+     * @return array{
+     *     window: string,
+     *     total: string,
+     *     orders: string,
+     *     cards: list<array{title: string, rows: list<array{label: string, amount: string, detail: string, percent: float, tone: string}>}>
+     * }
+     */
+    protected function getViewData(): array
     {
-        return $this->windowLabel();
+        $sales = $this->sales();
+        $total = (float) $sales['totals']['sales'];
+        $payment = $sales['payment_split'];
+        $source = $sales['source_split'];
+        $walkIns = (int) $source['walk_in']['orders'];
+
+        $cashDetail = $this->orderCount((int) $payment['cash']['orders'], 'order').' · '.$this->shareText((float) $payment['cash']['sales'], $total);
+
+        if ($walkIns > 0) {
+            $cashDetail .= ' · includes '.$this->orderCount($walkIns, 'walk-in sale');
+        }
+
+        return [
+            'window' => $this->windowLabel(),
+            'total' => $this->peso($total),
+            'orders' => $this->orderCount((int) $sales['totals']['orders'], 'order'),
+            'cards' => [
+                [
+                    'title' => 'How buyers paid',
+                    'rows' => [
+                        $this->row('Cash', (float) $payment['cash']['sales'], $total, $cashDetail, 'primary'),
+                        $this->row(
+                            'Online (GCash, Maya)',
+                            (float) $payment['online']['sales'],
+                            $total,
+                            $this->orderCount((int) $payment['online']['orders'], 'order').' · '.$this->shareText((float) $payment['online']['sales'], $total),
+                            'secondary',
+                        ),
+                    ],
+                ],
+                [
+                    'title' => 'Where sales came from',
+                    'rows' => [
+                        $this->row(
+                            'App orders',
+                            (float) $source['app']['sales'],
+                            $total,
+                            $this->orderCount((int) $source['app']['orders'], 'order').' · '.$this->shareText((float) $source['app']['sales'], $total),
+                            'primary',
+                        ),
+                        $this->row(
+                            'Walk-in sales',
+                            (float) $source['walk_in']['sales'],
+                            $total,
+                            $this->orderCount($walkIns, 'sale').' · '.$this->shareText((float) $source['walk_in']['sales'], $total),
+                            'secondary',
+                        ),
+                    ],
+                ],
+            ],
+        ];
     }
 
     /**
-     * @return array<Stat>
+     * @return array{label: string, amount: string, detail: string, percent: float, tone: string}
      */
-    protected function getStats(): array
+    private function row(string $label, float $amount, float $total, string $detail, string $tone): array
     {
-        $sales = $this->sales();
-
-        $total = (float) $sales['totals']['sales'];
-        $online = $sales['payment_split']['online'];
-        $cash = $sales['payment_split']['cash'];
-        $app = $sales['source_split']['app'];
-        $walkIn = $sales['source_split']['walk_in'];
-
         return [
-            Stat::make('Online', $this->peso((float) $online['sales']))
-                ->description($online['orders'].' orders · '.$this->shareText((float) $online['sales'], $total)),
-            Stat::make('Cash', $this->peso((float) $cash['sales']))
-                ->description($cash['orders'].' orders, includes walk-in sales'),
-            Stat::make('App orders', $this->peso((float) $app['sales']))
-                ->description($app['orders'].' · '.$this->shareText((float) $app['sales'], $total)),
-            Stat::make('Walk-in sales', $this->peso((float) $walkIn['sales']))
-                ->description($walkIn['orders'].' · '.$this->shareText((float) $walkIn['sales'], $total)),
+            'label' => $label,
+            'amount' => $this->peso($amount),
+            'detail' => $detail,
+            'percent' => $total > 0 ? round($amount / $total * 100, 1) : 0.0,
+            'tone' => $tone,
         ];
+    }
+
+    private function orderCount(int $count, string $noun): string
+    {
+        return $count.' '.($count === 1 ? $noun : $noun.'s');
     }
 }

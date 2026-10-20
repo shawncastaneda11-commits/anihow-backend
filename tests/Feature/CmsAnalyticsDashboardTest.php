@@ -168,7 +168,9 @@ class CmsAnalyticsDashboardTest extends TestCase
         Livewire::actingAs($admin)
             ->test(PaymentSplitStats::class, ['pageFilters' => ['range' => 'month', 'category' => 'all']])
             ->assertSee('₱40.00')
-            ->assertSee('includes walk-in sales')
+            ->assertSee('How buyers paid')
+            ->assertSee('Where sales came from')
+            ->assertSee('includes 1 walk-in sale')
             ->assertSee('₱25.00');
 
         $chart = Livewire::actingAs($admin)
@@ -224,6 +226,21 @@ class CmsAnalyticsDashboardTest extends TestCase
         $this->assertSame('#8C948F', $data['datasets'][0]['backgroundColor'][5]);
     }
 
+    public function test_the_cash_row_mentions_walk_ins_only_when_there_are_some(): void
+    {
+        $admin = $this->staff(Role::SuperAdmin);
+        $farmer = $this->farmer();
+        $crop = $this->cropType(['name' => 'Pechay']);
+        $listing = $this->listingFor($farmer, ['crop_type_id' => $crop->id]);
+        $this->sale($farmer, $crop, $listing, 2, 40, Carbon::parse('2026-10-03 09:00:00', 'Asia/Manila'));
+
+        Livewire::actingAs($admin)
+            ->test(PaymentSplitStats::class, ['pageFilters' => ['range' => 'month', 'category' => 'all']])
+            ->assertSee('1 order · 100%')
+            ->assertSee('0 sales · 0%')
+            ->assertDontSee('includes');
+    }
+
     public function test_harvest_stats_hide_a_missing_cost_and_show_a_loss(): void
     {
         $admin = $this->staff(Role::SuperAdmin);
@@ -249,14 +266,20 @@ class CmsAnalyticsDashboardTest extends TestCase
 
         Livewire::actingAs($admin)
             ->test(HarvestSummaryStats::class, ['pageFilters' => ['range' => 'month']])
-            ->assertSee('Profit — No cost recorded')
+            ->assertSee('No production cost recorded yet')
+            ->assertSee('Value of harvested stock')
+            ->assertSee('₱200.00')
+            ->assertSee('5 kg rejected.')
             ->assertSee('1 estimated')
+            ->assertSee('Unsold stock')
             ->assertDontSee('Expected profit');
 
         Livewire::actingAs($admin)
             ->test(HarvestByCropTable::class, ['pageFilters' => ['range' => 'month']])
             ->assertSee('Tomato')
-            ->assertSee('Rejected: Spoiled 5 kg');
+            ->assertSee('15 kg')
+            ->assertSee('Spoiled 5 kg')
+            ->assertSee('Stock value');
 
         $costly = $this->cropType(['name' => 'Loss crop']);
         $costlyListing = $this->listingFor($farmer, ['crop_type_id' => $costly->id]);

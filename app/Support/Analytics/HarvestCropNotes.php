@@ -6,30 +6,11 @@ use App\Enums\HarvestRejectionReason;
 use App\Enums\StockRemovalReason;
 
 /**
- * One harvest-by-crop notes cell, shared by the dashboard table and the yearly CSV.
+ * Rejected and removed stock by reason, and quantities with their units, shared
+ * by the dashboard's harvest table and the analytics CSVs.
  */
 final class HarvestCropNotes
 {
-    /**
-     * @param  array<string, mixed>  $crop
-     */
-    public static function format(array $crop): string
-    {
-        $parts = [];
-        $rejected = self::rejected($crop);
-        $removed = self::removed($crop);
-
-        if ($rejected !== []) {
-            $parts[] = 'Rejected: '.implode(', ', $rejected);
-        }
-
-        if ($removed !== []) {
-            $parts[] = 'Removed: '.implode(', ', $removed);
-        }
-
-        return implode(' · ', $parts);
-    }
-
     /**
      * Rejected stock by reason, such as "Spoiled 5 kg".
      *

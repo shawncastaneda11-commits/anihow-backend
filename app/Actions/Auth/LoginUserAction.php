@@ -2,7 +2,6 @@
 
 namespace App\Actions\Auth;
 
-use App\Enums\UserStatus;
 use App\Models\User;
 use DateTimeInterface;
 use Illuminate\Support\Facades\Hash;
@@ -34,10 +33,7 @@ class LoginUserAction
 
         if (! $user->status->canAuthenticate()) {
             throw ValidationException::withMessages([
-                'email' => match ($user->status) {
-                    UserStatus::Pending => 'Your account is awaiting approval. You can sign in after an administrator approves it.',
-                    default => 'This account is suspended. Contact the AniHow administrator.',
-                },
+                'email' => 'This account is suspended. Contact the AniHow administrator.',
             ]);
         }
 

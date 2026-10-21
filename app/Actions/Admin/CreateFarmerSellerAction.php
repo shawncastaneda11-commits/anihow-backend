@@ -10,7 +10,8 @@ use Illuminate\Support\Str;
 class CreateFarmerSellerAction
 {
     /**
-     * Farmer-seller accounts are created (and thereby verified) by super_admin only.
+     * Farmer-seller accounts are created (and thereby verified) by super_admin only,
+     * so they are active at once; there is no separate approval step.
      * Any password sent by the client is ignored. The temporary password is returned
      * once and is not stored in plain text.
      *
@@ -28,7 +29,7 @@ class CreateFarmerSellerAction
             'shop_name' => $data['shop_name'] ?? null,
             'bio' => $data['bio'] ?? null,
             'contact' => $data['contact'] ?? ($data['phone'] ?? null),
-            'status' => UserStatus::Pending,
+            'status' => UserStatus::Active,
             // Admin-created farmer_seller accounts are treated as verified.
             'email_verified_at' => now(),
         ]);

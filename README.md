@@ -164,7 +164,6 @@ Outside production the same command also creates Sta. Clara Farm, a test farm wi
 | `susp03@gmail.com` | Content Editor | Suspended, no farm |
 | `kuyajun@gmail.com` | Farmer-seller | Kuya Jun Harvest, accepts online payment |
 | `alingnena@gmail.com` | Farmer-seller | Aling Nena Produce, cash only, sells the value-added Tuyong mangga |
-| `pending01@gmail.com` | Farmer-seller | Waiting for approval |
 | `susp02@gmail.com` | Farmer-seller | Suspended |
 | `buyer01@gmail.com` | Buyer | Has completed and pending orders |
 | `buyer02@gmail.com` | Buyer | Has reservations and reports |

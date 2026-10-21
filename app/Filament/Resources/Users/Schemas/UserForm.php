@@ -80,12 +80,12 @@ class UserForm
 
                 Select::make('status')
                     ->options(UserStatus::options())
-                    ->default(UserStatus::Pending->value)
+                    ->default(UserStatus::Active->value)
                     ->visible(fn (): bool => self::canManageAccounts())
                     ->required(fn (): bool => self::canManageAccounts())
                     ->dehydrated(fn (): bool => self::canManageAccounts())
                     ->native(false)
-                    ->helperText('Only active accounts can sign in. Farmer-seller registrations arrive pending.'),
+                    ->helperText('Only active accounts can sign in. Suspend an account to stop it signing in.'),
 
                 TextInput::make('location')
                     ->maxLength(255)

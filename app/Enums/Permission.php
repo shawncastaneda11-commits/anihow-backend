@@ -6,7 +6,6 @@ enum Permission: string
 {
     // Accounts
     case ManageAccounts = 'manage_accounts';
-    case ApproveFarmerSeller = 'approve_farmer_seller';
     case SuspendAccounts = 'suspend_accounts';
 
     // Farms
@@ -77,7 +76,6 @@ enum Permission: string
     {
         return match ($this) {
             self::ManageAccounts => 'Manage accounts',
-            self::ApproveFarmerSeller => 'Approve farmer-seller registrations',
             self::SuspendAccounts => 'Suspend accounts',
             self::ManageFarms => 'Manage farms',
             self::ManageOwnFarmProfile => 'Manage own farm profile',
@@ -138,7 +136,6 @@ enum Permission: string
              */
             Role::SuperAdmin => [
                 self::ManageAccounts,
-                self::ApproveFarmerSeller,
                 self::SuspendAccounts,
                 self::ManageFarms,
                 self::ManageOrganicCertification,

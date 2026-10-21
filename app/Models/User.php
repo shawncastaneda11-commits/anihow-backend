@@ -305,11 +305,6 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         return $this->hasMany(SellerPaymentQr::class, 'farmer_seller_id');
     }
 
-    public function isPending(): bool
-    {
-        return $this->status === UserStatus::Pending;
-    }
-
     public function sendEmailVerificationNotification(): void
     {
         app(SendEmailVerificationCodeAction::class)->handle($this);

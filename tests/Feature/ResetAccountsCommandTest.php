@@ -237,7 +237,7 @@ class ResetAccountsCommandTest extends TestCase
             ->expectsOutputToContain('created')
             ->assertSuccessful();
 
-        $this->assertSame(11, User::query()->count());
+        $this->assertSame(10, User::query()->count());
         $this->assertSame(4, Farm::query()->count());
         $this->assertDatabaseHas('farms', ['slug' => 'sta-clara-farm']);
         $this->assertSame(9, Listing::query()->count());

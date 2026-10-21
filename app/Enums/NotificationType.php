@@ -17,6 +17,7 @@ enum NotificationType: string
     case ListingLowStock = 'listing_low_stock';
     case ListingTakenDown = 'listing_taken_down';
     case ListingRestored = 'listing_restored';
+    /** No longer sent; kept so notifications already stored still load. */
     case AccountApproved = 'account_approved';
     case FloorPriceRaised = 'floor_price_raised';
     case TawadCeilingLowered = 'tawad_ceiling_lowered';

@@ -136,7 +136,6 @@ class CreateTestFixtures
         $jun = $this->account('kuyajun@gmail.com', 'Kuya Jun', 'password', Role::FarmerSeller, $pyap, UserStatus::Active, 'Kuya Jun Harvest', true);
         $this->paymentQr($jun);
         $nena = $this->account('alingnena@gmail.com', 'Aling Nena', 'password', Role::FarmerSeller, $pyap, UserStatus::Active, 'Aling Nena Produce', false);
-        $this->account('pending01@gmail.com', 'Pending Seller', 'password', Role::FarmerSeller, $pyap, UserStatus::Pending);
         $this->account('susp02@gmail.com', 'Suspended Seller', 'password', Role::FarmerSeller, $pyap, UserStatus::Suspended, suspensionReason: 'Test account');
         $buyer01 = $this->account('buyer01@gmail.com', 'Buyer 01', 'password', Role::Buyer, null, UserStatus::Active);
         $buyer02 = $this->account('buyer02@gmail.com', 'Buyer 02', 'password', Role::Buyer, null, UserStatus::Active);

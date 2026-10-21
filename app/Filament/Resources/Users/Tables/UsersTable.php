@@ -8,7 +8,6 @@ use App\Enums\ReservationCancellationReason;
 use App\Enums\Role;
 use App\Enums\UserStatus;
 use App\Models\User;
-use App\Support\InAppNotifier;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -47,7 +46,6 @@ class UsersTable
                     ->formatStateUsing(fn (UserStatus $state): string => $state->label())
                     ->color(fn (UserStatus $state): string => match ($state) {
                         UserStatus::Active => 'success',
-                        UserStatus::Pending => 'warning',
                         UserStatus::Suspended => 'danger',
                     }),
                 TextColumn::make('phone')
@@ -67,25 +65,6 @@ class UsersTable
                     ->relationship('farm', 'name'),
             ])
             ->recordActions([
-                /*
-                 * Farmer-seller registration requires Super Admin approval with
-                 * a farm membership check. This is that approval.
-                 */
-                Action::make('approve')
-                    ->icon('heroicon-o-check-badge')
-                    ->color('success')
-                    ->requiresConfirmation()
-                    ->visible(fn (User $record): bool => $record->isPending()
-                        && auth()->user()->can(Permission::ApproveFarmerSeller->value))
-                    ->action(function (User $record): void {
-                        $record->update([
-                            'status' => UserStatus::Active,
-                            'approved_at' => now(),
-                            'approved_by' => auth()->id(),
-                        ]);
-
-                        app(InAppNotifier::class)->accountApproved($record);
-                    }),
                 Action::make('suspend')
                     ->icon('heroicon-o-no-symbol')
                     ->color('danger')

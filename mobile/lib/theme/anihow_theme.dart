@@ -204,6 +204,7 @@ class AniHowTheme {
           minimumSize: const Size.fromHeight(52),
           shape: const StadiumBorder(),
           textStyle: const TextStyle(
+            fontFamily: 'Roboto',
             fontWeight: FontWeight.w600,
             fontSize: AniHowSpace.name,
           ),
@@ -216,6 +217,7 @@ class AniHowTheme {
           minimumSize: const Size.fromHeight(52),
           shape: const StadiumBorder(),
           textStyle: const TextStyle(
+            fontFamily: 'Roboto',
             fontWeight: FontWeight.w600,
             fontSize: AniHowSpace.name,
           ),

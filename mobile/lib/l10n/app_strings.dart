@@ -1128,9 +1128,11 @@ class AppStrings {
     'Up to $sellable $unit ($held held by orders)',
     'Hanggang $sellable $unit ($held ang hawak ng mga order)',
   );
-  String leftAfterExpiry(String quantity, String unit) =>
-      t('$quantity $unit left', 'May natitirang $quantity $unit');
-  String get removeAsSpoiled => t('Remove as spoiled', 'Alisin bilang sira');
+  String leftAfterExpiry(String quantity, String unit) => t(
+    'What should happen to the $quantity $unit left?',
+    'Ano ang gagawin sa natitirang $quantity $unit?',
+  );
+  String get removeAsSpoiled => t('Remove spoiled', 'Alisin ang sira');
   String get extendListing => t('Extend', 'Palawigin');
   String get stockHistory => t('Stock history', 'Kasaysayan ng stock');
   String trackedSince(DateTime date) => t(

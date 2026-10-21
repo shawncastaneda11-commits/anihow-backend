@@ -1095,6 +1095,9 @@ class AppStrings {
   String get harvestDate => t('Harvest date', 'Araw ng ani');
   String get dateMade => t('Date made', 'Araw na ginawa');
   String get harvestedQuantity => t('Harvested quantity', 'Dami ng ani');
+  String enterHarvestedQuantity({bool valueAdded = false}) => valueAdded
+      ? t('Enter how much you made.', 'Ilagay kung gaano karami ang nagawa.')
+      : t('Enter how much you harvested.', 'Ilagay kung gaano karami ang inani.');
   String get quantityMade => t('Quantity made', 'Dami na ginawa');
   String get expectedQuantity => t('Expected quantity', 'Inaasahang dami');
   String get expectedQuantityHint => t(

@@ -64,6 +64,13 @@ const _crop = CategoryItem(
   unit: 'kg',
 );
 
+const _bundleCrop = CategoryItem(
+  id: 8,
+  name: 'Pechay',
+  labelEn: 'Pechay',
+  unit: 'bundle',
+);
+
 Finder _stepCheck(int index) {
   return find.descendant(
     of: find.byKey(ValueKey('form-step-$index'), skipOffstage: false),
@@ -78,6 +85,7 @@ void main() {
     ListingItem? listing,
     UserAccount? user,
     ApiClient? api,
+    List<CategoryItem> crops = const [_crop],
   }) async {
     await tester.binding.setSurfaceSize(const Size(400, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -85,7 +93,7 @@ void main() {
       _app(
         ListingFormScreen(
           listing: listing,
-          cropTypes: Future.value(const [_crop]),
+          cropTypes: Future.value(crops),
         ),
         user: user,
         api: api,
@@ -249,6 +257,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Naturally grown'));
     await tester.pump();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('harvest-quantity')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(find.byKey(const ValueKey('harvest-quantity')), '10');
+    await tester.pump();
     await tester.tap(find.text('Save listing'));
     await tester.pumpAndSettle();
 
@@ -268,9 +283,75 @@ void main() {
     await tester.ensureVisible(find.text('Certified Organic'));
     await tester.tap(find.text('Certified Organic'));
     await tester.pump();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('harvest-quantity')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(find.byKey(const ValueKey('harvest-quantity')), '10');
+    await tester.pump();
     await tester.tap(find.text('Save listing'));
     await tester.pumpAndSettle();
 
     expect(api.created?['growing_method'], 'certified_organic');
+  });
+
+  Future<void> scrollTo(WidgetTester tester, Key key) {
+    return tester.scrollUntilVisible(
+      find.byKey(key),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+  }
+
+  testWidgets('a half bundle minimum shows the rule under the fields, not a pop-up', (tester) async {
+    final api = _RecordingApi();
+    await pumpForm(tester, api: api, user: _seller(certified: false), crops: const [_bundleCrop]);
+
+    await tester.enterText(find.byType(TextField).first, 'Pechay, sariwa');
+    await tester.tap(find.byType(DropdownButtonFormField<int>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pechay').last);
+    await tester.pumpAndSettle();
+    await scrollTo(tester, const ValueKey('listing-min-order'));
+    await tester.enterText(find.byKey(const ValueKey('listing-min-order')), '0.5');
+    await tester.pump();
+
+    final rule = find.byKey(const ValueKey('listing-order-rule-error'));
+    expect(rule, findsOneWidget);
+    expect(find.byKey(const ValueKey('listing-order-preview')), findsNothing);
+    final ruleText = tester.widget<Text>(rule).data;
+    expect(ruleText, contains('1'));
+
+    await scrollTo(tester, const ValueKey('harvest-quantity'));
+    await tester.enterText(find.byKey(const ValueKey('harvest-quantity')), '10');
+    await tester.tap(find.text('Save listing'));
+    await tester.pumpAndSettle();
+
+    expect(api.created, isNull);
+    expect(find.byType(SnackBar), findsNothing);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('listing-form-error'))).data,
+      ruleText,
+    );
+  });
+
+  testWidgets('saving without a harvested quantity says so under the field', (tester) async {
+    final api = _RecordingApi();
+    await pumpForm(tester, api: api, user: _seller(certified: false));
+
+    await tester.enterText(find.byType(TextField).first, 'Tomato');
+    await tester.tap(find.byType(DropdownButtonFormField<int>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tomato').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save listing'));
+    await tester.pumpAndSettle();
+
+    expect(api.created, isNull);
+    expect(find.byType(SnackBar), findsNothing);
+    expect(find.text('Enter how much you harvested.'), findsWidgets);
+    await scrollTo(tester, const ValueKey('harvest-quantity'));
+    expect(find.byKey(const ValueKey('harvest-quantity-error')), findsOneWidget);
   });
 }

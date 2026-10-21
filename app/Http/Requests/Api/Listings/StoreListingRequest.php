@@ -28,7 +28,10 @@ class StoreListingRequest extends FormRequest
      */
     public function messages(): array
     {
-        return HarvestInput::messages();
+        return [
+            ...HarvestInput::messages(),
+            'quantity_available.required_without' => 'Enter how much you harvested.',
+        ];
     }
 
     /**

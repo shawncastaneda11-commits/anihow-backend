@@ -52,6 +52,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   bool _breakdown = false;
   String? _formError;
   bool _showReasonError = false;
+  bool _showQuantityError = false;
   DateTime _harvestDate = DateTime.now();
   final _minOrder = TextEditingController(text: '1');
   final _orderStep = TextEditingController(text: '1');
@@ -246,19 +247,27 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   }
 
   Future<void> _save({bool confirmed = false}) async {
-    if (_harvestReasonMissing()) {
-      setState(() => _showReasonError = true);
+    // Every problem shows in red under its field, and the first one is
+    // repeated above Save so the seller knows why nothing was saved.
+    final crops = await _cropTypes;
+    if (!mounted) {
       return;
     }
-    if (_cropTypeId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppStrings.read(context).chooseCrop)),
-      );
-      return;
-    }
+    final s = AppStrings.read(context);
+    final reasonMissing = _harvestReasonMissing();
+    final quantityMissing = _quantityMissing();
     final rule = _orderRuleMessage();
-    if (rule != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(rule)));
+    final problem = _cropTypeId == null
+        ? s.chooseCrop
+        : rule ??
+              (quantityMissing ? _quantityMessage(s, crops) : null) ??
+              (reasonMissing ? s.chooseReason : null);
+    setState(() {
+      _showReasonError = reasonMissing;
+      _showQuantityError = quantityMissing;
+      _formError = problem;
+    });
+    if (problem != null) {
       return;
     }
     final listing = widget.listing;
@@ -346,6 +355,26 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
         setState(() => _busy = false);
       }
     }
+  }
+
+  /// The quantity this form needs before saving: the harvest for a new
+  /// listing, the expected amount for an upcoming one, or the actual harvest
+  /// when an upcoming listing has opened.
+  bool _quantityMissing() {
+    final listing = widget.listing;
+    if (listing != null) {
+      return listing.needsActualHarvest && _quantity.text.trim().isEmpty;
+    }
+    final text = _isUpcoming ? _quantity.text : _harvestedQty.text;
+    return (double.tryParse(text.trim()) ?? 0) <= 0;
+  }
+
+  String _quantityMessage(AppStrings s, List<CategoryItem> crops) {
+    if (widget.listing == null && !_isUpcoming) {
+      final crop = _selectedCrop(crops);
+      return s.enterHarvestedQuantity(valueAdded: crop?.isValueAdded == true);
+    }
+    return s.enterQuantity;
   }
 
   bool _harvestReasonMissing() {
@@ -488,7 +517,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                   key: const ValueKey('listing-min-order'),
                   controller: _minOrder,
                   keyboardType: keyboard,
-                  onChanged: (_) => setState(() {}),
+                  onChanged: (_) => setState(() => _formError = null),
                 ),
               ),
             ),
@@ -500,7 +529,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                   key: const ValueKey('listing-order-step'),
                   controller: _orderStep,
                   keyboardType: keyboard,
-                  onChanged: (_) => setState(() {}),
+                  onChanged: (_) => setState(() => _formError = null),
                 ),
               ),
             ),
@@ -526,7 +555,14 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
               ),
           ],
         ),
-        if (min != null && step != null && min > 0 && step > 0) ...[
+        if (_orderRuleMessage() case final rule?) ...[
+          const SizedBox(height: 8),
+          Text(
+            rule,
+            key: const ValueKey('listing-order-rule-error'),
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        ] else if (min != null && step != null && min > 0 && step > 0) ...[
           const SizedBox(height: 8),
           Text(
             key: const ValueKey('listing-order-preview'),
@@ -1015,7 +1051,11 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                                 costs: _costs,
                                 breakdownOpen: _breakdown,
                                 showReasonError: _showReasonError,
-                                onChanged: () => setState(_syncCost),
+                                showQuantityError: _showQuantityError,
+                                onChanged: () => setState(() {
+                                  _syncCost();
+                                  _formError = null;
+                                }),
                                 onPickDate: () => _pickDate(
                                   current: _harvestDate,
                                   firstDate: DateTime.now().subtract(
@@ -1050,6 +1090,17 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                                       ),
                                 ),
                               ),
+                              if (_showQuantityError && _quantityMissing())
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    s.enterQuantity,
+                                    key: const ValueKey('listing-quantity-error'),
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.error,
+                                    ),
+                                  ),
+                                ),
                               Padding(
                                 padding: const EdgeInsets.only(top: 8),
                                 child: Text(s.expectedQuantityHint),
@@ -1073,6 +1124,17 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                                       ),
                                 ),
                               ),
+                              if (_showQuantityError && _quantityMissing())
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    s.enterQuantity,
+                                    key: const ValueKey('listing-quantity-error'),
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.error,
+                                    ),
+                                  ),
+                                ),
                               if (widget.listing!.needsActualHarvest)
                                 Align(
                                   alignment: Alignment.centerLeft,

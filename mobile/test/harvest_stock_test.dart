@@ -161,13 +161,34 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.byKey(const ValueKey('break-down-costs')));
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('break-down-costs')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('break-down-costs')));
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('cost-seeds')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.enterText(find.byKey(const ValueKey('cost-seeds')), '100');
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('cost-fertilizer')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.enterText(find.byKey(const ValueKey('cost-fertilizer')), '50');
     await tester.pump();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('production-cost')),
+      -200,
+      scrollable: find.byType(Scrollable).first,
+    );
 
     final cost = tester.widget<TextField>(
       find.byKey(const ValueKey('production-cost')),
@@ -240,6 +261,11 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('listing-quantity')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
 
     final quantity = tester.widget<TextField>(
       find.byKey(const ValueKey('listing-quantity')),

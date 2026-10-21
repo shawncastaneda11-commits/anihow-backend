@@ -91,10 +91,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       _app(
-        ListingFormScreen(
-          listing: listing,
-          cropTypes: Future.value(crops),
-        ),
+        ListingFormScreen(listing: listing, cropTypes: Future.value(crops)),
         user: user,
         api: api,
       ),
@@ -165,7 +162,6 @@ void main() {
       list,
       const Offset(0, -240),
     );
-    await tester.drag(list, const Offset(0, -180));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(OutlinedButton, 'Not set').first);
     await tester.pumpAndSettle();
@@ -262,7 +258,10 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.enterText(find.byKey(const ValueKey('harvest-quantity')), '10');
+    await tester.enterText(
+      find.byKey(const ValueKey('harvest-quantity')),
+      '10',
+    );
     await tester.pump();
     await tester.tap(find.text('Save listing'));
     await tester.pumpAndSettle();
@@ -288,7 +287,10 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.enterText(find.byKey(const ValueKey('harvest-quantity')), '10');
+    await tester.enterText(
+      find.byKey(const ValueKey('harvest-quantity')),
+      '10',
+    );
     await tester.pump();
     await tester.tap(find.text('Save listing'));
     await tester.pumpAndSettle();
@@ -304,39 +306,57 @@ void main() {
     );
   }
 
-  testWidgets('a half bundle minimum shows the rule under the fields, not a pop-up', (tester) async {
-    final api = _RecordingApi();
-    await pumpForm(tester, api: api, user: _seller(certified: false), crops: const [_bundleCrop]);
+  testWidgets(
+    'a half bundle minimum shows the rule under the fields, not a pop-up',
+    (tester) async {
+      final api = _RecordingApi();
+      await pumpForm(
+        tester,
+        api: api,
+        user: _seller(certified: false),
+        crops: const [_bundleCrop],
+      );
 
-    await tester.enterText(find.byType(TextField).first, 'Pechay, sariwa');
-    await tester.tap(find.byType(DropdownButtonFormField<int>));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Pechay').last);
-    await tester.pumpAndSettle();
-    await scrollTo(tester, const ValueKey('listing-min-order'));
-    await tester.enterText(find.byKey(const ValueKey('listing-min-order')), '0.5');
-    await tester.pump();
+      await tester.enterText(find.byType(TextField).first, 'Pechay, sariwa');
+      await tester.tap(find.byType(DropdownButtonFormField<int>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Pechay').last);
+      await tester.pumpAndSettle();
+      await scrollTo(tester, const ValueKey('listing-min-order'));
+      await tester.enterText(
+        find.byKey(const ValueKey('listing-min-order')),
+        '0.5',
+      );
+      await tester.pump();
 
-    final rule = find.byKey(const ValueKey('listing-order-rule-error'));
-    expect(rule, findsOneWidget);
-    expect(find.byKey(const ValueKey('listing-order-preview')), findsNothing);
-    final ruleText = tester.widget<Text>(rule).data;
-    expect(ruleText, contains('1'));
+      final rule = find.byKey(const ValueKey('listing-order-rule-error'));
+      expect(rule, findsOneWidget);
+      expect(find.byKey(const ValueKey('listing-order-preview')), findsNothing);
+      final ruleText = tester.widget<Text>(rule).data;
+      expect(ruleText, contains('1'));
 
-    await scrollTo(tester, const ValueKey('harvest-quantity'));
-    await tester.enterText(find.byKey(const ValueKey('harvest-quantity')), '10');
-    await tester.tap(find.text('Save listing'));
-    await tester.pumpAndSettle();
+      await scrollTo(tester, const ValueKey('harvest-quantity'));
+      await tester.enterText(
+        find.byKey(const ValueKey('harvest-quantity')),
+        '10',
+      );
+      await tester.tap(find.text('Save listing'));
+      await tester.pumpAndSettle();
 
-    expect(api.created, isNull);
-    expect(find.byType(SnackBar), findsNothing);
-    expect(
-      tester.widget<Text>(find.byKey(const ValueKey('listing-form-error'))).data,
-      ruleText,
-    );
-  });
+      expect(api.created, isNull);
+      expect(find.byType(SnackBar), findsNothing);
+      expect(
+        tester
+            .widget<Text>(find.byKey(const ValueKey('listing-form-error')))
+            .data,
+        ruleText,
+      );
+    },
+  );
 
-  testWidgets('saving without a harvested quantity says so under the field', (tester) async {
+  testWidgets('saving without a harvested quantity says so under the field', (
+    tester,
+  ) async {
     final api = _RecordingApi();
     await pumpForm(tester, api: api, user: _seller(certified: false));
 
@@ -352,6 +372,9 @@ void main() {
     expect(find.byType(SnackBar), findsNothing);
     expect(find.text('Enter how much you harvested.'), findsWidgets);
     await scrollTo(tester, const ValueKey('harvest-quantity'));
-    expect(find.byKey(const ValueKey('harvest-quantity-error')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('harvest-quantity-error')),
+      findsOneWidget,
+    );
   });
 }

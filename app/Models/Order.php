@@ -216,6 +216,38 @@ class Order extends Model
         return $this->hasOne(StallMessage::class, 'order_id')->latestOfMany();
     }
 
+    public function chatClearedColumnFor(User $user): ?string
+    {
+        if ($this->buyer_id !== null && (int) $this->buyer_id === (int) $user->id) {
+            return 'buyer_chat_cleared_through_message_id';
+        }
+
+        if ((int) $this->farmer_seller_id === (int) $user->id) {
+            return 'farmer_seller_chat_cleared_through_message_id';
+        }
+
+        return null;
+    }
+
+    /**
+     * True once this person removed the chat row and nothing newer was sent.
+     */
+    public function chatRemovedFor(User $user): bool
+    {
+        $column = $this->chatClearedColumnFor($user);
+        $clearedThrough = $column === null ? null : $this->getAttribute($column);
+
+        if ($clearedThrough === null) {
+            return false;
+        }
+
+        $latestId = $this->relationLoaded('latestChatMessage')
+            ? $this->latestChatMessage?->id
+            : StallMessage::query()->where('order_id', $this->id)->max('id');
+
+        return (int) $latestId <= (int) $clearedThrough;
+    }
+
     public function isWalkIn(): bool
     {
         return $this->source === OrderSource::WalkIn;

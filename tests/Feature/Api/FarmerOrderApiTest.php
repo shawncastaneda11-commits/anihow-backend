@@ -52,6 +52,28 @@ class FarmerOrderApiTest extends TestCase
         ]);
     }
 
+    public function test_completing_with_less_cash_than_the_total_is_rejected(): void
+    {
+        $farmer = $this->farmer();
+        $listing = $this->listingFor($farmer, ['price_per_unit' => 50, 'quantity_available' => 10]);
+        $order = $this->placeOrder($this->buyer(), $listing, 2);
+
+        $this->asUser($farmer)->patchJson("/api/farmer/orders/{$order->id}/confirm")->assertOk();
+        $this->asUser($farmer)->patchJson("/api/farmer/orders/{$order->id}/ready")->assertOk();
+
+        $this->asUser($farmer)
+            ->patchJson("/api/farmer/orders/{$order->id}/complete", ['amount_received' => 90])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['amount_received' => 'The amount received is less than the order total of ₱100.00.']);
+
+        $this->assertSame(OrderStatus::Ready, $order->fresh()->status);
+
+        $this->asUser($farmer)
+            ->patchJson("/api/farmer/orders/{$order->id}/complete", ['amount_received' => 120])
+            ->assertOk()
+            ->assertJsonPath('data.amount_received', 120);
+    }
+
     public function test_completing_without_amount_received_is_rejected(): void
     {
         $farmer = $this->farmer();

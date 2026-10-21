@@ -23,7 +23,7 @@ class PaymentProofFactory extends Factory
             'buyer_id' => User::factory(),
             'farmer_seller_id' => User::factory(),
             'seller_payment_qr_id' => null,
-            'reference_number' => strtoupper(fake()->bothify('??????####')),
+            'reference_number' => fake()->numerify('####'),
             'amount' => 30,
             'screenshot_path' => null,
             'status' => PaymentProofStatus::Pending,

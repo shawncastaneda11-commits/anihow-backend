@@ -96,7 +96,7 @@ class ReservationPaymentTest extends TestCase
 
         $this->reserve($buyer, $listing, 2, 'proof')->assertOk();
 
-        $this->sendProof($buyer, $reservation, $qr, 'AB12CD')->assertOk();
+        $this->sendProof($buyer, $reservation, $qr, '8901')->assertOk();
         $reservation->refresh();
         $this->assertSame(OrderPaymentStatus::PaymentSent, $reservation->payment_status);
         $this->assertSame(1, StallMessage::query()->where('body', 'like', '%(reservation)%')->count());
@@ -111,13 +111,13 @@ class ReservationPaymentTest extends TestCase
 
         $late = $this->awaiting(hours: 24)[4];
         $late->forceFill(['payment_due_at' => now()->subMinute()])->save();
-        $this->sendProof($late->buyer, $late, SellerPaymentQr::query()->findOrFail($late->payment_qr_ids[0]), 'ZZ99YY')
+        $this->sendProof($late->buyer, $late, SellerPaymentQr::query()->findOrFail($late->payment_qr_ids[0]), '9988')
             ->assertUnprocessable()
             ->assertJsonPath('errors.reservation.0', 'The payment time has passed.');
 
         $order = $this->placeOnlineOrder($farmer, $buyer);
         $this->asUser($buyer)->post("/api/buyer/orders/{$order->id}/payment-proofs", [
-            'reference_number' => 'ab12cd',
+            'reference_number' => '89 01',
             'amount' => 30,
             'qr_id' => $qr->id,
         ])->assertUnprocessable()
@@ -127,7 +127,7 @@ class ReservationPaymentTest extends TestCase
     public function test_accept_marks_paid_and_converts_once_the_window_is_open(): void
     {
         [$farmer, $listing, $buyer, $qr, $reservation] = $this->awaiting(from: now()->addHours(2));
-        $this->sendProof($buyer, $reservation, $qr, 'PAID01')->assertOk();
+        $this->sendProof($buyer, $reservation, $qr, '1001')->assertOk();
         $proof = PaymentProof::query()->where('reservation_id', $reservation->id)->firstOrFail();
 
         $this->asUser($farmer)->patchJson("/api/farmer/reservations/{$reservation->id}/payment-proofs/{$proof->id}", [
@@ -145,7 +145,7 @@ class ReservationPaymentTest extends TestCase
         $sent = Reservation::query()->findOrFail(
             $this->reserve($secondBuyer, $waiting, flow: 'proof')->assertCreated()->json('data.id'),
         );
-        $this->sendProof($secondBuyer, $sent, $qr, 'WAIT01')->assertOk();
+        $this->sendProof($secondBuyer, $sent, $qr, '1002')->assertOk();
         $waiting->forceFill(['available_from' => now()])->save();
 
         $unpaid = $this->upcoming($farmer, from: now()->addDays(2));
@@ -209,7 +209,7 @@ class ReservationPaymentTest extends TestCase
     public function test_accepting_after_opening_converts_immediately_and_reject_extends_the_due_time(): void
     {
         [$farmer, $listing, $buyer, $qr, $reservation] = $this->awaiting(from: now()->addHours(2));
-        $this->sendProof($buyer, $reservation, $qr, 'OPEN01')->assertOk();
+        $this->sendProof($buyer, $reservation, $qr, '1003')->assertOk();
         $proof = PaymentProof::query()->where('reservation_id', $reservation->id)->firstOrFail();
 
         Carbon::setTestNow($listing->available_from->copy());
@@ -222,7 +222,7 @@ class ReservationPaymentTest extends TestCase
         $this->assertSame(OrderPaymentStatus::Paid, Order::query()->where('reservation_id', $reservation->id)->value('payment_status'));
 
         [$farmer, $listing, $buyer, $qr, $reservation] = $this->awaiting(from: now()->addDays(3));
-        $this->sendProof($buyer, $reservation, $qr, 'NOPE01')->assertOk();
+        $this->sendProof($buyer, $reservation, $qr, '1004')->assertOk();
         $proof = PaymentProof::query()->where('reservation_id', $reservation->id)->firstOrFail();
         $reservation->forceFill(['payment_due_at' => now()->addMinutes(10), 'payment_reminded_at' => now()])->save();
 
@@ -265,7 +265,7 @@ class ReservationPaymentTest extends TestCase
         $this->reserve($next, $listing, 5, 'proof')->assertCreated();
 
         $pending = $this->awaiting()[4];
-        $this->sendProof($pending->buyer, $pending, SellerPaymentQr::query()->findOrFail($pending->payment_qr_ids[0]), 'SLOW01')->assertOk();
+        $this->sendProof($pending->buyer, $pending, SellerPaymentQr::query()->findOrFail($pending->payment_qr_ids[0]), '1005')->assertOk();
         PaymentProof::query()->where('reservation_id', $pending->id)->update(['created_at' => now()->subHours(13)]);
 
         $this->artisan('payments:upkeep')->assertSuccessful();
@@ -294,7 +294,7 @@ class ReservationPaymentTest extends TestCase
             ->assertJsonPath('data.refund_reference', 'RF11AA');
 
         [$farmer, $listing, $buyer, $qr, $reservation] = $this->awaiting();
-        $this->sendProof($buyer, $reservation, $qr, 'SENT99')->assertOk();
+        $this->sendProof($buyer, $reservation, $qr, '1006')->assertOk();
         $this->asUser($farmer)->patchJson("/api/farmer/listings/{$listing->id}/reservations/{$reservation->id}", [
             'note' => 'Crop failed',
         ])->assertOk();
@@ -326,7 +326,7 @@ class ReservationPaymentTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonPath('errors.qr.0', 'Finish or cancel your reservations first.');
 
-        $this->sendProof($buyer, $reservation, $qr, 'HOLD01')->assertOk();
+        $this->sendProof($buyer, $reservation, $qr, '1007')->assertOk();
 
         $this->asUser($buyer)->postJson('/api/auth/user/deletion-request')
             ->assertUnprocessable()
@@ -340,11 +340,11 @@ class ReservationPaymentTest extends TestCase
     public function test_the_seller_payment_list_qr_access_and_export_include_reservations(): void
     {
         [$farmer, $listing, $buyer, $qr, $reservation] = $this->awaiting();
-        $this->sendProof($buyer, $reservation, $qr, 'LIST01')->assertOk();
+        $this->sendProof($buyer, $reservation, $qr, '1008')->assertOk();
 
         $order = $this->placeOnlineOrder($farmer, $this->buyer());
         $this->asUser(User::query()->findOrFail($order->buyer_id))->post("/api/buyer/orders/{$order->id}/payment-proofs", [
-            'reference_number' => 'LIST02',
+            'reference_number' => '1009',
             'amount' => 30,
             'qr_id' => $qr->id,
         ])->assertOk();
@@ -369,7 +369,7 @@ class ReservationPaymentTest extends TestCase
         ]);
         $kinds = collect($list->json('data'))->pluck('kind')->all();
         $this->assertSame(['order', 'reservation'], $kinds);
-        $this->assertSame('LIST02', $list->json('data.0.reference'));
+        $this->assertSame('1009', $list->json('data.0.reference'));
         $this->assertSame($listing->title, $list->json('data.1.title'));
         $this->assertSame($reservation->id, $list->json('data.1.reservation_id'));
 
@@ -386,7 +386,7 @@ class ReservationPaymentTest extends TestCase
 
         $export = app(ExportOwnDataAction::class)->handle($buyer);
         $row = collect($export['payment_proofs'])->firstWhere('reservation_id', $reservation->id);
-        $this->assertSame('LIST01', $row['reference_number']);
+        $this->assertSame('1008', $row['reference_number']);
 
         $admin = User::factory()->create();
         $admin->syncRoles(Role::SuperAdmin);
@@ -418,7 +418,7 @@ class ReservationPaymentTest extends TestCase
     private function paidReservation(float $quantity = 1): array
     {
         [$farmer, $listing, $buyer, $qr, $reservation] = $this->awaiting(quantity: $quantity);
-        $this->sendProof($buyer, $reservation, $qr, strtoupper(fake()->bothify('??????')))->assertOk();
+        $this->sendProof($buyer, $reservation, $qr, fake()->numerify('####'))->assertOk();
         $proof = PaymentProof::query()->where('reservation_id', $reservation->id)->firstOrFail();
         $this->asUser($farmer)->patchJson("/api/farmer/reservations/{$reservation->id}/payment-proofs/{$proof->id}", [
             'decision' => 'accept',

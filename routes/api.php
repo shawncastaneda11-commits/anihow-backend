@@ -146,6 +146,8 @@ Route::middleware(['auth:sanctum', 'password.changed'])->group(function (): void
         ->name('orders.messages.index');
     Route::post('orders/{order}/messages', [OrderMessageController::class, 'store'])
         ->name('orders.messages.store');
+    Route::delete('orders/{order}/chat', [OrderMessageController::class, 'destroy'])
+        ->name('orders.chat.destroy');
 
     // A buyer can message a stall before, during, or after an order.
     Route::get('stall-chats', [StallConversationController::class, 'index'])

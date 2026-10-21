@@ -31,8 +31,9 @@ use Illuminate\Validation\ValidationException;
  *               Prices and tawad amounts freeze here.
  *   Cancelled   before Confirmed, quantity_held decreases and nothing else.
  *               at or after Confirmed, quantity_available is restored.
- *   Completed   amount_received is required. This is the cash counted at
- *               handover; the system records it and never processes it.
+ *   Completed   amount_received is required and may not be below the order
+ *               total. This is the cash counted at handover; the system
+ *               records it and never processes it.
  *
  * A no-show is a cancellation with reason no_show, not a sixth status.
  */
@@ -155,6 +156,8 @@ class OrderStateMachine
     {
         $this->assertPaymentConfirmed($order);
 
+        $typedBySeller = $amountReceived !== null;
+
         if ($amountReceived === null && $order->isPaymentTracked() && $order->payment_status === OrderPaymentStatus::Paid) {
             $accepted = $order->proofs()
                 ->where('status', PaymentProofStatus::Accepted)
@@ -172,6 +175,14 @@ class OrderStateMachine
         if ($amountReceived < 0) {
             throw ValidationException::withMessages([
                 'amount_received' => 'Amount received cannot be negative.',
+            ]);
+        }
+
+        // Compared in centavos so 99.995-style float noise never blocks a
+        // full payment.
+        if ($typedBySeller && (int) round($amountReceived * 100) < (int) round((float) $order->total * 100)) {
+            throw ValidationException::withMessages([
+                'amount_received' => 'The amount received is less than the order total of ₱'.number_format((float) $order->total, 2).'.',
             ]);
         }
 

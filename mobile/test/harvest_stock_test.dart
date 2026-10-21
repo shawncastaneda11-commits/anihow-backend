@@ -8,6 +8,7 @@ import 'package:anihow/services/api_client.dart';
 import 'package:anihow/state/auth_controller.dart';
 import 'package:anihow/state/preferences_controller.dart';
 import 'package:anihow/theme/anihow_theme.dart';
+import 'package:anihow/widgets/primary_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -17,6 +18,22 @@ class _ScriptedApi extends ApiClient {
 
   Map<String, dynamic>? lastUpdate;
   final List<AppNotification> notes;
+  ListingItem? afterStockChange;
+
+  @override
+  Future<ListingItem> removeStock(
+    int id, {
+    required String quantity,
+    required String reason,
+    String? note,
+  }) async => afterStockChange!;
+
+  @override
+  Future<ListingItem> addStock(int id, Map<String, dynamic> body) async =>
+      afterStockChange!;
+
+  @override
+  Future<ListingItem> farmerListing(int id) async => afterStockChange!;
 
   _ScriptedApi.withNotes(this.notes) : super(onUnauthorized: () {});
 
@@ -279,6 +296,70 @@ void main() {
 
     expect(api.lastUpdate, isNotNull);
     expect(api.lastUpdate!.containsKey('quantity_available'), isFalse);
+  });
+
+  testWidgets('removing and adding stock updates the number and says by how much', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    const listing = ListingItem(
+      id: 9,
+      title: 'Pechay',
+      pricePerUnit: '40',
+      quantityAvailable: '11',
+      unit: 'kg',
+    );
+    final api = _ScriptedApi()
+      ..afterStockChange = const ListingItem(
+        id: 9,
+        title: 'Pechay',
+        pricePerUnit: '40',
+        quantityAvailable: '9',
+        unit: 'kg',
+      );
+    await tester.pumpWidget(
+      _app(
+        ListingFormScreen(listing: listing, cropTypes: Future.value(const [])),
+        api: api,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('remove-stock')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('remove-stock')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('remove-quantity')), '2');
+    await tester.tap(find.widgetWithText(PrimaryButton, 'Remove stock'));
+    await tester.pumpAndSettle();
+
+    String quantity() => tester
+        .widget<TextField>(find.byKey(const ValueKey('listing-quantity')))
+        .controller!
+        .text;
+    expect(quantity(), '9');
+    expect(find.text('−2 kg removed · now 9 kg'), findsOneWidget);
+
+    api.afterStockChange = const ListingItem(
+      id: 9,
+      title: 'Pechay',
+      pricePerUnit: '40',
+      quantityAvailable: '19',
+      unit: 'kg',
+    );
+    await tester.tap(find.byKey(const ValueKey('add-stock')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('harvest-quantity')), '10');
+    await tester.tap(find.widgetWithText(PrimaryButton, 'Add stock'));
+    await tester.pumpAndSettle();
+
+    expect(quantity(), '19');
+    expect(find.text('+10 kg added · now 19 kg'), findsOneWidget);
   });
 
   testWidgets('remove stock shows how much is held by orders', (tester) async {

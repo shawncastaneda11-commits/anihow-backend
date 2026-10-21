@@ -829,6 +829,8 @@ class ApiClient {
   Future<void> removeStallChat(int conversationId) =>
       _delete('/stall-chats/$conversationId');
 
+  Future<void> removeOrderChat(int orderId) => _delete('/orders/$orderId/chat');
+
   Future<StallChat> openStallChat(int sellerId) async {
     final response = await _post('/stall-chats', {
       'farmer_seller_id': sellerId,

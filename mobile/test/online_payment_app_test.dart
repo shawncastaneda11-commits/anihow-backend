@@ -350,13 +350,28 @@ void main() {
     await tester.ensureVisible(find.byKey(const ValueKey('pay-submit')));
     await tester.tap(find.byKey(const ValueKey('pay-submit')));
     await tester.pump();
-    expect(find.text('Enter the reference number.'), findsOneWidget);
+    const fourDigits = 'Enter the last 4 digits of the reference number.';
+    expect(find.text(fourDigits), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
 
     await tester.enterText(find.byKey(const ValueKey('pay-reference')), 'AB12CD');
+    await tester.pump();
+    expect(find.text(fourDigits), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('pay-submit')));
+    await tester.pump();
+    expect(find.text(fourDigits), findsOneWidget);
+    expect(api.submittedReference, isNull);
+
+    await tester.enterText(find.byKey(const ValueKey('pay-reference')), '5012 345 678 901');
+    expect(
+      tester.widget<TextField>(find.byKey(const ValueKey('pay-reference'))).controller?.text,
+      '5012',
+    );
+    await tester.enterText(find.byKey(const ValueKey('pay-reference')), '8901');
     await tester.tap(find.byKey(const ValueKey('pay-submit')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
-    expect(api.submittedReference, 'AB12CD');
+    expect(api.submittedReference, '8901');
     expect(find.text('Payment sent'), findsWidgets);
     expect(find.textContaining('Waiting for Nena Stall to check it'), findsOneWidget);
     expect(find.byKey(const ValueKey('pay-qr')), findsNothing);
@@ -526,6 +541,12 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('refund-submit')));
     await tester.pump();
     expect(find.text('Enter the refund reference.'), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
+    await tester.enterText(find.byKey(const ValueKey('refund-reference')), 'RF9');
+    await tester.tap(find.byKey(const ValueKey('refund-submit')));
+    await tester.pump();
+    expect(find.text('Enter 6 to 40 letters or digits from the refund receipt.'), findsOneWidget);
+    expect(api.refundReference, isNull);
     await tester.enterText(find.byKey(const ValueKey('refund-reference')), 'RF9901');
     await tester.tap(find.byKey(const ValueKey('refund-submit')));
     await tester.pump();
@@ -694,7 +715,7 @@ void main() {
     expect(find.textContaining('To check (1)'), findsOneWidget);
     expect(find.text('Maria'), findsOneWidget);
     expect(find.text('Check now'), findsOneWidget);
-    expect(find.text('GCash · ref AB12CD34'), findsOneWidget);
+    expect(find.text('GCash · ref ending CD34'), findsOneWidget);
     expect(find.textContaining('Sent'), findsWidgets);
 
     await tester.tap(find.text('Confirmed'));

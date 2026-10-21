@@ -1581,6 +1581,7 @@ class _AmountReceivedDialog extends StatefulWidget {
 
 class _AmountReceivedDialogState extends State<_AmountReceivedDialog> {
   late final TextEditingController _controller;
+  String? _error;
 
   @override
   void initState() {
@@ -1614,8 +1615,15 @@ class _AmountReceivedDialogState extends State<_AmountReceivedDialog> {
           inputFormatters: [
             FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
           ],
+          onChanged: (_) {
+            if (_error != null) {
+              setState(() => _error = null);
+            }
+          },
           decoration: InputDecoration(
             hintText: s.orderTotalHint(AniHowMoney.peso(widget.order.total)),
+            errorText: _error,
+            errorMaxLines: 3,
           ),
         ),
       ),
@@ -1627,9 +1635,9 @@ class _AmountReceivedDialogState extends State<_AmountReceivedDialog> {
         TextButton(
           onPressed: () {
             final amount = _controller.text.trim();
-            if (amount.isEmpty) {
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(SnackBar(content: Text(s.enterCashReceived)));
+            final problem = _amountProblem(s, amount);
+            if (problem != null) {
+              setState(() => _error = problem);
               return;
             }
             Navigator.pop(context, amount);
@@ -1638,6 +1646,20 @@ class _AmountReceivedDialogState extends State<_AmountReceivedDialog> {
         ),
       ],
     );
+  }
+
+  /// Blank, unreadable, or below the order total. More than the total is fine:
+  /// the seller may have been handed a rounder amount.
+  String? _amountProblem(AppStrings s, String amount) {
+    final value = double.tryParse(amount);
+    if (amount.isEmpty || value == null) {
+      return s.enterCashReceived;
+    }
+    final total = double.tryParse(widget.order.total) ?? 0;
+    if ((value * 100).round() < (total * 100).round()) {
+      return s.amountBelowTotal(AniHowMoney.peso(widget.order.total));
+    }
+    return null;
   }
 }
 

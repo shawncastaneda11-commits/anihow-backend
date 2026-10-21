@@ -309,7 +309,7 @@ class _PaymentRow extends StatelessWidget {
                       ),
                     if (wallet.isNotEmpty && reference != null && reference.isNotEmpty) ...[
                       const SizedBox(height: 2),
-                      Text(s.walletRef(wallet, reference), style: muted),
+                      Text(s.walletRef(wallet, lastFourOf(reference)), style: muted),
                     ],
                     const SizedBox(height: 8),
                     Wrap(

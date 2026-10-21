@@ -44,8 +44,8 @@ extension HelpTopics on AppStrings {
         'Magbayad sa QR ng seller gamit ang GCash, Maya o app ng bangko mo.',
       ),
       t(
-        'Enter the reference number (a screenshot is optional) and tap Submit.',
-        'Ilagay ang reference number (puwedeng walang screenshot) at pindutin ang I-submit.',
+        'Enter the last 4 digits of the reference number (a screenshot is optional) and tap Submit.',
+        'Ilagay ang huling 4 na numero ng reference number (puwedeng walang screenshot) at pindutin ang I-submit.',
       ),
       t(
         'The seller confirms the payment from their payments list.',

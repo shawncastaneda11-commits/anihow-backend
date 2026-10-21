@@ -62,6 +62,7 @@ enum _ChatFilter { all, needsReply, orders, questions }
 class _OrderChatsScreenState extends State<OrderChatsScreen> {
   late Future<_ChatInbox> _future;
   final _hiddenLatestAt = <int, String?>{};
+  final _hiddenOrderLatestAt = <int, String?>{};
   final _search = TextEditingController();
   _ChatFilter _filter = _ChatFilter.all;
   Timer? _refresh;
@@ -159,6 +160,39 @@ class _OrderChatsScreenState extends State<OrderChatsScreen> {
     }
   }
 
+  Future<void> _hideOrderChat(OrderRecord order) async {
+    setState(() => _hiddenOrderLatestAt[order.id] = order.latestMessageAt);
+    try {
+      await context.read<AuthController>().api.removeOrderChat(order.id);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppStrings.of(context).chatRemoved)),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _hiddenOrderLatestAt.remove(order.id));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
+  /// Removed here a moment ago and nothing newer has arrived since.
+  bool _isOrderHidden(OrderRecord order) {
+    if (!_hiddenOrderLatestAt.containsKey(order.id)) {
+      return false;
+    }
+    final removedAt = _hiddenOrderLatestAt[order.id];
+    final current = order.latestMessageAt;
+    if (current == null || current.isEmpty) {
+      return true;
+    }
+    return removedAt != null && current.compareTo(removedAt) <= 0;
+  }
+
   Future<void> _reload() async {
     final future = _load();
     setState(() {
@@ -168,6 +202,9 @@ class _OrderChatsScreenState extends State<OrderChatsScreen> {
   }
 
   bool _showOrder(OrderRecord order) {
+    if (order.chatRemoved || _isOrderHidden(order)) {
+      return false;
+    }
     if (order.latestMessageAt != null || order.latestMessageBody != null) {
       return true;
     }
@@ -249,6 +286,7 @@ class _OrderChatsScreenState extends State<OrderChatsScreen> {
       onAskRemove: (title) =>
           confirmRemoveStallChat(context, title),
       onRemove: _hideAndDelete,
+      onRemoveOrder: _hideOrderChat,
     );
   }
 
@@ -701,6 +739,7 @@ class _ChatRow extends StatelessWidget {
     required this.onOpenStall,
     required this.onAskRemove,
     required this.onRemove,
+    required this.onRemoveOrder,
   });
 
   final _ChatEntry entry;
@@ -710,21 +749,30 @@ class _ChatRow extends StatelessWidget {
   final Future<void> Function(StallChat chat) onOpenStall;
   final Future<bool> Function(String title) onAskRemove;
   final Future<void> Function(StallChat chat) onRemove;
+  final Future<void> Function(OrderRecord order) onRemoveOrder;
 
   @override
   Widget build(BuildContext context) {
     final chat = entry.chat;
-    if (chat == null) {
-      return _ThreadBody(
-        entry: entry,
-        forSeller: forSeller,
-        myId: myId,
-        onTap: () => onOpenOrder(entry.order!),
-      );
+    final order = entry.order;
+    final title = chat != null
+        ? chat.title(viewingAsSeller: forSeller)
+        : order!.chatPeerTitle(viewingAsSeller: forSeller);
+    final keyName = chat != null ? 'stall-chat-${chat.id}' : 'order-chat-${order!.id}';
+
+    Future<void> askThenRemove() async {
+      if (!await onAskRemove(title)) {
+        return;
+      }
+      if (chat != null) {
+        await onRemove(chat);
+      } else {
+        await onRemoveOrder(order!);
+      }
     }
-    final title = chat.title(viewingAsSeller: forSeller);
+
     return Dismissible(
-      key: ValueKey('stall-chat-${chat.id}'),
+      key: ValueKey(keyName),
       direction: DismissDirection.endToStart,
       background: ColoredBox(
         key: const Key('remove-chat-swipe'),
@@ -738,18 +786,16 @@ class _ChatRow extends StatelessWidget {
         ),
       ),
       confirmDismiss: (_) async {
-        if (await onAskRemove(title)) {
-          await onRemove(chat);
-        }
+        await askThenRemove();
         return false;
       },
       child: _ThreadBody(
         entry: entry,
         forSeller: forSeller,
         myId: myId,
-        onTap: () => onOpenStall(chat),
+        onTap: () => chat != null ? onOpenStall(chat) : onOpenOrder(order!),
         menu: PopupMenuButton<String>(
-          key: ValueKey('stall-chat-menu-${chat.id}'),
+          key: ValueKey('$keyName-menu'),
           tooltip: AppStrings.of(context).removeChat,
           icon: const Icon(Icons.more_vert),
           style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
@@ -761,11 +807,8 @@ class _ChatRow extends StatelessWidget {
             ),
           ],
           onSelected: (value) async {
-            if (value != 'remove') {
-              return;
-            }
-            if (await onAskRemove(title)) {
-              await onRemove(chat);
+            if (value == 'remove') {
+              await askThenRemove();
             }
           },
         ),

@@ -53,6 +53,9 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   String? _formError;
   bool _showReasonError = false;
   bool _showQuantityError = false;
+
+  /// What the last Add or Remove stock changed, shown under the quantity.
+  double? _stockChange;
   DateTime _harvestDate = DateTime.now();
   final _minOrder = TextEditingController(text: '1');
   final _orderStep = TextEditingController(text: '1');
@@ -678,6 +681,24 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     }
   }
 
+  /// After a stock sheet saves: fetch the listing again, put the new amount
+  /// in the quantity box, and say how much it moved.
+  Future<void> _afterStockChange(bool changed) async {
+    if (!changed || !mounted) {
+      return;
+    }
+    final before = double.tryParse(_listing?.quantityAvailable ?? '') ?? 0;
+    await _reloadListing();
+    final after = double.tryParse(_listing?.quantityAvailable ?? '');
+    if (!mounted || after == null) {
+      return;
+    }
+    setState(() {
+      _quantity.text = _listing!.quantityAvailable;
+      _stockChange = after - before;
+    });
+  }
+
   Future<void> _reloadListing() async {
     final listing = _listing;
     if (listing == null) {
@@ -1201,13 +1222,19 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                                 child: TextField(
                                   key: const ValueKey('listing-quantity'),
                                   controller: _quantity,
-                                  readOnly: !widget.listing!.needsActualHarvest,
+                                  readOnly: !_listing!.needsActualHarvest,
                                   keyboardType:
                                       const TextInputType.numberWithOptions(
                                         decimal: true,
                                       ),
                                 ),
                               ),
+                              if (_stockChange != null && _stockChange != 0)
+                                _StockChangeNote(
+                                  change: _stockChange!,
+                                  total: _listing!.quantityAvailable,
+                                  unit: _listing!.unit ?? '',
+                                ),
                               if (_showQuantityError && _quantityMissing())
                                 Padding(
                                   padding: const EdgeInsets.only(top: 4),
@@ -1223,31 +1250,36 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                                     ),
                                   ),
                                 ),
-                              if (widget.listing!.needsActualHarvest)
+                              if (_listing!.needsActualHarvest)
                                 Align(
                                   alignment: Alignment.centerLeft,
                                   child: TextButton(
                                     key: const ValueKey(
                                       'record-actual-harvest',
                                     ),
-                                    onPressed: () => showAddStockSheet(
-                                      context,
-                                      widget.listing!,
-                                      actual: true,
+                                    onPressed: () async => _afterStockChange(
+                                      await showAddStockSheet(
+                                        context,
+                                        _listing!,
+                                        actual: true,
+                                      ),
                                     ),
                                     child: Text(s.recordActualHarvest),
                                   ),
                                 ),
-                              if (!widget.listing!.needsActualHarvest)
+                              if (!_listing!.needsActualHarvest)
                                 Row(
                                   children: [
                                     Expanded(
                                       child: OutlinedButton(
                                         key: const ValueKey('add-stock'),
-                                        onPressed: () => showAddStockSheet(
-                                          context,
-                                          widget.listing!,
-                                        ),
+                                        onPressed: () async =>
+                                            _afterStockChange(
+                                              await showAddStockSheet(
+                                                context,
+                                                _listing!,
+                                              ),
+                                            ),
                                         child: Text(s.addStock),
                                       ),
                                     ),
@@ -1255,16 +1287,13 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                                     Expanded(
                                       child: OutlinedButton(
                                         key: const ValueKey('remove-stock'),
-                                        onPressed: () async {
-                                          final changed =
+                                        onPressed: () async =>
+                                            _afterStockChange(
                                               await showRemoveStockSheet(
                                                 context,
-                                                widget.listing!,
-                                              );
-                                          if (changed && mounted) {
-                                            await _reloadListing();
-                                          }
-                                        },
+                                                _listing!,
+                                              ),
+                                            ),
                                         child: Text(s.removeStock),
                                       ),
                                     ),
@@ -1508,6 +1537,60 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// A green "+10 kg added" or amber "−2 kg removed" line under the stock
+/// quantity, so a saved sheet visibly changes the number.
+class _StockChangeNote extends StatelessWidget {
+  const _StockChangeNote({
+    required this.change,
+    required this.total,
+    required this.unit,
+  });
+
+  final double change;
+  final String total;
+  final String unit;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final added = change > 0;
+    final amount = formatGoodQuantity(change.abs());
+    final color = added
+        ? readableAccent(context)
+        : Theme.of(context).colorScheme.error;
+    return Padding(
+      key: const ValueKey('stock-change-note'),
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        children: [
+          Icon(
+            added ? Icons.add_circle_outline : Icons.remove_circle_outline,
+            size: 18,
+            color: color,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              added
+                  ? s.stockAddedNote(
+                      amount,
+                      unit,
+                      formatGoodQuantity(double.tryParse(total) ?? 0),
+                    )
+                  : s.stockRemovedNote(
+                      amount,
+                      unit,
+                      formatGoodQuantity(double.tryParse(total) ?? 0),
+                    ),
+              style: TextStyle(color: color, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
     );
   }

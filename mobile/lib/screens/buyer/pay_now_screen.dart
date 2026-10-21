@@ -115,6 +115,7 @@ class _PayNowScreenState extends State<PayNowScreen> with WidgetsBindingObserver
   String? _screenshotPath;
   late final TextEditingController _reference;
   late final TextEditingController _amount;
+  String? _referenceError;
 
   bool get _paysReservation => widget.paysReservation;
 
@@ -315,8 +316,8 @@ class _PayNowScreenState extends State<PayNowScreen> with WidgetsBindingObserver
 
   Future<void> _submit(_PayTarget target) async {
     final s = AppStrings.read(context);
-    if (_reference.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s.referenceRequired)));
+    if (!RegExp(r'^\d{4}$').hasMatch(_reference.text.trim())) {
+      setState(() => _referenceError = s.referenceFourDigits);
       return;
     }
     final qr = _selected(target);
@@ -422,6 +423,12 @@ class _PayNowScreenState extends State<PayNowScreen> with WidgetsBindingObserver
                   const SizedBox(height: AniHowSpace.cardGap),
                   _PaidForm(
                     reference: _reference,
+                    referenceError: _referenceError,
+                    onReferenceChanged: () {
+                      if (_referenceError != null) {
+                        setState(() => _referenceError = null);
+                      }
+                    },
                     amount: _amount,
                     screenshotPath: _screenshotPath,
                     sending: _sending,
@@ -653,6 +660,8 @@ class _QrCard extends StatelessWidget {
 class _PaidForm extends StatelessWidget {
   const _PaidForm({
     required this.reference,
+    required this.referenceError,
+    required this.onReferenceChanged,
     required this.amount,
     required this.screenshotPath,
     required this.sending,
@@ -662,6 +671,8 @@ class _PaidForm extends StatelessWidget {
   });
 
   final TextEditingController reference;
+  final String? referenceError;
+  final VoidCallback onReferenceChanged;
   final TextEditingController amount;
   final String? screenshotPath;
   final bool sending;
@@ -682,13 +693,20 @@ class _PaidForm extends StatelessWidget {
             Text(s.ivePaid, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: AniHowSpace.fieldGap),
             AniHowField(
-              label: s.referenceNumber,
+              label: s.referenceLastFour,
               child: TextField(
                 key: const ValueKey('pay-reference'),
                 controller: reference,
+                keyboardType: TextInputType.number,
+                maxLength: 4,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                onChanged: (_) => onReferenceChanged(),
                 decoration: InputDecoration(
                   hintText: s.referenceHint,
                   helperText: s.referenceHelper,
+                  helperMaxLines: 3,
+                  errorText: referenceError,
+                  counterText: '',
                 ),
               ),
             ),
@@ -786,7 +804,7 @@ class _SentCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            Text('${s.referenceNumber}  ${proof?.reference ?? ''}'),
+            Text('${s.referenceEndsIn}  ${lastFourOf(proof?.reference)}'),
             Text('${s.proofAmount}  ${AniHowMoney.peso(proof?.amount ?? target.amount)}'),
             Text('${s.paidTo}  $paidTo'),
             if (proof?.sentAt != null) Text('${s.sentLabel}  ${s.agoPhrase(proof!.sentAt!)}'),
@@ -924,7 +942,7 @@ class _PaidCard extends StatelessWidget {
                   ? s.reservationSecured
                   : s.shopReceived(target.peerName, AniHowMoney.peso(target.amount)),
             ),
-            Text('${s.referenceNumber}  ${proof?.reference ?? ''}'),
+            Text('${s.referenceEndsIn}  ${lastFourOf(proof?.reference)}'),
             if (when != null) Text('${s.confirmedLabel}  ${s.monthDayClock(when)}'),
             if (!target.isReservation) ...[
               const SizedBox(height: 8),

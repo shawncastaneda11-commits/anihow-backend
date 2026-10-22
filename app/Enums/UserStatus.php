@@ -2,16 +2,18 @@
 
 namespace App\Enums;
 
+/**
+ * Farmer-seller accounts are created by the Super Admin, so there is no
+ * pending-approval state: an account is active until it is suspended.
+ */
 enum UserStatus: string
 {
-    case Pending = 'pending';
     case Active = 'active';
     case Suspended = 'suspended';
 
     public function label(): string
     {
         return match ($this) {
-            self::Pending => 'Pending approval',
             self::Active => 'Active',
             self::Suspended => 'Suspended',
         };

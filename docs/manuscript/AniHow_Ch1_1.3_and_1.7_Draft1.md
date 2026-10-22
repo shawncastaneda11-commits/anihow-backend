@@ -145,9 +145,10 @@ photographs, and views the farm's roster of approved Farmer-Sellers without
 acting on it. A Content Editor cannot set prices, cannot moderate, and cannot
 reach another farm's content.
 
-Farmer-Seller registration requires Super Admin approval together with a check of
-the applicant's farm membership. Content Editor accounts are created by the Super
-Admin. Buyer registration is open and self-service.
+Farmer-Seller accounts are created by the Super Admin for confirmed members of a
+partner farm and can sign in at once with a temporary password. Content Editor
+accounts are also created by the Super Admin. Buyer registration is open and
+self-service.
 
 ## Boundaries of the proposed system
 

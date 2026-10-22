@@ -152,4 +152,57 @@ class RemoveStallChatTest extends TestCase
 
         $this->assertNull(StallConversation::query()->find($conversationId)?->buyer_cleared_through_message_id);
     }
+
+    public function test_removing_an_order_chat_hides_the_row_for_that_person_until_a_new_message(): void
+    {
+        $farmer = $this->farmer();
+        $buyer = $this->buyer();
+        $listing = $this->listingFor($farmer, ['quantity_available' => 10, 'price_per_unit' => 30]);
+        $order = $this->placeOrder($buyer, $listing, 1);
+
+        $this->asUser($buyer)
+            ->postJson("/api/orders/{$order->id}/messages", ['body' => 'hi'])
+            ->assertCreated();
+
+        $this->asUser($farmer)
+            ->deleteJson("/api/orders/{$order->id}/chat")
+            ->assertNoContent();
+
+        $this->asUser($farmer)
+            ->getJson('/api/farmer/orders')
+            ->assertOk()
+            ->assertJsonPath('data.0.chat_removed', true);
+
+        $this->asUser($buyer)
+            ->getJson('/api/buyer/orders')
+            ->assertOk()
+            ->assertJsonPath('data.0.chat_removed', false);
+
+        $this->asUser($farmer)
+            ->getJson("/api/orders/{$order->id}/messages")
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+
+        $this->asUser($buyer)
+            ->postJson("/api/orders/{$order->id}/messages", ['body' => 'Are you there?'])
+            ->assertCreated();
+
+        $this->asUser($farmer)
+            ->getJson('/api/farmer/orders')
+            ->assertOk()
+            ->assertJsonPath('data.0.chat_removed', false);
+    }
+
+    public function test_only_the_two_people_on_an_order_can_remove_its_chat(): void
+    {
+        $farmer = $this->farmer();
+        $listing = $this->listingFor($farmer, ['quantity_available' => 10, 'price_per_unit' => 30]);
+        $order = $this->placeOrder($this->buyer(), $listing, 1);
+
+        $this->asUser($this->buyer(['email' => 'stranger@example.com']))
+            ->deleteJson("/api/orders/{$order->id}/chat")
+            ->assertForbidden();
+
+        $this->assertNull($order->fresh()->buyer_chat_cleared_through_message_id);
+    }
 }

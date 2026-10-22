@@ -1169,22 +1169,27 @@ class _ExpiredActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
-    final muted = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.72);
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.72);
+    // Extend is the usual next step, so it is the filled button; removing
+    // stock is the quieter outlined one. Labels shrink rather than wrap.
+    const shape = StadiumBorder();
+    const size = Size(48, 44);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             s.leftAfterExpiry(listing.quantityAvailable, listing.unit ?? ''),
             key: ValueKey('expired-left-${listing.id}'),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: muted),
+            style: theme.textTheme.bodySmall?.copyWith(color: muted),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
-                child: OutlinedButton(
+                child: OutlinedButton.icon(
                   key: ValueKey('remove-spoiled-${listing.id}'),
                   onPressed: () async {
                     final changed = await showRemoveStockSheet(
@@ -1197,30 +1202,51 @@ class _ExpiredActions extends StatelessWidget {
                     }
                   },
                   style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(48, 40),
+                    minimumSize: size,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    shape: const StadiumBorder(),
+                    foregroundColor: theme.colorScheme.onSurface,
+                    side: BorderSide(color: theme.colorScheme.outlineVariant),
+                    shape: shape,
                   ),
-                  child: Text(s.removeAsSpoiled),
+                  icon: const Icon(Icons.delete_outline, size: 18),
+                  label: _OneLine(s.removeAsSpoiled),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: OutlinedButton(
+                child: FilledButton.icon(
                   key: ValueKey('extend-${listing.id}'),
                   onPressed: onExtend,
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(48, 40),
+                  style: FilledButton.styleFrom(
+                    minimumSize: size,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    shape: const StadiumBorder(),
+                    shape: shape,
                   ),
-                  child: Text(s.extendListing),
+                  icon: const Icon(Icons.event_repeat, size: 18),
+                  label: _OneLine(s.extendListing),
                 ),
               ),
             ],
           ),
         ],
       ),
+    );
+  }
+}
+
+/// A button label that scales down to fit instead of wrapping to a second line.
+class _OneLine extends StatelessWidget {
+  const _OneLine(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Text(text, maxLines: 1, softWrap: false),
     );
   }
 }

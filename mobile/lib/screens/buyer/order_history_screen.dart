@@ -76,8 +76,12 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
     super.dispose();
   }
 
+  /// Polls and tab switches refresh both tabs, so a reservation made on a
+  /// listing shows here without waiting for a cancel or a restart.
   @override
-  Future<void> refreshPolledOrders() => _reload();
+  Future<void> refreshPolledOrders() async {
+    await Future.wait([_reload(), _reloadReservations()]);
+  }
 
   Future<void> _reload() async {
     final future = context.read<AuthController>().api.buyerOrders();
@@ -174,9 +178,25 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen>
                     future: _reservations,
                     onRetry: _reloadReservations,
                     emptyMessage: s.noReservations,
+                    emptyBuilder: (context) => RefreshIndicator(
+                      onRefresh: _reloadReservations,
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: AniHowSpace.screenPadding,
+                        children: [
+                          const SizedBox(height: 120),
+                          Text(
+                            s.noReservations,
+                            style: Theme.of(context).textTheme.bodyLarge,
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
                     builder: (context, items) {
                       return BuyerReservationsList(
                         reservations: items,
+                        onRefresh: _reloadReservations,
                         onCancel: _cancelReservation,
                         onOpenOrder: (reservation) {
                           final orderId = reservation.orderId;
@@ -484,11 +504,13 @@ class BuyerReservationsList extends StatelessWidget {
   const BuyerReservationsList({
     super.key,
     required this.reservations,
+    this.onRefresh,
     this.onCancel,
     this.onOpenOrder,
   });
 
   final List<ReservationRecord> reservations;
+  final Future<void> Function()? onRefresh;
   final Future<void> Function(ReservationRecord reservation)? onCancel;
   final void Function(ReservationRecord reservation)? onOpenOrder;
 
@@ -498,7 +520,8 @@ class BuyerReservationsList extends StatelessWidget {
     final active = reservations.where((item) => item.isActive).toList();
     final history = reservations.where((item) => !item.isActive).toList();
 
-    return ListView(
+    final list = ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
         AniHowSpace.screen,
         AniHowSpace.screen,
@@ -513,13 +536,14 @@ class BuyerReservationsList extends StatelessWidget {
             onCancel: onCancel == null || !reservation.canBuyerCancel
                 ? null
                 : () => onCancel!(reservation),
-            onOpen: () {
-              Navigator.of(context).push(
+            onOpen: () async {
+              await Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) =>
                       ReservationDetailScreen(reservation: reservation),
                 ),
               );
+              await onRefresh?.call();
             },
           ),
         if (history.isNotEmpty) ...[
@@ -535,6 +559,11 @@ class BuyerReservationsList extends StatelessWidget {
           ),
       ],
     );
+    final refresh = onRefresh;
+    if (refresh == null) {
+      return list;
+    }
+    return RefreshIndicator(onRefresh: refresh, child: list);
   }
 }
 

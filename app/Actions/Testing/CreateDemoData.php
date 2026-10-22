@@ -1018,7 +1018,7 @@ class CreateDemoData
                     $proof = $this->submitReservationProof->handle(
                         $buyer,
                         $reservation,
-                        $this->reference(),
+                        $this->proofReference(),
                         (float) $reservation->line_total,
                         $qrId,
                     );
@@ -1138,7 +1138,7 @@ class CreateDemoData
                 $proof = $this->submitReservationProof->handle(
                     $buyer,
                     $reservation,
-                    $this->reference(),
+                    $this->proofReference(),
                     (float) $reservation->line_total,
                     $qrId,
                 );
@@ -1197,7 +1197,7 @@ class CreateDemoData
                 $this->submitProof->handle(
                     $buyer,
                     $order,
-                    $this->reference(),
+                    $this->proofReference(),
                     (float) $order->total,
                     (int) ($order->payment_qr_ids[0] ?? 0),
                 ),
@@ -1210,7 +1210,7 @@ class CreateDemoData
         $proof = $this->submitProof->handle(
             $buyer,
             $order->fresh(),
-            $this->reference(),
+            $this->proofReference(),
             (float) $order->fresh()->total,
             (int) ($order->fresh()->payment_qr_ids[0] ?? 0),
         );
@@ -1522,6 +1522,16 @@ class CreateDemoData
         $this->references++;
 
         return 'DEMO'.str_pad((string) $this->references, 6, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * The last 4 digits a buyer types for a payment proof.
+     */
+    private function proofReference(): string
+    {
+        $this->references++;
+
+        return str_pad((string) ($this->references % 10000), 4, '0', STR_PAD_LEFT);
     }
 
     /**

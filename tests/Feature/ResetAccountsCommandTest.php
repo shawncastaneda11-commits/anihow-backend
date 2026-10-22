@@ -104,7 +104,7 @@ class ResetAccountsCommandTest extends TestCase
             'order_id' => $order->id,
             'buyer_id' => $order->buyer_id,
             'farmer_seller_id' => $order->farmer_seller_id,
-            'reference_number' => 'TESTPROOF1',
+            'reference_number' => '1111',
             'amount' => 20,
             'screenshot_path' => $proofPath,
             'status' => PaymentProofStatus::Pending,
@@ -237,7 +237,7 @@ class ResetAccountsCommandTest extends TestCase
             ->expectsOutputToContain('created')
             ->assertSuccessful();
 
-        $this->assertSame(11, User::query()->count());
+        $this->assertSame(10, User::query()->count());
         $this->assertSame(4, Farm::query()->count());
         $this->assertDatabaseHas('farms', ['slug' => 'sta-clara-farm']);
         $this->assertSame(9, Listing::query()->count());

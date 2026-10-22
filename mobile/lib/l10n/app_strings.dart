@@ -163,6 +163,21 @@ class AppStrings {
       t('Create a buyer account', 'Gumawa ng buyer account');
 
   String get verifyEmail => t('Verify Email', 'Beripikahin ang email');
+  String resetStepOf(int step, int total) =>
+      t('Step $step of $total', 'Hakbang $step sa $total');
+  String resetCodeSentTo(String email) => t(
+    'Enter the 6-digit code we sent to $email. It lasts 10 minutes.',
+    'Ilagay ang 6 na digit na code na ipinadala namin sa $email. May bisa ito ng 10 minuto.',
+  );
+  String get chooseNewPasswordHint => t(
+    'Code accepted. Choose a new password.',
+    'Tama ang code. Pumili ng bagong password.',
+  );
+  String get enterValidEmail => t(
+    'Enter a valid email, like maria@gmail.com.',
+    'Maglagay ng tamang email, gaya ng maria@gmail.com.',
+  );
+  String get useAnotherEmail => t('Use a different email', 'Ibang email ang gamitin');
   String get code => t('Code', 'Code');
   String get verify => t('Verify', 'Beripikahin');
   String get resendCode => t('Resend code', 'Ipadala ulit ang code');
@@ -989,6 +1004,12 @@ class AppStrings {
     'Pagkatapos mag-place, buksan ang Orders, tapos Chat with stall.',
   );
   String get howYouMeet => t('How you meet', 'Paano kayo magkikita');
+  String get howWillYouGetIt =>
+      t('How will you get it?', 'Paano mo ito makukuha?');
+  String get chooseHowToGetIt => t(
+    'Choose I pick up or Seller brings it.',
+    'Pumili: Ako ang susalo o Hatid ng seller.',
+  );
   String get pickupShort => t('I pick up', 'Ako ang susalo');
   String get deliverShort => t('Seller brings it', 'Hatid ng seller');
   String get orderPlacedTitle => t('Order reserved', 'Na-reserve na ang order');
@@ -1095,6 +1116,9 @@ class AppStrings {
   String get harvestDate => t('Harvest date', 'Araw ng ani');
   String get dateMade => t('Date made', 'Araw na ginawa');
   String get harvestedQuantity => t('Harvested quantity', 'Dami ng ani');
+  String enterHarvestedQuantity({bool valueAdded = false}) => valueAdded
+      ? t('Enter how much you made.', 'Ilagay kung gaano karami ang nagawa.')
+      : t('Enter how much you harvested.', 'Ilagay kung gaano karami ang inani.');
   String get quantityMade => t('Quantity made', 'Dami na ginawa');
   String get expectedQuantity => t('Expected quantity', 'Inaasahang dami');
   String get expectedQuantityHint => t(
@@ -1128,9 +1152,11 @@ class AppStrings {
     'Up to $sellable $unit ($held held by orders)',
     'Hanggang $sellable $unit ($held ang hawak ng mga order)',
   );
-  String leftAfterExpiry(String quantity, String unit) =>
-      t('$quantity $unit left', 'May natitirang $quantity $unit');
-  String get removeAsSpoiled => t('Remove as spoiled', 'Alisin bilang sira');
+  String leftAfterExpiry(String quantity, String unit) => t(
+    'What should happen to the $quantity $unit left?',
+    'Ano ang gagawin sa natitirang $quantity $unit?',
+  );
+  String get removeAsSpoiled => t('Remove spoiled', 'Alisin ang sira');
   String get extendListing => t('Extend', 'Palawigin');
   String get stockHistory => t('Stock history', 'Kasaysayan ng stock');
   String trackedSince(DateTime date) => t(
@@ -1443,8 +1469,15 @@ class AppStrings {
   String get referenceExample =>
       t('e.g. 5012 345 678 901', 'hal. 5012 345 678 901');
   String get referenceHelper => t(
-    'Find it in your GCash or Maya receipt.',
-    'Hanapin ito sa resibo ng GCash o Maya.',
+    'Type the last 4 digits of the reference number on your GCash or Maya receipt.',
+    'I-type ang huling 4 na numero ng reference number sa resibo ng GCash o Maya.',
+  );
+  String get referenceLastFour =>
+      t('Last 4 digits of the reference number', 'Huling 4 na numero ng reference number');
+  String get referenceEndsIn => t('Reference ends in', 'Nagtatapos ang reference sa');
+  String get referenceFourDigits => t(
+    'Enter the last 4 digits of the reference number.',
+    'Ilagay ang huling 4 na numero ng reference number.',
   );
   String get amountPaid => t('Amount paid', 'Halagang ibinayad');
   String get addReceiptScreenshot => t(
@@ -1501,8 +1534,8 @@ class AppStrings {
     'Dumating ba ang $peso sa $wallet mo?',
   );
   String lookForReference(String reference, String wallet) => t(
-    'Look for reference $reference in your $wallet history. Only confirm if you can see it.',
-    'Hanapin ang reference na $reference sa history ng $wallet. Kumpirmahin lang kung nakikita mo ito.',
+    'Look for a reference ending in $reference in your $wallet history. Only confirm if you can see it.',
+    'Hanapin ang reference na nagtatapos sa $reference sa history ng $wallet. Kumpirmahin lang kung nakikita mo ito.',
   );
   String get yesReceived => t('Yes, received', 'Oo, natanggap');
   String get confirmWhileUnpaid => t(
@@ -1512,7 +1545,7 @@ class AppStrings {
   String paidVia(String peso, String wallet) =>
       t('Paid · $peso via $wallet', 'Bayad na · $peso sa $wallet');
   String refConfirmed(String reference, String when) =>
-      t('Ref $reference · $when', 'Ref $reference · $when');
+      t('Ref ending $reference · $when', 'Ref na nagtatapos sa $reference · $when');
   String get onlinePaymentHelp => t(
     'Buyers pay with your QR, then send the reference number. You check each one.',
     'Nagbabayad ang buyer gamit ang QR mo, tapos ipinapadala ang reference number. Sinusuri mo ang bawat isa.',
@@ -1536,7 +1569,7 @@ class AppStrings {
     _ => (wallet ?? '').toUpperCase(),
   };
   String walletRef(String wallet, String reference) =>
-      t('$wallet · ref $reference', '$wallet · ref $reference');
+      t('$wallet · ref ending $reference', '$wallet · ref …$reference');
   String get checkNow => t('Check now', 'Suriin ngayon');
   String toCheckCount(int count) => t('To check ($count)', 'Susuriin ($count)');
   String get paymentsEmpty =>
@@ -1551,10 +1584,7 @@ class AppStrings {
   );
   String get ivePaid => t("I've paid", 'Nakabayad na ako');
   String get referenceNumber => t('Reference number', 'Reference number');
-  String get referenceHint =>
-      t('e.g. 5012 345 678 901', 'hal. 5012 345 678 901');
-  String get referenceRequired =>
-      t('Enter the reference number.', 'Ilagay ang reference number.');
+  String get referenceHint => t('e.g. 8901', 'hal. 8901');
   String get proofAmount => t('Amount', 'Halaga');
   String get submitProof => t('Submit', 'I-submit');
   String get paymentSentWaiting => t(
@@ -1587,6 +1617,16 @@ class AppStrings {
   String get refundReference => t('Refund reference', 'Reference ng refund');
   String get refundReferenceRequired =>
       t('Enter the refund reference.', 'Ilagay ang reference ng refund.');
+  String get refundReferenceFormat => t(
+    'Enter 6 to 40 letters or digits from the refund receipt.',
+    'Ilagay ang 6 hanggang 40 letra o numero mula sa resibo ng refund.',
+  );
+  String get refundReferenceHint =>
+      t('e.g. 5012 999 888 777', 'hal. 5012 999 888 777');
+  String get refundSheetHint => t(
+    'Send the money back first, then enter the reference from your GCash or Maya receipt.',
+    'Ibalik muna ang pera, saka ilagay ang reference mula sa resibo ng GCash o Maya.',
+  );
   String get payments => t('Payments', 'Mga bayad');
   String paymentsToCheck(int count) => count == 1
       ? t('1 payment to check', '1 bayad na susuriin')
@@ -1719,6 +1759,28 @@ class AppStrings {
       t('Order total $peso', 'Kabuuan ng order $peso');
   String get enterCashReceived =>
       t('Enter the cash amount received.', 'Ilagay ang cash na natanggap.');
+  String amountBelowTotal(String total) => t(
+    'This is less than the order total of $total.',
+    'Kulang ito sa kabuuang $total ng order.',
+  );
+  String get inStockNow => t('In stock now', 'Stock ngayon');
+  String get historyLink => t('History', 'Kasaysayan');
+  String readyToSellLine(String amount, String unit) => t(
+    '$amount $unit ready to sell',
+    '$amount $unit puwedeng ibenta',
+  ).replaceAll('  ', ' ');
+  String heldByOrdersLine(String amount, String unit) => t(
+    '$amount $unit held by orders',
+    '$amount $unit nakalaan sa order',
+  ).replaceAll('  ', ' ');
+  String stockAddedNote(String amount, String unit, String total) => t(
+    '+$amount $unit added · now $total $unit',
+    '+$amount $unit naidagdag · $total $unit na ngayon',
+  );
+  String stockRemovedNote(String amount, String unit, String total) => t(
+    '−$amount $unit removed · now $total $unit',
+    '−$amount $unit naalis · $total $unit na lang',
+  );
   String get record => t('Record', 'Itala');
   String get cancelReasonHint => t(
     'A no-show is a cancellation reason, not a separate status.',

@@ -335,6 +335,8 @@ class _RemoveSheetState extends State<_RemoveSheet> {
     final sellable =
         widget.listing.sellableQuantity ?? widget.listing.quantityAvailable;
     final held = formatGoodQuantity(widget.listing.heldQuantity ?? 0);
+    final walkInOn =
+        context.watch<AuthController>().user?.farmFeatures.walkIn ?? true;
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottom),
@@ -358,6 +360,7 @@ class _RemoveSheetState extends State<_RemoveSheet> {
           const SizedBox(height: AniHowSpace.fieldGap),
           Wrap(
             spacing: 8,
+            runSpacing: 8,
             children: [
               for (final reason in removalReasons)
                 ChoiceChip(
@@ -368,7 +371,7 @@ class _RemoveSheetState extends State<_RemoveSheet> {
                 ),
             ],
           ),
-          if (_reason == 'sold_outside') ...[
+          if (_reason == 'sold_outside' && walkInOn) ...[
             const SizedBox(height: AniHowSpace.fieldGap),
             AniHowHintCard(
               key: const ValueKey('walk-in-nudge'),

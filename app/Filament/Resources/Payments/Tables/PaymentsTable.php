@@ -50,7 +50,7 @@ class PaymentsTable
                     ->label('Wallet')
                     ->formatStateUsing(fn ($state): string => $state?->label() ?? '—'),
                 TextColumn::make('reference_number')
-                    ->label('Reference')
+                    ->label('Reference (last 4)')
                     ->searchable(),
                 TextColumn::make('status')
                     ->label('Proof')

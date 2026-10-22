@@ -14,6 +14,8 @@ class _ChatApi extends ApiClient {
 
   bool failRemove;
   int removes = 0;
+  final removedOrders = <int>[];
+  List<OrderRecord> orders = const [];
   List<StallChat> chats = [
     const StallChat(
       id: 4,
@@ -26,7 +28,12 @@ class _ChatApi extends ApiClient {
   ];
 
   @override
-  Future<List<OrderRecord>> buyerOrders() async => const [];
+  Future<List<OrderRecord>> buyerOrders() async => List<OrderRecord>.from(orders);
+
+  @override
+  Future<void> removeOrderChat(int orderId) async {
+    removedOrders.add(orderId);
+  }
 
   @override
   Future<List<StallChat>> stallChats() async => List<StallChat>.from(chats);
@@ -155,6 +162,37 @@ void main() {
 
     expect(api.removes, 1);
     expect(find.text('Aling Nena'), findsNothing);
+    expect(find.text('Chat removed'), findsOneWidget);
+  });
+
+  testWidgets('an order chat can be swiped away too', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = _ChatApi()
+      ..chats = []
+      ..orders = const [
+        OrderRecord(
+          id: 1525,
+          status: 'placed',
+          total: '11',
+          items: [],
+          shopName: 'Mang Jun',
+          latestMessageBody: 'hi',
+          latestMessageUserId: 9,
+          latestMessageAt: '2026-10-06T10:00:00+08:00',
+        ),
+      ];
+    await _openList(tester, api);
+    expect(find.text('Mang Jun'), findsOneWidget);
+
+    await tester.drag(find.byType(Dismissible), const Offset(-400, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('Remove this chat?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('confirm-remove-chat')));
+    await tester.pumpAndSettle();
+
+    expect(api.removedOrders, [1525]);
+    expect(find.text('Mang Jun'), findsNothing);
     expect(find.text('Chat removed'), findsOneWidget);
   });
 }

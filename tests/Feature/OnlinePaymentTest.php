@@ -196,28 +196,28 @@ class OnlinePaymentTest extends TestCase
         $buyer = User::query()->findOrFail($order->buyer_id);
 
         $sent = $this->asUser($buyer)->post("/api/buyer/orders/{$order->id}/payment-proofs", [
-            'reference_number' => 'ab 12-cd',
+            'reference_number' => '89 0-1',
             'amount' => 30,
             'qr_id' => $first->id,
         ])->assertOk();
-        $sent->assertJsonPath('data.latest_proof.reference_number', 'AB12CD');
+        $sent->assertJsonPath('data.latest_proof.reference_number', '8901');
         $sent->assertJsonPath('data.latest_proof.reviewed_at', null);
         $sent->assertJsonPath('data.latest_proof.account_last4', '1234');
         $this->assertNotNull($sent->json('data.latest_proof.sent_at'));
 
         $proof = PaymentProof::query()->firstOrFail();
-        $this->assertSame('AB12CD', $proof->reference_number);
+        $this->assertSame('8901', $proof->reference_number);
         $this->assertSame(OrderPaymentStatus::PaymentSent, $order->fresh()->payment_status);
         $this->assertDatabaseHas('order_payment_events', ['event' => 'proof_sent']);
         $this->assertSame(0, OrderStatusHistory::query()->count());
         $message = StallMessage::query()->firstOrFail();
         $this->assertSame($buyer->id, $message->user_id);
-        $this->assertSame('Sent ₱30.00 via GCash, ref AB12CD', $message->body);
+        $this->assertSame('Sent ₱30.00 via GCash, ref ending 8901', $message->body);
 
         $late = $this->placeOnline($farmer);
         $late->forceFill(['payment_due_at' => now()->subMinute()])->save();
         $this->asUser($buyer)->post("/api/buyer/orders/{$late->id}/payment-proofs", [
-            'reference_number' => 'LATE1234',
+            'reference_number' => '4321',
             'amount' => 30,
             'qr_id' => $first->id,
         ])->assertUnprocessable()
@@ -225,7 +225,7 @@ class OnlinePaymentTest extends TestCase
 
         $again = $this->placeOnline($farmer);
         $this->asUser($buyer)->post("/api/buyer/orders/{$again->id}/payment-proofs", [
-            'reference_number' => 'AB12CD',
+            'reference_number' => '8901',
             'amount' => 30,
             'qr_id' => $first->id,
         ])->assertUnprocessable()
@@ -234,11 +234,42 @@ class OnlinePaymentTest extends TestCase
         $fresh = $this->placeOnline($farmer);
         $other = $this->saveQr($farmer, '5678');
         $this->asUser($buyer)->post("/api/buyer/orders/{$fresh->id}/payment-proofs", [
-            'reference_number' => 'NEWREF99',
+            'reference_number' => '9999',
             'amount' => 30,
             'qr_id' => $other->id,
         ])->assertUnprocessable()
             ->assertJsonValidationErrors('qr_id');
+    }
+
+    public function test_a_proof_takes_only_the_last_four_digits_and_a_shared_ending_with_another_amount_is_fine(): void
+    {
+        $farmer = $this->farmer();
+        $qr = $this->saveQr($farmer);
+        $this->turnOnlineOn($farmer);
+        $order = $this->placeOnline($farmer);
+        $buyer = User::query()->findOrFail($order->buyer_id);
+
+        foreach (['5012 345 678 901', '890', 'AB12'] as $wrong) {
+            $this->asUser($buyer)->post("/api/buyer/orders/{$order->id}/payment-proofs", [
+                'reference_number' => $wrong,
+                'amount' => 30,
+                'qr_id' => $qr->id,
+            ])->assertUnprocessable()
+                ->assertJsonPath('errors.reference_number.0', 'Enter the last 4 digits of the reference number.');
+        }
+
+        $this->asUser($buyer)->post("/api/buyer/orders/{$order->id}/payment-proofs", [
+            'reference_number' => '8901',
+            'amount' => 30,
+            'qr_id' => $qr->id,
+        ])->assertOk();
+
+        $bigger = $this->placeOnline($farmer);
+        $this->asUser($buyer)->post("/api/buyer/orders/{$bigger->id}/payment-proofs", [
+            'reference_number' => '8901',
+            'amount' => 60,
+            'qr_id' => $qr->id,
+        ])->assertOk();
     }
 
     public function test_accepting_a_proof_lets_the_seller_complete_without_typing_the_amount(): void
@@ -318,8 +349,8 @@ class OnlinePaymentTest extends TestCase
         $this->asUser($farmer)->patchJson("/api/farmer/orders/{$legacy->id}/confirm")->assertOk();
         $this->asUser($farmer)->patchJson("/api/farmer/orders/{$legacy->id}/ready")->assertOk();
         $this->asUser($farmer)->patchJson("/api/farmer/orders/{$legacy->id}/complete", [
-            'amount_received' => 28,
-        ])->assertOk()->assertJsonPath('data.amount_received', 28);
+            'amount_received' => 30,
+        ])->assertOk()->assertJsonPath('data.amount_received', 30);
     }
 
     public function test_a_buyer_cannot_cancel_after_sending_proof_and_a_paid_cancel_becomes_a_refund(): void
@@ -421,7 +452,7 @@ class OnlinePaymentTest extends TestCase
 
         $proofOrder = $this->placeOnline($farmer);
         $this->asUser($buyer)->post("/api/buyer/orders/{$proofOrder->id}/payment-proofs", [
-            'reference_number' => 'REMIND01',
+            'reference_number' => '0101',
             'amount' => 30,
             'qr_id' => $proofOrder->payment_qr_ids[0],
         ])->assertOk();
@@ -452,7 +483,7 @@ class OnlinePaymentTest extends TestCase
 
         $proof->refresh();
         $this->assertNotNull($proof->screenshot_deleted_at);
-        $this->assertSame('AB12CD', $proof->reference_number);
+        $this->assertSame('8901', $proof->reference_number);
         $this->assertFalse(Storage::disk('local')->exists('payment-proofs/old.jpg'));
     }
 
@@ -545,7 +576,7 @@ class OnlinePaymentTest extends TestCase
         $buyer = User::query()->findOrFail($order->buyer_id);
 
         $this->asUser($buyer)->post("/api/buyer/orders/{$order->id}/payment-proofs", [
-            'reference_number' => 'ab 12-cd',
+            'reference_number' => '89 0-1',
             'amount' => 30,
             'qr_id' => $qr->id,
         ])->assertOk();

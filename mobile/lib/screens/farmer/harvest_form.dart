@@ -76,6 +76,7 @@ class HarvestFields extends StatelessWidget {
     required this.costs,
     required this.breakdownOpen,
     this.showReasonError = false,
+    this.showQuantityError = false,
     required this.onChanged,
     required this.onPickDate,
     required this.onReason,
@@ -93,6 +94,9 @@ class HarvestFields extends StatelessWidget {
   final Map<String, TextEditingController> costs;
   final bool breakdownOpen;
   final bool showReasonError;
+
+  /// Set after a save attempt with no harvested quantity, to say so under it.
+  final bool showQuantityError;
   final VoidCallback onChanged;
   final VoidCallback onPickDate;
   final ValueChanged<String?> onReason;
@@ -169,6 +173,15 @@ class HarvestFields extends StatelessWidget {
             ),
           ],
         ),
+        if (showQuantityError && (double.tryParse(harvested.text.trim()) ?? 0) <= 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              s.enterHarvestedQuantity(valueAdded: valueAdded),
+              key: const ValueKey('harvest-quantity-error'),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
         if (rejectedAmount > 0) ...[
           const SizedBox(height: AniHowSpace.fieldGap),
           AniHowField(

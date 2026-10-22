@@ -14,9 +14,8 @@ class CompleteOrderRequest extends FormRequest
     }
 
     /**
-     * The cash counted at handover. Recorded, never processed. It is allowed
-     * to differ from the order total: people round, and the record should say
-     * what actually changed hands.
+     * The cash counted at handover. Recorded, never processed. It may be more
+     * than the order total, never less; OrderStateMachine checks the total.
      *
      * @return array<string, mixed>
      */

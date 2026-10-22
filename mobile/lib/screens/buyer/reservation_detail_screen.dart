@@ -72,7 +72,7 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
         title: Text(
           s.arrivedInWallet(AniHowMoney.peso(_reservation.amountLabel), walletName),
         ),
-        content: Text(s.lookForReference(proof?.reference ?? '', walletName)),
+        content: Text(s.lookForReference(lastFourOf(proof?.reference), walletName)),
         actions: [
           TextButton(
             key: const ValueKey('payment-received-cancel'),
@@ -323,7 +323,7 @@ class _CheckCard extends StatelessWidget {
                     child: AuthorizedChatImage(url: proof.screenshotUrl!),
                   ),
                 ),
-              Text('${s.referenceNumber}  ${proof?.reference ?? ''}'),
+              Text('${s.referenceEndsIn}  ${lastFourOf(proof?.reference)}'),
               Text('${s.proofAmount}  ${AniHowMoney.peso(proof?.amount)}'),
               Text('${s.toLabel}  $paidTo'),
               const SizedBox(height: 8),

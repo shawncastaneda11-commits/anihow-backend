@@ -1,11 +1,15 @@
+import 'dart:io';
+
 import 'package:anihow/models/models.dart';
 import 'package:anihow/screens/farmer/farm_announcements_screen.dart';
 import 'package:anihow/screens/farmer/listings_screen.dart';
 import 'package:anihow/services/api_client.dart';
 import 'package:anihow/state/auth_controller.dart';
 import 'package:anihow/state/preferences_controller.dart';
+import 'package:anihow/support/crop_language.dart';
 import 'package:anihow/theme/anihow_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
@@ -85,6 +89,7 @@ Future<void> _pump(
   WidgetTester tester,
   _ListingsApi api, {
   UserAccount? user,
+  CropLanguage language = CropLanguage.english,
 }) async {
   api.account = user;
   final auth = AuthController(api: api)
@@ -94,7 +99,9 @@ Future<void> _pump(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (_) => PreferencesController()..notificationsEnabled = false,
+          create: (_) => PreferencesController()
+            ..notificationsEnabled = false
+            ..language = language,
         ),
         ChangeNotifierProvider.value(value: auth),
       ],
@@ -276,6 +283,29 @@ void main() {
     expect(find.text('Add stock'), findsNothing);
   });
 
+  testWidgets('expired stock buttons stay one line high in Filipino on a narrow phone', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.runAsync(_loadRoboto);
+    await _pump(
+      tester,
+      _ListingsApi([
+        _listing(id: 6, title: 'Old stock', quantity: '13', expiredWithStock: true),
+      ]),
+      language: CropLanguage.filipino,
+    );
+
+    final remove = tester.getSize(find.byKey(const ValueKey('remove-spoiled-6')));
+    final extend = tester.getSize(find.byKey(const ValueKey('extend-6')));
+
+    expect(remove.height, 44);
+    expect(extend.height, 44);
+    expect(find.text('Alisin ang sira'), findsOneWidget);
+    expect(find.text('Ano ang gagawin sa natitirang 13 kg?'), findsOneWidget);
+  });
+
   testWidgets('a pending harvest offers its harvest, sold out offers stock', (
     tester,
   ) async {
@@ -411,4 +441,22 @@ void main() {
     expect(find.byKey(const ValueKey('stock-bar-4')), findsNothing);
     expect(find.text('7 kg left'), findsOneWidget);
   });
+}
+
+/// Test text is drawn as squares unless a real font is loaded, which would make
+/// every label look too wide. Load the Roboto the app uses from the Flutter SDK.
+Future<void> _loadRoboto() async {
+  final root = Platform.environment['FLUTTER_ROOT'];
+  final folder = root == null ? null : Directory('$root/bin/cache/artifacts/material_fonts');
+  if (folder == null || !folder.existsSync()) {
+    return;
+  }
+  final loader = FontLoader('Roboto');
+  for (final file in folder.listSync().whereType<File>()) {
+    final name = file.uri.pathSegments.last.toLowerCase();
+    if (name == 'roboto-regular.ttf' || name == 'roboto-medium.ttf' || name == 'roboto-bold.ttf') {
+      loader.addFont(file.readAsBytes().then(ByteData.sublistView));
+    }
+  }
+  await loader.load();
 }

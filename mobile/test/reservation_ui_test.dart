@@ -67,6 +67,80 @@ void main() {
     expect(find.textContaining('Estimated total'), findsOneWidget);
   });
 
+  testWidgets('reserving needs pickup or delivery, and the choice shows', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final calls = <String>[];
+    await tester.pumpWidget(
+      _app(
+        ReserveHarvestSheet(
+          listing: ListingItem(
+            id: 7,
+            title: 'Kalabasa',
+            pricePerUnit: '40',
+            quantityAvailable: '8',
+            unit: 'kg',
+            isUpcoming: true,
+            availableFrom: DateTime(2026, 10, 20),
+          ),
+          onReserve: (_, preference) async => calls.add(preference),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.check_circle), findsNothing);
+    await tester.tap(find.widgetWithText(FilledButton, 'Reserve'));
+    await tester.pump();
+    expect(find.text('Choose I pick up or Seller brings it.'), findsOneWidget);
+    expect(calls, isEmpty);
+
+    await tester.tap(find.byKey(const ValueKey('reserve-deliver')));
+    await tester.pump();
+    expect(find.text('Choose I pick up or Seller brings it.'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('reserve-deliver')),
+        matching: find.byIcon(Icons.check_circle),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Reserve'));
+    await tester.pumpAndSettle();
+    expect(calls, ['seller_delivers']);
+  });
+
+  testWidgets('coming back to the tab reloads reservations too', (
+    tester,
+  ) async {
+    final api = _QuietApi();
+    final auth = AuthController(api: api)..restoring = false;
+    Widget screen(bool active) => MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => PreferencesController()..notificationsEnabled = false,
+        ),
+        ChangeNotifierProvider.value(value: auth),
+        ChangeNotifierProvider(create: (_) => CartController(auth)),
+      ],
+      child: MaterialApp(
+        theme: AniHowTheme.light(),
+        home: OrderHistoryScreen(active: active),
+      ),
+    );
+    await tester.pumpWidget(screen(false));
+    await tester.pump();
+    final before = api.reservationLoads;
+
+    await tester.pumpWidget(screen(true));
+    await tester.pump();
+    await tester.pump();
+    expect(api.reservationLoads, greaterThan(before));
+  });
+
   testWidgets('orders and reservations are tabs, and an active one can be cancelled', (
     tester,
   ) async {
@@ -157,9 +231,17 @@ void main() {
 class _QuietApi extends ApiClient {
   _QuietApi() : super(onUnauthorized: () {});
 
+  int reservationLoads = 0;
+
+  @override
+  Future<List<AppNotification>> notifications() async => const [];
+
   @override
   Future<List<OrderRecord>> buyerOrders() async => const [];
 
   @override
-  Future<List<ReservationRecord>> buyerReservations() async => const [];
+  Future<List<ReservationRecord>> buyerReservations() async {
+    reservationLoads += 1;
+    return const [];
+  }
 }

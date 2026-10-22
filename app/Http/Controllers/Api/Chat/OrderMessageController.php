@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Chat;
 
+use App\Actions\Chat\RemoveOrderChatForUser;
 use App\Actions\Chat\SendStallMessage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Chat\StoreOrderMessageRequest;
@@ -12,6 +13,7 @@ use App\Models\StallMessage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 class OrderMessageController extends Controller
 {
@@ -61,5 +63,17 @@ class OrderMessageController extends Controller
             ->additional(['message' => 'Message sent.'])
             ->response()
             ->setStatusCode(201);
+    }
+
+    /**
+     * Take the order's row off this person's chat list. Messages stay.
+     */
+    public function destroy(Request $request, Order $order, RemoveOrderChatForUser $removeOrderChatForUser): Response
+    {
+        $this->authorize('chat', $order);
+
+        $removeOrderChatForUser->handle($request->user(), $order);
+
+        return response()->noContent();
     }
 }

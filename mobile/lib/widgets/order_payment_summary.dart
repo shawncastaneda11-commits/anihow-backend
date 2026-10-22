@@ -61,7 +61,7 @@ class OrderPaymentSummary extends StatelessWidget {
             ),
             if (proof?.reference != null)
               Text(
-                s.refConfirmed(proof!.reference!, when),
+                s.refConfirmed(lastFourOf(proof!.reference), when),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.68),
                 ),
@@ -121,7 +121,7 @@ class OrderPaymentSummary extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _row(s.referenceNumber, proof?.reference ?? ''),
+                      _row(s.referenceEndsIn, lastFourOf(proof?.reference)),
                       _row(s.proofAmount, AniHowMoney.peso(proof?.amount)),
                       _row(s.toLabel, paidTo),
                       if (proof?.sentAt != null) _row(s.sentLabel, s.agoPhrase(proof!.sentAt!)),
@@ -229,7 +229,7 @@ class OrderPaymentSummary extends StatelessWidget {
             if (order.paymentDueAt != null && order.isAwaitingPayment)
               Text(s.payBefore(order.paymentDueAt!)),
             if (proof != null) ...[
-              Text('${s.referenceNumber}: ${proof.reference ?? ''}'),
+              Text('${s.referenceEndsIn}: ${lastFourOf(proof.reference)}'),
               Text('${s.proofAmount}: ${AniHowMoney.peso(proof.amount)}'),
               if (proof.wallet != null) Text(s.walletLabel(proof.wallet)),
               if (proof.isRejected && proof.rejectionReason != null)
@@ -291,7 +291,7 @@ class OrderPaymentSummary extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(s.lookForReference(proof?.reference ?? '', wallet.isEmpty ? s.walletGcash : wallet)),
+            Text(s.lookForReference(lastFourOf(proof?.reference), wallet.isEmpty ? s.walletGcash : wallet)),
             if (differs)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
@@ -397,6 +397,7 @@ class RejectPaymentProofSheet extends StatefulWidget {
 class _RejectProofSheetState extends State<RejectPaymentProofSheet> {
   String _reason = 'not_received';
   final _note = TextEditingController();
+  bool _showNoteError = false;
 
   @override
   void dispose() {
@@ -409,38 +410,52 @@ class _RejectProofSheetState extends State<RejectPaymentProofSheet> {
     final s = AppStrings.of(context);
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottom),
+      padding: EdgeInsets.fromLTRB(16, 20, 16, 16 + bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Wrap(
             spacing: 8,
+            runSpacing: 8,
             children: [
               for (final reason in ['not_received', 'wrong_amount', 'wrong_reference', 'other'])
                 ChoiceChip(
                   key: ValueKey('reject-$reason'),
                   label: Text(s.paymentRejectReason(reason)),
                   selected: _reason == reason,
-                  onSelected: (_) => setState(() => _reason = reason),
+                  onSelected: (_) => setState(() {
+                    _reason = reason;
+                    _showNoteError = false;
+                  }),
                 ),
             ],
           ),
-          if (_reason == 'other')
-            TextField(
-              key: const ValueKey('reject-note'),
-              controller: _note,
-              decoration: InputDecoration(labelText: s.noteOptional),
+          if (_reason == 'other') ...[
+            const SizedBox(height: AniHowSpace.fieldGap),
+            AniHowField(
+              label: s.rejectionNote,
+              child: TextField(
+                key: const ValueKey('reject-note'),
+                controller: _note,
+                onChanged: (_) {
+                  if (_showNoteError) {
+                    setState(() => _showNoteError = false);
+                  }
+                },
+                decoration: InputDecoration(
+                  errorText: _showNoteError ? s.rejectionNoteRequired : null,
+                ),
+              ),
             ),
-          const SizedBox(height: AniHowSpace.fieldGap),
+          ],
+          const SizedBox(height: AniHowSpace.section),
           PrimaryButton(
             key: const ValueKey('reject-submit'),
             label: s.notReceived,
             onPressed: () {
               if (_reason == 'other' && _note.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(s.rejectionNoteRequired)),
-                );
+                setState(() => _showNoteError = true);
                 return;
               }
               Navigator.pop(context, (reason: _reason, note: _note.text.trim()));
@@ -461,6 +476,7 @@ class RefundReferenceSheet extends StatefulWidget {
 
 class _RefundSheetState extends State<RefundReferenceSheet> {
   final _reference = TextEditingController();
+  String? _error;
 
   @override
   void dispose() {
@@ -468,31 +484,59 @@ class _RefundSheetState extends State<RefundReferenceSheet> {
     super.dispose();
   }
 
+  /// Mirrors the server: 6 to 40 letters or digits once spaces and dashes go.
+  String? _problem(AppStrings s) {
+    final cleaned = _reference.text.replaceAll(RegExp(r'[\s\-]+'), '');
+    if (cleaned.isEmpty) {
+      return s.refundReferenceRequired;
+    }
+    if (!RegExp(r'^[A-Za-z0-9]{6,40}$').hasMatch(cleaned)) {
+      return s.refundReferenceFormat;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottom),
+      padding: EdgeInsets.fromLTRB(16, 20, 16, 16 + bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Text(s.markRefunded, style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 4),
+          Text(s.refundSheetHint, style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: AniHowSpace.section),
           AniHowField(
             label: s.refundReference,
             child: TextField(
               key: const ValueKey('refund-reference'),
               controller: _reference,
+              autofocus: true,
+              textInputAction: TextInputAction.done,
+              onChanged: (_) {
+                if (_error != null) {
+                  setState(() => _error = null);
+                }
+              },
+              decoration: InputDecoration(
+                hintText: s.refundReferenceHint,
+                errorText: _error,
+                errorMaxLines: 2,
+              ),
             ),
           ),
+          const SizedBox(height: AniHowSpace.section),
           PrimaryButton(
             key: const ValueKey('refund-submit'),
             label: s.markRefunded,
             onPressed: () {
-              if (_reference.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(s.refundReferenceRequired)),
-                );
+              final problem = _problem(s);
+              if (problem != null) {
+                setState(() => _error = problem);
                 return;
               }
               Navigator.pop(context, _reference.text.trim());

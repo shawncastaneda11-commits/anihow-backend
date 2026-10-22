@@ -100,6 +100,7 @@ class OrderResource extends JsonResource
                 ],
             )),
             'review' => new ReviewResource($this->whenLoaded('review')),
+            'chat_removed' => $request->user() !== null && $this->resource->chatRemovedFor($request->user()),
             'latest_message' => $this->whenLoaded('latestChatMessage', fn (): array => [
                 'body' => $this->latestChatMessage->body,
                 'user_id' => $this->latestChatMessage->user_id,

@@ -95,6 +95,23 @@ class FarmerListingApiTest extends TestCase
         ]);
     }
 
+    public function test_a_listing_without_any_quantity_asks_for_the_harvest_in_plain_words(): void
+    {
+        $farmer = $this->farmer();
+        $cropType = $this->cropType();
+
+        $this->asUser($farmer)->postJson('/api/farmer/listings', [
+            'title' => 'Fresh kamatis',
+            'crop_type_id' => $cropType->id,
+            'unit' => 'kg',
+            'price_per_unit' => 30,
+            'harvested_on' => now()->toDateString(),
+            'quantity_harvested' => '',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.quantity_available.0', 'Enter how much you harvested.');
+    }
+
     public function test_farmer_can_create_and_replace_a_listing_photo(): void
     {
         Storage::fake(ListingStorage::diskName());

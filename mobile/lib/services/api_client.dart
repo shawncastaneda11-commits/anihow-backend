@@ -234,6 +234,10 @@ class ApiClient {
     await _post('/auth/forgot-password', {'email': email});
   }
 
+  Future<void> verifyResetCode(String email, String code) async {
+    await _post('/auth/verify-reset-code', {'email': email, 'code': code});
+  }
+
   Future<void> resetPassword(
     String email,
     String code,
@@ -828,6 +832,8 @@ class ApiClient {
 
   Future<void> removeStallChat(int conversationId) =>
       _delete('/stall-chats/$conversationId');
+
+  Future<void> removeOrderChat(int orderId) => _delete('/orders/$orderId/chat');
 
   Future<StallChat> openStallChat(int sellerId) async {
     final response = await _post('/stall-chats', {

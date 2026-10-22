@@ -58,9 +58,11 @@ class SubmitReservationPaymentProofAction
 
             $reference = PaymentReference::normalize($referenceNumber);
 
-            if (! preg_match('/^[A-Z0-9]{6,30}$/', $reference)) {
+            // Buyers type only the last 4 digits; the seller looks for them
+            // in the wallet history.
+            if (! preg_match('/^\d{4}$/', $reference)) {
                 throw ValidationException::withMessages([
-                    'reference_number' => 'Enter 6 to 30 letters or digits.',
+                    'reference_number' => 'Enter the last 4 digits of the reference number.',
                 ]);
             }
 
@@ -85,6 +87,7 @@ class SubmitReservationPaymentProofAction
             $duplicate = PaymentProof::query()
                 ->where('farmer_seller_id', $reservation->farmer_seller_id)
                 ->where('reference_number', $reference)
+                ->where('amount', $amountValue)
                 ->whereIn('status', [PaymentProofStatus::Pending, PaymentProofStatus::Accepted])
                 ->exists();
 
@@ -139,7 +142,7 @@ class SubmitReservationPaymentProofAction
             $this->chat->forReservation(
                 $buyer,
                 $reservation,
-                "Sent ₱{$formatted} via {$wallet}, ref {$reference} (reservation)",
+                "Sent ₱{$formatted} via {$wallet}, ref ending {$reference} (reservation)",
             );
 
             return $proof;

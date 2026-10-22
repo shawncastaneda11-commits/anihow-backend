@@ -43,7 +43,7 @@ class AnihowTestFixturesTest extends TestCase
             ->doesntExpectOutputToContain('password')
             ->assertSuccessful();
 
-        $this->assertSame(11, User::query()->count());
+        $this->assertSame(10, User::query()->count());
         $this->assertTrue(Hash::check('password', (string) User::query()->where('email', 'kuyajun@gmail.com')->value('password')));
         $this->assertTrue(Hash::check('password', (string) User::query()->where('email', 'buyer01@gmail.com')->value('password')));
         $this->assertTrue(Hash::check('password', (string) User::query()->where('email', 'editor01@gmail.com')->value('password')));
@@ -110,7 +110,7 @@ class AnihowTestFixturesTest extends TestCase
             ->doesntExpectOutputToContain('password')
             ->assertSuccessful();
 
-        $this->assertSame(11, User::query()->count());
+        $this->assertSame(10, User::query()->count());
         $this->assertSame(9, Listing::query()->count());
         $this->assertSame(3, Order::query()->count());
         $this->assertSame(1, Review::query()->count());

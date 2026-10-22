@@ -46,11 +46,6 @@ class UserPolicy
         return $user->can(Permission::ManageAccounts->value) && $user->id !== $model->id;
     }
 
-    public function approve(User $user, User $model): bool
-    {
-        return $user->can(Permission::ApproveFarmerSeller->value);
-    }
-
     public function suspend(User $user, User $model): bool
     {
         return $user->can(Permission::SuspendAccounts->value) && $user->id !== $model->id;

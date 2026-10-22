@@ -7,6 +7,9 @@ use App\Enums\UserStatus;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role as SpatieRole;
 use Tests\TestCase;
 
 class CreateFarmerSellerTest extends TestCase
@@ -20,7 +23,7 @@ class CreateFarmerSellerTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
     }
 
-    public function test_super_admin_can_create_a_farmer_seller_account(): void
+    public function test_a_farmer_seller_account_the_super_admin_creates_can_sign_in_at_once(): void
     {
         $admin = User::factory()->create();
         $admin->assignRole(Role::SuperAdmin);
@@ -45,7 +48,7 @@ class CreateFarmerSellerTest extends TestCase
         $this->assertNotNull(User::query()->where('email', 'juan@farm.ph')->value('email_verified_at'));
         $this->assertDatabaseHas('users', [
             'email' => 'juan@farm.ph',
-            'status' => UserStatus::Pending->value,
+            'status' => UserStatus::Active->value,
             'must_change_password' => true,
         ]);
 
@@ -53,11 +56,8 @@ class CreateFarmerSellerTest extends TestCase
             'email' => 'juan@farm.ph',
             'password' => $temporaryPassword,
         ])
-            ->assertUnprocessable()
-            ->assertJsonPath(
-                'errors.email.0',
-                'Your account is awaiting approval. You can sign in after an administrator approves it.',
-            );
+            ->assertOk()
+            ->assertJsonPath('data.must_change_password', true);
     }
 
     public function test_approved_farmer_seller_can_log_in(): void
@@ -99,5 +99,24 @@ class CreateFarmerSellerTest extends TestCase
             'password' => 'password123',
             'password_confirmation' => 'password123',
         ])->assertUnauthorized();
+    }
+
+    public function test_the_migration_activates_pending_accounts_and_drops_the_approval_permission(): void
+    {
+        $waiting = User::factory()->create();
+        DB::table('users')->where('id', $waiting->id)->update(['status' => 'pending']);
+        $permission = Permission::findOrCreate('approve_farmer_seller', 'web');
+        SpatieRole::findByName(Role::SuperAdmin->value, 'web')->givePermissionTo($permission);
+
+        $migration = require database_path('migrations/2026_10_22_011640_remove_pending_account_status.php');
+        $migration->up();
+
+        $this->assertSame(UserStatus::Active, $waiting->fresh()->status);
+        $this->assertNull(Permission::query()->where('name', 'approve_farmer_seller')->first());
+        $this->assertSame('active', User::query()->create([
+            'name' => 'Default Status',
+            'email' => 'default.status@farm.ph',
+            'password' => 'password',
+        ])->fresh()->status->value);
     }
 }

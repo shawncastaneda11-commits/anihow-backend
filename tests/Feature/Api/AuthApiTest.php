@@ -120,22 +120,6 @@ class AuthApiTest extends TestCase
         $this->assertNotContains('place_orders', $permissions);
     }
 
-    public function test_pending_farmer_seller_cannot_log_in(): void
-    {
-        $farmer = User::factory()->pending()->create(['email' => 'pending@example.com']);
-        $farmer->syncRoles(Role::FarmerSeller);
-
-        $this->postJson('/api/auth/login', [
-            'email' => 'pending@example.com',
-            'password' => 'password',
-        ])
-            ->assertUnprocessable()
-            ->assertJsonPath(
-                'errors.email.0',
-                'Your account is awaiting approval. You can sign in after an administrator approves it.',
-            );
-    }
-
     public function test_suspended_user_cannot_log_in(): void
     {
         $buyer = User::factory()->inactive()->create(['email' => 'inactive@example.com']);

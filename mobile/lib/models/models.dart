@@ -745,6 +745,13 @@ class PaymentQrCode {
   }
 }
 
+/// The last 4 characters of a payment reference. New proofs store only these;
+/// older proofs kept the whole number.
+String lastFourOf(String? reference) {
+  final value = (reference ?? '').trim();
+  return value.length <= 4 ? value : value.substring(value.length - 4);
+}
+
 class PaymentProofRecord {
   const PaymentProofRecord({
     this.id,
@@ -842,6 +849,7 @@ class OrderRecord {
     this.latestMessageBody,
     this.latestMessageUserId,
     this.latestMessageAt,
+    this.chatRemoved = false,
   });
 
   final int id;
@@ -889,6 +897,10 @@ class OrderRecord {
   final String? latestMessageBody;
   final int? latestMessageUserId;
   final String? latestMessageAt;
+
+  /// The signed-in person took this order off their chat list and nothing
+  /// newer has been sent.
+  final bool chatRemoved;
 
   static DateTime? _asDate(Object? value) {
     if (value is! String || value.isEmpty) {
@@ -983,6 +995,7 @@ class OrderRecord {
       latestMessageAt: json['latest_message'] is Map
           ? Map<String, dynamic>.from(json['latest_message'] as Map)['created_at'] as String?
           : null,
+      chatRemoved: json['chat_removed'] == true,
     );
   }
 
@@ -1150,6 +1163,7 @@ class OrderRecord {
       latestMessageBody: latestMessageBody,
       latestMessageUserId: latestMessageUserId,
       latestMessageAt: latestMessageAt,
+      chatRemoved: chatRemoved,
     );
   }
 }

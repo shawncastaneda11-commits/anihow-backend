@@ -859,6 +859,7 @@ class AppStrings {
   String get report => t('Report', 'I-ulat');
   String get reportDetails => t('Details (optional)', 'Detalye (opsyonal)');
   String get reportChooseReason => t('Choose a reason.', 'Pumili ng dahilan.');
+  String get reportSentTitle => t('Report sent', 'Naipadala ang ulat');
   String get reportSubmitted => t(
     'Thank you. Your report was sent to the administrator.',
     'Salamat. Naipadala na ang iyong ulat sa administrator.',

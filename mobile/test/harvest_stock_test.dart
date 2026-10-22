@@ -279,15 +279,13 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.byKey(const ValueKey('listing-quantity')),
+      find.byKey(const ValueKey('stock-panel')),
       200,
       scrollable: find.byType(Scrollable).first,
     );
 
-    final quantity = tester.widget<TextField>(
-      find.byKey(const ValueKey('listing-quantity')),
-    );
-    expect(quantity.readOnly, isTrue);
+    expect(find.byKey(const ValueKey('listing-quantity')), findsNothing);
+    expect(find.text('In stock now'), findsOneWidget);
     expect(find.byKey(const ValueKey('add-stock')), findsOneWidget);
     expect(find.byKey(const ValueKey('remove-stock')), findsOneWidget);
 
@@ -339,10 +337,10 @@ void main() {
     await tester.pumpAndSettle();
 
     String quantity() => tester
-        .widget<TextField>(find.byKey(const ValueKey('listing-quantity')))
-        .controller!
-        .text;
-    expect(quantity(), '9');
+        .widget<Text>(find.byKey(const ValueKey('stock-in-hand')))
+        .textSpan!
+        .toPlainText();
+    expect(quantity(), '9 kg');
     expect(find.text('−2 kg removed · now 9 kg'), findsOneWidget);
 
     api.afterStockChange = const ListingItem(
@@ -358,7 +356,7 @@ void main() {
     await tester.tap(find.widgetWithText(PrimaryButton, 'Add stock'));
     await tester.pumpAndSettle();
 
-    expect(quantity(), '19');
+    expect(quantity(), '19 kg');
     expect(find.text('+10 kg added · now 19 kg'), findsOneWidget);
   });
 

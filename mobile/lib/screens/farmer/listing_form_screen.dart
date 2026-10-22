@@ -681,6 +681,24 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     }
   }
 
+  void _pickHarvestedOn() => _pickDate(
+    current: _harvestedOn,
+    lastDate: DateTime.now(),
+    onPicked: (date) => setState(() => _harvestedOn = date),
+  );
+
+  void _openStockHistory() {
+    final listing = _listing ?? widget.listing!;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => StockHistoryScreen(
+          listingId: listing.id,
+          listingTitle: listing.title,
+        ),
+      ),
+    );
+  }
+
   /// After a stock sheet saves: fetch the listing again, put the new amount
   /// in the quantity box, and say how much it moved.
   Future<void> _afterStockChange(bool changed) async {
@@ -1211,7 +1229,8 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                                 child: Text(s.expectedQuantityHint),
                               ),
                             ],
-                            if (widget.listing != null) ...[
+                            if (widget.listing != null &&
+                                _listing!.needsActualHarvest) ...[
                               _NumberedHeading(
                                 number: '4',
                                 title: s.stockSection,
@@ -1222,19 +1241,12 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                                 child: TextField(
                                   key: const ValueKey('listing-quantity'),
                                   controller: _quantity,
-                                  readOnly: !_listing!.needsActualHarvest,
                                   keyboardType:
                                       const TextInputType.numberWithOptions(
                                         decimal: true,
                                       ),
                                 ),
                               ),
-                              if (_stockChange != null && _stockChange != 0)
-                                _StockChangeNote(
-                                  change: _stockChange!,
-                                  total: _listing!.quantityAvailable,
-                                  unit: _listing!.unit ?? '',
-                                ),
                               if (_showQuantityError && _quantityMissing())
                                 Padding(
                                   padding: const EdgeInsets.only(top: 4),
@@ -1250,70 +1262,102 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                                     ),
                                   ),
                                 ),
-                              if (_listing!.needsActualHarvest)
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: TextButton(
-                                    key: const ValueKey(
-                                      'record-actual-harvest',
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: TextButton(
+                                  key: const ValueKey('record-actual-harvest'),
+                                  onPressed: () async => _afterStockChange(
+                                    await showAddStockSheet(
+                                      context,
+                                      _listing!,
+                                      actual: true,
                                     ),
-                                    onPressed: () async => _afterStockChange(
-                                      await showAddStockSheet(
-                                        context,
-                                        _listing!,
-                                        actual: true,
-                                      ),
+                                  ),
+                                  child: Text(s.recordActualHarvest),
+                                ),
+                              ),
+                              const SizedBox(height: AniHowSpace.fieldGap),
+                              _HarvestedOnRow(
+                                date: _harvestedOn,
+                                onPick: _pickHarvestedOn,
+                                onClear: () =>
+                                    setState(() => _harvestedOn = null),
+                              ),
+                            ],
+                            if (widget.listing != null &&
+                                !_listing!.needsActualHarvest) ...[
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _NumberedHeading(
+                                      number: '4',
+                                      title: s.stockSection,
                                     ),
-                                    child: Text(s.recordActualHarvest),
+                                  ),
+                                  TextButton(
+                                    key: const ValueKey('stock-history-link'),
+                                    onPressed: _openStockHistory,
+                                    child: Text(s.historyLink),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: AniHowSpace.cardGap),
+                              _StockPanel(listing: _listing!),
+                              if (_stockChange != null && _stockChange != 0)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: AniHowSpace.cardGap,
+                                  ),
+                                  child: _StockChangeNote(
+                                    change: _stockChange!,
+                                    total: _listing!.quantityAvailable,
+                                    unit: _listing!.unit ?? '',
                                   ),
                                 ),
-                              if (!_listing!.needsActualHarvest)
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: OutlinedButton(
-                                        key: const ValueKey('add-stock'),
-                                        onPressed: () async =>
-                                            _afterStockChange(
-                                              await showAddStockSheet(
-                                                context,
-                                                _listing!,
-                                              ),
-                                            ),
-                                        child: Text(s.addStock),
-                                      ),
-                                    ),
-                                    const SizedBox(width: AniHowSpace.cardGap),
-                                    Expanded(
-                                      child: OutlinedButton(
-                                        key: const ValueKey('remove-stock'),
-                                        onPressed: () async =>
-                                            _afterStockChange(
-                                              await showRemoveStockSheet(
-                                                context,
-                                                _listing!,
-                                              ),
-                                            ),
-                                        child: Text(s.removeStock),
-                                      ),
-                                    ),
-                                  ],
-                                ),
                               const SizedBox(height: AniHowSpace.fieldGap),
-                              _DateField(
-                                label: s.harvestedOnLabel,
-                                value: _harvestedOn,
-                                clearLabel: s.clearDate,
-                                emptyLabel: s.dateNotSet,
-                                formatted: _harvestedOn == null
-                                    ? null
-                                    : s.shortDate(_harvestedOn!),
-                                onPick: () => _pickDate(
-                                  current: _harvestedOn,
-                                  lastDate: DateTime.now(),
-                                  onPicked: (date) =>
-                                      setState(() => _harvestedOn = date),
-                                ),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: FilledButton.icon(
+                                      key: const ValueKey('add-stock'),
+                                      style: FilledButton.styleFrom(
+                                        minimumSize: const Size(48, 48),
+                                      ),
+                                      onPressed: () async => _afterStockChange(
+                                        await showAddStockSheet(
+                                          context,
+                                          _listing!,
+                                        ),
+                                      ),
+                                      icon: const Icon(Icons.add, size: 20),
+                                      label: _FitLabel(s.addStock),
+                                    ),
+                                  ),
+                                  const SizedBox(width: AniHowSpace.cardGap),
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      key: const ValueKey('remove-stock'),
+                                      style: OutlinedButton.styleFrom(
+                                        minimumSize: const Size(48, 48),
+                                      ),
+                                      onPressed: () async => _afterStockChange(
+                                        await showRemoveStockSheet(
+                                          context,
+                                          _listing!,
+                                        ),
+                                      ),
+                                      icon: const Icon(Icons.remove, size: 20),
+                                      label: _FitLabel(s.removeStock),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: AniHowSpace.cardGap),
+                              const Divider(height: 1),
+                              const SizedBox(height: 4),
+                              _HarvestedOnRow(
+                                date: _harvestedOn,
+                                onPick: _pickHarvestedOn,
                                 onClear: () =>
                                     setState(() => _harvestedOn = null),
                               ),
@@ -1542,8 +1586,100 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   }
 }
 
-/// A green "+10 kg added" or amber "−2 kg removed" line under the stock
-/// quantity, so a saved sheet visibly changes the number.
+/// The stock in hand on Edit listing: the big number, and how much of it is
+/// free to sell versus held by orders.
+class _StockPanel extends StatelessWidget {
+  const _StockPanel({required this.listing});
+
+  final ListingItem listing;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+    final unit = (listing.unit ?? '').trim();
+    final inHand = formatGoodQuantity(
+      double.tryParse(listing.quantityAvailable) ?? 0,
+    );
+    final ready = listing.sellableQuantity == null
+        ? null
+        : formatGoodQuantity(double.tryParse(listing.sellableQuantity!) ?? 0);
+    final held = listing.heldQuantity ?? 0;
+    final muted = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
+    );
+    return DecoratedBox(
+      key: const ValueKey('stock-panel'),
+      decoration: BoxDecoration(
+        color: accentTint(context),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: Row(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(s.inStockNow, style: muted),
+                  const SizedBox(height: 2),
+                  Text.rich(
+                    key: const ValueKey('stock-in-hand'),
+                    TextSpan(
+                      text: inHand,
+                      children: [
+                        if (unit.isNotEmpty)
+                          TextSpan(
+                            text: ' $unit',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: readableAccent(context),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                      ],
+                    ),
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      color: readableAccent(context),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (ready != null)
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      s.readyToSellLine(ready, unit),
+                      textAlign: TextAlign.end,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (held > 0) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        s.heldByOrdersLine(formatGoodQuantity(held), unit),
+                        textAlign: TextAlign.end,
+                        style: muted,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A green "+10 kg added" or warm "−2 kg removed" pill under the stock panel,
+/// so a saved sheet visibly changes the number.
 class _StockChangeNote extends StatelessWidget {
   const _StockChangeNote({
     required this.change,
@@ -1558,40 +1694,105 @@ class _StockChangeNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final added = change > 0;
     final amount = formatGoodQuantity(change.abs());
-    final color = added
+    final now = formatGoodQuantity(double.tryParse(total) ?? 0);
+    final ink = added
         ? readableAccent(context)
-        : Theme.of(context).colorScheme.error;
-    return Padding(
+        : (dark ? const Color(0xFFF2B58A) : const Color(0xFF8A3F0E));
+    final fill = added
+        ? accentTint(context)
+        : (dark ? const Color(0xFF4A2E1C) : const Color(0xFFFCEFE4));
+    return DecoratedBox(
       key: const ValueKey('stock-change-note'),
-      padding: const EdgeInsets.only(top: 6),
-      child: Row(
-        children: [
-          Icon(
-            added ? Icons.add_circle_outline : Icons.remove_circle_outline,
-            size: 18,
-            color: color,
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              added
-                  ? s.stockAddedNote(
-                      amount,
-                      unit,
-                      formatGoodQuantity(double.tryParse(total) ?? 0),
-                    )
-                  : s.stockRemovedNote(
-                      amount,
-                      unit,
-                      formatGoodQuantity(double.tryParse(total) ?? 0),
-                    ),
-              style: TextStyle(color: color, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(12),
       ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            Icon(
+              added ? Icons.add_circle_outline : Icons.remove_circle_outline,
+              size: 20,
+              color: ink,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                added
+                    ? s.stockAddedNote(amount, unit, now)
+                    : s.stockRemovedNote(amount, unit, now),
+                style: TextStyle(color: ink, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One slim line for the harvest date: label, the date to tap, and a clear
+/// button once a date is set.
+class _HarvestedOnRow extends StatelessWidget {
+  const _HarvestedOnRow({
+    required this.date,
+    required this.onPick,
+    required this.onClear,
+  });
+
+  final DateTime? date;
+  final VoidCallback onPick;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+    return Row(
+      key: const ValueKey('harvested-on-row'),
+      children: [
+        Icon(
+          Icons.calendar_today_outlined,
+          size: 18,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.62),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(s.harvestedOnLabel, style: theme.textTheme.bodyMedium),
+        ),
+        TextButton(
+          key: const ValueKey('harvested-on-pick'),
+          style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+          onPressed: onPick,
+          child: Text(date == null ? s.dateNotSet : s.shortDate(date!)),
+        ),
+        if (date != null)
+          IconButton(
+            key: const ValueKey('harvested-on-clear'),
+            tooltip: s.clearDate,
+            onPressed: onClear,
+            icon: const Icon(Icons.close, size: 20),
+          ),
+      ],
+    );
+  }
+}
+
+/// A button label that shrinks to stay on one line in longer translations.
+class _FitLabel extends StatelessWidget {
+  const _FitLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Text(text, maxLines: 1, softWrap: false),
     );
   }
 }

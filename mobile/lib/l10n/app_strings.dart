@@ -1742,6 +1742,16 @@ class AppStrings {
     'This is less than the order total of $total.',
     'Kulang ito sa kabuuang $total ng order.',
   );
+  String get inStockNow => t('In stock now', 'Stock ngayon');
+  String get historyLink => t('History', 'Kasaysayan');
+  String readyToSellLine(String amount, String unit) => t(
+    '$amount $unit ready to sell',
+    '$amount $unit puwedeng ibenta',
+  ).replaceAll('  ', ' ');
+  String heldByOrdersLine(String amount, String unit) => t(
+    '$amount $unit held by orders',
+    '$amount $unit nakalaan sa order',
+  ).replaceAll('  ', ' ');
   String stockAddedNote(String amount, String unit, String total) => t(
     '+$amount $unit added · now $total $unit',
     '+$amount $unit naidagdag · $total $unit na ngayon',

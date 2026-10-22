@@ -93,7 +93,7 @@ void main() {
     expect(find.byKey(const ValueKey('listing-report')), findsNothing);
   });
 
-  testWidgets('successful report shows the thank-you snackbar', (tester) async {
+  testWidgets('successful report shows a confirmation inside the sheet', (tester) async {
     await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -118,7 +118,45 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
+    expect(find.byKey(const ValueKey('report-sent')), findsOneWidget);
+    expect(find.text(s.reportSentTitle), findsOneWidget);
     expect(find.text(s.reportSubmitted), findsOneWidget);
+    expect(find.byKey(const ValueKey('report-submit')), findsNothing);
+  });
+
+  testWidgets('Done closes the sheet after a report', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _app(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => showReportSheet(
+                context,
+                targetType: 'order',
+                targetId: 9,
+                submit: (_, _) async {},
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('report-reason-payment_problem')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('report-submit')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('report-sent')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('report-done')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('report-sent')), findsNothing);
+    expect(find.text('open'), findsOneWidget);
   });
 
   testWidgets('submit stays reachable on a small phone with the keyboard open', (tester) async {

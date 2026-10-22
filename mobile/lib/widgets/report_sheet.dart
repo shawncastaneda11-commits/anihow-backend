@@ -5,6 +5,7 @@ import '../l10n/app_strings.dart';
 import '../services/api_client.dart';
 import '../state/auth_controller.dart';
 import '../theme/anihow_space.dart';
+import '../theme/readable_accent.dart';
 import 'primary_button.dart';
 
 Future<void> showReportSheet(
@@ -50,6 +51,7 @@ class _ReportBottomSheetState extends State<ReportBottomSheet> {
   String? _reason;
   String? _reasonError;
   String? _submitError;
+  bool _sent = false;
   bool _sending = false;
 
   @override
@@ -85,10 +87,9 @@ class _ReportBottomSheetState extends State<ReportBottomSheet> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s.reportSubmitted)));
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
+      // Shown inside the sheet: a snackbar fired while the sheet closes is
+      // easy to miss behind it or under the bottom bar.
+      setState(() => _sent = true);
     } on ApiException catch (error) {
       // A snackbar would sit behind this sheet, so the error shows inside it.
       if (mounted) {
@@ -104,6 +105,15 @@ class _ReportBottomSheetState extends State<ReportBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
+    if (_sent) {
+      return _ReportSent(
+        onDone: () {
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        },
+      );
+    }
     // Scrolls so Submit stays reachable on a small phone with the keyboard up.
     return SafeArea(
       child: SingleChildScrollView(
@@ -171,6 +181,47 @@ class _ReportBottomSheetState extends State<ReportBottomSheet> {
               label: s.submitReport,
               onPressed: _sending ? null : _submit,
               busy: _sending,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The sheet's own confirmation after a report goes through.
+class _ReportSent extends StatelessWidget {
+  const _ReportSent({required this.onDone});
+
+  final VoidCallback onDone;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+    return SafeArea(
+      child: Padding(
+        key: const ValueKey('report-sent'),
+        padding: AniHowSpace.screenPadding,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: AniHowSpace.cardGap),
+            Icon(Icons.check_circle, size: 48, color: readableAccent(context)),
+            const SizedBox(height: AniHowSpace.cardGap),
+            Text(
+              s.reportSentTitle,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: AniHowSpace.labelGap),
+            Text(s.reportSubmitted, textAlign: TextAlign.center),
+            const SizedBox(height: AniHowSpace.section),
+            PrimaryButton(
+              key: const ValueKey('report-done'),
+              label: s.done,
+              onPressed: onDone,
             ),
           ],
         ),

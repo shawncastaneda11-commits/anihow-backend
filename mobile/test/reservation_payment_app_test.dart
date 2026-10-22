@@ -32,7 +32,7 @@ class _Api extends ApiClient {
     required String fulfillmentPreference,
     String? fulfillmentNote,
   }) async {
-    return _reservation();
+    return _reservation(fulfillmentPreference: fulfillmentPreference);
   }
 
   bool sawBuyerReservations = false;
@@ -123,6 +123,7 @@ ReservationRecord _reservation({
   String paymentStatus = 'awaiting_payment',
   PaymentProofRecord? proof,
   String? refundReference,
+  String? fulfillmentPreference,
 }) {
   return ReservationRecord(
     id: id,
@@ -144,6 +145,7 @@ ReservationRecord _reservation({
     ],
     latestProof: proof,
     refundReference: refundReference,
+    fulfillmentPreference: fulfillmentPreference,
     buyerName: 'Ana',
   );
 }
@@ -242,10 +244,13 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('reserve-harvest')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('reserve-pickup')));
+    await tester.pump();
     await tester.tap(find.widgetWithText(FilledButton, 'Reserve').last);
     await tester.pumpAndSettle();
     expect(find.byType(PayNowScreen), findsOneWidget);
     expect(find.text('Reservation · Pechay'), findsOneWidget);
+    expect(find.byKey(const ValueKey('pay-fulfillment')), findsOneWidget);
   });
 
   testWidgets('a disabled reserve explains why', (tester) async {

@@ -32,6 +32,7 @@ class _PayTarget {
     this.paymentDueAt,
     this.latestProof,
     this.order,
+    this.fulfillmentPreference,
   });
 
   final String amount;
@@ -44,6 +45,7 @@ class _PayTarget {
   final List<PaymentQrCode> paymentQrs;
   final bool isReservation;
   final OrderRecord? order;
+  final String? fulfillmentPreference;
 
   bool get isAwaitingPayment => paymentStatus == 'awaiting_payment';
 
@@ -62,6 +64,7 @@ class _PayTarget {
       paymentQrs: order.paymentQrs,
       isReservation: false,
       order: order,
+      fulfillmentPreference: order.fulfillmentPreference,
     );
   }
 
@@ -75,6 +78,7 @@ class _PayTarget {
       latestProof: reservation.latestProof,
       paymentQrs: reservation.paymentQrs,
       isReservation: true,
+      fulfillmentPreference: reservation.fulfillmentPreference,
     );
   }
 }
@@ -483,6 +487,31 @@ class _AmountCard extends StatelessWidget {
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
               ),
             ),
+            if (target.fulfillmentPreference != null) ...[
+              const SizedBox(height: 6),
+              Row(
+                key: const ValueKey('pay-fulfillment'),
+                children: [
+                  Icon(
+                    target.fulfillmentPreference == 'seller_delivers'
+                        ? Icons.local_shipping_outlined
+                        : Icons.storefront_outlined,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      target.fulfillmentPreference == 'seller_delivers'
+                          ? s.deliverShort
+                          : s.pickupShort,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 10),
             DecoratedBox(
               key: const ValueKey('pay-deadline'),

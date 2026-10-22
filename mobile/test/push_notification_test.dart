@@ -335,6 +335,8 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('reserve-harvest')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('reserve-pickup')));
+    await tester.pump();
     await tester.tap(find.widgetWithText(FilledButton, 'Reserve').last);
     await tester.pumpAndSettle();
     expect(find.text('Get notified about orders and payments'), findsOneWidget);

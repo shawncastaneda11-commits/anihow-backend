@@ -11,6 +11,7 @@ import '../../state/cart_controller.dart';
 import '../../state/preferences_controller.dart';
 import '../../support/order_quantity.dart';
 import '../../theme/anihow_space.dart';
+import '../../theme/readable_accent.dart';
 import '../../theme/anihow_theme.dart';
 import '../../widgets/cart_icon_button.dart';
 import '../../widgets/chat_with_stall_button.dart';
@@ -456,8 +457,11 @@ class ReserveHarvestSheet extends StatefulWidget {
 
 class _ReserveHarvestSheetState extends State<ReserveHarvestSheet> {
   late final TextEditingController _quantity;
-  String _preference = CartRequests.buyerPickup;
+
+  /// Nothing is chosen at first: the buyer has to pick one.
+  String? _preference;
   bool _busy = false;
+  bool _showChoiceError = false;
   String? _error;
 
   @override
@@ -480,12 +484,17 @@ class _ReserveHarvestSheetState extends State<ReserveHarvestSheet> {
       setState(() => _error = AppStrings.read(context).enterQuantity);
       return;
     }
+    final preference = _preference;
+    if (preference == null) {
+      setState(() => _showChoiceError = true);
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      await widget.onReserve(quantity, _preference);
+      await widget.onReserve(quantity, preference);
     } on ApiException catch (error) {
       if (mounted) {
         setState(() => _error = error.message);
@@ -544,30 +553,49 @@ class _ReserveHarvestSheetState extends State<ReserveHarvestSheet> {
               ),
               const SizedBox(height: 8),
               Text(s.payWithSellerQr),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              Text(
+                s.howWillYouGetIt,
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
                     child: _ReserveChoice(
+                      key: const ValueKey('reserve-pickup'),
                       label: s.pickupShort,
+                      icon: Icons.storefront_outlined,
                       selected: _preference == CartRequests.buyerPickup,
-                      onTap: () => setState(
-                        () => _preference = CartRequests.buyerPickup,
-                      ),
+                      onTap: () => setState(() {
+                        _preference = CartRequests.buyerPickup;
+                        _showChoiceError = false;
+                      }),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: _ReserveChoice(
+                      key: const ValueKey('reserve-deliver'),
                       label: s.deliverShort,
+                      icon: Icons.local_shipping_outlined,
                       selected: _preference == CartRequests.sellerDelivers,
-                      onTap: () => setState(
-                        () => _preference = CartRequests.sellerDelivers,
-                      ),
+                      onTap: () => setState(() {
+                        _preference = CartRequests.sellerDelivers;
+                        _showChoiceError = false;
+                      }),
                     ),
                   ),
                 ],
               ),
+              if (_showChoiceError) ...[
+                const SizedBox(height: 6),
+                Text(
+                  s.chooseHowToGetIt,
+                  key: const ValueKey('reserve-choice-error'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
               if (_error != null) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -592,26 +620,70 @@ class _ReserveHarvestSheetState extends State<ReserveHarvestSheet> {
   }
 }
 
+/// One of the two pickup or delivery cards. The chosen one is filled, has a
+/// thicker border and a check, so the choice is plain at a glance.
 class _ReserveChoice extends StatelessWidget {
   const _ReserveChoice({
+    super.key,
     required this.label,
+    required this.icon,
     required this.selected,
     required this.onTap,
   });
 
   final String label;
+  final IconData icon;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton(
-      style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-      onPressed: onTap,
-      child: Text(
-        label,
-        style: TextStyle(
-          fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+    final theme = Theme.of(context);
+    final accent = readableAccent(context);
+    final border = selected
+        ? accent
+        : theme.colorScheme.onSurface.withValues(alpha: 0.28);
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: Material(
+        color: selected ? accentTint(context) : Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: border, width: selected ? 2 : 1),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 56),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    selected ? Icons.check_circle : icon,
+                    size: 20,
+                    color: selected ? accent : theme.colorScheme.onSurface,
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                        color: selected ? accent : null,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

@@ -234,6 +234,10 @@ class ApiClient {
     await _post('/auth/forgot-password', {'email': email});
   }
 
+  Future<void> verifyResetCode(String email, String code) async {
+    await _post('/auth/verify-reset-code', {'email': email, 'code': code});
+  }
+
   Future<void> resetPassword(
     String email,
     String code,

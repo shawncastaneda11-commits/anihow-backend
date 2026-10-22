@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Auth\ForgotPasswordRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 class ForgotPasswordController extends Controller
 {
@@ -15,16 +16,28 @@ class ForgotPasswordController extends Controller
     {
         $user = User::query()->where('email', $request->validated('email'))->first();
 
-        if ($user instanceof User && $user->status->canAuthenticate()) {
-            if (SendEmailVerificationCodeAction::mailRequiredButMissing()) {
-                SendEmailVerificationCodeAction::logUnavailable();
-            } else {
-                $sendCode->handle($user);
-            }
+        // Says plainly when no account uses the email, so a mistyped address
+        // is not left waiting for a code. throttle:auth limits the guessing.
+        if (! $user instanceof User) {
+            throw ValidationException::withMessages([
+                'email' => 'No AniHow account uses this email. Check the spelling.',
+            ]);
+        }
+
+        if (! $user->status->canAuthenticate()) {
+            throw ValidationException::withMessages([
+                'email' => 'This account is suspended. Contact the AniHow administrator.',
+            ]);
+        }
+
+        if (SendEmailVerificationCodeAction::mailRequiredButMissing()) {
+            SendEmailVerificationCodeAction::logUnavailable();
+        } else {
+            $sendCode->handle($user);
         }
 
         return response()->json([
-            'message' => 'If that email is registered, a password reset link was sent.',
+            'message' => 'We sent a 6-digit code to your email.',
         ]);
     }
 }

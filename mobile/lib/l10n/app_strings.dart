@@ -163,6 +163,21 @@ class AppStrings {
       t('Create a buyer account', 'Gumawa ng buyer account');
 
   String get verifyEmail => t('Verify Email', 'Beripikahin ang email');
+  String resetStepOf(int step, int total) =>
+      t('Step $step of $total', 'Hakbang $step sa $total');
+  String resetCodeSentTo(String email) => t(
+    'Enter the 6-digit code we sent to $email. It lasts 10 minutes.',
+    'Ilagay ang 6 na digit na code na ipinadala namin sa $email. May bisa ito ng 10 minuto.',
+  );
+  String get chooseNewPasswordHint => t(
+    'Code accepted. Choose a new password.',
+    'Tama ang code. Pumili ng bagong password.',
+  );
+  String get enterValidEmail => t(
+    'Enter a valid email, like maria@gmail.com.',
+    'Maglagay ng tamang email, gaya ng maria@gmail.com.',
+  );
+  String get useAnotherEmail => t('Use a different email', 'Ibang email ang gamitin');
   String get code => t('Code', 'Code');
   String get verify => t('Verify', 'Beripikahin');
   String get resendCode => t('Resend code', 'Ipadala ulit ang code');
@@ -989,6 +1004,12 @@ class AppStrings {
     'Pagkatapos mag-place, buksan ang Orders, tapos Chat with stall.',
   );
   String get howYouMeet => t('How you meet', 'Paano kayo magkikita');
+  String get howWillYouGetIt =>
+      t('How will you get it?', 'Paano mo ito makukuha?');
+  String get chooseHowToGetIt => t(
+    'Choose I pick up or Seller brings it.',
+    'Pumili: Ako ang susalo o Hatid ng seller.',
+  );
   String get pickupShort => t('I pick up', 'Ako ang susalo');
   String get deliverShort => t('Seller brings it', 'Hatid ng seller');
   String get orderPlacedTitle => t('Order reserved', 'Na-reserve na ang order');

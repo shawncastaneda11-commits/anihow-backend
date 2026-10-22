@@ -255,7 +255,7 @@ class VerificationAndPasswordResetTest extends TestCase
             ->assertJsonPath('message', 'Your email address is not verified.');
     }
 
-    public function test_forgot_password_sends_a_code_for_an_existing_account_and_nothing_for_an_unknown_email(): void
+    public function test_forgot_password_sends_a_code_for_an_existing_account_and_says_when_the_email_is_unknown(): void
     {
         Notification::fake();
 
@@ -266,15 +266,13 @@ class VerificationAndPasswordResetTest extends TestCase
             'email' => 'resetme@example.com',
         ])->assertOk();
 
-        $unknown = $this->postJson('/api/auth/forgot-password', [
+        $this->postJson('/api/auth/forgot-password', [
             'email' => 'nobody@example.com',
-        ])->assertOk();
+        ])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.email.0', 'No AniHow account uses this email. Check the spelling.');
 
-        $this->assertSame($known->json(), $unknown->json());
-        $this->assertSame(
-            'If that email is registered, a password reset link was sent.',
-            $known->json('message'),
-        );
+        $this->assertSame('We sent a 6-digit code to your email.', $known->json('message'));
         $this->assertTrue(SendEmailVerificationCodeAction::shouldExposeCode());
         $known->assertJsonMissingPath('reset_code');
         $known->assertJsonMissingPath('verification_code');
@@ -287,6 +285,32 @@ class VerificationAndPasswordResetTest extends TestCase
                 && in_array($line, $mail->introLines, true);
         });
         Notification::assertCount(1);
+    }
+
+    public function test_the_code_can_be_checked_before_choosing_a_new_password(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create(['email' => 'step@example.com']);
+        $user->syncRoles(Role::Buyer);
+
+        $this->postJson('/api/auth/forgot-password', ['email' => 'step@example.com'])->assertOk();
+        $code = Notification::sent($user, ResetPasswordCodeNotification::class)->last()->code;
+        $wrong = $code === '000000' ? '111111' : '000000';
+
+        $this->postJson('/api/auth/verify-reset-code', ['email' => 'step@example.com', 'code' => $wrong])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.code.0', 'The reset code is invalid or has expired.');
+
+        $this->postJson('/api/auth/verify-reset-code', ['email' => 'step@example.com', 'code' => $code])
+            ->assertOk();
+
+        $this->postJson('/api/auth/reset-password', [
+            'email' => 'step@example.com',
+            'code' => $code,
+            'password' => 'New-Pass#123',
+            'password_confirmation' => 'New-Pass#123',
+        ])->assertOk();
     }
 
     public function test_correct_reset_code_changes_the_password_and_revokes_old_tokens(): void
@@ -439,8 +463,8 @@ class VerificationAndPasswordResetTest extends TestCase
         $this->postJson('/api/auth/forgot-password', [
             'email' => 'suspended@example.com',
         ])
-            ->assertOk()
-            ->assertJsonPath('message', 'If that email is registered, a password reset link was sent.');
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.email.0', 'This account is suspended. Contact the AniHow administrator.');
 
         Notification::assertNothingSent();
         $this->assertNull(Cache::get(SendPasswordResetCodeAction::CACHE_PREFIX.$user->getKey()));

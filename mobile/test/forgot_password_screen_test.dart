@@ -25,10 +25,40 @@ class _RecordingApi extends ApiClient {
 
   int forgotCalls = 0;
   int resetCalls = 0;
+  int verifyCalls = 0;
+  bool unknownEmail = false;
+  bool wrongCode = false;
 
   @override
   Future<void> forgotPassword(String email) async {
     forgotCalls += 1;
+    if (unknownEmail) {
+      throw ApiException(
+        'No AniHow account uses this email. Check the spelling.',
+        statusCode: 422,
+        body: {
+          'errors': {
+            'email': ['No AniHow account uses this email. Check the spelling.'],
+          },
+        },
+      );
+    }
+  }
+
+  @override
+  Future<void> verifyResetCode(String email, String code) async {
+    verifyCalls += 1;
+    if (wrongCode) {
+      throw ApiException(
+        'The reset code is invalid or has expired.',
+        statusCode: 422,
+        body: {
+          'errors': {
+            'code': ['The reset code is invalid or has expired.'],
+          },
+        },
+      );
+    }
   }
 
   @override
@@ -92,8 +122,78 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.forgotCalls, 1);
-    expect(find.widgetWithText(FilledButton, s.resetPassword), findsOneWidget);
+    expect(find.text('Step 2 of 3'), findsOneWidget);
     expect(find.text('000000'), findsOneWidget);
+    expect(find.text(s.newPassword), findsNothing);
+    expect(find.widgetWithText(FilledButton, s.resetPassword), findsNothing);
+  });
+
+  testWidgets('the new password appears only after the code is accepted', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(412, 915));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final api = _RecordingApi()..wrongCode = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AniHowTheme.light(),
+        home: ForgotPasswordScreen(client: api),
+      ),
+    );
+    await tester.pump();
+
+    final s = AppStrings(false);
+    await tester.enterText(find.byType(TextField), 'maria@example.com');
+    await tester.tap(find.widgetWithText(FilledButton, s.sendCode));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, '123456');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, s.verify));
+    await tester.pumpAndSettle();
+    expect(find.text('The reset code is invalid or has expired.'), findsOneWidget);
+    expect(find.text(s.newPassword), findsNothing);
+
+    api.wrongCode = false;
+    await tester.tap(find.widgetWithText(FilledButton, s.verify));
+    await tester.pumpAndSettle();
+    expect(api.verifyCalls, 2);
+    expect(find.text('Step 3 of 3'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, s.resetPassword), findsOneWidget);
+  });
+
+  testWidgets('an unknown email stays on step 1 with a red note', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(412, 915));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final api = _RecordingApi()..unknownEmail = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AniHowTheme.light(),
+        home: ForgotPasswordScreen(client: api),
+      ),
+    );
+    await tester.pump();
+
+    final s = AppStrings(false);
+    await tester.enterText(find.byType(TextField), 'nobody');
+    await tester.tap(find.widgetWithText(FilledButton, s.sendCode));
+    await tester.pump();
+    expect(find.text(s.enterValidEmail), findsOneWidget);
+    expect(api.forgotCalls, 0);
+
+    await tester.enterText(find.byType(TextField), 'nobody@example.com');
+    await tester.tap(find.widgetWithText(FilledButton, s.sendCode));
+    await tester.pumpAndSettle();
+    expect(api.forgotCalls, 1);
+    expect(
+      find.text('No AniHow account uses this email. Check the spelling.'),
+      findsOneWidget,
+    );
+    expect(find.text('Step 1 of 3'), findsOneWidget);
   });
 
   testWidgets('mismatched passwords block submit', (tester) async {
@@ -116,8 +216,12 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).first, '123456');
-    await tester.enterText(find.byType(TextField).at(1), 'new-password-123');
-    await tester.enterText(find.byType(TextField).at(2), 'different-password');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, s.verify));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).at(0), 'new-password-123');
+    await tester.enterText(find.byType(TextField).at(1), 'different-password');
     await tester.pump();
     await tester.tap(find.widgetWithText(FilledButton, s.resetPassword));
     await tester.pump();
@@ -161,8 +265,12 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).first, '123456');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, s.verify));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).at(0), 'new-password-123');
     await tester.enterText(find.byType(TextField).at(1), 'new-password-123');
-    await tester.enterText(find.byType(TextField).at(2), 'new-password-123');
     await tester.pump();
     await tester.tap(find.widgetWithText(FilledButton, s.resetPassword));
     await tester.pumpAndSettle();

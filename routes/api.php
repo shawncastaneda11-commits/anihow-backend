@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\Auth\ResetPasswordController;
 use App\Http\Controllers\Api\Auth\StoreUserAvatarController;
 use App\Http\Controllers\Api\Auth\UpdateProfileController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
+use App\Http\Controllers\Api\Auth\VerifyResetCodeController;
 use App\Http\Controllers\Api\Buyer\BuyerAnnouncementController;
 use App\Http\Controllers\Api\Cart\CartController;
 use App\Http\Controllers\Api\Chat\ChatAttachmentController;
@@ -78,6 +79,7 @@ Route::prefix('auth')->group(function (): void {
         Route::post('register', RegisterController::class)->name('auth.register');
         Route::post('login', LoginController::class)->name('auth.login');
         Route::post('forgot-password', ForgotPasswordController::class)->name('auth.forgot-password');
+        Route::post('verify-reset-code', VerifyResetCodeController::class)->name('auth.verify-reset-code');
         Route::post('reset-password', ResetPasswordController::class)->name('auth.reset-password');
     });
 

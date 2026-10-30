@@ -1795,6 +1795,8 @@ class AppStrings {
       t('No-show at handover', 'Hindi dumating sa handover');
   String get sellerUnresponsive =>
       t('Seller unresponsive', 'Hindi tumugon ang seller');
+  String get listingTakenDown =>
+      t('Listing taken down', 'Tinanggal ang listing');
   String get otherReason => t('Other', 'Iba');
   String get cancelledByBuyer => t('Cancelled by buyer', 'Kinansela ng buyer');
   String get reviewUnlocked =>
@@ -1828,6 +1830,7 @@ class AppStrings {
         'seller_declined' => sellerDeclined,
         'no_show' => noShowHandover,
         'seller_unresponsive' => sellerUnresponsive,
+        'listing_taken_down' => listingTakenDown,
         'other' => otherReason,
         _ => fallback ?? value ?? '',
       };

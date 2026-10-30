@@ -17,11 +17,18 @@ class TakeDownListingAction
         private InAppNotifier $notifier,
         private CancelReservation $cancelReservation,
         private GuardListingReservationCancellation $reservationGuard,
+        private GuardListingOpenOrders $openOrdersGuard,
     ) {}
 
-    public function handle(Listing $listing, User $moderator, string $reason, bool $confirmCancelReservations = false): Listing
-    {
+    public function handle(
+        Listing $listing,
+        User $moderator,
+        string $reason,
+        bool $confirmCancelReservations = false,
+        bool $confirmOpenOrders = false,
+    ): Listing {
         $this->reservationGuard->ensure($listing, $confirmCancelReservations, asValidationException: true);
+        $this->openOrdersGuard->ensure($listing, $confirmOpenOrders);
 
         $listing->forceFill([
             'status' => ListingStatus::TakenDown,
@@ -34,6 +41,8 @@ class TakeDownListingAction
         CartItem::query()->where('listing_id', $listing->id)->delete();
 
         $this->cancelReservation->forListing($listing, ReservationCancellationReason::ListingRemoved);
+
+        $this->openOrdersGuard->cancelPlaced($listing);
 
         $listing->loadMissing('farmerSeller');
 

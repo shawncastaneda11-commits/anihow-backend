@@ -8,6 +8,7 @@ use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
+use Filament\Facades\Filament;
 use Filament\Resources\Pages\EditRecord;
 
 class EditUser extends EditRecord
@@ -56,6 +57,21 @@ class EditUser extends EditRecord
     public function temporaryPasswordAction(): Action
     {
         return TemporaryPasswordAction::make();
+    }
+
+    /**
+     * Changing your own password would otherwise end this session on the
+     * next request, because the session stores the old password hash.
+     */
+    protected function afterSave(): void
+    {
+        $record = $this->getRecord();
+
+        if ($record->is(auth()->user()) && $record->wasChanged('password') && request()->hasSession()) {
+            request()->session()->put([
+                'password_hash_'.Filament::getAuthGuard() => $record->getAuthPassword(),
+            ]);
+        }
     }
 
     /**

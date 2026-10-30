@@ -272,6 +272,12 @@ class OrderPaymentSummary extends StatelessWidget {
                 label: s.markRefunded,
                 onPressed: () => _refund(context),
               ),
+            if (forSeller && order.paymentStatus == 'refund_due' && order.paidAt == null)
+              OutlinedButton(
+                key: const ValueKey('payment-never-arrived'),
+                onPressed: () => _neverArrived(context),
+                child: Text(s.paymentNeverArrived),
+              ),
           ],
         ),
       ),
@@ -370,6 +376,41 @@ class OrderPaymentSummary extends StatelessWidget {
         order.id,
         refundReference: reference,
       );
+      onChanged?.call(updated);
+    } on ApiException catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    }
+  }
+
+  /// Only for a payment the seller never confirmed: the cancellation made it
+  /// a refund due, but no money reached the seller to send back.
+  Future<void> _neverArrived(BuildContext context) async {
+    final s = AppStrings.of(context);
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(s.paymentNeverArrivedTitle),
+        content: Text(s.paymentNeverArrivedBody(AniHowMoney.peso(order.total))),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(s.cancel),
+          ),
+          TextButton(
+            key: const ValueKey('payment-never-arrived-yes'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(s.closeRefund),
+          ),
+        ],
+      ),
+    );
+    if (yes != true || !context.mounted) {
+      return;
+    }
+    try {
+      final updated = await context.read<AuthController>().api.markOrderPaymentNotReceived(order.id);
       onChanged?.call(updated);
     } on ApiException catch (error) {
       if (context.mounted) {

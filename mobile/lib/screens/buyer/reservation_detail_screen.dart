@@ -129,6 +129,45 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
     }
   }
 
+  /// Only for a payment the seller never confirmed: the cancellation made it
+  /// a refund due, but no money reached the seller to send back.
+  Future<void> _neverArrived() async {
+    final s = AppStrings.of(context);
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(s.paymentNeverArrivedTitle),
+        content: Text(s.paymentNeverArrivedBody(AniHowMoney.peso(_reservation.amountLabel))),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(s.cancel),
+          ),
+          TextButton(
+            key: const ValueKey('payment-never-arrived-yes'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(s.closeRefund),
+          ),
+        ],
+      ),
+    );
+    if (yes != true || !mounted) {
+      return;
+    }
+    try {
+      final updated = await context.read<AuthController>().api.markReservationPaymentNotReceived(
+        _reservation.id,
+      );
+      if (mounted) {
+        setState(() => _reservation = updated);
+      }
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    }
+  }
+
   Future<void> _cancel() async {
     final listingId = _reservation.listingId;
     if (listingId == null) {
@@ -235,6 +274,14 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
               key: const ValueKey('mark-refunded'),
               label: s.markRefunded,
               onPressed: _refund,
+            ),
+          if (widget.forSeller &&
+              reservation.paymentStatus == 'refund_due' &&
+              reservation.paidAt == null)
+            OutlinedButton(
+              key: const ValueKey('payment-never-arrived'),
+              onPressed: _neverArrived,
+              child: Text(s.paymentNeverArrived),
             ),
           if (widget.forSeller && reservation.isActive && reservation.listingId != null)
             TextButton(

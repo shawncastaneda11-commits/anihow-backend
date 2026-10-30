@@ -384,6 +384,42 @@ class OnlinePaymentTest extends TestCase
             ->assertJsonPath('data.refund_reference', 'RF9901');
     }
 
+    public function test_a_seller_closes_an_unconfirmed_order_refund_as_never_received(): void
+    {
+        [$farmer, $order] = $this->sentProof();
+        $buyer = User::query()->findOrFail($order->buyer_id);
+        $this->asUser($farmer)->patchJson("/api/farmer/orders/{$order->id}/cancel", [
+            'reason' => 'no_show',
+        ])->assertOk();
+        $rejectedNotices = $this->notices($buyer->id, NotificationType::PaymentRejected);
+
+        $this->asUser($this->farmer())->patchJson("/api/farmer/orders/{$order->id}/payment-not-received")
+            ->assertForbidden();
+
+        $this->asUser($farmer)->patchJson("/api/farmer/orders/{$order->id}/payment-not-received")
+            ->assertOk()
+            ->assertJsonPath('data.payment_status', OrderPaymentStatus::NotReceived->value);
+        $this->assertSame($rejectedNotices + 1, $this->notices($buyer->id, NotificationType::PaymentRejected));
+
+        $this->asUser($farmer)->patchJson("/api/farmer/orders/{$order->id}/payment-not-received")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('payment');
+    }
+
+    public function test_a_confirmed_order_payment_cannot_be_closed_as_never_received(): void
+    {
+        [$farmer, $order] = $this->sentProof();
+        $order->forceFill([
+            'payment_status' => OrderPaymentStatus::RefundDue,
+            'paid_at' => now(),
+        ])->save();
+
+        $this->asUser($farmer)->patchJson("/api/farmer/orders/{$order->id}/payment-not-received")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('payment');
+        $this->assertSame(OrderPaymentStatus::RefundDue, $order->fresh()->payment_status);
+    }
+
     public function test_the_stale_sweep_turns_a_paid_unanswered_order_into_a_refund(): void
     {
         [$farmer, $order] = $this->sentProof();

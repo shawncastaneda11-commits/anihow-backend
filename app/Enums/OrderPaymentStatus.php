@@ -9,6 +9,7 @@ enum OrderPaymentStatus: string
     case Paid = 'paid';
     case RefundDue = 'refund_due';
     case Refunded = 'refunded';
+    case NotReceived = 'not_received';
     case NotTracked = 'not_tracked';
 
     public function label(): string
@@ -19,6 +20,7 @@ enum OrderPaymentStatus: string
             self::Paid => 'Paid',
             self::RefundDue => 'Refund due',
             self::Refunded => 'Refunded',
+            self::NotReceived => 'Not received',
             self::NotTracked => 'Not tracked',
         };
     }

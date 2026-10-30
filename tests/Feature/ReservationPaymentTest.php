@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Actions\Privacy\ExportOwnDataAction;
+use App\Actions\Reservations\GuardListingReservationCancellation;
 use App\Enums\NotificationType;
 use App\Enums\OrderPaymentStatus;
 use App\Enums\PaymentMethod;
@@ -311,6 +312,47 @@ class ReservationPaymentTest extends TestCase
         ])->assertOk();
         $this->assertSame(OrderPaymentStatus::RefundDue, $reservation->fresh()->payment_status);
         $this->assertSame(ReservationCancellationReason::ListingRemoved, $reservation->fresh()->cancellation_reason);
+    }
+
+    public function test_a_seller_closes_an_unconfirmed_reservation_refund_as_never_received(): void
+    {
+        [$farmer, $listing, $buyer, $qr, $reservation] = $this->awaiting();
+        $this->sendProof($buyer, $reservation, $qr, '1007')->assertOk();
+
+        $this->assertStringContainsString(
+            '1 of them already paid online, so the seller will owe a refund.',
+            app(GuardListingReservationCancellation::class)->warning($listing),
+        );
+
+        $this->asUser($farmer)->patchJson("/api/farmer/listings/{$listing->id}/reservations/{$reservation->id}", [
+            'note' => 'Crop failed',
+        ])->assertOk();
+        $rejectedNotices = $this->notices($buyer->id, NotificationType::PaymentRejected);
+
+        $this->asUser($this->farmer())->patchJson("/api/farmer/reservations/{$reservation->id}/payment-not-received")
+            ->assertForbidden();
+
+        $this->asUser($farmer)->patchJson("/api/farmer/reservations/{$reservation->id}/payment-not-received")
+            ->assertOk()
+            ->assertJsonPath('data.payment_status', OrderPaymentStatus::NotReceived->value);
+        $this->assertSame($rejectedNotices + 1, $this->notices($buyer->id, NotificationType::PaymentRejected));
+
+        $this->asUser($farmer)->patchJson("/api/farmer/reservations/{$reservation->id}/payment-not-received")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('payment');
+    }
+
+    public function test_a_confirmed_reservation_payment_cannot_be_closed_as_never_received(): void
+    {
+        [$farmer, $listing, , , $reservation] = $this->paidReservation();
+        $this->asUser($farmer)->patchJson("/api/farmer/listings/{$listing->id}/reservations/{$reservation->id}", [
+            'note' => 'Crop failed',
+        ])->assertOk();
+
+        $this->asUser($farmer)->patchJson("/api/farmer/reservations/{$reservation->id}/payment-not-received")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('payment');
+        $this->assertSame(OrderPaymentStatus::RefundDue, $reservation->fresh()->payment_status);
     }
 
     public function test_online_payment_qr_deletion_and_account_deletion_wait_for_tracked_reservations(): void

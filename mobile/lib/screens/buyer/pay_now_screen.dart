@@ -33,6 +33,9 @@ class _PayTarget {
     this.latestProof,
     this.order,
     this.fulfillmentPreference,
+    this.cancellationReason,
+    this.cancellationLabel,
+    this.refundReference,
   });
 
   final String amount;
@@ -46,8 +49,18 @@ class _PayTarget {
   final bool isReservation;
   final OrderRecord? order;
   final String? fulfillmentPreference;
+  final String? cancellationReason;
+  final String? cancellationLabel;
+  final String? refundReference;
 
   bool get isAwaitingPayment => paymentStatus == 'awaiting_payment';
+
+  /// Cancelled after the buyer paid: the money goes back, or the seller
+  /// reported it never arrived. Nothing is left to pay on this screen.
+  bool get isClosedAfterCancel =>
+      paymentStatus == 'refund_due' ||
+      paymentStatus == 'refunded' ||
+      paymentStatus == 'not_received';
 
   bool get isPaymentSent => paymentStatus == 'payment_sent';
 
@@ -65,6 +78,9 @@ class _PayTarget {
       isReservation: false,
       order: order,
       fulfillmentPreference: order.fulfillmentPreference,
+      cancellationReason: order.cancellationReason,
+      cancellationLabel: order.cancellationLabel,
+      refundReference: order.refundReference,
     );
   }
 
@@ -79,6 +95,8 @@ class _PayTarget {
       paymentQrs: reservation.paymentQrs,
       isReservation: true,
       fulfillmentPreference: reservation.fulfillmentPreference,
+      cancellationReason: reservation.cancellationReason,
+      refundReference: reservation.refundReference,
     );
   }
 }
@@ -380,8 +398,10 @@ class _PayNowScreenState extends State<PayNowScreen> with WidgetsBindingObserver
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     final target = _target;
-    final rejected = target?.latestProof?.isRejected == true;
+    final closed = target?.isClosedAfterCancel == true;
+    final rejected = !closed && target?.latestProof?.isRejected == true;
     final showPayTools = target != null &&
+        !closed &&
         _showForm &&
         (target.isAwaitingPayment || rejected);
     return Scaffold(
@@ -393,6 +413,7 @@ class _PayNowScreenState extends State<PayNowScreen> with WidgetsBindingObserver
               children: [
                 _AmountCard(target: target, dueSoon: _dueSoon),
                 const SizedBox(height: AniHowSpace.cardGap),
+                if (closed) _CancelledPaymentCard(target: target),
                 if (rejected && !_showForm) _RejectedCard(
                   target: target,
                   onSendAgain: () => setState(() => _showForm = true),
@@ -538,6 +559,14 @@ class _AmountCard extends StatelessWidget {
 
   (String, Color, Color) _chip(AppStrings s, bool urgent) {
     final due = target.paymentDueAt;
+    if (target.isClosedAfterCancel) {
+      final label = s.paymentStatusLabel(target.paymentStatus);
+      return switch (target.paymentStatus) {
+        'refunded' => (label, AniHowColors.inStock, AniHowColors.inStockBg),
+        'not_received' => (label, AniHowColors.cancelledRed, AniHowColors.lowStockBg),
+        _ => (label, AniHowColors.root, const Color(0xFFFFF4D6)),
+      };
+    }
     if (target.paymentIsPaid) {
       return (s.paymentStatusLabel('paid'), AniHowColors.inStock, AniHowColors.inStockBg);
     }
@@ -845,7 +874,10 @@ class _SentCard extends StatelessWidget {
               ),
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: Text(s.paymentSentNote),
+                child: Text(
+                  s.paymentSentNote,
+                  style: const TextStyle(color: AniHowColors.text),
+                ),
               ),
             ),
             if (target.order != null) ...[
@@ -915,7 +947,10 @@ class _RejectedCard extends StatelessWidget {
               ),
             ),
             if (proof?.rejectionReason != null)
-              Text(s.reasonLine(s.paymentRejectReason(proof!.rejectionReason!))),
+              Text(
+                s.reasonLine(s.paymentRejectReason(proof!.rejectionReason!)),
+                style: const TextStyle(color: AniHowColors.text),
+              ),
             if (proof?.rejectionNote != null && proof!.rejectionNote!.isNotEmpty)
               Container(
                 margin: const EdgeInsets.symmetric(vertical: 8),
@@ -925,14 +960,91 @@ class _RejectedCard extends StatelessWidget {
                     left: BorderSide(color: AniHowColors.cancelledRed.withValues(alpha: 0.5), width: 3),
                   ),
                 ),
-                child: Text('“${proof.rejectionNote}”'),
+                child: Text(
+                  '“${proof.rejectionNote}”',
+                  style: const TextStyle(color: AniHowColors.text),
+                ),
               ),
-            if (due != null) Text(s.sendAgainBefore(due)),
+            if (due != null)
+              Text(
+                s.sendAgainBefore(due),
+                style: const TextStyle(color: AniHowColors.text),
+              ),
             const SizedBox(height: 8),
             PrimaryButton(
               key: const ValueKey('pay-send-again'),
               label: s.sendAgain,
               onPressed: onSendAgain,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A paid order or reservation that was cancelled: the buyer sees what they
+/// sent and what happens to it, not a prompt to pay again.
+class _CancelledPaymentCard extends StatelessWidget {
+  const _CancelledPaymentCard({required this.target});
+
+  final _PayTarget target;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+    final proof = target.latestProof;
+    final status = target.paymentStatus;
+    final reason = target.isReservation
+        ? s.reservationCancelReason(target.cancellationReason)
+        : s.cancellationReasonText(
+            target.cancellationReason,
+            fallback: target.cancellationLabel,
+          );
+    final (title, color) = switch (status) {
+      'refunded' => (s.refundSentTitle, AniHowColors.inStock),
+      'not_received' => (s.notReceivedBuyerTitle, AniHowColors.cancelledRed),
+      _ => (s.cancelledRefundDue, AniHowColors.root),
+    };
+    final refundReference = target.refundReference;
+    return DecoratedBox(
+      key: const ValueKey('pay-cancelled'),
+      decoration: paymentCardDecoration(context, borderColor: color),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              title,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(reason.isEmpty ? s.cancelledPlain : s.cancelledBecause(reason)),
+            if (proof != null) ...[
+              const SizedBox(height: 8),
+              Text('${s.referenceEndsIn}  ${lastFourOf(proof.reference)}'),
+              Text('${s.proofAmount}  ${AniHowMoney.peso(proof.amount ?? target.amount)}'),
+            ],
+            const SizedBox(height: 8),
+            Text(
+              switch (status) {
+                'refunded' => refundReference == null
+                    ? s.paymentStatusLabel('refunded')
+                    : '${s.refundReference}: $refundReference',
+                'not_received' => s.notReceivedBuyerNote(
+                    canReport: !target.isReservation,
+                  ),
+                _ => s.refundDueBuyerNote,
+              },
+              key: const ValueKey('pay-cancelled-note'),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
+              ),
             ),
           ],
         ),

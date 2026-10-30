@@ -8,6 +8,7 @@ use App\Actions\Reports\ResolveReportAction;
 use App\Enums\CancellationReason;
 use App\Enums\ListingStatus;
 use App\Enums\OrderActor;
+use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderStatus;
 use App\Enums\ReportReason;
 use App\Enums\ReportStatus;
@@ -76,6 +77,19 @@ class ListingTakedownOpenOrdersTest extends TestCase
         $this->assertSame(OrderStatus::Confirmed, $confirmed->fresh()->status);
         $this->assertSame(0.0, (float) $listing->quantity_held);
         $this->assertSame(17.0, (float) $listing->quantity_available);
+    }
+
+    public function test_the_takedown_warning_counts_placed_orders_already_paid_online(): void
+    {
+        $listing = $this->stockedListing($this->farmer());
+        $this->placeOrder($this->buyer(), $listing, 1);
+        $paid = $this->placeOrder($this->buyer(), $listing, 1);
+        $paid->forceFill(['payment_status' => OrderPaymentStatus::PaymentSent])->save();
+
+        $this->assertStringContainsString(
+            '2 placed order(s) will be cancelled and the buyers notified (1 already paid online, so the seller will owe a refund)',
+            app(GuardListingOpenOrders::class)->warning($listing),
+        );
     }
 
     public function test_a_takedown_without_open_orders_needs_no_extra_confirmation(): void

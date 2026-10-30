@@ -771,6 +771,14 @@ class ApiClient {
     return ReservationRecord.fromJson(_asMap(response['data'] ?? response));
   }
 
+  Future<ReservationRecord> markReservationPaymentNotReceived(int reservationId) async {
+    final response = await _patchJson(
+      '/farmer/reservations/$reservationId/payment-not-received',
+      const {},
+    );
+    return ReservationRecord.fromJson(_asMap(response['data'] ?? response));
+  }
+
   Future<ReservationRecord?> farmerReservation(int id) async {
     final listings = await farmerListings();
     for (final listing in listings) {
@@ -1035,6 +1043,11 @@ class ApiClient {
     final response = await _patchJson('/farmer/orders/$orderId/refund', {
       'refund_reference': refundReference,
     });
+    return OrderRecord.fromJson(_asMap(response['data'] ?? response));
+  }
+
+  Future<OrderRecord> markOrderPaymentNotReceived(int orderId) async {
+    final response = await _patchJson('/farmer/orders/$orderId/payment-not-received', const {});
     return OrderRecord.fromJson(_asMap(response['data'] ?? response));
   }
 

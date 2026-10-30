@@ -4,6 +4,7 @@ namespace App\Actions\Listings;
 
 use App\Enums\CancellationReason;
 use App\Enums\OrderActor;
+use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderSource;
 use App\Enums\OrderStatus;
 use App\Models\Listing;
@@ -25,21 +26,26 @@ class GuardListingOpenOrders
     public function __construct(private OrderStateMachine $stateMachine) {}
 
     /**
-     * @return array{placed: int, in_progress: int}|null
+     * @return array{placed: int, placed_paid: int, in_progress: int}|null
      */
     public function describe(Listing $listing): ?array
     {
-        $statuses = $this->openOrders($listing)->pluck('status');
+        $orders = $this->openOrders($listing)->get(['id', 'status', 'payment_status']);
 
-        if ($statuses->isEmpty()) {
+        if ($orders->isEmpty()) {
             return null;
         }
 
-        $placed = $statuses->filter(fn (OrderStatus $status): bool => $status === OrderStatus::Placed)->count();
+        $placed = $orders->filter(fn (Order $order): bool => $order->status === OrderStatus::Placed);
 
         return [
-            'placed' => $placed,
-            'in_progress' => $statuses->count() - $placed,
+            'placed' => $placed->count(),
+            'placed_paid' => $placed->filter(fn (Order $order): bool => in_array(
+                $order->payment_status,
+                [OrderPaymentStatus::PaymentSent, OrderPaymentStatus::Paid],
+                true,
+            ))->count(),
+            'in_progress' => $orders->count() - $placed->count(),
         ];
     }
 
@@ -54,7 +60,13 @@ class GuardListingOpenOrders
         $parts = [];
 
         if ($summary['placed'] > 0) {
-            $parts[] = "{$summary['placed']} placed order(s) will be cancelled and the buyers notified";
+            $part = "{$summary['placed']} placed order(s) will be cancelled and the buyers notified";
+
+            if ($summary['placed_paid'] > 0) {
+                $part .= " ({$summary['placed_paid']} already paid online, so the seller will owe a refund)";
+            }
+
+            $parts[] = $part;
         }
 
         if ($summary['in_progress'] > 0) {

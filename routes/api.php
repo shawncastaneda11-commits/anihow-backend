@@ -53,9 +53,11 @@ use App\Http\Controllers\Api\Payments\BuyerReservationPaymentProofController;
 use App\Http\Controllers\Api\Payments\FarmerPaymentController;
 use App\Http\Controllers\Api\Payments\FarmerPaymentProofController;
 use App\Http\Controllers\Api\Payments\FarmerReservationPaymentProofController;
+use App\Http\Controllers\Api\Payments\OrderPaymentNotReceivedController;
 use App\Http\Controllers\Api\Payments\OrderRefundController;
 use App\Http\Controllers\Api\Payments\PaymentProofScreenshotController;
 use App\Http\Controllers\Api\Payments\PaymentQrImageController;
+use App\Http\Controllers\Api\Payments\ReservationPaymentNotReceivedController;
 use App\Http\Controllers\Api\Payments\ReservationRefundController;
 use App\Http\Controllers\Api\Payments\SellerPaymentQrController;
 use App\Http\Controllers\Api\Reports\SubmitReportController;
@@ -250,10 +252,14 @@ Route::middleware([
         ->name('farmer.orders.payment-proofs.update');
     Route::patch('orders/{order}/refund', OrderRefundController::class)
         ->name('farmer.orders.refund');
+    Route::patch('orders/{order}/payment-not-received', OrderPaymentNotReceivedController::class)
+        ->name('farmer.orders.payment-not-received');
     Route::patch('reservations/{reservation}/payment-proofs/{paymentProof}', [FarmerReservationPaymentProofController::class, 'update'])
         ->name('farmer.reservations.payment-proofs.update');
     Route::patch('reservations/{reservation}/refund', ReservationRefundController::class)
         ->name('farmer.reservations.refund');
+    Route::patch('reservations/{reservation}/payment-not-received', ReservationPaymentNotReceivedController::class)
+        ->name('farmer.reservations.payment-not-received');
 
     Route::get('payment-qrs', [SellerPaymentQrController::class, 'index'])->name('farmer.payment-qrs.index');
     Route::post('payment-qrs', [SellerPaymentQrController::class, 'store'])->name('farmer.payment-qrs.store');

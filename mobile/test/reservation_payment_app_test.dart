@@ -22,6 +22,7 @@ class _Api extends ApiClient {
 
   String? reviewDecision;
   String? refundReference;
+  int? markedNotReceived;
   Object? shopError;
   OrderRecord? detailOrder;
 
@@ -70,6 +71,12 @@ class _Api extends ApiClient {
   }) async {
     this.refundReference = refundReference;
     return _reservation(paymentStatus: 'refunded', refundReference: refundReference);
+  }
+
+  @override
+  Future<ReservationRecord> markReservationPaymentNotReceived(int reservationId) async {
+    markedNotReceived = reservationId;
+    return _reservation(paymentStatus: 'not_received');
   }
 
   @override
@@ -124,6 +131,8 @@ ReservationRecord _reservation({
   PaymentProofRecord? proof,
   String? refundReference,
   String? fulfillmentPreference,
+  String? cancellationReason,
+  DateTime? paidAt,
 }) {
   return ReservationRecord(
     id: id,
@@ -131,7 +140,9 @@ ReservationRecord _reservation({
     listingName: 'Pechay',
     quantity: 2,
     lineTotal: 80,
-    status: paymentStatus == 'refund_due' ? 'cancelled' : 'active',
+    status: const ['refund_due', 'refunded', 'not_received'].contains(paymentStatus)
+        ? 'cancelled'
+        : 'active',
     unit: 'kg',
     paymentStatus: paymentStatus,
     paymentDueAt: DateTime.now().add(const Duration(hours: 5)),
@@ -146,11 +157,19 @@ ReservationRecord _reservation({
     latestProof: proof,
     refundReference: refundReference,
     fulfillmentPreference: fulfillmentPreference,
+    cancellationReason: cancellationReason,
+    paidAt: paidAt,
     buyerName: 'Ana',
   );
 }
 
-Future<void> _pump(WidgetTester tester, Widget home, _Api api, {UserAccount? user}) async {
+Future<void> _pump(
+  WidgetTester tester,
+  Widget home,
+  _Api api, {
+  UserAccount? user,
+  ThemeData? theme,
+}) async {
   await tester.binding.setSurfaceSize(const Size(500, 1600));
   addTearDown(() => tester.binding.setSurfaceSize(null));
   final auth = AuthController(api: api)
@@ -171,7 +190,7 @@ Future<void> _pump(WidgetTester tester, Widget home, _Api api, {UserAccount? use
         ChangeNotifierProvider.value(value: auth),
         ChangeNotifierProvider(create: (_) => CartController(auth)),
       ],
-      child: MaterialApp(theme: AniHowTheme.light(), home: home),
+      child: MaterialApp(theme: theme ?? AniHowTheme.light(), home: home),
     ),
   );
   await tester.pump();
@@ -356,6 +375,109 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('a cancelled paid reservation shows the refund, not send again', (tester) async {
+    final api = _Api();
+    const cancelledProof = PaymentProofRecord(
+      id: 2,
+      reference: 'ABC13333',
+      amount: '80.00',
+      status: 'rejected',
+      rejectionReason: 'other',
+      rejectionNote: 'Reservation cancelled',
+    );
+    await _pump(
+      tester,
+      PayNowScreen(
+        reservation: _reservation(
+          paymentStatus: 'refund_due',
+          proof: cancelledProof,
+          cancellationReason: 'listing_removed',
+        ),
+      ),
+      api,
+    );
+    expect(find.byKey(const ValueKey('pay-cancelled')), findsOneWidget);
+    expect(find.byKey(const ValueKey('pay-rejected')), findsNothing);
+    expect(find.byKey(const ValueKey('pay-send-again')), findsNothing);
+    expect(find.byKey(const ValueKey('pay-reference')), findsNothing);
+    expect(find.text('Cancelled · refund due'), findsOneWidget);
+    expect(find.text('This was cancelled: the listing was taken down.'), findsOneWidget);
+    expect(find.textContaining('3333'), findsOneWidget);
+    expect(find.text('Refund due'), findsOneWidget);
+
+    await _pump(
+      tester,
+      PayNowScreen(
+        key: UniqueKey(),
+        reservation: _reservation(paymentStatus: 'not_received', proof: cancelledProof),
+      ),
+      api,
+    );
+    expect(find.text('Seller did not receive the payment'), findsOneWidget);
+    expect(find.byKey(const ValueKey('pay-send-again')), findsNothing);
+  });
+
+  testWidgets('pale payment boxes keep dark text in dark mode', (tester) async {
+    await _pump(
+      tester,
+      PayNowScreen(
+        reservation: _reservation(
+          proof: const PaymentProofRecord(
+            id: 2,
+            reference: 'ABC12345',
+            amount: '80.00',
+            status: 'rejected',
+            rejectionReason: 'not_received',
+            rejectionNote: 'Wrong amount',
+          ),
+        ),
+      ),
+      _Api(),
+      theme: AniHowTheme.dark(),
+    );
+    final note = tester.widget<Text>(find.text('“Wrong amount”'));
+    expect(note.style?.color, AniHowColors.text);
+  });
+
+  testWidgets('a seller closes an unconfirmed refund as never arrived', (tester) async {
+    final api = _Api();
+    const seller = UserAccount(
+      id: 4,
+      name: 'Jun',
+      email: 'jun@example.com',
+      roles: ['farmer_seller'],
+    );
+    await _pump(
+      tester,
+      ReservationDetailScreen(
+        forSeller: true,
+        reservation: _reservation(paymentStatus: 'refund_due'),
+      ),
+      api,
+      user: seller,
+    );
+    await tester.tap(find.byKey(const ValueKey('payment-never-arrived')));
+    await tester.pumpAndSettle();
+    expect(find.text('Close this refund?'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('payment-never-arrived-yes')));
+    await tester.pumpAndSettle();
+    expect(api.markedNotReceived, 4);
+    expect(find.byKey(const ValueKey('payment-never-arrived')), findsNothing);
+
+    await _pump(
+      tester,
+      ReservationDetailScreen(
+        key: UniqueKey(),
+        forSeller: true,
+        reservation: _reservation(paymentStatus: 'refund_due', paidAt: DateTime(2026, 10, 30)),
+      ),
+      api,
+      user: seller,
+    );
+    expect(find.byKey(const ValueKey('mark-refunded')), findsOneWidget);
+    expect(find.byKey(const ValueKey('payment-never-arrived')), findsNothing);
   });
 
   testWidgets('the reservations list shows a pill, pay now, and cancel only while awaiting', (

@@ -2,6 +2,7 @@
 
 namespace App\Actions\Reservations;
 
+use App\Enums\OrderPaymentStatus;
 use App\Enums\ReservationStatus;
 use App\Exceptions\ReservationsRequireConfirmation;
 use App\Models\Listing;
@@ -45,8 +46,24 @@ class GuardListingReservationCancellation
         }
 
         $quantity = number_format($summary['quantity'], 2, '.', '');
+        $paid = $this->paidCount($listing);
+        $refunds = $paid > 0
+            ? " {$paid} of them already paid online, so the seller will owe a refund."
+            : '';
 
-        return "{$summary['count']} active reservation(s) ({$quantity} {$summary['unit']}) will be cancelled and the buyers notified. Restoring the listing later does NOT bring them back.";
+        return "{$summary['count']} active reservation(s) ({$quantity} {$summary['unit']}) will be cancelled and the buyers notified.{$refunds} Restoring the listing later does NOT bring them back.";
+    }
+
+    /**
+     * Active reservations whose buyer has already sent or been confirmed for
+     * the payment; cancelling them leaves the seller owing a refund.
+     */
+    private function paidCount(Listing $listing): int
+    {
+        return $listing->reservations()
+            ->where('status', ReservationStatus::Active)
+            ->whereIn('payment_status', [OrderPaymentStatus::PaymentSent, OrderPaymentStatus::Paid])
+            ->count();
     }
 
     public function conflictMessage(int $count, float $quantity, string $unit): string

@@ -1051,7 +1051,8 @@ class OrderRecord {
     return paymentStatus == 'payment_sent' ||
         paymentStatus == 'paid' ||
         paymentStatus == 'refund_due' ||
-        paymentStatus == 'refunded';
+        paymentStatus == 'refunded' ||
+        paymentStatus == 'not_received';
   }
 
   bool get hasCancellationReason =>

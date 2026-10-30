@@ -1604,6 +1604,7 @@ class AppStrings {
     'paid' => t('Paid', 'Bayad na'),
     'refund_due' => t('Refund due', 'Kailangan i-refund'),
     'refunded' => t('Refunded', 'Na-refund na'),
+    'not_received' => t('Not received', 'Hindi natanggap'),
     _ => '',
   };
   String get waitingForPayment =>
@@ -1615,6 +1616,45 @@ class AppStrings {
     'Hindi ito ang kabuuang halaga ng order.',
   );
   String get markRefunded => t('Mark as refunded', 'Markahan na na-refund');
+  String get paymentNeverArrived =>
+      t('Payment never arrived', 'Hindi dumating ang bayad');
+  String get paymentNeverArrivedTitle =>
+      t('Close this refund?', 'Isara ang refund na ito?');
+  String paymentNeverArrivedBody(String amount) => t(
+    'Only do this if the $amount never reached your wallet. The buyer is told that no refund will be sent.',
+    'Gawin lang ito kung hindi talaga dumating ang $amount sa wallet mo. Sasabihan ang buyer na walang refund na ipapadala.',
+  );
+  String get closeRefund => t('Close refund', 'Isara ang refund');
+  String get cancelledRefundDue =>
+      t('Cancelled · refund due', 'Kinansela · kailangan i-refund');
+  String cancelledBecause(String reason) =>
+      t('This was cancelled: $reason.', 'Kinansela ito: $reason.');
+  String get cancelledPlain => t('This was cancelled.', 'Kinansela ito.');
+  String get refundDueBuyerNote => t(
+    'The seller will send back what you paid, and you\'ll be notified when they do.',
+    'Ibabalik ng seller ang ibinayad mo, at aabisuhan ka kapag naipadala na.',
+  );
+  String get refundSentTitle => t('Refund sent', 'Naipadala ang refund');
+  String reservationCancelReason(String? value) => switch (value) {
+    'buyer_cancelled' => t('cancelled by you', 'kinansela mo'),
+    'seller_cancelled' => t('cancelled by the seller', 'kinansela ng seller'),
+    'harvest_shortfall' => t('the harvest fell short', 'kulang ang ani'),
+    'listing_removed' => t('the listing was taken down', 'tinanggal ang listing'),
+    'account_closed' => t('the account was closed', 'isinara ang account'),
+    'payment_expired' => t('the payment time expired', 'lumipas ang oras ng bayad'),
+    _ => '',
+  };
+  String get notReceivedBuyerTitle =>
+      t('Seller did not receive the payment', 'Hindi natanggap ng seller ang bayad');
+  String notReceivedBuyerNote({required bool canReport}) => canReport
+      ? t(
+          'The seller says this payment never arrived, so no refund will be sent. If you did pay, message the seller or report the payment.',
+          'Sabi ng seller ay hindi dumating ang bayad na ito, kaya walang refund na ipapadala. Kung nagbayad ka, i-message ang seller o i-report ang bayad.',
+        )
+      : t(
+          'The seller says this payment never arrived, so no refund will be sent. If you did pay, message the seller.',
+          'Sabi ng seller ay hindi dumating ang bayad na ito, kaya walang refund na ipapadala. Kung nagbayad ka, i-message ang seller.',
+        );
   String get refundReference => t('Refund reference', 'Reference ng refund');
   String get refundReferenceRequired =>
       t('Enter the refund reference.', 'Ilagay ang reference ng refund.');

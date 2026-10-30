@@ -69,7 +69,7 @@ class StatusPill extends StatelessWidget {
     final color = switch (status) {
       'paid' => AniHowColors.completed,
       'payment_sent' => AniHowColors.confirmedBlue,
-      'refund_due' || 'refunded' => AniHowColors.cancelled,
+      'refund_due' || 'refunded' || 'not_received' => AniHowColors.cancelled,
       _ => AniHowColors.pending,
     };
     return StatusPill(label: label, color: color);

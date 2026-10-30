@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Reports\Tables;
 
+use App\Actions\Listings\GuardListingOpenOrders;
 use App\Actions\Reports\DismissReportAction;
 use App\Actions\Reports\ResolveReportAction;
 use App\Actions\Reservations\GuardListingReservationCancellation;
@@ -148,6 +149,17 @@ class ReportsTable
                                 return $listing instanceof Listing
                                     && app(GuardListingReservationCancellation::class)->describe($listing) !== null;
                             }),
+                        Placeholder::make('open_orders_warning')
+                            ->label('')
+                            ->content(fn (Report $record): string => $record->reportable instanceof Listing
+                                ? (app(GuardListingOpenOrders::class)->warning($record->reportable) ?? '')
+                                : '')
+                            ->visible(fn (Report $record, Get $get): bool => self::takedownHasOpenOrders($record, $get)),
+                        Checkbox::make('confirm_open_orders')
+                            ->label('I understand the placed orders will be cancelled')
+                            ->visible(fn (Report $record, Get $get): bool => self::takedownHasOpenOrders($record, $get))
+                            ->required(fn (Report $record, Get $get): bool => self::takedownHasOpenOrders($record, $get))
+                            ->accepted(fn (Report $record, Get $get): bool => self::takedownHasOpenOrders($record, $get)),
                     ])
                     ->action(function (Report $record, array $data): void {
                         app(ResolveReportAction::class)->handle(
@@ -157,6 +169,7 @@ class ReportsTable
                             (bool) ($data['apply_moderation'] ?? false),
                             $data['moderation_reason'] ?? null,
                             (bool) ($data['confirm_cancel_reservations'] ?? false),
+                            (bool) ($data['confirm_open_orders'] ?? false),
                         );
                     }),
                 Action::make('dismiss')
@@ -223,5 +236,15 @@ class ReportsTable
         }
 
         return null;
+    }
+
+    /**
+     * The takedown toggle is on and the reported listing still has open orders.
+     */
+    private static function takedownHasOpenOrders(Report $record, Get $get): bool
+    {
+        return (bool) $get('apply_moderation')
+            && $record->reportable instanceof Listing
+            && app(GuardListingOpenOrders::class)->describe($record->reportable) !== null;
     }
 }

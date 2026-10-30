@@ -165,7 +165,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(OutlinedButton, 'Not set').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('28'));
+    // A day next month is always upcoming, whatever day the test runs.
+    await tester.tap(find.byTooltip('Next month'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('15').hitTestable().first);
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
 

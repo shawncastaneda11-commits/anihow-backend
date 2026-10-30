@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\ReservationsRequireConfirmation;
+use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsureIdVerified;
 use App\Http\Middleware\EnsurePasswordChanged;
 use App\Http\Middleware\ForceJsonResponse;
@@ -43,6 +44,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
             'password.changed' => EnsurePasswordChanged::class,
+            'account.active' => EnsureAccountIsActive::class,
             'id.verified' => EnsureIdVerified::class,
         ]);
     })

@@ -56,8 +56,7 @@ class UserForm
                     ->native(false)
                     ->preload()
                     ->live()
-                    ->visible(fn (): bool => self::canManageAccounts())
-                    ->disabled(fn (?User $record): bool => $record?->isSuperAdmin() ?? false)
+                    ->visible(fn (?User $record): bool => self::canManageAccounts() && ! ($record?->isSuperAdmin() ?? false))
                     ->dehydrated(fn (?User $record): bool => self::canManageAccounts() && ! ($record?->isSuperAdmin() ?? false))
                     ->helperText('One account holds one role. Super Admin is seeded and cannot be assigned from this form.'),
 
@@ -78,12 +77,16 @@ class UserForm
                     ->rule(fn (Get $get, Select $component): Closure => self::oneContentEditorPerFarm($get, $component))
                     ->helperText('Content Editors and Farmer-Sellers belong to one farm. One Content Editor per farm.'),
 
+                /*
+                 * Hidden on your own account so an administrator cannot
+                 * suspend themselves and lock the panel.
+                 */
                 Select::make('status')
                     ->options(UserStatus::options())
                     ->default(UserStatus::Active->value)
-                    ->visible(fn (): bool => self::canManageAccounts())
-                    ->required(fn (): bool => self::canManageAccounts())
-                    ->dehydrated(fn (): bool => self::canManageAccounts())
+                    ->visible(fn (?User $record): bool => self::managesOtherAccount($record))
+                    ->required(fn (?User $record): bool => self::managesOtherAccount($record))
+                    ->dehydrated(fn (?User $record): bool => self::managesOtherAccount($record))
                     ->native(false)
                     ->helperText('Only active accounts can sign in. Suspend an account to stop it signing in.'),
 
@@ -128,6 +131,11 @@ class UserForm
             && $record instanceof User
             && $record->exists
             && auth()->id() === $record->getKey();
+    }
+
+    private static function managesOtherAccount(?User $record): bool
+    {
+        return self::canManageAccounts() && ($record === null || auth()->id() !== $record->getKey());
     }
 
     private static function canManageAccounts(): bool

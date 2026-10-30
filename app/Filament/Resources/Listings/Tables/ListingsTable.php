@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Listings\Tables;
 
+use App\Actions\Listings\GuardListingOpenOrders;
 use App\Actions\Listings\TakeDownListingAction;
 use App\Actions\Reservations\GuardListingReservationCancellation;
 use App\Enums\ListingStatus;
@@ -162,7 +163,10 @@ class ListingsTable
                     ->color('danger')
                     ->requiresConfirmation()
                     ->visible(fn (Listing $record): bool => $record->status === ListingStatus::Published)
-                    ->modalDescription(fn (Listing $record): ?string => app(GuardListingReservationCancellation::class)->warning($record))
+                    ->modalDescription(fn (Listing $record): ?string => collect([
+                        app(GuardListingReservationCancellation::class)->warning($record),
+                        app(GuardListingOpenOrders::class)->warning($record),
+                    ])->filter()->implode(' ') ?: null)
                     ->schema([
                         Textarea::make('takedown_reason')
                             ->label('Reason')
@@ -174,6 +178,11 @@ class ListingsTable
                             ->visible(fn (Listing $record): bool => app(GuardListingReservationCancellation::class)->describe($record) !== null)
                             ->required(fn (Listing $record): bool => app(GuardListingReservationCancellation::class)->describe($record) !== null)
                             ->accepted(fn (Listing $record): bool => app(GuardListingReservationCancellation::class)->describe($record) !== null),
+                        Checkbox::make('confirm_open_orders')
+                            ->label('I understand the placed orders will be cancelled')
+                            ->visible(fn (Listing $record): bool => app(GuardListingOpenOrders::class)->describe($record) !== null)
+                            ->required(fn (Listing $record): bool => app(GuardListingOpenOrders::class)->describe($record) !== null)
+                            ->accepted(fn (Listing $record): bool => app(GuardListingOpenOrders::class)->describe($record) !== null),
                     ])
                     ->action(function (Listing $record, array $data): void {
                         app(TakeDownListingAction::class)->handle(
@@ -181,6 +190,7 @@ class ListingsTable
                             auth()->user(),
                             $data['takedown_reason'],
                             (bool) ($data['confirm_cancel_reservations'] ?? false),
+                            (bool) ($data['confirm_open_orders'] ?? false),
                         );
                     }),
 

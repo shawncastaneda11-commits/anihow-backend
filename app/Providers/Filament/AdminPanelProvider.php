@@ -4,9 +4,11 @@ namespace App\Providers\Filament;
 
 use App\Filament\Auth\Login;
 use App\Filament\Pages\Dashboard;
+use App\Filament\Resources\Users\UserResource;
+use App\Http\Middleware\AuthenticatePanel;
 use App\Http\Middleware\RedirectIfMustChangePassword;
+use Filament\Actions\Action;
 use Filament\Enums\ThemeMode;
-use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -74,8 +76,20 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
+            ->userMenuItems([
+                'account' => Action::make('account')
+                    ->label('My account')
+                    ->icon('heroicon-o-user-circle')
+                    ->url(fn (): string => UserResource::getUrl('edit', ['record' => auth()->id()])),
+            ])
+            /*
+             * Persistent, so these also run on every in-page action and a
+             * suspended account is signed out on its next click.
+             */
             ->authMiddleware([
-                Authenticate::class,
+                AuthenticatePanel::class,
+            ], isPersistent: true)
+            ->authMiddleware([
                 RedirectIfMustChangePassword::class,
             ]);
     }

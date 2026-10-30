@@ -129,6 +129,16 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             }
         });
 
+        /*
+         * However an account is suspended (the Suspend action, the Status
+         * field, an anonymised deletion), its app sessions end with it.
+         */
+        static::updated(function (User $user): void {
+            if ($user->wasChanged('status') && ! $user->status->canAuthenticate()) {
+                $user->tokens()->delete();
+            }
+        });
+
         static::deleting(function (User $user): void {
             $images = app(ImageVariants::class);
             $images->delete($user->avatar_path);

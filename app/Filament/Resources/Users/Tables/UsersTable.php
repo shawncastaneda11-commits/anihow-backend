@@ -20,6 +20,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Spatie\Permission\Models\Role as RoleModel;
 
 class UsersTable
 {
@@ -56,13 +57,20 @@ class UsersTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                /*
+                 * A Content Editor only ever sees their own farm's accounts,
+                 * so role and farm filters would only lead to empty results.
+                 */
                 SelectFilter::make('role')
                     ->relationship('roles', 'name')
-                    ->label('Role'),
+                    ->getOptionLabelFromRecordUsing(fn (RoleModel $record): string => Role::tryFrom($record->name)?->label() ?? $record->name)
+                    ->label('Role')
+                    ->visible(fn (): bool => auth()->user()?->can(Permission::ManageAccounts->value) ?? false),
                 SelectFilter::make('status')
                     ->options(UserStatus::options()),
                 SelectFilter::make('farm')
-                    ->relationship('farm', 'name'),
+                    ->relationship('farm', 'name')
+                    ->visible(fn (): bool => auth()->user()?->can(Permission::ManageAccounts->value) ?? false),
             ])
             ->recordActions([
                 Action::make('suspend')

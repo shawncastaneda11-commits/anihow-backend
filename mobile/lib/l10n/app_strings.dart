@@ -208,7 +208,6 @@ class AppStrings {
   );
   String get signOut => t('Sign out', 'Mag-sign out');
   String get myData => t('My data', 'Aking datos');
-  String get saveProfile => t('Save profile', 'I-save ang profile');
   String get profileUpdated =>
       t('Profile updated.', 'Na-update na ang profile.');
   String get emailNotEditable => t(
@@ -496,9 +495,6 @@ class AppStrings {
   String get activeListings => t('Active listings', 'Mga active na listing');
   String get noActiveListings =>
       t('No active listings', 'Walang active na listing');
-  String get noBioYet => t('No bio yet', 'Wala pang bio');
-  String get noLocationYet => t('No location yet', 'Wala pang lokasyon');
-  String get noContactYet => t('No contact yet', 'Wala pang contact');
   String get pickupOnly => t('Pickup only', 'Pickup lang');
   String get callToPickup => t(
     'Message the stall in the app to coordinate pickup.',
@@ -1020,7 +1016,6 @@ class AppStrings {
     'An administrator removed this listing from the marketplace.',
     'Tinanggal ng administrator ang listing na ito sa marketplace.',
   );
-  String get outOfStock => t('Out', 'Wala');
   String get placed => t('Placed', 'Placed');
   String get confirmed => t('Confirmed', 'Confirmed');
   String get ready => t('Ready', 'Ready');
@@ -1295,9 +1290,6 @@ class AppStrings {
   );
   String get comingSoon => t('Coming soon', 'Malapit na');
   String get discountPaused => t('Paused', 'Naka-pause');
-  String get availabilityAvailable => t('Available', 'Nabibili');
-  String get availabilityUpcoming => t('Upcoming', 'Paparating');
-  String get availabilityExpired => t('Expired', 'Paso na');
 
   String monthName(DateTime date) {
     const english = [
@@ -1363,6 +1355,15 @@ class AppStrings {
   String get manageLink => t('Manage', 'Ayusin');
   String get onlinePaymentIsOn => t('Online payment is on', 'Naka-on ang online na bayad');
   String get onlinePaymentIsOff => t('Online payment is off', 'Naka-off ang online na bayad');
+  String get shopTakesOnlinePayment =>
+      t('Online payment or cash', 'Online na bayad o cash');
+  String shopOnlinePaymentDetail(int hours) => t(
+    "Pay with the seller's GCash, Maya or bank QR within $hours ${hours == 1 ? 'hour' : 'hours'}, or pay cash.",
+    'Magbayad gamit ang GCash, Maya o bank QR ng seller sa loob ng $hours oras, o cash.',
+  );
+  String get shopCashOnly => t('Cash only', 'Cash lang');
+  String get shopCashOnlyDetail =>
+      t('Pay the seller in person at pickup.', 'Magbayad nang personal sa pickup.');
   String onlinePaymentDetail(int qrs, int hours) => t(
     '$qrs QR ${qrs == 1 ? 'code' : 'codes'} · buyers have $hours ${hours == 1 ? 'hour' : 'hours'} to pay',
     '$qrs QR code · may $hours oras ang buyer para magbayad',
@@ -2108,11 +2109,6 @@ class AppStrings {
   String get salesCategoryAll => t('All', 'Lahat');
   String get salesCategoryFresh => t('Fresh', 'Sariwa');
   String get salesCategoryValueAdded => t('Value-added', 'Prosesong produkto');
-  String groupedBy(String grouping) => switch (grouping) {
-    'week' => t('grouped by week', 'pinagsama-sama ayon sa linggo'),
-    'month' => t('grouped by month', 'pinagsama-sama ayon sa buwan'),
-    _ => t('grouped by day', 'pinagsama-sama ayon sa araw'),
-  };
 
   DateTime? _calendarDate(String iso) {
     final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch(iso);

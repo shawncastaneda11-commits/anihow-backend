@@ -18,6 +18,7 @@ import '../../widgets/id_verification_card.dart';
 import '../../widgets/order_look.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
+import '../../widgets/line_price.dart';
 import '../chat/order_chat_screen.dart';
 import 'pay_now_screen.dart';
 
@@ -509,8 +510,9 @@ class _PlacedView extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                              Text(
-                                AniHowMoney.peso(item.lineTotal ?? item.lineSubtotal),
+                              LinePrice(
+                                total: item.lineTotal ?? item.lineSubtotal,
+                                original: item.lineSubtotal,
                                 style: Theme.of(context).textTheme.titleSmall,
                               ),
                             ],

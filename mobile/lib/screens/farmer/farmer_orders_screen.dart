@@ -22,6 +22,7 @@ import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
 import '../../widgets/order_payment_summary.dart';
 import '../../widgets/status_pill.dart';
+import '../../widgets/line_price.dart';
 import '../chat/order_chat_screen.dart';
 import 'farmer_payments_screen.dart';
 import 'walk_in_sale_screen.dart';
@@ -1476,10 +1477,9 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
                               ],
                             ),
                           ),
-                          Text(
-                            AniHowMoney.peso(
-                              item.lineTotal ?? item.lineSubtotal,
-                            ),
+                          LinePrice(
+                            total: item.lineTotal ?? item.lineSubtotal,
+                            original: item.lineSubtotal,
                             style: theme.textTheme.titleSmall,
                           ),
                         ],

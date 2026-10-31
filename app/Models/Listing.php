@@ -166,11 +166,6 @@ class Listing extends Model
         return $this->activeTawadRule()->first();
     }
 
-    public function favorites(): HasMany
-    {
-        return $this->hasMany(Favorite::class);
-    }
-
     public function reservations(): HasMany
     {
         return $this->hasMany(Reservation::class);

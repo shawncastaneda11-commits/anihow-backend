@@ -283,7 +283,6 @@ All endpoints are under `/api`. Send `Accept: application/json`, and after signi
 | `/api/auth` | Sign up, sign in, email verification, password reset, terms, ID verification, profile |
 | `/api/buyer` | Cart, checkout, orders, reservations, payments, favorites, reviews |
 | `/api/farmer` | Listings, stock, harvests, orders, payments, walk-in sales, analytics |
-| `/api/admin` | Admin-only actions used outside the CMS |
 | other `/api` routes | Marketplace, farms, shops, chats, notifications, reports, FAQ |
 
 List every route with:

@@ -54,7 +54,7 @@ void main() {
     await tester.pump();
 
     final s = AppStrings(false);
-    expect(find.text(s.favoriteCrops), findsNothing);
+    expect(find.text('Crops'), findsNothing);
     expect(find.text(s.noFavoriteStores), findsOneWidget);
   });
 

@@ -40,7 +40,7 @@ void main() {
     final s = AppStrings(false);
     expect(find.text(s.writeReview), findsOneWidget);
     expect(find.text(s.submitReview), findsOneWidget);
-    expect(find.text(s.readyToReview), findsNothing);
+    expect(find.text('Ready to review'), findsNothing);
 
     await tester.ensureVisible(find.byKey(const ValueKey('review-star-5')));
     await tester.tap(find.byKey(const ValueKey('review-star-5')));

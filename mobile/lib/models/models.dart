@@ -1298,31 +1298,6 @@ class CartSnapshot {
   }
 }
 
-class FavoriteRecord {
-  const FavoriteRecord({
-    required this.id,
-    required this.listingId,
-    this.listing,
-  });
-
-  final int id;
-  final int listingId;
-  final ListingItem? listing;
-
-  factory FavoriteRecord.fromJson(Map<String, dynamic> json) {
-    final listingJson = json['listing'];
-    return FavoriteRecord(
-      id: ListingItem._asCount(json['id']) ?? 0,
-      listingId: ListingItem._asCount(json['listing_id']) ?? 0,
-      listing: listingJson is Map<String, dynamic>
-          ? ListingItem.fromJson(listingJson)
-          : listingJson is Map
-          ? ListingItem.fromJson(Map<String, dynamic>.from(listingJson))
-          : null,
-    );
-  }
-}
-
 class ShopFavoriteRecord {
   const ShopFavoriteRecord({
     required this.id,

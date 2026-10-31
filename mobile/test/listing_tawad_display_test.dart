@@ -64,7 +64,7 @@ void main() {
 
     expect(find.byKey(const ValueKey('promo-badge')), findsOneWidget);
     expect(find.text(s.promoFlatOff(AniHowMoney.peso('5'))), findsOneWidget);
-    expect(find.text(s.tawadMinus(AniHowMoney.peso('5'))), findsNothing);
+    expect(find.text('Tawad −${AniHowMoney.peso('5')}'), findsNothing);
   });
 
   testWidgets('listing detail shows tawad on the photo and under the price', (tester) async {
@@ -81,6 +81,6 @@ void main() {
     expect(find.byKey(const ValueKey('promo-badge')), findsOneWidget);
     expect(find.text(s.promoFlatOff(AniHowMoney.peso('5'))), findsOneWidget);
     expect(find.byKey(const ValueKey('listing-tawad-summary')), findsNothing);
-    expect(find.text(s.tawadOffThisOrder(AniHowMoney.peso('5'))), findsNothing);
+    expect(find.text('${AniHowMoney.peso('5')} off this order'), findsNothing);
   });
 }

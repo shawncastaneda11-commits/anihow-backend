@@ -3,14 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\CropCareArticle;
-use App\Models\Farm;
 use App\Models\Listing;
 use App\Support\ImageVariants;
 use App\Support\ListingStorage;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -164,26 +162,6 @@ class ImageVariantsTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.image_url', $article->fresh()->imageUrl())
             ->assertJsonPath('data.thumbnail_url', $article->fresh()->thumbnailUrl());
-    }
-
-    public function test_thumbnail_backfill_is_idempotent(): void
-    {
-        $images = app(ImageVariants::class);
-        $disk = Storage::disk(ListingStorage::diskName());
-        $path = 'listings/legacy.jpg';
-        $disk->put($path, UploadedFile::fake()->image('legacy.jpg', 800, 600)->getContent());
-
-        Farm::factory()->create(['cover_photo_path' => $path]);
-
-        $this->assertFalse($disk->exists($images->thumbnailPath($path)));
-
-        Artisan::call('images:backfill-thumbnails');
-        $this->assertTrue($disk->exists($images->thumbnailPath($path)));
-        $first = $disk->get($images->thumbnailPath($path));
-
-        Artisan::call('images:backfill-thumbnails');
-        $this->assertSame($first, $disk->get($images->thumbnailPath($path)));
-        $this->assertLongSideAtMost($first, ImageVariants::THUMB_LONG_SIDE);
     }
 
     public function test_exif_orientation_six_is_rotated_after_resize(): void

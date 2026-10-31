@@ -12,7 +12,6 @@ use App\Filament\Resources\AccountDeletionRequests\AccountDeletionRequestResourc
 use App\Mail\AccountDeletionCompletedMail;
 use App\Models\AccountDeletionRequest;
 use App\Models\Farm;
-use App\Models\Favorite;
 use App\Models\InAppNotification;
 use App\Models\Order;
 use App\Models\TawadRule;
@@ -125,8 +124,8 @@ class PrivacyRightsTest extends TestCase
             'comment' => 'Sariwa.',
         ])->assertCreated();
 
-        $this->asUser($buyer)->postJson('/api/buyer/favorites', [
-            'listing_id' => $listing->id,
+        $this->asUser($buyer)->postJson('/api/buyer/shop-favorites', [
+            'farmer_seller_id' => $farmer->id,
         ])->assertCreated();
 
         $this->addToCart($buyer, $listing, 2);
@@ -156,7 +155,8 @@ class PrivacyRightsTest extends TestCase
         $this->assertCount(1, $payload['orders']);
         $this->assertSame('Tonyo Stall', $payload['orders'][0]['counterparty_name']);
         $this->assertNotEmpty($payload['reviews_written']);
-        $this->assertNotEmpty($payload['favorites']);
+        $this->assertArrayNotHasKey('favorites', $payload);
+        $this->assertNotEmpty($payload['shop_favorites']);
         $this->assertNotEmpty($payload['cart']);
         $this->assertNotEmpty($payload['stall_messages']);
         $this->assertSame($order->id, $payload['stall_messages'][0]['order_id']);
@@ -278,7 +278,6 @@ class PrivacyRightsTest extends TestCase
             ->postJson("/api/orders/{$order->id}/messages", ['body' => 'Salamat.'])
             ->assertCreated();
 
-        $this->asUser($buyer)->postJson('/api/buyer/favorites', ['listing_id' => $listing->id])->assertCreated();
         $this->addToCart($buyer, $listing, 1);
         InAppNotification::factory()->create(['user_id' => $farmer->id]);
 
@@ -309,7 +308,6 @@ class PrivacyRightsTest extends TestCase
         $this->assertFalse($rule->fresh()->is_active);
         $this->assertNotNull($rule->fresh()->ended_at);
         $this->assertSame(0, $farmer->cartItems()->count());
-        $this->assertSame(0, Favorite::query()->where('buyer_id', $farmer->id)->count());
         $this->assertSame(0, $anonymised->inAppNotifications()->count());
 
         $this->assertTrue(Order::query()->whereKey($order->id)->exists());

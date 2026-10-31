@@ -64,13 +64,6 @@ class ExportOwnDataAction
                     'buyer_name' => $review->buyer?->name,
                     'created_at' => $review->created_at?->toIso8601String(),
                 ])->all(),
-            'favorites' => $user->favorites()->with('listing:id,title')->get()
-                ->map(fn ($favorite): array => [
-                    'id' => $favorite->id,
-                    'listing_id' => $favorite->listing_id,
-                    'listing_title' => $favorite->listing?->title,
-                    'created_at' => $favorite->created_at?->toIso8601String(),
-                ])->all(),
             'shop_favorites' => $user->shopFavorites()->with('farmerSeller:id,name,shop_name')->get()
                 ->map(fn ($favorite): array => [
                     'id' => $favorite->id,

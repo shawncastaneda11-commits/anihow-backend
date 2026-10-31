@@ -27,13 +27,11 @@ class ExportLogsTable
                 TextColumn::make('row_count')
                     ->label('Rows')
                     ->sortable(),
+                // The saved filters are an array, which a plain column would
+                // render once per key. Show one readable line instead.
                 TextColumn::make('filters')
                     ->label('Filters')
-                    ->formatStateUsing(function (ExportLog $record): string {
-                        $filters = $record->filters ?? [];
-
-                        return $filters === [] ? '—' : json_encode($filters, JSON_UNESCAPED_SLASHES);
-                    })
+                    ->state(fn (ExportLog $record): string => $record->filterSummary())
                     ->wrap(),
             ])
             ->recordActions([])

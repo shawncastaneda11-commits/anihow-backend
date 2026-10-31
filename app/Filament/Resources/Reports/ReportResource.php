@@ -43,7 +43,7 @@ class ReportResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->with(['reporter', 'reportable', 'resolvedBy']);
+        return parent::getEloquentQuery()->with(['reporter', 'reportable']);
     }
 
     public static function canAccess(): bool

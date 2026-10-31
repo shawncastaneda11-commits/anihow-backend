@@ -57,10 +57,6 @@ class ReportsTable
                 TextColumn::make('reporter.name')
                     ->label('Reported by')
                     ->searchable(),
-                TextColumn::make('resolvedBy.name')
-                    ->label('Resolved by')
-                    ->placeholder('Open')
-                    ->toggleable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable(),

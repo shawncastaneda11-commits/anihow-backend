@@ -1609,6 +1609,9 @@ class AppStrings {
   };
   String get waitingForPayment =>
       t('Waiting for payment', 'Hinihintay ang bayad');
+  String get orderConfirmed => t('Order confirmed', 'Kumpirmado ang order');
+  String get paymentNeedsChecking =>
+      t('Payment needs checking', 'Kailangang tingnan ang bayad');
   String get receivedPayment => t('Received', 'Natanggap');
   String get notReceived => t('Not received', 'Hindi natanggap');
   String get proofAmountDiffers => t(

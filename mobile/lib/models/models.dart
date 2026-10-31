@@ -1990,6 +1990,10 @@ class ReservationRecord {
     this.refundedAt,
     this.latestProof,
     this.paymentQrs = const [],
+    this.cancelledAt,
+    this.buyerAvatarUrl,
+    this.shopName,
+    this.opensAt,
   });
 
   final int id;
@@ -2012,6 +2016,14 @@ class ReservationRecord {
   final DateTime? refundedAt;
   final PaymentProofRecord? latestProof;
   final List<PaymentQrCode> paymentQrs;
+  final DateTime? cancelledAt;
+  final String? buyerAvatarUrl;
+
+  /// The seller's stall name, shown on the buyer's reservation card.
+  final String? shopName;
+
+  /// When the listing opens and the reservation becomes an order.
+  final DateTime? opensAt;
 
   bool get isActive => status == 'active';
 
@@ -2041,9 +2053,19 @@ class ReservationRecord {
 
   String get amountLabel => lineTotal.toStringAsFixed(2);
 
+  /// "5 kg", or "1.5 kg" for a part unit.
+  String get quantityLabel {
+    final amount = quantity == quantity.roundToDouble()
+        ? quantity.toStringAsFixed(0)
+        : quantity.toString();
+    return '$amount ${unit ?? ''}'.trim();
+  }
+
   factory ReservationRecord.fromJson(Map<String, dynamic> json) {
     final buyer = json['buyer'];
     final buyerMap = buyer is Map ? Map<String, dynamic>.from(buyer) : null;
+    final seller = json['seller'];
+    final sellerMap = seller is Map ? Map<String, dynamic>.from(seller) : null;
     return ReservationRecord(
       id: ListingItem._asCount(json['id']) ?? 0,
       listingId: ListingItem._asCount(json['listing_id']),
@@ -2072,6 +2094,10 @@ class ReservationRecord {
           .whereType<Map>()
           .map((item) => PaymentQrCode.fromJson(Map<String, dynamic>.from(item)))
           .toList(),
+      cancelledAt: OrderRecord._asDate(json['cancelled_at']),
+      buyerAvatarUrl: buyerMap?['avatar_url'] as String?,
+      shopName: sellerMap?['shop_name'] as String? ?? sellerMap?['name'] as String?,
+      opensAt: OrderRecord._asDate(json['opens_at']),
     );
   }
 
@@ -2106,6 +2132,10 @@ class ReservationRecord {
       refundedAt: refundedAt ?? this.refundedAt,
       latestProof: latestProof ?? this.latestProof,
       paymentQrs: paymentQrs ?? this.paymentQrs,
+      cancelledAt: cancelledAt,
+      buyerAvatarUrl: buyerAvatarUrl,
+      shopName: shopName,
+      opensAt: opensAt,
     );
   }
 }
@@ -2118,6 +2148,7 @@ class PaymentListItem {
     required this.title,
     required this.amount,
     this.items = const [],
+    this.buyerAvatarUrl,
     this.wallet,
     this.reference,
     this.sentAt,
@@ -2130,6 +2161,7 @@ class PaymentListItem {
   final String kind;
   final int id;
   final String buyerName;
+  final String? buyerAvatarUrl;
   final String title;
   final List<String> items;
   final String amount;
@@ -2149,6 +2181,7 @@ class PaymentListItem {
       kind: json['kind'] as String? ?? 'order',
       id: ListingItem._asCount(json['id']) ?? 0,
       buyerName: json['buyer_name'] as String? ?? '',
+      buyerAvatarUrl: json['buyer_avatar_url'] as String?,
       title: json['title'] as String? ?? '',
       items: names is List
           ? names.map((item) => item.toString()).toList()

@@ -36,6 +36,7 @@ class _MarketplaceApi extends ApiClient {
     int? page,
     String? mixDay,
     int? farmId,
+    MarketplaceFlags flags = const MarketplaceFlags(),
   }) async {
     calls++;
     this.sort = sort;
@@ -161,7 +162,7 @@ void main() {
     await tester.tap(find.byKey(const Key('marketplace-filter')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Nearest'));
-    await tester.tap(find.text('Apply'));
+    await tester.tap(find.byKey(const Key('filters-apply')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('location-unavailable')), findsOneWidget);
@@ -450,7 +451,7 @@ void main() {
     await tester.tap(find.byKey(const Key('marketplace-filter')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Nearest'));
-    await tester.tap(find.text('Apply'));
+    await tester.tap(find.byKey(const Key('filters-apply')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('location-no-fix')), findsOneWidget);
@@ -476,7 +477,7 @@ void main() {
       await tester.tap(find.byKey(const Key('marketplace-filter')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Nearest'));
-      await tester.tap(find.text('Apply'));
+      await tester.tap(find.byKey(const Key('filters-apply')));
       await tester.pump();
 
       expect(find.byKey(const Key('finding-location')), findsOneWidget);

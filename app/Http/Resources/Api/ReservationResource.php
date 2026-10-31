@@ -50,6 +50,13 @@ class ReservationResource extends JsonResource
                 'name' => $this->buyer->name,
                 'avatar_url' => $this->buyer->avatarUrl(),
             ]),
+            'seller' => $this->whenLoaded('farmerSeller', fn (): ?array => $this->farmerSeller === null ? null : [
+                'id' => $this->farmerSeller->id,
+                'name' => $this->farmerSeller->name,
+                'shop_name' => $this->farmerSeller->shop_name,
+            ]),
+            // When the harvest opens and an active reservation becomes an order.
+            'opens_at' => $this->whenLoaded('listing', fn (): ?string => $this->listing?->available_from?->toIso8601String()),
         ];
     }
 

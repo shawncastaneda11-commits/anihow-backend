@@ -43,6 +43,7 @@ class _MarketApi extends ApiClient {
     int? page,
     String? mixDay,
     int? farmId,
+    MarketplaceFlags flags = const MarketplaceFlags(),
   }) async {
     this.sort = sort;
     this.category = category;
@@ -59,9 +60,17 @@ class _MarketApi extends ApiClient {
       'nearLng': nearLng,
       'page': page,
       'mixDay': mixDay,
+      'farmId': farmId,
+      'flags': flags.query,
     });
-    return MarketplaceFeed(items: listings);
+    return MarketplaceFeed(items: listings, total: listings.length + flags.count);
   }
+
+  @override
+  Future<List<FarmOption>> farms() async => const [
+    FarmOption(id: 7, name: 'PYAP Manggahan Chapter'),
+    FarmOption(id: 8, name: 'TRUOFA'),
+  ];
 
   @override
   Future<List<CategoryItem>> cropTypes() async => const [
@@ -246,8 +255,10 @@ void main() {
     await tester.tap(find.byKey(const Key('marketplace-filter')));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ChoiceChip, 'Price low-high'));
+    await tester.ensureVisible(find.widgetWithText(ChoiceChip, 'Certified organic'));
+    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ChoiceChip, 'Certified organic'));
-    await tester.tap(find.text('Apply'));
+    await tester.tap(find.byKey(const Key('filters-apply')));
     await tester.pumpAndSettle();
 
     expect(api.sort, 'price_asc');
@@ -257,7 +268,7 @@ void main() {
     expect(api.calls.last['page'], isNull);
   });
 
-  testWidgets('sort chips stay on screen and none is highlighted by default', (
+  testWidgets('sort chips stay on screen and Default is chosen at first', (
     tester,
   ) async {
     for (final size in [const Size(360, 640), const Size(411, 800)]) {
@@ -288,18 +299,19 @@ void main() {
         expect(rect.bottom, lessThanOrEqualTo(size.height));
       }
 
-      expectVisible(find.text('Sort'));
+      expectVisible(find.text('SORT'));
       expect(find.byKey(const Key('sort-fair')), findsNothing);
       expectVisible(find.byKey(const Key('sort-newest')));
       expectVisible(find.widgetWithText(ChoiceChip, 'Price low-high'));
       expectVisible(find.widgetWithText(ChoiceChip, 'Price high-low'));
       expectVisible(find.widgetWithText(ChoiceChip, 'Availability'));
       expectVisible(find.widgetWithText(ChoiceChip, 'Nearest'));
-      expectVisible(find.text('Growing method'));
-      expectVisible(find.widgetWithText(ChoiceChip, 'Certified organic'));
-      expectVisible(find.widgetWithText(ChoiceChip, 'Naturally grown'));
       expectVisible(find.text('Clear'));
-      expectVisible(find.text('Apply'));
+      expectVisible(find.byKey(const Key('filters-apply')));
+      expect(
+        tester.widget<ChoiceChip>(find.byKey(const Key('sort-default'))).selected,
+        isTrue,
+      );
 
       final newest = tester.widget<ChoiceChip>(
         find.byKey(const Key('sort-newest')),
@@ -322,6 +334,55 @@ void main() {
     }
   });
 
+  testWidgets('switches, farm and the result count apply and show as chips', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = _MarketApi(listings: [_listing(1)]);
+
+    await tester.pumpWidget(_app(api));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('marketplace-filter')));
+    await tester.pumpAndSettle();
+    expect(find.text('Show 1 result'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('filter-online')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('filter-in-stock')));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(find.text('Show 3 results'), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const ValueKey('farm-8')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('farm-8')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('filters-apply')));
+    await tester.pumpAndSettle();
+
+    expect(api.calls.last['farmId'], 8);
+    expect(api.calls.last['flags'], {'in_stock': 1, 'online_payment': 1});
+    final badge = tester.widget<Badge>(find.byKey(const Key('marketplace-filter-count')));
+    expect(badge.isLabelVisible, isTrue);
+    expect(find.descendant(of: find.byKey(const Key('marketplace-filter-count')), matching: find.text('3')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('active-filter-online')), findsOneWidget);
+
+    tester.widget<InputChip>(find.byKey(const ValueKey('active-filter-online'))).onDeleted!();
+    await tester.pumpAndSettle();
+    expect(api.calls.last['flags'], {'in_stock': 1});
+    expect(find.byKey(const ValueKey('active-filter-online')), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('active-filter-farm')),
+        matching: find.text('TRUOFA'),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('category and crop chips combine', (tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -336,8 +397,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('marketplace-filter')));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('crop-3')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('crop-3')));
-    await tester.tap(find.text('Apply'));
+    await tester.tap(find.byKey(const Key('filters-apply')));
     await tester.pumpAndSettle();
 
     expect(api.category, 'value_added');

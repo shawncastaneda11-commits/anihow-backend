@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\Faq\FaqController;
 use App\Http\Controllers\Api\Farmer\FarmerAnalyticsController;
 use App\Http\Controllers\Api\Farmer\FarmerAnnouncementController;
 use App\Http\Controllers\Api\Farms\FarmController;
+use App\Http\Controllers\Api\Farms\FarmListController;
 use App\Http\Controllers\Api\Favorites\FarmFavoriteController;
 use App\Http\Controllers\Api\Favorites\FavoriteController;
 use App\Http\Controllers\Api\Favorites\ShopFavoriteController;
@@ -176,6 +177,7 @@ Route::middleware(['auth:sanctum', 'account.active', 'password.changed'])->group
     Route::get('faq', [FaqController::class, 'index'])->name('faq.index');
     Route::post('faq/ask', [FaqController::class, 'ask'])->name('faq.ask');
 
+    Route::get('farms', FarmListController::class)->name('farms.index');
     Route::get('farms/{farm}', FarmController::class)->name('farms.show');
 
     // Storefront pages are public to any signed-in role. Farmers reach them

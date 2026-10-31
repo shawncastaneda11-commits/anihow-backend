@@ -38,10 +38,21 @@ class ApiException implements Exception {
 }
 
 class PagedItems<T> {
-  const PagedItems({required this.items, required this.complete});
+  const PagedItems({
+    required this.items,
+    required this.complete,
+    this.counts = const {},
+    this.totalAmount,
+  });
 
   final List<T> items;
   final bool complete;
+
+  /// Per-tab totals some lists send with the page, e.g. the payments tabs.
+  final Map<String, int> counts;
+
+  /// The sum of every row in the list, not only this page.
+  final double? totalAmount;
 }
 
 class MarketplaceFeed {
@@ -70,6 +81,61 @@ Map<String, dynamic> buyerAnnouncementQuery({
 }
 
 /// Query string for [ApiClient.marketplace]. A null [farmId] is omitted.
+/// The marketplace's on/off filters.
+class MarketplaceFlags {
+  const MarketplaceFlags({
+    this.inStock = false,
+    this.upcoming = false,
+    this.onlinePayment = false,
+    this.tawad = false,
+    this.topRated = false,
+  });
+
+  final bool inStock;
+
+  /// Pre-order: harvests that have not opened yet.
+  final bool upcoming;
+  final bool onlinePayment;
+  final bool tawad;
+  final bool topRated;
+
+  int get count => [inStock, upcoming, onlinePayment, tawad, topRated].where((on) => on).length;
+
+  MarketplaceFlags copyWith({
+    bool? inStock,
+    bool? upcoming,
+    bool? onlinePayment,
+    bool? tawad,
+    bool? topRated,
+  }) {
+    return MarketplaceFlags(
+      inStock: inStock ?? this.inStock,
+      upcoming: upcoming ?? this.upcoming,
+      onlinePayment: onlinePayment ?? this.onlinePayment,
+      tawad: tawad ?? this.tawad,
+      topRated: topRated ?? this.topRated,
+    );
+  }
+
+  Map<String, int> get query => {
+    if (inStock) 'in_stock': 1,
+    if (upcoming) 'upcoming': 1,
+    if (onlinePayment) 'online_payment': 1,
+    if (tawad) 'tawad': 1,
+    if (topRated) 'top_rated': 1,
+  };
+}
+
+class FarmOption {
+  const FarmOption({required this.id, required this.name});
+
+  final int id;
+  final String name;
+
+  factory FarmOption.fromJson(Map<String, dynamic> json) =>
+      FarmOption(id: (json['id'] as num).toInt(), name: json['name'] as String? ?? '');
+}
+
 Map<String, dynamic> marketplaceQuery({
   String? search,
   int? cropTypeId,
@@ -81,8 +147,10 @@ Map<String, dynamic> marketplaceQuery({
   int? page,
   String? mixDay,
   int? farmId,
+  MarketplaceFlags flags = const MarketplaceFlags(),
 }) {
   return {
+    ...flags.query,
     if (search != null && search.isNotEmpty) 'search': search,
     'crop_type_id': ?cropTypeId,
     if (sort != null && sort.isNotEmpty) 'sort': sort,
@@ -404,6 +472,7 @@ class ApiClient {
     int? page,
     String? mixDay,
     int? farmId,
+    MarketplaceFlags flags = const MarketplaceFlags(),
   }) async {
     try {
       final response = await _dio.get(
@@ -419,6 +488,7 @@ class ApiClient {
           page: page,
           mixDay: mixDay,
           farmId: farmId,
+          flags: flags,
         ),
       );
       final body = _asMap(response.data);
@@ -491,6 +561,8 @@ class ApiClient {
 
   Future<void> removeShopFavorite(int sellerId) =>
       _delete('/buyer/shop-favorites/$sellerId');
+
+  Future<List<FarmOption>> farms() => _list('/farms', parse: FarmOption.fromJson);
 
   Future<List<FarmFavoriteRecord>> farmFavorites() {
     return _list('/buyer/farm-favorites', parse: FarmFavoriteRecord.fromJson);
@@ -1063,9 +1135,15 @@ class ApiClient {
       final body = response.data;
       final meta = body is Map ? _asMap(body['meta']) : <String, dynamic>{};
       final lastPage = _asInt(meta['last_page'], 1);
+      final counts = _asMap(meta['counts']);
+      final total = meta['total_amount'];
       return PagedItems(
         items: _parseList(body, PaymentListItem.fromJson),
         complete: page >= lastPage,
+        counts: {
+          for (final entry in counts.entries) entry.key: _asInt(entry.value, 0),
+        },
+        totalAmount: total is num ? total.toDouble() : double.tryParse('$total'),
       );
     } on DioException catch (error) {
       throw ApiException(_messageFrom(error));

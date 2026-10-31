@@ -48,6 +48,7 @@ class _MenuApi extends ApiClient {
     int? page,
     String? mixDay,
     int? farmId,
+    MarketplaceFlags flags = const MarketplaceFlags(),
   }) async {
     return const MarketplaceFeed(items: []);
   }

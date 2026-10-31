@@ -741,20 +741,21 @@ void main() {
     ];
     await _pump(tester, const FarmerPaymentsScreen(), api);
     await tester.pump();
-    expect(find.textContaining('To check (1)'), findsOneWidget);
+    expect(find.byKey(const ValueKey('payments-tab-count-to_check')), findsOneWidget);
     expect(find.text('Maria'), findsOneWidget);
-    expect(find.text('Check now'), findsOneWidget);
-    expect(find.text('GCash · ref ending CD34'), findsOneWidget);
-    expect(find.textContaining('Sent'), findsWidgets);
+    expect(find.text('1 payment to check · ₱20.00'), findsOneWidget);
+    expect(find.text('Check now'), findsNothing);
+    expect(find.text('Order'), findsOneWidget);
+    expect(find.textContaining('GCash · ref ending CD34'), findsOneWidget);
 
     await tester.tap(find.text('Confirmed'));
     await tester.pumpAndSettle();
-    expect(find.text('Paid'), findsOneWidget);
-    expect(find.text('Paid Oct 8, 4:10 PM'), findsOneWidget);
+    expect(find.textContaining('Paid Oct 8, 4:10 PM'), findsOneWidget);
 
     await tester.tap(find.text('Refund due').first);
     await tester.pumpAndSettle();
-    expect(find.text('Since Oct 7'), findsOneWidget);
+    expect(find.text('1 refund to send · ₱20.00'), findsOneWidget);
+    expect(find.textContaining('due since Oct 7'), findsOneWidget);
     expect(find.text('Pechay'), findsOneWidget);
 
     api.payments = const [];

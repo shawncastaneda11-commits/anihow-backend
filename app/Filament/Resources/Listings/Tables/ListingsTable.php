@@ -73,7 +73,7 @@ class ListingsTable
                 TextColumn::make('farm.name')
                     ->label('Farm')
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('price_per_unit')
                     ->label('Price')
                     ->money('PHP')
@@ -90,7 +90,7 @@ class ListingsTable
                     ->sortable(),
                 TextColumn::make('quantity_held')
                     ->label('Held')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('availability_state')
                     ->label('Availability')
                     ->badge()
@@ -111,7 +111,7 @@ class ListingsTable
                 IconColumn::make('is_active')
                     ->label('Seller active')
                     ->boolean()
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->modifyQueryUsing(fn (Builder $query) => $query->with(['cropType', 'farm.cropTypeOverrides']))
             ->filters([

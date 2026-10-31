@@ -219,6 +219,49 @@ class ExportCsvTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_the_export_log_shows_its_filters_in_words(): void
+    {
+        $farm = Farm::factory()->create(['name' => 'PYAP Manggahan Chapter']);
+        $empty = ExportLog::factory()->create([
+            'filters' => [
+                'farm' => ['value' => null],
+                'status' => ['value' => null],
+                'placed_at' => ['from' => null, 'until' => null],
+                'completed_at' => ['from' => null, 'until' => null],
+                'fulfillment_preference' => ['value' => null],
+            ],
+        ]);
+        $narrowed = ExportLog::factory()->create([
+            'filters' => [
+                'farm' => ['value' => (string) $farm->id],
+                'status' => ['value' => 'completed'],
+                'placed_at' => ['from' => '2026-10-01', 'until' => '2026-10-31'],
+            ],
+        ]);
+        $direct = ExportLog::factory()->create(['filters' => ['farm' => $farm->id, 'status' => 'completed']]);
+        $yearly = ExportLog::factory()->create([
+            'type' => ExportType::AnalyticsYearly,
+            'filters' => ['year' => 2026, 'farm_id' => null, 'category' => 'all'],
+        ]);
+
+        $this->assertSame('All farms · All statuses · Any date', $empty->filterSummary());
+        $this->assertSame(
+            'PYAP Manggahan Chapter · Completed · Placed Oct 1, 2026 – Oct 31, 2026',
+            $narrowed->filterSummary(),
+        );
+        $this->assertSame('PYAP Manggahan Chapter · Completed · Any date', $direct->filterSummary());
+        $this->assertSame('Year 2026 · All farms · All categories', $yearly->filterSummary());
+
+        $empty->forceFill(['created_at' => Carbon::parse('2026-10-28 15:21:44')])->save();
+
+        $this->actingAs($this->staff(Role::SuperAdmin))
+            ->get('/admin/export-logs')
+            ->assertOk()
+            ->assertSee('All farms · All statuses · Any date')
+            ->assertSee('Oct 28, 2026 3:21 PM')
+            ->assertDontSee('{&quot;farm&quot;', false);
+    }
+
     public function test_ledger_csv_prefixes_formula_injection_in_text_and_leaves_numbers(): void
     {
         $admin = $this->staff(Role::SuperAdmin);

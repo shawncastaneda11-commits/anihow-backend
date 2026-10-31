@@ -211,9 +211,10 @@ class AniHowTheme {
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
+        // Same accent as text buttons: brand green is unreadable on dark.
         style: OutlinedButton.styleFrom(
-          foregroundColor: AniHowColors.brand,
-          side: const BorderSide(color: AniHowColors.brand),
+          foregroundColor: accent,
+          side: BorderSide(color: accent),
           minimumSize: const Size.fromHeight(52),
           shape: const StadiumBorder(),
           textStyle: const TextStyle(

@@ -44,7 +44,7 @@ class FarmAnnouncementsTable
                     ->toggleable(),
                 TextColumn::make('author.name')
                     ->label('Author')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

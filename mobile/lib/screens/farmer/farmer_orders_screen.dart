@@ -1231,6 +1231,22 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
     );
   }
 
+  /// The order pill describes the order, not the payment. This line says
+  /// where the payment stands, so "Order confirmed" is not read as paid.
+  (String, Color)? _paymentLine(AppStrings s, OrderRecord order) {
+    if (order.isCancelled || order.status == 'completed') {
+      return null;
+    }
+    if (order.isPaymentSent) {
+      return (s.paymentNeedsChecking, AniHowColors.pending);
+    }
+    if (order.isAwaitingPayment) {
+      final muted = Theme.of(context).colorScheme.onSurface;
+      return (s.waitingForPayment, muted.withValues(alpha: 0.72));
+    }
+    return null;
+  }
+
   Widget _buildBody(OrderRecord? order) {
     final s = AppStrings.of(context);
     if (_loading && order == null) {
@@ -1258,14 +1274,36 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
                     ),
                     const SizedBox(width: AniHowSpace.cardGap),
                     Expanded(
-                      child: Text(
-                        order.buyerName,
-                        style: theme.textTheme.titleMedium,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            order.buyerName,
+                            style: theme.textTheme.titleMedium,
+                          ),
+                          if (_paymentLine(s, order) case final line?)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                line.$1,
+                                key: const ValueKey('order-payment-line'),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: line.$2,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                    Flexible(
+                    const SizedBox(width: 8),
+                    // A fixed cap instead of Flexible: Flexible split the row
+                    // with the name and left the pill floating mid-card.
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 150),
                       child: StatusPill.order(
                         order.status,
+                        label: order.isConfirmed ? s.orderConfirmed : null,
                         strings: s,
                         fulfillmentPreference: order.fulfillmentPreference,
                       ),
@@ -1280,20 +1318,26 @@ class _FarmerOrderDetailScreenState extends State<FarmerOrderDetailScreen> {
                   OrderMetaRow(icon: Icons.call_outlined, text: order.contact!),
                 if (!order.isWalkIn)
                   Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => OrderChatScreen(order: order),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                      label: Text(s.chatWithBuyer),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.only(top: 10, right: 8),
-                        visualDensity: VisualDensity.compact,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Padding(
+                      // Line the chat link up with the buyer's name.
+                      padding: const EdgeInsetsDirectional.only(
+                        start: 40 + AniHowSpace.cardGap,
+                      ),
+                      child: TextButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => OrderChatScreen(order: order),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                        label: Text(s.chatWithBuyer),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.only(top: 10, right: 8),
+                          visualDensity: VisualDensity.compact,
+                        ),
                       ),
                     ),
                   ),

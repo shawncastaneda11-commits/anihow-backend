@@ -525,6 +525,35 @@ void main() {
     expect(api.completedAmount, isNull);
   });
 
+  testWidgets('a confirmed order says the payment still needs checking', (tester) async {
+    final api = _Api();
+    api.order = _order(status: 'confirmed', paymentStatus: 'payment_sent');
+    await _pump(
+      tester,
+      FarmerOrderDetailScreen(order: api.order),
+      api,
+      user: const UserAccount(id: 4, name: 'Nena', email: 'n@example.com', roles: ['farmer_seller']),
+    );
+
+    expect(find.text('Order confirmed'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('order-payment-line'))).data,
+      'Payment needs checking',
+    );
+
+    final card = tester.getRect(find.byType(Card).first);
+    final pill = tester.getRect(find.text('Order confirmed'));
+    expect(card.right - pill.right, lessThan(40));
+  });
+
+  testWidgets('outlined buttons use the readable accent in dark mode', (tester) async {
+    final dark = AniHowTheme.dark().outlinedButtonTheme.style!;
+    final light = AniHowTheme.light().outlinedButtonTheme.style!;
+
+    expect(dark.foregroundColor!.resolve({}), AniHowColors.sage);
+    expect(light.foregroundColor!.resolve({}), AniHowColors.brand);
+  });
+
   testWidgets('a refund needs a reference and the payments tabs list orders', (tester) async {
     final api = _Api();
     api.order = _order(status: 'cancelled', paymentStatus: 'refund_due', allowedNext: const []);

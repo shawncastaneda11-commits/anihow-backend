@@ -15,6 +15,7 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Enums\Width;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -45,6 +46,8 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Green,
             ])
+            // Wide tables use the whole screen instead of scrolling sideways.
+            ->maxContentWidth(Width::Full)
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
                 fn (): string => Blade::render('@include(\'filament.brand-styles\')'),

@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Support\ChatAttachmentLimiter;
+use Filament\Schemas\Schema;
+use Filament\Tables\Table;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
@@ -37,6 +39,17 @@ class AppServiceProvider extends ServiceProvider
         // 8+ characters with upper and lower case, a number and a symbol.
         Password::defaults(fn (): Password => Password::min(8)->mixedCase()->numbers()->symbols());
         $this->configureBroadcasting();
+        $this->configureCmsDates();
+    }
+
+    /**
+     * CMS tables and detail pages show "Oct 23, 2026 4:39 PM": no seconds,
+     * 12-hour time, so dates read naturally and keep columns narrow.
+     */
+    private function configureCmsDates(): void
+    {
+        Table::configureUsing(fn (Table $table): Table => $table->defaultDateTimeDisplayFormat('M j, Y g:i A'));
+        Schema::configureUsing(fn (Schema $schema): Schema => $schema->defaultDateTimeDisplayFormat('M j, Y g:i A'));
     }
 
     private function configureBroadcasting(): void

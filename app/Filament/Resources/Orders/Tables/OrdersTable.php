@@ -56,7 +56,7 @@ class OrdersTable
                 TextColumn::make('tawad_total')
                     ->label('Tawad')
                     ->money('PHP')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('amount_received')
                     ->label('Received')
                     ->money('PHP')
@@ -67,7 +67,7 @@ class OrdersTable
                         && (float) $record->amount_received !== (float) $record->total
                             ? 'warning'
                             : null)
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('fulfillment_preference')
                     ->label('Fulfillment')
                     ->formatStateUsing(fn (FulfillmentPreference $state): string => $state->label())

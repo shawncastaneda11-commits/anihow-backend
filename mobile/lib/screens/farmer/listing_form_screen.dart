@@ -518,6 +518,17 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     }
   }
 
+  /// The crops the seller may pick now, plus the listing's own crop. A crop
+  /// can leave that list later (a crop list, a farm's own crops, a crop
+  /// turned off), and the locked picker must still show what the listing is.
+  List<CategoryItem> _withListingCrop(List<CategoryItem> cropTypes) {
+    final own = widget.listing?.category;
+    if (own == null || cropTypes.any((crop) => crop.id == own.id)) {
+      return cropTypes;
+    }
+    return [...cropTypes, own];
+  }
+
   CategoryItem? _selectedCrop(List<CategoryItem> cropTypes) {
     for (final cropType in cropTypes) {
       if (cropType.id == _cropTypeId) {
@@ -900,7 +911,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
           if (snapshot.hasError) {
             return Center(child: Text('${snapshot.error}'));
           }
-          final cropTypes = snapshot.data ?? const [];
+          final cropTypes = _withListingCrop(snapshot.data ?? const []);
           final selectedCrop = _selectedCrop(cropTypes);
           final floor = selectedCrop?.sellerFloorPrice;
           return Column(

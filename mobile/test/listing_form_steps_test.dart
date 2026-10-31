@@ -276,6 +276,33 @@ void main() {
     );
   });
 
+  testWidgets('editing works when the listing crop left the crop list', (
+    tester,
+  ) async {
+    await pumpForm(
+      tester,
+      crops: const [_bundleCrop],
+      listing: const ListingItem(
+        id: 9,
+        title: 'Kamatis',
+        pricePerUnit: '40',
+        quantityAvailable: '50',
+        unit: 'kg',
+        category: _crop,
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    final picker = tester.widget<DropdownButton<int>>(
+      find.descendant(
+        of: find.byKey(const ValueKey('listing-crop-type')),
+        matching: find.byType(DropdownButton<int>),
+      ),
+    );
+    expect(picker.value, _crop.id);
+    expect(picker.items!.where((item) => item.value == _crop.id), hasLength(1));
+  });
+
   testWidgets('tapping a step chip scrolls to that card', (tester) async {
     await tester.binding.setSurfaceSize(const Size(400, 640));
     addTearDown(() => tester.binding.setSurfaceSize(null));

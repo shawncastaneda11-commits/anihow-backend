@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 
 import '../l10n/app_strings.dart';
 import '../support/order_quantity.dart';
-import '../theme/anihow_theme.dart';
 
 /// Minus and plus move by the seller's step, starting from the minimum
 /// and stopping at what is still available.
@@ -148,11 +147,26 @@ class _OrderQuantityStepperState extends State<OrderQuantityStepper> {
       inputFormatters: whole
           ? [FilteringTextInputFormatter.digitsOnly]
           : const [],
-      decoration: const InputDecoration(isDense: true),
+      decoration: InputDecoration(
+        isDense: true,
+        suffixText: widget.unit.trim().isEmpty ? null : widget.unit.trim(),
+      ),
       onTapOutside: (_) => _snap(),
       onEditingComplete: _snap,
       onSubmitted: (_) => _snap(),
     );
+  }
+
+  /// One line under the box: the live small-unit amount when the unit has one,
+  /// then the seller's minimum and step.
+  String _hint(AppStrings s) {
+    final min = formatOrderAmount(widget.min);
+    final step = formatOrderAmount(widget.step);
+    final live = _liveSmallUnit;
+    if (live == null) {
+      return s.quantityStepHint(min, step, widget.unit);
+    }
+    return s.quantityLiveHint(live, min, step, widget.unit);
   }
 
   @override
@@ -181,38 +195,12 @@ class _OrderQuantityStepperState extends State<OrderQuantityStepper> {
             ),
           ],
         ),
-        const SizedBox(height: 4),
-        if (_liveSmallUnit != null) ...[
-          Align(
-            alignment: Alignment.center,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: AniHowColors.inStockBg,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                child: Text(
-                  key: const ValueKey('order-qty-equivalent'),
-                  s.quantitySmallUnitHint(_liveSmallUnit!),
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: AniHowColors.inStock,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-        ],
+        const SizedBox(height: 8),
         Text(
           key: const ValueKey('order-qty-hint'),
-          s.quantityStepHint(
-            formatOrderAmount(widget.min),
-            formatOrderAmount(widget.step),
-            widget.unit,
-            minEquivalent: orderQuantitySmallUnit(widget.min, widget.unit),
-            stepEquivalent: orderQuantitySmallUnit(widget.step, widget.unit),
+          _hint(s),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.72),
           ),
         ),
       ],

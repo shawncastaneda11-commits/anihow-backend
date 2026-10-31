@@ -49,6 +49,63 @@ void main() {
     expect(find.text('Harvested Oct 3'), findsOneWidget);
   });
 
+  testWidgets('an in-stock listing shows its unit, chips, total and a bottom bar', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final listing = ListingItem(
+      id: 5,
+      title: 'Kalabasa, pangkare-kare',
+      pricePerUnit: '38',
+      quantityAvailable: '25',
+      unit: 'kg',
+      sellerName: 'Kuya Jun Harvest',
+      sellerId: 7,
+      harvestedOn: DateTime(2026, 10, 22),
+      minOrderQuantity: 0.5,
+      orderStep: 0.25,
+    );
+
+    await tester.pumpWidget(_app(ListingDetailScreen(listingId: listing.id, preview: listing)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('In stock'), findsOneWidget);
+    expect(find.text('25 kg left'), findsOneWidget);
+    expect(find.text('Harvested Oct 22'), findsOneWidget);
+    expect(find.text('No reviews yet'), findsOneWidget);
+    expect(find.text('= 500 g · min 0.5 kg · steps of 0.25 kg'), findsOneWidget);
+    expect(find.text('₱19.00'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('order-qty-plus')));
+    await tester.pump();
+    expect(find.text('₱28.50'), findsOneWidget);
+
+    final button = tester.getRect(find.text('Add to cart'));
+    expect(button.bottom, greaterThan(800 - 90));
+  });
+
+  testWidgets('a pre-order listing never says In stock', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(400, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final listing = ListingItem(
+      id: 6,
+      title: 'Kalabas',
+      pricePerUnit: '150',
+      quantityAvailable: '100',
+      unit: 'kg',
+      isUpcoming: true,
+      availableFrom: DateTime(2026, 11, 6),
+    );
+
+    await tester.pumpWidget(_app(ListingDetailScreen(listingId: listing.id, preview: listing)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('In stock'), findsNothing);
+    expect(find.text('Pre-order'), findsOneWidget);
+    expect(find.text('100 kg expected'), findsOneWidget);
+    expect(find.text('Reserve now, get it on Nov 6.'), findsOneWidget);
+    expect(find.text('Nov 6'), findsOneWidget);
+  });
+
   testWidgets('an upcoming listing disables add to cart', (tester) async {
     await tester.binding.setSurfaceSize(const Size(400, 1200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -67,7 +124,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Available from Oct 20'), findsOneWidget);
+    expect(find.text('Ready Oct 20'), findsOneWidget);
+    expect(find.byKey(const ValueKey('preorder-note')), findsOneWidget);
     expect(find.text('Reserve'), findsOneWidget);
 
     await tester.tap(find.text('Reserve'));

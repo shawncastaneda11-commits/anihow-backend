@@ -17,9 +17,11 @@ import '../../widgets/cart_icon_button.dart';
 import '../../widgets/chat_with_stall_button.dart';
 import '../../widgets/form_label.dart';
 import '../../widgets/growing_badge.dart';
+import '../../widgets/hint_card.dart';
 import '../../widgets/id_verification_card.dart';
 import '../../widgets/order_quantity_stepper.dart';
 import '../../widgets/primary_button.dart';
+import '../../widgets/profile_avatar_button.dart';
 import '../../widgets/produce_card.dart';
 import '../../widgets/produce_photo.dart';
 import '../../widgets/promo_badge.dart';
@@ -224,219 +226,356 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               });
             }
           }
-          return ListView(
-            padding: AniHowSpace.screenPadding,
+          return Column(
             children: [
-              AspectRatio(
-                aspectRatio: 4 / 3,
-                child: ProducePhoto(
-                  listing: listing,
-                  borderRadius: BorderRadius.circular(AniHowTheme.cardRadius),
-                  iconSize: 64,
-                  preferThumbnail: false,
+              Expanded(
+                child: ListView(
+                  padding: AniHowSpace.screenPadding,
+                  children: _details(context, listing, s),
                 ),
               ),
-              const SizedBox(height: AniHowSpace.section),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      listing.name,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ),
-                  if (listing.isLowStock)
-                    StatusPill.lowStock(strings: s)
-                  else
-                    StatusPill.inStock(strings: s),
-                ],
+              _ListingActionBar(
+                listing: listing,
+                quantity: _quantity,
+                adding: _adding,
+                onAddToCart: _addToCart,
+                onReserve: () => _openReserve(listing),
               ),
-              if (listing.category != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  listing.category!.labelFor(
-                    context.watch<PreferencesController>().language,
-                  ),
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface
-                        .withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-              const SizedBox(height: AniHowSpace.labelGap),
-              InkWell(
-                onTap: listing.sellerId == null
-                    ? null
-                    : () => openBuyerShop(context, listing.sellerId!),
-                borderRadius: BorderRadius.circular(AniHowSpace.radius),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              listing.sellerName ??
-                                  s.t('Farm stall', 'Tindahan'),
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: listing.sellerId == null
-                                        ? null
-                                        : AniHowColors.deepGreen,
-                                  ),
-                            ),
-                            if (listing.sellerLocation != null)
-                              Text(
-                                listing.sellerLocation!,
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                            if (listing.hasRating) ...[
-                              const SizedBox(height: AniHowSpace.labelGap),
-                              RatingLabel(
-                                rating: listing.averageRating!,
-                                count: listing.reviewsCount,
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      if (listing.sellerId != null)
-                        const Icon(Icons.chevron_right),
-                    ],
-                  ),
-                ),
-              ),
-              if (widget.preview == null &&
-                  context.watch<AuthController>().user?.isBuyer == true &&
-                  listing.sellerId != null &&
-                  listing.sellerId != context.watch<AuthController>().user?.id)
-                ChatWithStallButton(
-                  sellerId: listing.sellerId!,
-                  compact: true,
-                  listingId: listing.id,
-                ),
-              const SizedBox(height: AniHowSpace.cardGap),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xFF1A2A22)
-                      : const Color(0xFFEDF6F0),
-                  borderRadius: BorderRadius.circular(AniHowSpace.radius),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              listing.priceLabel,
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(
-                                    color: AniHowColors.brand,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                            ),
-                          ),
-                          Text(
-                            '${listing.quantityAvailable} ${s.t('available', 'available')}',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ],
-                      ),
-                      GrowingBadge(
-                        badge: listing.organicBadge,
-                        certifier: listing.organicCertifier,
-                      ),
-                      if (listing.harvestedOn != null)
-                        Text(
-                          s.harvestedLine(
-                            s.shortDate(listing.harvestedOn!.toLocal()),
-                          ),
-                        ),
-                      if (listing.isUpcoming && listing.availableFrom != null)
-                        Text(
-                          key: const ValueKey('upcoming-badge'),
-                          s.availableFromBadge(
-                            s.shortDate(listing.availableFrom!.toLocal()),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-              if (promoBadgeLabel(s, listing.tawad, unit: listing.unit) !=
-                  null) ...[
-                const SizedBox(height: AniHowSpace.labelGap),
-                PromoBadge(rule: listing.tawad, unit: listing.unit),
-              ],
-              if (listing.description != null &&
-                  listing.description!.isNotEmpty) ...[
-                const SizedBox(height: AniHowSpace.cardGap),
-                Text(listing.description!),
-              ],
-              const SizedBox(height: AniHowSpace.section),
-              if (_reserveBlockReason(listing, s) case final reason?)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    FilledButton(
-                      key: const ValueKey('reserve-harvest'),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                      ),
-                      onPressed: null,
-                      child: Text(s.reserve),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(reason, key: const ValueKey('reserve-unavailable')),
-                  ],
-                )
-              else if (listing.showComingSoon)
-                Text(
-                  s.comingSoon,
-                  key: const ValueKey('coming-soon'),
-                  style: Theme.of(context).textTheme.titleMedium,
-                )
-              else if (listing.showReserveButton)
-                FilledButton(
-                  key: const ValueKey('reserve-harvest'),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
-                  ),
-                  onPressed: () => _openReserve(listing),
-                  child: Text(s.reserve),
-                )
-              else ...[
-                AniHowField(
-                  label: s.quantity,
-                  child: OrderQuantityStepper(
-                    controller: _quantity,
-                    min: listing.minOrderQuantity,
-                    step: listing.orderStep,
-                    unit: listing.unit ?? '',
-                    max: _available(listing),
-                  ),
-                ),
-                const SizedBox(height: AniHowSpace.fieldGap),
-                PrimaryButton(
-                  label: s.addToCart,
-                  onPressed: _addToCart,
-                  busy: _adding,
-                ),
-              ],
             ],
           );
         },
       ),
+    );
+  }
+
+  List<Widget> _details(BuildContext context, ListingItem listing, AppStrings s) {
+    final theme = Theme.of(context);
+    final user = context.watch<AuthController>().user;
+    final canMessage = widget.preview == null &&
+        user?.isBuyer == true &&
+        listing.sellerId != null &&
+        listing.sellerId != user?.id;
+    final reserveBlocked = _reserveBlockReason(listing, s);
+    final opens = listing.availableFrom?.toLocal();
+    final unit = listing.unit ?? listing.unitLabel ?? '';
+    final amount = formatOrderAmount(double.tryParse(listing.quantityAvailable) ?? 0);
+    return [
+      AspectRatio(
+        aspectRatio: 4 / 3,
+        child: ProducePhoto(
+          listing: listing,
+          borderRadius: BorderRadius.circular(AniHowTheme.cardRadius),
+          iconSize: 64,
+          preferThumbnail: false,
+        ),
+      ),
+      const SizedBox(height: AniHowSpace.section),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(listing.name, style: theme.textTheme.titleLarge),
+                if (listing.category != null)
+                  Text(
+                    listing.category!.labelFor(context.watch<PreferencesController>().language),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AniHowSpace.cardGap),
+          _statusPill(listing, s),
+        ],
+      ),
+      const SizedBox(height: AniHowSpace.cardGap),
+      _SellerCard(listing: listing, canMessage: canMessage),
+      const SizedBox(height: AniHowSpace.section),
+      Text(
+        listing.priceLabel,
+        key: const ValueKey('listing-price'),
+        style: theme.textTheme.headlineSmall?.copyWith(
+          color: readableAccent(context),
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      const SizedBox(height: AniHowSpace.cardGap),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          if (listing.isUpcoming) ...[
+            if (opens != null)
+              _InfoChip(
+                key: const ValueKey('upcoming-badge'),
+                label: s.readyOn(s.shortDate(opens)),
+                tone: _ChipTone.preorder,
+              ),
+            _InfoChip(label: s.expectedAmount(amount, unit)),
+          ] else
+            _InfoChip(
+              key: const ValueKey('listing-left'),
+              label: s.amountLeft(amount, unit),
+              tone: _ChipTone.stock,
+            ),
+          if (listing.harvestedOn != null && !listing.isUpcoming)
+            _InfoChip(label: s.harvestedLine(s.shortDate(listing.harvestedOn!.toLocal()))),
+          if (listing.acceptsOnlinePayment) _InfoChip(label: s.onlinePaymentChip),
+        ],
+      ),
+      GrowingBadge(badge: listing.organicBadge, certifier: listing.organicCertifier),
+      if (promoBadgeLabel(s, listing.tawad, unit: listing.unit) != null) ...[
+        const SizedBox(height: AniHowSpace.labelGap),
+        PromoBadge(rule: listing.tawad, unit: listing.unit),
+      ],
+      if (listing.description != null && listing.description!.isNotEmpty) ...[
+        const SizedBox(height: AniHowSpace.cardGap),
+        Text(listing.description!),
+      ],
+      const SizedBox(height: AniHowSpace.section),
+      if (reserveBlocked != null)
+        Text(reserveBlocked, key: const ValueKey('reserve-unavailable'))
+      else if (listing.showComingSoon)
+        Text(
+          s.comingSoon,
+          key: const ValueKey('coming-soon'),
+          style: theme.textTheme.titleMedium,
+        )
+      else if (listing.showReserveButton)
+        AniHowHintCard(
+          key: const ValueKey('preorder-note'),
+          icon: Icons.event_outlined,
+          title: opens == null ? s.preorderNoteTitleNoDate : s.preorderNoteTitle(s.shortDate(opens)),
+          body: s.preorderNoteBody,
+          tone: AniHowHintTone.cash,
+        )
+      else
+        AniHowField(
+          label: s.quantity,
+          child: OrderQuantityStepper(
+            controller: _quantity,
+            min: listing.minOrderQuantity,
+            step: listing.orderStep,
+            unit: listing.unit ?? '',
+            max: _available(listing),
+          ),
+        ),
+    ];
+  }
+
+  Widget _statusPill(ListingItem listing, AppStrings s) {
+    if (listing.isUpcoming) {
+      return StatusPill(
+        key: const ValueKey('listing-status-pill'),
+        label: listing.showComingSoon ? s.comingSoon : s.preorderPill,
+        color: AniHowColors.pending,
+        background: const Color(0xFFFFF1DA),
+        icon: Icons.event,
+      );
+    }
+    return KeyedSubtree(
+      key: const ValueKey('listing-status-pill'),
+      child: listing.isLowStock ? StatusPill.lowStock(strings: s) : StatusPill.inStock(strings: s),
+    );
+  }
+}
+
+/// Seller row: who sells it, their rating, a message button and the way to
+/// their shop.
+class _SellerCard extends StatelessWidget {
+  const _SellerCard({required this.listing, required this.canMessage});
+
+  final ListingItem listing;
+  final bool canMessage;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+    final name = listing.sellerName ?? s.t('Farm stall', 'Tindahan');
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.7);
+    return Card(
+      key: const ValueKey('listing-seller-card'),
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: listing.sellerId == null ? null : () => openBuyerShop(context, listing.sellerId!),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              AniHowAvatar(name: name, radius: 20),
+              const SizedBox(width: AniHowSpace.cardGap),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 2),
+                    if (listing.hasRating)
+                      RatingLabel(rating: listing.averageRating!, count: listing.reviewsCount, size: 14)
+                    else
+                      Text(s.noReviewsShort, style: theme.textTheme.bodySmall?.copyWith(color: muted)),
+                    if (listing.sellerLocation != null && listing.sellerLocation!.isNotEmpty)
+                      Text(
+                        listing.sellerLocation!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                      ),
+                  ],
+                ),
+              ),
+              if (canMessage)
+                ChatWithStallButton(sellerId: listing.sellerId!, iconOnly: true, listingId: listing.id),
+              if (listing.sellerId != null) Icon(Icons.chevron_right, color: muted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+enum _ChipTone { plain, stock, preorder }
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({super.key, required this.label, this.tone = _ChipTone.plain});
+
+  final String label;
+  final _ChipTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    final (Color fg, Color bg) = switch (tone) {
+      _ChipTone.stock => (readableAccent(context), accentTint(context)),
+      _ChipTone.preorder => (
+        dark ? const Color(0xFFE9B566) : AniHowColors.pending,
+        dark ? const Color(0x26E9B566) : const Color(0xFFFFF1DA),
+      ),
+      _ChipTone.plain => (
+        theme.colorScheme.onSurface.withValues(alpha: 0.85),
+        theme.colorScheme.onSurface.withValues(alpha: 0.07),
+      ),
+    };
+    return DecoratedBox(
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        child: Text(
+          label,
+          style: theme.textTheme.labelMedium?.copyWith(color: fg, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+}
+
+/// Stays at the bottom of the screen: the total and Add to cart, or the
+/// ready date and Reserve for a pre-order.
+class _ListingActionBar extends StatelessWidget {
+  const _ListingActionBar({
+    required this.listing,
+    required this.quantity,
+    required this.adding,
+    required this.onAddToCart,
+    required this.onReserve,
+  });
+
+  final ListingItem listing;
+  final TextEditingController quantity;
+  final bool adding;
+  final VoidCallback onAddToCart;
+  final VoidCallback onReserve;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.68);
+    final opens = listing.availableFrom?.toLocal();
+    final upcoming = listing.isUpcoming;
+    final blocked = _reserveBlockReason(listing, s) != null || listing.showComingSoon;
+
+    Widget? leading;
+    Widget button;
+    if (upcoming) {
+      if (opens != null) {
+        leading = _BarFigure(label: s.readyLabel, value: s.shortDate(opens), muted: muted);
+      }
+      final comingSoonOnly = listing.showComingSoon && _reserveBlockReason(listing, s) == null;
+      button = FilledButton(
+        key: comingSoonOnly ? null : const ValueKey('reserve-harvest'),
+        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+        onPressed: blocked || !listing.showReserveButton ? null : onReserve,
+        child: Text(comingSoonOnly ? s.comingSoon : s.reserve),
+      );
+    } else {
+      leading = ValueListenableBuilder<TextEditingValue>(
+        valueListenable: quantity,
+        builder: (context, value, _) {
+          final amount = double.tryParse(value.text.trim()) ?? 0;
+          final price = double.tryParse(listing.pricePerUnit) ?? 0;
+          return _BarFigure(
+            key: const ValueKey('listing-total'),
+            label: s.total,
+            value: AniHowMoney.peso((amount * price).toStringAsFixed(2)),
+            muted: muted,
+          );
+        },
+      );
+      button = PrimaryButton(label: s.addToCart, onPressed: onAddToCart, busy: adding);
+    }
+    return DecoratedBox(
+      key: const ValueKey('listing-action-bar'),
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        border: Border(top: BorderSide(color: theme.dividerColor)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(AniHowSpace.screen, 10, AniHowSpace.screen, 12),
+          child: Row(
+            children: [
+              if (leading != null) ...[leading, const SizedBox(width: AniHowSpace.section)],
+              Expanded(child: button),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BarFigure extends StatelessWidget {
+  const _BarFigure({super.key, required this.label, required this.value, required this.muted});
+
+  final String label;
+  final String value;
+  final Color muted;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: theme.textTheme.bodySmall?.copyWith(color: muted)),
+        Text(value, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+      ],
     );
   }
 }

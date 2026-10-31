@@ -306,7 +306,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             ),
           ),
           SizedBox(
-            height: 200,
+            height: 184,
             child: ListView.separated(
               key: const ValueKey('favorites-fresh-strip'),
               scrollDirection: Axis.horizontal,
@@ -493,7 +493,13 @@ class _StoreRow extends StatelessWidget {
     final place = shop?.location?.trim();
     final parts = <InlineSpan>[
       if (shop != null && shop.hasRating) ...[
-        TextSpan(text: '★ ', style: const TextStyle(color: Color(0xFFE9A23B))),
+        const WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: Padding(
+            padding: EdgeInsets.only(right: 2),
+            child: Icon(Icons.star_rounded, size: 14, color: Color(0xFFE9A23B)),
+          ),
+        ),
         TextSpan(text: shop.averageRating!),
       ] else
         TextSpan(text: s.noReviewsShort),

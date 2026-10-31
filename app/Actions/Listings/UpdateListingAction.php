@@ -5,7 +5,6 @@ namespace App\Actions\Listings;
 use App\Actions\Reservations\CancelReservation;
 use App\Actions\Reservations\GuardListingReservationCancellation;
 use App\Enums\ReservationCancellationReason;
-use App\Models\Farm;
 use App\Models\Listing;
 use App\Support\HarvestInput;
 use Illuminate\Http\UploadedFile;
@@ -38,13 +37,8 @@ class UpdateListingAction
         // farm_id is denormalized from the seller and is never set from input.
         unset($attributes['farm_id'], $attributes['farmer_seller_id'], $attributes['quantity_held'], $attributes['status']);
 
-        if (array_key_exists('crop_type_id', $attributes) && (int) $attributes['crop_type_id'] !== (int) $listing->crop_type_id) {
-            $listing->loadMissing('farm');
-            CreateListingAction::assertValueAddedAllowed(
-                $listing->farm instanceof Farm ? $listing->farm : null,
-                (int) $attributes['crop_type_id'],
-            );
-        }
+        // The crop type never changes after creation (UpdateListingRequest).
+        unset($attributes['crop_type_id']);
 
         $turningOff = array_key_exists('is_active', $attributes) && ! $attributes['is_active'];
 
@@ -102,14 +96,12 @@ class UpdateListingAction
             return $attributes;
         }
 
-        $cropChanged = array_key_exists('crop_type_id', $attributes)
-            && (int) $attributes['crop_type_id'] !== (int) $listing->crop_type_id;
         $unitChanged = array_key_exists('unit', $attributes)
             && (string) $attributes['unit'] !== (string) ($listing->unit?->value ?? $listing->getRawOriginal('unit'));
 
-        if ($cropChanged || $unitChanged) {
+        if ($unitChanged) {
             throw ValidationException::withMessages([
-                $cropChanged ? 'crop_type_id' : 'unit' => 'Create a new listing for a different crop or unit.',
+                'unit' => 'Create a new listing for a different unit.',
             ]);
         }
 

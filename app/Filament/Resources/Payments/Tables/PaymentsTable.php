@@ -21,8 +21,10 @@ class PaymentsTable
         return $table
             ->defaultSort('created_at', 'desc')
             ->columns([
-                TextColumn::make('reservation_id')
-                    ->label('Type')
+                // One column for what was paid for: the order number, or the
+                // reservation and its listing.
+                TextColumn::make('paid_for')
+                    ->label('For')
                     ->state(function (PaymentProof $record): string {
                         if ($record->order_id === null && $record->reservation_id !== null) {
                             $name = $record->reservation?->listing_name;
@@ -30,20 +32,23 @@ class PaymentsTable
                             return $name !== null && $name !== '' ? "Reservation · {$name}" : 'Reservation';
                         }
 
-                        return 'Order';
-                    }),
-                TextColumn::make('order.order_number')
-                    ->label('Order')
-                    ->searchable(),
+                        return 'Order '.($record->order?->order_number ?? '—');
+                    })
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->where(
+                        fn (Builder $proofs): Builder => $proofs
+                            ->whereHas('order', fn (Builder $order): Builder => $order->where('order_number', 'like', "%{$search}%"))
+                            ->orWhereHas('reservation', fn (Builder $reservation): Builder => $reservation->where('listing_name', 'like', "%{$search}%")),
+                    )),
                 TextColumn::make('buyer.name')
                     ->label('Buyer')
                     ->searchable(),
                 TextColumn::make('farmerSeller.name')
                     ->label('Seller')
                     ->searchable(),
-                TextColumn::make('order.farm.name')
+                TextColumn::make('farm_name')
                     ->label('Farm')
-                    ->searchable(),
+                    ->state(fn (PaymentProof $record): ?string => $record->order?->farm?->name ?? $record->reservation?->farm?->name)
+                    ->placeholder('—'),
                 TextColumn::make('amount')
                     ->money('PHP'),
                 TextColumn::make('paymentQr.wallet')
@@ -56,9 +61,13 @@ class PaymentsTable
                     ->label('Proof')
                     ->badge()
                     ->formatStateUsing(fn (PaymentProofStatus $state): string => $state->label()),
-                TextColumn::make('order.payment_status')
+                TextColumn::make('payment_status')
                     ->label('Payment')
-                    ->formatStateUsing(fn ($state): string => $state instanceof OrderPaymentStatus ? $state->label() : '—'),
+                    ->state(function (PaymentProof $record): string {
+                        $status = $record->order?->payment_status ?? $record->reservation?->payment_status;
+
+                        return $status instanceof OrderPaymentStatus ? $status->label() : '—';
+                    }),
                 TextColumn::make('created_at')
                     ->label('Sent')
                     ->dateTime()
@@ -66,7 +75,8 @@ class PaymentsTable
                 TextColumn::make('reviewed_at')
                     ->label('Reviewed')
                     ->dateTime()
-                    ->placeholder('—'),
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('payment_status')
@@ -99,10 +109,9 @@ class PaymentsTable
                             return $query;
                         }
 
-                        return $query->whereHas(
-                            'order',
-                            fn (Builder $order): Builder => $order->where('farm_id', $value),
-                        );
+                        return $query->where(fn (Builder $proofs): Builder => $proofs
+                            ->whereHas('order', fn (Builder $order): Builder => $order->where('farm_id', $value))
+                            ->orWhereHas('reservation', fn (Builder $reservation): Builder => $reservation->where('farm_id', $value)));
                     }),
                 Filter::make('sent')
                     ->label('Sent')

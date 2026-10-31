@@ -313,6 +313,10 @@ class AppStrings {
   String showListingInMarket(String title) =>
       t('Show $title in the market', 'Ipakita ang $title sa palengke');
   String get tawadDiscount => t('Tawad discount', 'Diskwento sa tawad');
+  String get cropTypeLocked => t(
+    "The crop type can't be changed. Make a new listing for a different crop.",
+    'Hindi na mababago ang uri ng pananim. Gumawa ng bagong listing para sa ibang pananim.',
+  );
   String get incomingOrders => t('Incoming orders', 'Mga papasok na order');
   String get cropCare => t('Crop care', 'Pangangalaga ng pananim');
   String get listings => t('Listings', 'Mga listing');
@@ -1949,6 +1953,10 @@ class AppStrings {
     'Kapag nai-save, papalitan ang kasalukuyang tawad sa listing na ito.',
   );
   String get ruleType => t('Rule type', 'Uri ng rule');
+  String listingSavedTawadNot(String reason) => t(
+    'Listing saved, but the tawad was not: $reason Set it from Edit listing.',
+    'Na-save ang listing, pero hindi ang tawad: $reason Itakda ito sa Edit listing.',
+  );
   String get tawadFlat =>
       t('Flat peso off per order', 'Flat na bawas bawat order');
   String get tawadMinQty =>

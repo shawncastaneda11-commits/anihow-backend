@@ -55,7 +55,7 @@ class ReservationResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->with(['buyer', 'farmerSeller', 'listing']);
+        return parent::getEloquentQuery()->with(['buyer', 'farmerSeller', 'listing', 'farm']);
     }
 
     public static function canAccess(): bool

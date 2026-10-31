@@ -13,6 +13,7 @@ use App\Enums\OrderStatus;
 use App\Enums\ProductCategory;
 use App\Enums\ReservationCancellationReason;
 use App\Enums\ReservationStatus;
+use App\Http\Requests\Api\Listings\UpdateListingRequest;
 use App\Models\HarvestRecord;
 use App\Models\InAppNotification;
 use App\Models\Listing;
@@ -321,8 +322,9 @@ class HarvestStockTest extends TestCase
 
         $this->asUser($farmer)->patchJson("/api/farmer/listings/{$listing->id}", [
             'crop_type_id' => $other->id,
-        ])->assertOk();
-        $this->assertSame($other->id, $listing->fresh()->crop_type_id);
+        ])->assertUnprocessable()
+            ->assertJsonPath('errors.crop_type_id.0', UpdateListingRequest::CROP_LOCKED_MESSAGE);
+        $this->assertSame($crop->id, $listing->fresh()->crop_type_id);
 
         $this->asUser($farmer)->patchJson("/api/farmer/listings/{$listing->id}", [
             'available_from' => null,
@@ -334,9 +336,9 @@ class HarvestStockTest extends TestCase
         $this->assertNull($estimate->production_cost);
 
         $this->asUser($farmer)->patchJson("/api/farmer/listings/{$listing->id}", [
-            'crop_type_id' => $crop->id,
+            'crop_type_id' => $other->id,
         ])->assertUnprocessable()
-            ->assertJsonPath('errors.crop_type_id.0', 'Create a new listing for a different crop or unit.');
+            ->assertJsonPath('errors.crop_type_id.0', UpdateListingRequest::CROP_LOCKED_MESSAGE);
     }
 
     public function test_add_stock_snapshots_price_and_accepts_a_cost_breakdown(): void

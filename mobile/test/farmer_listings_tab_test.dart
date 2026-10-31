@@ -73,6 +73,11 @@ class _ListingsApi extends ApiClient {
   Future<List<FarmAnnouncement>> farmerAnnouncements() async => announcements;
 
   @override
+  Future<List<CategoryItem>> cropTypes() async => const [
+    CategoryItem(id: 3, name: 'Talong', labelEn: 'Eggplant', unit: 'kg'),
+  ];
+
+  @override
   Future<void> deleteListing(
     int id, {
     bool confirmCancelReservations = false,
@@ -155,7 +160,7 @@ void main() {
     expect(find.text('Add stock'), findsOneWidget);
   });
 
-  testWidgets('upcoming status and the menu omit reservations otherwise', (
+  testWidgets('cards have no menu; tapping one opens edit, which can delete', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(400, 900));
@@ -168,18 +173,13 @@ void main() {
 
     expect(find.text('Upcoming'), findsOneWidget);
     expect(find.byKey(const ValueKey('listing-status-8')), findsOneWidget);
+    expect(find.byIcon(Icons.more_vert), findsNothing);
 
-    await tester.tap(find.byKey(const ValueKey('listing-menu-1')));
+    await tester.tap(find.text('Market'));
     await tester.pumpAndSettle();
     expect(find.text('Edit listing'), findsOneWidget);
-    expect(find.text('Add stock'), findsWidgets);
-    expect(find.text('Remove stock'), findsOneWidget);
-    expect(find.text('Stock history'), findsOneWidget);
-    expect(find.text('Tawad discount'), findsOneWidget);
-    expect(find.text('Reservations'), findsNothing);
-    expect(find.text('Delete listing'), findsOneWidget);
 
-    await tester.tap(find.text('Delete listing'));
+    await tester.tap(find.byTooltip('Delete listing'));
     await tester.pumpAndSettle();
     expect(find.text('Delete this listing?'), findsOneWidget);
     await tester.tap(find.text('Delete'));
@@ -188,19 +188,37 @@ void main() {
     expect(find.text('Market'), findsNothing);
   });
 
-  testWidgets('an upcoming listing offers reservations in the menu', (
+  testWidgets('editing an upcoming listing links to its reservations', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(400, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await _pump(
       tester,
-      _ListingsApi([_listing(id: 8, title: 'Coming', isUpcoming: true)]),
+      _ListingsApi([
+        _listing(id: 1, title: 'Market'),
+        _listing(id: 8, title: 'Coming', isUpcoming: true, reservations: 2),
+      ]),
     );
 
-    await tester.tap(find.byKey(const ValueKey('listing-menu-8')));
+    await tester.tap(find.text('Coming'));
     await tester.pumpAndSettle();
-    expect(find.text('Reservations'), findsOneWidget);
+    final link = find.byKey(
+      const ValueKey('listing-reservations'),
+      skipOffstage: false,
+    );
+    await tester.ensureVisible(link);
+    await tester.pumpAndSettle();
+    expect(find.text('Reservations (2)'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Market'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('listing-reservations'), skipOffstage: false),
+      findsNothing,
+    );
   });
 
   testWidgets('a taken-down switch stays off', (tester) async {
@@ -325,11 +343,6 @@ void main() {
     );
 
     expect(find.text('Add stock'), findsOneWidget);
-
-    await tester.tap(find.byKey(const ValueKey('listing-menu-5')));
-    await tester.pumpAndSettle();
-    expect(find.text('Record actual harvest'), findsOneWidget);
-    expect(find.text('Remove stock'), findsNothing);
   });
 
   testWidgets('stock line uses the plural unit word', (tester) async {

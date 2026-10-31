@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Enums\ListingStatus;
 use App\Enums\TawadType;
+use App\Http\Requests\Api\Listings\UpdateListingRequest;
 use App\Models\Listing;
 use App\Models\TawadRule;
 use App\Support\ListingStorage;
@@ -93,6 +94,29 @@ class FarmerListingApiTest extends TestCase
             'title' => 'Kamatis, bagong ani',
             'crop_type_id' => $cropType->id,
         ]);
+    }
+
+    public function test_the_crop_type_cannot_change_after_the_listing_is_created(): void
+    {
+        $farmer = $this->farmer();
+        $tomato = $this->cropType(['name' => 'Tomato']);
+        $okra = $this->cropType(['name' => 'Okra']);
+        $listing = $this->listingFor($farmer, ['crop_type_id' => $tomato->id, 'price_per_unit' => 30]);
+
+        $this->asUser($farmer)
+            ->patchJson("/api/farmer/listings/{$listing->id}", ['crop_type_id' => $okra->id])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.crop_type_id.0', UpdateListingRequest::CROP_LOCKED_MESSAGE);
+        $this->assertSame($tomato->id, $listing->fresh()->crop_type_id);
+
+        // The app sends the unchanged crop with every save; that still works.
+        $this->asUser($farmer)
+            ->patchJson("/api/farmer/listings/{$listing->id}", [
+                'crop_type_id' => $tomato->id,
+                'title' => 'Kamatis, bagong ani',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.title', 'Kamatis, bagong ani');
     }
 
     public function test_a_listing_without_any_quantity_asks_for_the_harvest_in_plain_words(): void

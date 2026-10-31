@@ -4,7 +4,6 @@ namespace App\Http\Requests\Api\Listings;
 
 use App\Enums\GrowingMethod;
 use App\Enums\ListingUnit;
-use App\Models\CropType;
 use App\Models\Listing;
 use App\Support\Pricing\PriceGuardResolver;
 use App\Support\Pricing\UnitConverter;
@@ -14,6 +13,8 @@ use Illuminate\Validation\Rule;
 
 class UpdateListingRequest extends FormRequest
 {
+    public const CROP_LOCKED_MESSAGE = "The crop type can't be changed. Create a new listing for a different crop.";
+
     public function authorize(): bool
     {
         return $this->user()?->can('update', $this->route('listing')) ?? false;
@@ -25,7 +26,9 @@ class UpdateListingRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'crop_type_id' => ['sometimes', 'integer', 'exists:crop_types,id'],
+            // The crop type is fixed once a listing exists: its floor price,
+            // tawad limit, orders and sales reports all hang off it.
+            'crop_type_id' => ['sometimes', 'integer', Rule::in([(int) $this->listing()->crop_type_id])],
             'unit' => ['sometimes', 'required', Rule::enum(ListingUnit::class)],
             'title' => ['sometimes', 'string', 'max:150'],
             'description' => ['sometimes', 'nullable', 'string', 'max:5000'],
@@ -40,6 +43,16 @@ class UpdateListingRequest extends FormRequest
             'harvested_on' => ['sometimes', 'nullable', 'date', 'before_or_equal:today'],
             'growing_method' => ['sometimes', 'nullable', Rule::enum(GrowingMethod::class)],
             'image' => ['nullable', 'image', 'max:5120'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'crop_type_id.in' => self::CROP_LOCKED_MESSAGE,
         ];
     }
 
@@ -73,27 +86,9 @@ class UpdateListingRequest extends FormRequest
                     );
                 }
 
-                $cropType = $this->has('crop_type_id')
-                    ? CropType::find($this->validated('crop_type_id'))
-                    : $listing->cropType;
+                $cropType = $listing->cropType;
 
                 if ($cropType === null) {
-                    return;
-                }
-
-                $seller = $this->user();
-
-                if (
-                    $seller !== null
-                    && $this->has('crop_type_id')
-                    && (int) $cropType->id !== (int) $listing->crop_type_id
-                    && ! $seller->mayUseCropType($cropType->id)
-                ) {
-                    $validator->errors()->add(
-                        'crop_type_id',
-                        'This crop type is not on your list.',
-                    );
-
                     return;
                 }
 

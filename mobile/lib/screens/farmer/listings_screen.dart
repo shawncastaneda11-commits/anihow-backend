@@ -17,12 +17,8 @@ import '../../widgets/main_tab_app_bar.dart';
 import 'cancel_reservations_dialog.dart';
 import 'farm_announcements_screen.dart';
 import 'harvest_form.dart';
-import 'listing_delete.dart';
 import 'listing_form_screen.dart';
-import 'listing_reservations_screen.dart';
-import 'stock_history_screen.dart';
 import 'stock_sheets.dart';
-import 'tawad_form_screen.dart';
 
 enum _ListingFilter { all, inStock, low, hidden }
 
@@ -203,66 +199,6 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
     setState(() {});
   }
 
-  Future<void> _menu(String action, ListingItem listing) async {
-    switch (action) {
-      case 'edit':
-        await _openForm(listing);
-      case 'actual':
-        final changed = await showAddStockSheet(context, listing, actual: true);
-        if (changed && mounted) {
-          await _reload();
-        }
-      case 'add':
-        final changed = await showAddStockSheet(context, listing);
-        if (changed && mounted) {
-          await _reload();
-        }
-      case 'remove':
-        final changed = await showRemoveStockSheet(context, listing);
-        if (changed && mounted) {
-          await _reload();
-        }
-      case 'history':
-        if (!mounted) {
-          return;
-        }
-        await Navigator.of(context).push<void>(
-          MaterialPageRoute(
-            builder: (_) => StockHistoryScreen(
-              listingId: listing.id,
-              listingTitle: listing.title,
-            ),
-          ),
-        );
-      case 'tawad':
-        if (!mounted) {
-          return;
-        }
-        final changed = await Navigator.of(context).push<bool>(
-          MaterialPageRoute(
-            builder: (_) => TawadFormScreen(listing: listing),
-          ),
-        );
-        if (changed == true && mounted) {
-          await _reload();
-        }
-      case 'reservations':
-        if (!mounted) {
-          return;
-        }
-        await Navigator.of(context).push<void>(
-          MaterialPageRoute(
-            builder: (_) => ListingReservationsScreen(listing: listing),
-          ),
-        );
-      case 'delete':
-        final deleted = await deleteListingFlow(context, listing);
-        if (deleted && mounted) {
-          await _reload();
-        }
-    }
-  }
-
   List<ListingItem> _visible() {
     return switch (_filter) {
       _ListingFilter.all => _items,
@@ -405,7 +341,6 @@ class _FarmerListingsScreenState extends State<FarmerListingsScreen> {
               language: language,
               onOpen: () => _openForm(listing),
               onToggle: (active) => _toggle(listing, active),
-              onMenu: (action) => _menu(action, listing),
               onChanged: _reload,
             ),
           );
@@ -640,7 +575,6 @@ class _SellerListingCard extends StatelessWidget {
     required this.language,
     required this.onOpen,
     required this.onToggle,
-    required this.onMenu,
     required this.onChanged,
   });
 
@@ -648,7 +582,6 @@ class _SellerListingCard extends StatelessWidget {
   final CropLanguage language;
   final VoidCallback onOpen;
   final ValueChanged<bool> onToggle;
-  final ValueChanged<String> onMenu;
   final Future<void> Function() onChanged;
 
   @override
@@ -669,7 +602,9 @@ class _SellerListingCard extends StatelessWidget {
           InkWell(
             onTap: onOpen,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 4, 8),
+              // Tapping the card opens Edit listing, which holds every
+              // listing action, so the card has no menu of its own.
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -703,15 +638,11 @@ class _SellerListingCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                      _MoreMenu(listing: listing, onSelected: onMenu),
                     ],
                   ),
                   const SizedBox(height: 8),
                   if (_StockBar.shows(listing))
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: _StockBar(listing: listing),
-                    )
+                    _StockBar(listing: listing)
                   else
                     Text(
                       _stockLine(s),
@@ -1294,53 +1225,6 @@ class _VisibilityFooter extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _MoreMenu extends StatelessWidget {
-  const _MoreMenu({required this.listing, required this.onSelected});
-
-  final ListingItem listing;
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = AppStrings.of(context);
-    final theme = Theme.of(context);
-    final error = theme.colorScheme.error;
-    return PopupMenuButton<String>(
-      key: ValueKey('listing-menu-${listing.id}'),
-      tooltip: s.moreActions,
-      padding: EdgeInsets.zero,
-      icon: const Icon(Icons.more_vert),
-      style: IconButton.styleFrom(
-        minimumSize: const Size(44, 44),
-        fixedSize: const Size(44, 44),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        padding: EdgeInsets.zero,
-      ),
-      color: theme.cardTheme.color ?? theme.colorScheme.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      onSelected: onSelected,
-      itemBuilder: (context) => [
-        PopupMenuItem(value: 'edit', child: Text(s.editListing)),
-        if (listing.needsActualHarvest)
-          PopupMenuItem(value: 'actual', child: Text(s.recordActualHarvest))
-        else ...[
-          PopupMenuItem(value: 'add', child: Text(s.addStock)),
-          PopupMenuItem(value: 'remove', child: Text(s.removeStock)),
-        ],
-        PopupMenuItem(value: 'history', child: Text(s.stockHistory)),
-        PopupMenuItem(value: 'tawad', child: Text(s.tawadDiscount)),
-        if (listing.isUpcoming)
-          PopupMenuItem(value: 'reservations', child: Text(s.reservationsTab)),
-        const PopupMenuDivider(),
-        PopupMenuItem(
-          value: 'delete',
-          child: Text(s.deleteListing, style: TextStyle(color: error)),
-        ),
-      ],
     );
   }
 }

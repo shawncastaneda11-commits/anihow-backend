@@ -1306,9 +1306,9 @@ class AppStrings {
   String availableFromBadge(String date) =>
       t('Available from $date', 'Available simula $date');
   String get availableNow => t('Available now', 'Mabibili na ngayon');
-  String reserveFrom(String date) =>
-      t('Reserve · from $date', 'I-reserve · mula $date');
-  String get reserveOnly => t('Reserve', 'I-reserve');
+  String preorderReady(String date) =>
+      t('Pre-order · ready $date', 'Pre-order · handa sa $date');
+  String get preorderPill => t('Pre-order', 'Pre-order');
   String get comingSoon => t('Coming soon', 'Malapit na');
   String get discountPaused => t('Paused', 'Naka-pause');
   String get availabilityAvailable => t('Available', 'Nabibili');

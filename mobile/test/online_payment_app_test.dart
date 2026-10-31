@@ -554,6 +554,25 @@ void main() {
     expect(light.foregroundColor!.resolve({}), AniHowColors.brand);
   });
 
+  testWidgets('refund buttons on an unpaid refund due order do not overlap', (tester) async {
+    final api = _Api();
+    api.order = _order(status: 'cancelled', paymentStatus: 'refund_due', allowedNext: const []);
+    await _pump(
+      tester,
+      FarmerOrderDetailScreen(order: api.order),
+      api,
+      user: const UserAccount(id: 4, name: 'Nena', email: 'n@example.com', roles: ['farmer_seller']),
+    );
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const ValueKey('payment-never-arrived')));
+    await tester.pumpAndSettle();
+
+    final refunded = tester.getRect(find.byKey(const ValueKey('mark-refunded')));
+    final neverArrived = tester.getRect(find.byKey(const ValueKey('payment-never-arrived')));
+    expect(neverArrived.top - refunded.bottom, greaterThanOrEqualTo(8));
+    expect(find.text('Only if this money never reached your account. No refund will be sent.'), findsOneWidget);
+  });
+
   testWidgets('a refund needs a reference and the payments tabs list orders', (tester) async {
     final api = _Api();
     api.order = _order(status: 'cancelled', paymentStatus: 'refund_due', allowedNext: const []);

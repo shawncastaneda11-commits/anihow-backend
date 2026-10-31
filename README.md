@@ -37,7 +37,7 @@ Live server: `https://anihow.tech` (API at `/api`, CMS at `/admin`).
 
 **Super Admin (CMS)**
 
-- Accounts (approve, suspend, temporary passwords), ID verifications, account deletion requests.
+- Accounts (create, suspend, reactivate, temporary passwords), ID verifications, account deletion requests.
 - Farms, crop types, listings, orders, payments, reservations, reviews, reports, moderation and analytics exports.
 
 ## Stack

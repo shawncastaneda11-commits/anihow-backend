@@ -301,8 +301,8 @@ class ProduceCard extends StatelessWidget {
         ? s.comingSoon
         : upcoming
         ? (from == null
-              ? s.reserveOnly
-              : s.reserveFrom(s.shortDate(from.toLocal())))
+              ? s.preorderPill
+              : s.preorderReady(s.shortDate(from.toLocal())))
         : s.availableNow;
     return StatusPill(
       key: ValueKey('availability-pill-${listing.id}'),

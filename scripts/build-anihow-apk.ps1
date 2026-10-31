@@ -1,5 +1,5 @@
 param(
-    [string]$Server = 'railway'
+    [string]$Server = 'vps'
 )
 
 $ErrorActionPreference = 'Stop'

@@ -23,7 +23,7 @@ function Set-AniHowCommandShortcut {
 $adminUrl = Join-Path $Desktop 'AniHow Admin (Online).url'
 @"
 [InternetShortcut]
-URL=https://web-production-8a441d.up.railway.app/admin
+URL=https://anihow.tech/admin
 IconFile=$Icon
 IconIndex=0
 "@ | Set-Content -LiteralPath $adminUrl -Encoding ASCII

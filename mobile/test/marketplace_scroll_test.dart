@@ -484,7 +484,7 @@ void main() {
       expect(promo.bottom, lessThanOrEqualTo(photo.bottom + 1));
 
       final reserve = tester.renderObject<RenderParagraph>(
-        find.text('Reserve · from Oct 12'),
+        find.text('Pre-order · ready Oct 12'),
       );
       expect(reserve.didExceedMaxLines, isFalse);
       expect(find.byTooltip('Naturally grown (self-declared)'), findsOneWidget);

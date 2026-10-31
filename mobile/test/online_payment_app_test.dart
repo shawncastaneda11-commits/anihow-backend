@@ -269,6 +269,30 @@ void main() {
     );
   });
 
+  testWidgets('the add QR sheet spaces its fields and saves as a QR code', (tester) async {
+    final api = _Api();
+    final shop = ShopProfile(id: 4, shopName: 'Nena', name: 'Nena', paymentQrs: const [], acceptsOnlinePayment: true);
+    await _pump(tester, ShopEditScreen(key: UniqueKey(), shop: shop), api);
+    await tester.ensureVisible(find.byKey(const ValueKey('add-qr-code')));
+    await tester.tap(find.byKey(const ValueKey('add-qr-code')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Buyers scan this to pay you.'), findsOneWidget);
+    expect(find.text('No QR picture yet'), findsOneWidget);
+    expect(find.byKey(const ValueKey('qr-pick-camera')), findsOneWidget);
+    final name = tester.getRect(find.byKey(const ValueKey('qr-account-name')));
+    final last4 = tester.getRect(find.byKey(const ValueKey('qr-last4')));
+    final label = tester.getRect(find.text('Last 4 digits'));
+    expect(label.top, greaterThan(name.bottom));
+    expect(last4.top, greaterThan(label.bottom));
+    expect(last4.top - name.bottom, greaterThanOrEqualTo(14));
+
+    await tester.ensureVisible(find.text('Save QR code'));
+    await tester.tap(find.text('Save QR code'));
+    await tester.pump();
+    expect(find.text('Choose a QR image.'), findsOneWidget);
+  });
+
   testWidgets('payment time limit is saved with the shop', (tester) async {
     final api = _Api();
     final shop = ShopProfile(

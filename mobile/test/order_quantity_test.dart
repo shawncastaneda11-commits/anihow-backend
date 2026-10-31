@@ -52,8 +52,7 @@ void main() {
     );
 
     expect(controller.text, '1');
-    expect(find.text('Min 1 kg (1,000 g) · steps of 0.5 kg (500 g)'), findsOneWidget);
-    expect(find.text('= 1,000 g'), findsOneWidget);
+    expect(find.text('= 1,000 g · min 1 kg · steps of 0.5 kg'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('order-qty-plus')));
     await tester.pump();
@@ -66,7 +65,7 @@ void main() {
     expect(controller.text, '1');
   });
 
-  testWidgets('a kg listing shows live grams and bracketed min and step', (
+  testWidgets('a kg listing shows live grams with the min and step', (
     tester,
   ) async {
     final controller = TextEditingController(text: '0.1');
@@ -86,21 +85,17 @@ void main() {
       ),
     );
 
-    expect(find.text('= 100 g'), findsOneWidget);
-    expect(
-      find.text('Min 0.1 kg (100 g) · steps of 0.1 kg (100 g)'),
-      findsOneWidget,
-    );
+    expect(find.text('= 100 g · min 0.1 kg · steps of 0.1 kg'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('order-qty-plus')));
     await tester.pump();
 
     expect(controller.text, '0.2');
-    expect(find.text('= 200 g'), findsOneWidget);
-    expect(find.text('= 100 g'), findsNothing);
+    expect(find.text('= 200 g · min 0.1 kg · steps of 0.1 kg'), findsOneWidget);
+    expect(find.textContaining('= 100 g'), findsNothing);
   });
 
-  testWidgets('the gram equivalent is a green pill and updates as you type', (
+  testWidgets('the gram equivalent sits in the hint line and updates as you type', (
     tester,
   ) async {
     final controller = TextEditingController(text: '1');
@@ -120,26 +115,14 @@ void main() {
       ),
     );
 
-    expect(find.text('= 1,000 g'), findsOneWidget);
-    final equivalent = tester.element(find.text('= 1,000 g'));
-    DecoratedBox? pill;
-    equivalent.visitAncestorElements((ancestor) {
-      final widget = ancestor.widget;
-      if (widget is DecoratedBox &&
-          widget.decoration is BoxDecoration &&
-          (widget.decoration as BoxDecoration).color == AniHowColors.inStockBg) {
-        pill = widget;
-        return false;
-      }
-      return true;
-    });
-    expect(pill, isNotNull);
+    expect(find.text('= 1,000 g · min 0.01 kg · steps of 0.01 kg'), findsOneWidget);
+    expect(find.text('kg'), findsOneWidget);
 
     await tester.enterText(find.byKey(const ValueKey('order-qty-field')), '2.5');
     await tester.pump();
 
-    expect(find.text('= 2,500 g'), findsOneWidget);
-    expect(find.text('= 1,000 g'), findsNothing);
+    expect(find.text('= 2,500 g · min 0.01 kg · steps of 0.01 kg'), findsOneWidget);
+    expect(find.textContaining('= 1,000 g'), findsNothing);
   });
 
   testWidgets('a piece listing has no gram or millilitre hints', (tester) async {
@@ -161,7 +144,6 @@ void main() {
     );
 
     expect(find.text('Min 1 piece · steps of 1 piece'), findsOneWidget);
-    expect(find.byKey(const ValueKey('order-qty-equivalent')), findsNothing);
     expect(find.textContaining(' g)'), findsNothing);
     expect(find.textContaining(' mL)'), findsNothing);
     expect(find.textContaining('= '), findsNothing);

@@ -46,6 +46,8 @@ class OnlinePaymentSection extends StatelessWidget {
     final created = await showModalBottomSheet<PaymentQrCode>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
+      useSafeArea: true,
       builder: (_) => const _AddQrSheet(),
     );
     if (created != null) {
@@ -254,6 +256,7 @@ class _AddQrSheetState extends State<_AddQrSheet> {
       return;
     }
     if (_name.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(s.enterAccountName)));
       return;
     }
     if (!RegExp(r'^\d{4}$').hasMatch(_last4.text.trim())) {
@@ -282,18 +285,23 @@ class _AddQrSheetState extends State<_AddQrSheet> {
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
+    final theme = Theme.of(context);
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.68);
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottom),
+      padding: EdgeInsets.fromLTRB(AniHowSpace.screen, 0, AniHowSpace.screen, AniHowSpace.section + bottom),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(s.addQrCode, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: AniHowSpace.cardGap),
+            Text(s.addQrCode, style: theme.textTheme.titleLarge),
+            const SizedBox(height: AniHowSpace.labelGap),
+            Text(s.addQrSubtitle, style: theme.textTheme.bodyMedium?.copyWith(color: muted)),
+            const SizedBox(height: AniHowSpace.section),
             Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: [
                 for (final wallet in ['gcash', 'maya', 'bank_qrph'])
                   ChoiceChip(
@@ -304,44 +312,108 @@ class _AddQrSheetState extends State<_AddQrSheet> {
                   ),
               ],
             ),
+            const SizedBox(height: AniHowSpace.section),
+            AniHowField(
+              label: s.accountName,
+              child: TextField(
+                key: const ValueKey('qr-account-name'),
+                controller: _name,
+                textCapitalization: TextCapitalization.words,
+              ),
+            ),
             const SizedBox(height: AniHowSpace.fieldGap),
-            TextField(
-              key: const ValueKey('qr-account-name'),
-              controller: _name,
-              decoration: InputDecoration(labelText: s.accountName),
+            AniHowField(
+              label: s.last4Digits,
+              child: TextField(
+                key: const ValueKey('qr-last4'),
+                controller: _last4,
+                maxLength: 4,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
             ),
-            TextField(
-              key: const ValueKey('qr-last4'),
-              controller: _last4,
-              maxLength: 4,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: InputDecoration(labelText: s.last4Digits),
+            const SizedBox(height: AniHowSpace.labelGap),
+            AniHowField(
+              label: s.qrPicture,
+              child: _QrPictureBox(imagePath: _imagePath, emptyText: s.noQrPictureYet),
             ),
-            Wrap(
-              spacing: 8,
+            if (_imagePath != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                s.qrScanNote,
+                key: const ValueKey('qr-scan-note'),
+                style: theme.textTheme.bodySmall?.copyWith(color: muted),
+              ),
+            ],
+            const SizedBox(height: AniHowSpace.cardGap),
+            Row(
               children: [
-                TextButton(
-                  key: const ValueKey('qr-pick-gallery'),
-                  onPressed: () => _pick(ImageSource.gallery),
-                  child: Text(s.pickFromGallery),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    key: const ValueKey('qr-pick-gallery'),
+                    onPressed: () => _pick(ImageSource.gallery),
+                    icon: const Icon(Icons.photo_library_outlined),
+                    label: Text(s.pickFromGallery),
+                  ),
                 ),
-                TextButton(
-                  onPressed: () => _pick(ImageSource.camera),
-                  child: Text(s.pickFromCamera),
+                const SizedBox(width: AniHowSpace.cardGap),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    key: const ValueKey('qr-pick-camera'),
+                    onPressed: () => _pick(ImageSource.camera),
+                    icon: const Icon(Icons.photo_camera_outlined),
+                    label: Text(s.pickFromCamera),
+                  ),
                 ),
               ],
             ),
-            if (_imagePath != null) ...[
-              const SizedBox(height: 8),
-              Image.file(File(_imagePath!), height: 160, fit: BoxFit.contain),
-              Text(s.qrScanNote, key: const ValueKey('qr-scan-note')),
-            ],
-            const SizedBox(height: AniHowSpace.fieldGap),
-            PrimaryButton(label: s.saveShopProfile, busy: _busy, onPressed: _busy ? null : _save),
+            const SizedBox(height: AniHowSpace.section),
+            PrimaryButton(
+              key: const ValueKey('qr-save'),
+              label: s.saveQrCode,
+              busy: _busy,
+              onPressed: _busy ? null : _save,
+            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Placeholder until a QR picture is chosen, then a preview of it.
+class _QrPictureBox extends StatelessWidget {
+  const _QrPictureBox({required this.imagePath, required this.emptyText});
+
+  final String? imagePath;
+  final String emptyText;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final border = theme.colorScheme.outline.withValues(alpha: 0.5);
+    final path = imagePath;
+    return Container(
+      key: const ValueKey('qr-picture-box'),
+      height: 160,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AniHowSpace.radius),
+        border: Border.all(color: border),
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.04),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: path == null
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.qr_code_2, size: 40, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                  const SizedBox(height: 6),
+                  Text(emptyText, style: theme.textTheme.bodyMedium),
+                ],
+              ),
+            )
+          : Image.file(File(path), fit: BoxFit.contain),
     );
   }
 }

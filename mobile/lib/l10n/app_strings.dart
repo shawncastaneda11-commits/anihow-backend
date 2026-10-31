@@ -1091,27 +1091,15 @@ class AppStrings {
     'Buyers can order $amounts $unit…',
     'Puwedeng umorder ang mga buyer ng $amounts $unit…',
   );
-  String quantityStepHint(
-    String min,
-    String step,
-    String unit, {
-    String? minEquivalent,
-    String? stepEquivalent,
-  }) {
-    if (minEquivalent == null || stepEquivalent == null) {
-      return t(
-        'Min $min $unit · steps of $step $unit',
-        'Min $min $unit · hakbang na $step $unit',
-      );
-    }
-    return t(
-      'Min $min $unit ($minEquivalent) · steps of $step $unit ($stepEquivalent)',
-      'Min $min $unit ($minEquivalent) · hakbang na $step $unit ($stepEquivalent)',
-    );
-  }
+  String quantityStepHint(String min, String step, String unit) => t(
+    'Min $min $unit · steps of $step $unit',
+    'Min $min $unit · hakbang na $step $unit',
+  );
 
-  String quantitySmallUnitHint(String equivalent) =>
-      t('= $equivalent', '= $equivalent');
+  String quantityLiveHint(String equivalent, String min, String step, String unit) => t(
+    '= $equivalent · min $min $unit · steps of $step $unit',
+    '= $equivalent · min $min $unit · hakbang na $step $unit',
+  );
   String soldWholeStep(String name) => t(
     '$name are sold whole. Use a step of 1 or more.',
     'Buong $name lang ang binebenta. Gumamit ng hakbang na 1 o higit pa.',
@@ -1309,6 +1297,28 @@ class AppStrings {
   String preorderReady(String date) =>
       t('Pre-order · ready $date', 'Pre-order · handa sa $date');
   String get preorderPill => t('Pre-order', 'Pre-order');
+  String readyOn(String date) => t('Ready $date', 'Handa sa $date');
+  String get readyLabel => t('Ready', 'Handa');
+  String amountLeft(String amount, String unit) {
+    final measure = unit.isEmpty ? amount : '$amount $unit';
+    return t('$measure left', 'May $measure pa');
+  }
+
+  String expectedAmount(String amount, String unit) {
+    final measure = unit.isEmpty ? amount : '$amount $unit';
+    return t('$measure expected', 'Inaasahang $measure');
+  }
+
+  String get onlinePaymentChip => t('Online payment', 'Online na bayad');
+  String get noReviewsShort => t('No reviews yet', 'Wala pang review');
+  String preorderNoteTitle(String date) =>
+      t('Reserve now, get it on $date.', 'Mag-reserve ngayon, makukuha sa $date.');
+  String get preorderNoteTitleNoDate =>
+      t('Reserve now, get it when it is harvested.', 'Mag-reserve ngayon, makukuha pag naani na.');
+  String get preorderNoteBody => t(
+    'Your price is locked today. When the harvest opens, your reservation turns into an order automatically.',
+    'Naka-lock ang presyo mo ngayon. Pagbukas ng ani, kusang magiging order ang reserbasyon mo.',
+  );
   String get comingSoon => t('Coming soon', 'Malapit na');
   String get discountPaused => t('Paused', 'Naka-pause');
   String get availabilityAvailable => t('Available', 'Nabibili');
@@ -1438,6 +1448,15 @@ class AppStrings {
   );
   String get onlinePaymentSection => t('Online payment', 'Online na bayad');
   String get addQrCode => t('Add QR code', 'Magdagdag ng QR code');
+  String get addQrSubtitle => t(
+    'Buyers scan this to pay you.',
+    'Ito ang i-scan ng mga buyer para magbayad sa iyo.',
+  );
+  String get qrPicture => t('QR picture', 'Larawan ng QR');
+  String get noQrPictureYet => t('No QR picture yet', 'Wala pang larawan ng QR');
+  String get saveQrCode => t('Save QR code', 'I-save ang QR code');
+  String get enterAccountName =>
+      t('Enter the account name.', 'Ilagay ang pangalan sa account.');
   String get deleteQr => t('Delete QR', 'Burahin ang QR');
   String get deleteQrAsk =>
       t('Delete this QR code?', 'Burahin ang QR code na ito?');

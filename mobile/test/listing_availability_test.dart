@@ -6,7 +6,6 @@ import 'package:anihow/state/auth_controller.dart';
 import 'package:anihow/state/cart_controller.dart';
 import 'package:anihow/state/preferences_controller.dart';
 import 'package:anihow/theme/anihow_theme.dart';
-import 'package:anihow/widgets/availability_chip.dart';
 import 'package:anihow/widgets/produce_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -232,14 +231,5 @@ void main() {
 
     expect(find.byKey(const ValueKey('availability-pill-10')), findsOneWidget);
     expect(find.text('Available now'), findsOneWidget);
-  });
-
-  testWidgets('the farmer list chip names the availability state', (
-    tester,
-  ) async {
-    await tester.pumpWidget(_app(const AvailabilityChip(state: 'upcoming')));
-    await tester.pump();
-
-    expect(find.text('Upcoming'), findsOneWidget);
   });
 }

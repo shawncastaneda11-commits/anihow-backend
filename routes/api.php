@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\Role;
-use App\Http\Controllers\Api\Admin\CreateFarmerSellerController;
 use App\Http\Controllers\Api\Auth\AcceptTermsController;
 use App\Http\Controllers\Api\Auth\AccountDeletionRequestController;
 use App\Http\Controllers\Api\Auth\ChangePasswordController;
@@ -31,7 +30,6 @@ use App\Http\Controllers\Api\Farmer\FarmerAnnouncementController;
 use App\Http\Controllers\Api\Farms\FarmController;
 use App\Http\Controllers\Api\Farms\FarmListController;
 use App\Http\Controllers\Api\Favorites\FarmFavoriteController;
-use App\Http\Controllers\Api\Favorites\FavoriteController;
 use App\Http\Controllers\Api\Favorites\ShopFavoriteController;
 use App\Http\Controllers\Api\Listings\HarvestController;
 use App\Http\Controllers\Api\Listings\ListingController;
@@ -47,7 +45,6 @@ use App\Http\Controllers\Api\Notifications\NotificationController;
 use App\Http\Controllers\Api\Orders\BuyerOrderController;
 use App\Http\Controllers\Api\Orders\CheckoutController;
 use App\Http\Controllers\Api\Orders\FarmerOrderController;
-use App\Http\Controllers\Api\Orders\OrderHistoryController;
 use App\Http\Controllers\Api\Orders\WalkInSaleController;
 use App\Http\Controllers\Api\Payments\BuyerPaymentProofController;
 use App\Http\Controllers\Api\Payments\BuyerReservationPaymentProofController;
@@ -196,16 +193,6 @@ Route::middleware([
     'auth:sanctum',
     'account.active',
     'password.changed',
-    RoleMiddleware::using(Role::SuperAdmin, 'sanctum'),
-])->prefix('admin')->group(function (): void {
-    Route::post('farmer-sellers', CreateFarmerSellerController::class)
-        ->name('admin.farmer-sellers.store');
-});
-
-Route::middleware([
-    'auth:sanctum',
-    'account.active',
-    'password.changed',
     RoleMiddleware::using(Role::FarmerSeller, 'sanctum'),
 ])->prefix('farmer')->group(function (): void {
     Route::get('listings', [ListingController::class, 'index'])->name('farmer.listings.index');
@@ -263,7 +250,6 @@ Route::middleware([
     Route::patch('reservations/{reservation}/payment-not-received', ReservationPaymentNotReceivedController::class)
         ->name('farmer.reservations.payment-not-received');
 
-    Route::get('payment-qrs', [SellerPaymentQrController::class, 'index'])->name('farmer.payment-qrs.index');
     Route::post('payment-qrs', [SellerPaymentQrController::class, 'store'])->name('farmer.payment-qrs.store');
     Route::delete('payment-qrs/{sellerPaymentQr}', [SellerPaymentQrController::class, 'destroy'])
         ->name('farmer.payment-qrs.destroy');
@@ -298,14 +284,10 @@ Route::middleware([
     Route::get('reservations', [BuyerReservationController::class, 'index'])->name('buyer.reservations.index');
 
     Route::get('orders', [BuyerOrderController::class, 'index'])->name('buyer.orders.index');
-    Route::get('orders/history', [OrderHistoryController::class, 'index'])->name('buyer.orders.history');
     Route::get('orders/{order}', [BuyerOrderController::class, 'show'])->name('buyer.orders.show');
-    Route::get('orders/{order}/receipt', [OrderHistoryController::class, 'receipt'])
-        ->name('buyer.orders.receipt');
 
     Route::get('shops', [BuyerShopController::class, 'index'])->name('buyer.shops.index');
 
-    Route::get('favorites', [FavoriteController::class, 'index'])->name('buyer.favorites.index');
     Route::get('shop-favorites', [ShopFavoriteController::class, 'index'])->name('buyer.shop-favorites.index');
     Route::get('farm-favorites', [FarmFavoriteController::class, 'index'])->name('buyer.farm-favorites.index');
     Route::get('announcements', [BuyerAnnouncementController::class, 'index'])->name('buyer.announcements.index');
@@ -333,8 +315,6 @@ Route::middleware([
             ->name('buyer.reservations.payment-proofs.store');
 
         Route::post('reviews', [ReviewController::class, 'store'])->name('buyer.reviews.store');
-        Route::post('favorites', [FavoriteController::class, 'store'])->name('buyer.favorites.store');
-        Route::delete('favorites/{listing}', [FavoriteController::class, 'destroy'])->name('buyer.favorites.destroy');
         Route::post('shop-favorites', [ShopFavoriteController::class, 'store'])->name('buyer.shop-favorites.store');
         Route::delete('shop-favorites/{farmerSeller}', [ShopFavoriteController::class, 'destroy'])
             ->name('buyer.shop-favorites.destroy');

@@ -147,32 +147,13 @@ class ReviewShopFavoriteOrderApiTest extends TestCase
             ->assertJsonPath('data.bio', 'Updated bio.');
     }
 
-    public function test_buyer_can_add_list_and_remove_favorites(): void
+    public function test_saving_a_listing_as_a_favorite_is_gone(): void
     {
-        $farmer = $this->farmer();
-        $listing = $this->listingFor($farmer);
-        $buyer = $this->buyer();
+        $listing = $this->listingFor($this->farmer());
 
-        $this->asUser($buyer)->postJson('/api/buyer/favorites', [
-            'listing_id' => $listing->id,
-        ])->assertCreated();
-
-        $this->asUser($buyer)->postJson('/api/buyer/favorites', [
-            'listing_id' => $listing->id,
-        ])->assertUnprocessable();
-
-        $this->asUser($buyer)
-            ->getJson('/api/buyer/favorites')
-            ->assertOk()
-            ->assertJsonCount(1, 'data');
-
-        $this->asUser($buyer)
-            ->deleteJson("/api/buyer/favorites/{$listing->id}")
-            ->assertOk();
-
-        $this->asUser($buyer)
-            ->getJson('/api/buyer/favorites')
-            ->assertJsonCount(0, 'data');
+        $this->asUser($this->buyer())
+            ->postJson('/api/buyer/favorites', ['listing_id' => $listing->id])
+            ->assertNotFound();
     }
 
     public function test_buyer_can_add_list_and_remove_shop_favorites(): void

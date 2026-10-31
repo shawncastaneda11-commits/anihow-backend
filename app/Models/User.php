@@ -446,11 +446,6 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         return $this->hasMany(Review::class, 'farmer_seller_id');
     }
 
-    public function favorites(): HasMany
-    {
-        return $this->hasMany(Favorite::class, 'buyer_id');
-    }
-
     public function shopFavorites(): HasMany
     {
         return $this->hasMany(ShopFavorite::class, 'buyer_id');

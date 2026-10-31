@@ -11,19 +11,9 @@ use App\Http\Resources\Api\SellerPaymentQrResource;
 use App\Models\SellerPaymentQr;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class SellerPaymentQrController extends Controller
 {
-    public function index(Request $request): AnonymousResourceCollection
-    {
-        $this->authorize('viewAny', SellerPaymentQr::class);
-
-        return SellerPaymentQrResource::collection(
-            $request->user()->paymentQrs()->orderBy('id')->get(),
-        );
-    }
-
     public function store(StoreSellerPaymentQrRequest $request, StoreSellerPaymentQrAction $store): JsonResponse
     {
         $qr = $store->handle(

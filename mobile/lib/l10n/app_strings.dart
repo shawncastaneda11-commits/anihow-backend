@@ -147,10 +147,6 @@ class AppStrings {
     'Enter the email on your account. We will send a 6-digit code. It lasts 10 minutes.',
     'Ilagay ang email ng account mo. Magpapadala kami ng 6 na digit. May bisa ito ng 10 minuto.',
   );
-  String get resetPasswordHint => t(
-    'Enter the 6-digit code and choose a new password.',
-    'Ilagay ang 6 na digit na code at pumili ng bagong password.',
-  );
   String get passwordsDoNotMatch =>
       t('Passwords do not match.', 'Hindi magkatugma ang mga password.');
   String get sessionEnded => t(
@@ -312,7 +308,6 @@ class AppStrings {
   String get takenDownByAdmin => t('Taken down by admin', 'Tinanggal ng admin');
   String showListingInMarket(String title) =>
       t('Show $title in the market', 'Ipakita ang $title sa palengke');
-  String get tawadDiscount => t('Tawad discount', 'Diskwento sa tawad');
   String get cropTypeLocked => t(
     "The crop type can't be changed. Make a new listing for a different crop.",
     'Hindi na mababago ang uri ng pananim. Gumawa ng bagong listing para sa ibang pananim.',
@@ -323,7 +318,6 @@ class AppStrings {
   String get orders => t('Orders', 'Mga order');
   String get marketplace => t('Marketplace', 'Palengke');
   String get favorites => t('Favorites', 'Mga paborito');
-  String get favoriteCrops => t('Crops', 'Mga ani');
   String get favoriteStores => t('Stores', 'Mga tindahan');
   String get favoriteFarms => t('Farms', 'Mga bukid');
   String get noFavoriteFarms =>
@@ -335,7 +329,6 @@ class AppStrings {
   String get directions => t('Directions', 'Direksyon');
   String get farmUpdates => t('Updates', 'Mga update');
   String get noUpdatesYet => t('No updates yet', 'Wala pang update');
-  String shopsCount(int count) => t('$count shops', '$count tindahan');
   String get followers => t('Followers', 'Mga tagasunod');
   String get farmNoReviews => t('No reviews yet', 'Wala pang review');
   String farmReviewCount(int count) => count == 1
@@ -426,11 +419,8 @@ class AppStrings {
     'I-message ang tindahan sa chat ng iyong order.',
   );
   String get announcements => t('Announcements', 'Mga anunsyo');
-  String get viewAnnouncements =>
-      t('View announcements', 'Tingnan ang mga anunsyo');
   String get noAnnouncements =>
       t('No announcements right now.', 'Walang anunsyo ngayon.');
-  String get dismissAnnouncement => t('Dismiss', 'Isara');
   String get announcementPinned => t('Pinned', 'Naka-pin');
   String get updatesFromFarms =>
       t('Updates from farms', 'Mga update mula sa mga bukid');
@@ -549,10 +539,6 @@ class AppStrings {
       t('1 $unit = $equivalent', '1 $unit = $equivalent');
   String get checkout => t('Checkout', 'Checkout');
   String get shops => t('Farms', 'Mga bukid');
-  String get saveFarm => t('Save farm', 'I-save ang bukid');
-  String get removeFarm => t('Remove farm', 'Alisin ang bukid');
-  String get farmSavedToFavorites =>
-      t('Farm saved to favorites.', 'Nasave ang bukid sa mga paborito.');
   String get searchShops => t('Search shops', 'Maghanap ng tindahan');
   String shopsAtThisFarm(int count) => count == 1
       ? t('1 shop at this farm', '1 tindahan sa bukid na ito')
@@ -566,7 +552,6 @@ class AppStrings {
   String sellersCount(int count) => count == 1
       ? t('1 seller', '1 tindahan')
       : t('$count sellers', '$count na tindahan');
-  String get noShopsYet => t('No shops yet.', 'Wala pang tindahan.');
   String get noShopsMatch =>
       t('No shops match that search.', 'Walang tindahang tumugma sa hinanap.');
   String get shop => t('Shop', 'Tindahan');
@@ -620,13 +605,10 @@ class AppStrings {
       t('Price high-low', 'Presyo: mataas hanggang mababa');
   String get inStockFirst => t('Availability', 'May stock');
   String get emptyCart => t('Your cart is empty.', 'Walang laman ang cart mo.');
-  String get orderSummary => t('Order Summary', 'Buod ng order');
   String get listed => t('Listed', 'Nakalista');
   String get tawad => t('Tawad', 'Tawad');
   String get total => t('Total', 'Kabuuan');
   String get noOrders => t('No orders yet.', 'Wala pang order.');
-  String get noFavorites =>
-      t('No favorite stores yet.', 'Wala pang paboritong tindahan.');
   String get noListingsFound =>
       t('No listings found.', 'Walang nahanap na listing.');
   String get nothingHere => t('Nothing here yet.', 'Wala pa rito.');
@@ -634,7 +616,6 @@ class AppStrings {
       t('Something went wrong.', 'May nangyaring mali.');
   String get retry => t('Retry', 'Subukan ulit');
   String get farmStall => t('Farm stall', 'Tindahan');
-  String listingNumber(int id) => t('Listing #$id', 'Listing #$id');
   String chatTitle(String title) => t('Chat · $title', 'Chat · $title');
   String reviewsCount(int count) => count == 1
       ? t('(1 review)', '(1 review)')
@@ -943,11 +924,6 @@ class AppStrings {
 
   String get estimatedTotal => t('Estimated total', 'Tantyang kabuuan');
 
-  String get payCashOnHandover => t(
-    'Pay cash on handover after harvest',
-    'Magbayad ng cash sa pagkuha pagkatapos ng ani',
-  );
-
   String get payWithSellerQr => t(
     "Pay with the seller's QR before the deadline.",
     'Magbayad gamit ang QR ng nagbebenta bago ang deadline.',
@@ -1014,8 +990,6 @@ class AppStrings {
   String get inStock => t('In stock', 'May stock');
   String get lowStock => t('Low stock', 'Kulang ang stock');
   String get takenDown => t('Taken down', 'Tinanggal');
-  String get listingActive => t('Active', 'Active');
-  String get listingInactive => t('Inactive', 'Inactive');
   String get listingTakenDownHint => t(
     'An administrator removed this listing from the marketplace.',
     'Tinanggal ng administrator ang listing na ito sa marketplace.',
@@ -1029,7 +1003,6 @@ class AppStrings {
   String get ordersTabCompleted => t('Completed', 'Tapos na');
   String get ordersTabCancelled => t('Cancelled', 'Kinansela');
   String get fulfillment => t('Fulfillment', 'Pagsalo');
-  String get buyerPicksUp => t('Buyer picks up', 'Buyer ang susalo');
   String get sellerDelivers =>
       t('Farmer-seller delivers', 'Seller ang maghahatid');
   String get agreedTimePlace =>
@@ -1042,14 +1015,6 @@ class AppStrings {
   );
   String get payCashTitle =>
       t('Pay cash when you meet', 'Cash ang bayad sa pagkikita');
-  String get payCashBody => t(
-    'Hand the money to the seller. They type the amount after handover. No GCash or cards.',
-    'Ibigay ang pera sa seller. Itatala nila ang halaga pagkatapos magkita. Walang GCash o card.',
-  );
-  String get chatAfterPlace => t(
-    'Chat opens after you place the order. Open Orders, then Chat with stall.',
-    'Pagkatapos mag-place, buksan ang Orders, tapos Chat with stall.',
-  );
   String get howYouMeet => t('How you meet', 'Paano kayo magkikita');
   String get howWillYouGetIt =>
       t('How will you get it?', 'Paano mo ito makukuha?');
@@ -1064,7 +1029,6 @@ class AppStrings {
   String placeOrders(int count) =>
       t('Place $count orders', 'I-place ang $count order');
   String get ordersPlaced => t('Orders placed', 'Na-place na ang order');
-  String get orderPlaced => t('Order placed.', 'Na-place na ang order.');
   String cartSplit(int count) => t(
     'Your cart was split into $count orders, one per seller.',
     'Hinati ang cart mo sa $count order, isa bawat seller.',
@@ -1073,12 +1037,6 @@ class AppStrings {
     'Confirming places $count orders. The split happens now, not after.',
     'Kapag kumpirmado, $count order ang malilikha ngayon, hindi mamaya.',
   );
-  String get fulfillmentHint => t(
-    'A text arrangement for time and place. No courier, fee, or tracking.',
-    'Usapan lang sa text para sa oras at lugar. Walang courier, bayad, o tracking.',
-  );
-  String listedUnit(String peso) =>
-      t('Listed unit $peso', 'Presyo bawat yunit $peso');
   String get newListing => t('New listing', 'Bagong listing');
   String get editListing => t('Edit listing', 'I-edit ang listing');
   String get saveListing => t('Save listing', 'I-save ang listing');
@@ -1256,16 +1214,6 @@ class AppStrings {
     '$reserved $unit ang nakareserba na. Kapag mas maliit ang itinala, kakanselahin ang kulang pagbukas ng listing.',
   );
   String get confirmHarvest => t('Record harvest', 'Itala ang ani');
-  String stockSummary({
-    required String harvested,
-    required String good,
-    required String sold,
-    required String left,
-    required String removed,
-  }) => t(
-    'Harvested $harvested · Good $good · Sold $sold · Left $left · Removed $removed',
-    'Ani $harvested · Mabuti $good · Nabenta $sold · Natira $left · Inalis $removed',
-  );
   String costCategory(String value) => switch (value) {
     'seeds' => t('Seeds', 'Buto'),
     'fertilizer' => t('Fertilizer', 'Pataba'),
@@ -1360,17 +1308,10 @@ class AppStrings {
 
   String shortDate(DateTime date) => '${monthName(date)} ${date.day}';
 
-  String availabilityChip(String? state) => switch (state) {
-    'upcoming' => availabilityUpcoming,
-    'expired' => availabilityExpired,
-    _ => availabilityAvailable,
-  };
   String get description => t('Description', 'Deskripsyon');
   String get setTawad => t('Set tawad', 'Magtakda ng tawad');
   String get replaceTawad => t('Replace tawad', 'Palitan ang tawad');
   String get endTawad => t('End tawad', 'Tapusin ang tawad');
-  String get noTawad =>
-      t('No tawad on this listing.', 'Walang tawad sa listing na ito.');
   String get recordWalkIn => t('Record walk-in sale', 'Itala ang walk-in sale');
   String get editShop => t('Edit shop', 'I-edit ang tindahan');
   String get addCover => t('Add cover', 'Magdagdag ng cover');
@@ -1405,8 +1346,6 @@ class AppStrings {
     'Cash lang ang bayad. Magdagdag ng QR code para i-on.',
   );
   String get yourListings => t('Your listings', 'Mga listing mo');
-  String get editShopProfile =>
-      t('Edit shop profile', 'I-edit ang profile ng tindahan');
   String get saveShopProfile =>
       t('Save shop profile', 'I-save ang profile ng tindahan');
   String get shopName => t('Shop name', 'Pangalan ng tindahan');
@@ -1419,7 +1358,6 @@ class AppStrings {
       t('Could not open the link.', 'Hindi mabuksan ang link.');
   String get couldNotOpenPhone =>
       t('Could not open the phone app.', 'Hindi mabuksan ang phone app.');
-  String get readyToReview => t('Ready to review', 'Puwede nang i-review');
   String get writeReview => t('Write a review', 'Sumulat ng review');
   String get reviewComment => t('Comment (optional)', 'Komento (opsyonal)');
   String get submitReview => t('Submit review', 'I-submit ang review');
@@ -1512,9 +1450,6 @@ class AppStrings {
     'Bayad noong ${_monthDay(local)}, ${_clock(local)}',
   );
 
-  String sinceDate(DateTime local) =>
-      t('Since ${_monthDay(local)}', 'Mula ${_monthDay(local)}');
-
   String monthDayClock(DateTime local) =>
       '${_monthDay(local)}, ${_clock(local)}';
 
@@ -1564,8 +1499,6 @@ class AppStrings {
   String get tapQrToZoom => t('Tap the QR to zoom', 'I-tap ang QR para lumaki');
   String walletAccount(String wallet, String name) => '$wallet · $name';
   String last4Zoom(String last4) => '${maskedLast4(last4)} · $tapQrToZoom';
-  String get referenceExample =>
-      t('e.g. 5012 345 678 901', 'hal. 5012 345 678 901');
   String get referenceHelper => t(
     'Type the last 4 digits of the reference number on your GCash or Maya receipt.',
     'I-type ang huling 4 na numero ng reference number sa resibo ng GCash o Maya.',
@@ -1668,8 +1601,6 @@ class AppStrings {
   };
   String walletRef(String wallet, String reference) =>
       t('$wallet · ref ending $reference', '$wallet · ref …$reference');
-  String get checkNow => t('Check now', 'Suriin ngayon');
-  String toCheckCount(int count) => t('To check ($count)', 'Susuriin ($count)');
   String get toCheckTab => t('To check', 'Susuriin');
   String get orderBadge => t('Order', 'Order');
   String paymentsSummary(String tab, int count, String total) => switch (tab) {
@@ -1699,7 +1630,6 @@ class AppStrings {
   String get paymentsEmpty =>
       t('Nothing here right now.', 'Wala rito sa ngayon.');
   String get toLabel => t('To', 'Kay');
-  String get saveQr => t('Save QR', 'I-save ang QR');
   String get qrSaved =>
       t('QR saved to your gallery.', 'Na-save ang QR sa gallery.');
   String get qrSaveNeedsPermission => t(
@@ -1710,14 +1640,7 @@ class AppStrings {
   String get referenceNumber => t('Reference number', 'Reference number');
   String get referenceHint => t('e.g. 8901', 'hal. 8901');
   String get proofAmount => t('Amount', 'Halaga');
-  String get submitProof => t('Submit', 'I-submit');
-  String get paymentSentWaiting => t(
-    'Payment sent — waiting for the seller to check',
-    'Naipadala ang bayad — hinihintay ang pagsusuri ng nagbebenta',
-  );
   String get sendAgain => t('Send again', 'Ipadala ulit');
-  String get paymentRejected =>
-      t('Payment not accepted', 'Hindi tinanggap ang bayad');
   String get reportPaymentProblem =>
       t('Report payment problem', 'I-ulat ang problema sa bayad');
   String get paymentProblem => t('Payment problem', 'Problema sa bayad');
@@ -1851,12 +1774,6 @@ class AppStrings {
   String get toCheck => t('To check', 'Susuriin');
   String get confirmedPayments => t('Confirmed', 'Kumpirmado');
   String get refundDueTab => t('Refund due', 'Kailangan i-refund');
-  String get noPaymentsToCheck =>
-      t('No payments to check.', 'Walang bayad na susuriin.');
-  String get noConfirmedPayments =>
-      t('No confirmed payments.', 'Walang kumpirmadong bayad.');
-  String get noRefundsDue =>
-      t('No refunds due.', 'Walang refund na kailangan.');
   String paymentRejectReason(String reason) => switch (reason) {
     'not_received' => t('Not received', 'Hindi natanggap'),
     'wrong_amount' => t('Wrong amount', 'Maling halaga'),
@@ -1866,7 +1783,6 @@ class AppStrings {
   };
   String get rejectionNoteRequired =>
       t('Add a note for Other.', 'Maglagdag ng note para sa Iba pa.');
-  String get chooseWallet => t('Choose a wallet.', 'Pumili ng wallet.');
   String get chooseQrImage =>
       t('Choose a QR image.', 'Pumili ng larawan ng QR.');
   String get soldOutsideHint => t(
@@ -1875,14 +1791,10 @@ class AppStrings {
   );
   String get recordWalkInSale =>
       t('Record walk-in sale', 'Magtala ng walk-in sale');
-  String get screenshotOptional =>
-      t('Screenshot (optional)', 'Screenshot (opsyonal)');
-  String get pickScreenshot => t('Add screenshot', 'Magdagdag ng screenshot');
   String get pickFromGallery => t('Gallery', 'Gallery');
   String get pickFromCamera => t('Camera', 'Camera');
   String get amountReceivedOnline =>
       t('Amount received (online)', 'Halagang natanggap (online)');
-  String tawadMinus(String peso) => t('Tawad −$peso', 'Tawad −$peso');
   String get discountTawad => t('Discount (tawad)', 'Diskwento (tawad)');
   String discountTawadMinus(String peso) =>
       t('Discount (tawad) −$peso', 'Diskwento (tawad) −$peso');
@@ -1892,7 +1804,6 @@ class AppStrings {
     'Give buyers a fixed peso discount (tawad).',
     'Bigyan ang mga buyer ng takdang bawas na piso (tawad).',
   );
-  String get discountChip => t('Discount', 'Diskwento');
   String get editDiscount => t('Edit', 'I-edit');
   String get endDiscount => t('End', 'Tapusin');
   String promoFlatOff(String peso) => t('$peso off', '$peso bawas');
@@ -1922,10 +1833,6 @@ class AppStrings {
     );
   }
 
-  String tawadOffThisOrder(String peso) =>
-      t('$peso off this order', '$peso bawas sa order na ito');
-  String tawadOffAtMin(String peso, String quantity) =>
-      t('$peso off at $quantity and above', '$peso bawas sa $quantity pataas');
   String get walkIn => t('Walk-in', 'Walk-in');
   String get confirmOrder => t('Confirm order', 'Kumpirmahin ang order');
   String get markReady => t('Mark ready', 'Markahang ready');
@@ -2003,14 +1910,6 @@ class AppStrings {
   String buyerRated(Object rating) =>
       t('Buyer rated $rating', 'Rating ng buyer: $rating');
   String get orderNotFound => t('Order not found.', 'Hindi nahanap ang order.');
-  String get noPlacedOrders =>
-      t('No placed orders.', 'Walang naka-place na order.');
-  String get noConfirmedOrders =>
-      t('No confirmed orders.', 'Walang kumpirmadong order.');
-  String get noReadyOrders => t(
-    'No orders waiting for handover.',
-    'Walang order na hinihintay sa handover.',
-  );
   String get noCompletedOrders =>
       t('No completed orders.', 'Walang tapos na order.');
   String get noCancelledOrders =>
@@ -2060,7 +1959,6 @@ class AppStrings {
     'A clear photo helps buyers pick your produce.',
     'Mas madaling piliin ng buyer kung may malinaw na larawan.',
   );
-  String get listingDetails => t('Listing details', 'Detalye ng listing');
   String get stepPhoto => t('Photo', 'Larawan');
   String get stepDetails => t('Details', 'Detalye');
   String get stepPrice => t('Price', 'Presyo');
@@ -2168,22 +2066,17 @@ class AppStrings {
   String get unitsSold => t('Units sold', 'Nabentang yunit');
   String get grossSales => t('Gross sales', 'Kabuuang benta');
   String get averageTawad => t('Average tawad', 'Karaniwang tawad');
-  String get salesThisPeriod => t('Sales this period', 'Benta sa panahong ito');
   String get topCrops => t('Top crops', 'Pinakamabentang pananim');
   String get bestSellers => t('Best sellers', 'Pinakamabenta');
   String get walkInShare => t('Walk-in vs app', 'Walk-in laban sa app');
   String get walkInSales => t('Walk-in sales', 'Benta sa walk-in');
   String get appSales => t('App sales', 'Benta sa app');
-  String get periodWeek => t('Week', 'Linggo');
-  String get periodMonth => t('Month', 'Buwan');
   String get today => t('Today', 'Ngayon');
   String get thisWeek => t('This week', 'Ngayong linggo');
   String get thisMonth => t('This month', 'Ngayong buwan');
   String get thisYear => t('This year', 'Ngayong taon');
   String get yearly => t('Yearly', 'Taunan');
-  String yearlyChip(int year) => t('Yearly · $year', 'Taunan · $year');
   String get customRange => t('Custom', 'Pasadya');
-  String get chooseYear => t('Choose a year', 'Pumili ng taon');
   String get pickAtMost366 =>
       t('Pick at most 366 days.', 'Hanggang 366 araw lang.');
   String get salesCategoryAll => t('All', 'Lahat');
@@ -2194,26 +2087,6 @@ class AppStrings {
     'month' => t('grouped by month', 'pinagsama-sama ayon sa buwan'),
     _ => t('grouped by day', 'pinagsama-sama ayon sa araw'),
   };
-  String salesRangeLine(String startIso, String endIso, [String? grouping]) {
-    final dates = _salesRangeDates(startIso, endIso);
-    if (grouping == null || grouping.isEmpty) {
-      return dates;
-    }
-    return '$dates · ${groupedBy(grouping)}';
-  }
-
-  String _salesRangeDates(String startIso, String endIso) {
-    final start = _calendarDate(startIso);
-    final end = _calendarDate(endIso);
-    if (start == null || end == null) {
-      return '$startIso – $endIso';
-    }
-    final sameYear = start.year == end.year;
-    final startText = sameYear
-        ? shortDate(start)
-        : '${shortDate(start)}, ${start.year}';
-    return '$startText – ${shortDate(end)}, ${end.year}';
-  }
 
   DateTime? _calendarDate(String iso) {
     final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})').firstMatch(iso);
@@ -2232,17 +2105,12 @@ class AppStrings {
       t('Sales over time', 'Benta sa paglipas ng panahon');
   String get averageOrder => t('Average order', 'Karaniwang order');
   String get harvestTab => t('Harvest', 'Ani');
-  String get othersSlice => t('Others', 'Iba pa');
   String get howBuyersPaid =>
       t('How buyers paid', 'Paano nagbayad ang mamimili');
   String get onlinePay => t('Online', 'Online');
   String get cashPay => t('Cash', 'Cash');
   String get cashIncludesWalkIn =>
       t('Cash includes walk-in sales.', 'Kasama sa cash ang mga walk-in.');
-  String quantitySold(String quantity, String unit) => unit.isEmpty
-      ? t('$quantity sold', '$quantity ang nabenta')
-      : t('$quantity $unit sold', '$quantity $unit ang nabenta');
-  String get yearTotalTitle => t('This year', 'Ngayong taon');
   String get bestMonth => t('Best month', 'Pinakamabentang buwan');
   String ordersCount(int count) =>
       count == 1 ? t('1 order', '1 order') : t('$count orders', '$count order');
@@ -2253,38 +2121,16 @@ class AppStrings {
   String estimatedHarvests(int count) => count == 1
       ? t('Includes 1 estimated harvest.', 'May 1 tantiyang ani.')
       : t('Includes $count estimated harvests.', 'May $count tantiyang ani.');
-  String get harvestsRecorded => t('Harvests recorded', 'Naitalang ani');
-  String get cropsHarvested => t('Crops harvested', 'Naani na pananim');
-  String get expectedIncome => t('Expected income', 'Inaasahang kita');
-  String get actualIncomeSoFar =>
-      t('Actual income so far', 'Aktwal na kita sa ngayon');
-  String get harvestedLabel => t('Harvested', 'Naani');
   String get soldLabel => t('Sold', 'Nabenta');
-  String get goodLabel => t('Good', 'Maganda');
   String get rejectedLabel => t('Rejected', 'Tinanggihan');
-  String whyRejected(String reasons) =>
-      t('Why rejected: $reasons', 'Bakit tinanggihan: $reasons');
-  String get whereGoodWent =>
-      t('Where the good harvest went', 'Saan napunta ang magandang ani');
-  String get waitingForPickup =>
-      t('Waiting for pickup', 'Hinihintay ang pickup');
   String get removedLabel => t('Removed', 'Tinanggal');
   String get leftLabel => t('Left', 'Natira');
-  String get nothingRemoved => t('Nothing removed.', 'Walang tinanggal.');
-  String get expectedVsActual =>
-      t('Expected vs actual income', 'Inaasahan laban sa aktwal na kita');
-  String get incomeCaption => t(
-    'Expected = good harvest × the price when it was recorded. Actual = completed sales from these harvests so far.',
-    'Inaasahan = magandang ani × ang presyo noong naitala. Aktwal = tapos na benta mula sa mga ani na ito sa ngayon.',
-  );
   String get noCostHint => t(
     'Add a cost when you record a harvest to see profit.',
     'Maglagay ng gastos kapag nagtatala ng ani para makita ang tubo.',
   );
   String get costLabel => t('Cost', 'Gastos');
   String get expectedProfit => t('Expected profit', 'Inaasahang tubo');
-  String get actualProfitSoFar =>
-      t('Actual profit so far', 'Aktwal na tubo sa ngayon');
   String costCoverage(int withCost, int total) => t(
     'Based on $withCost of $total harvests with a cost.',
     'Batay sa $withCost sa $total ani na may gastos.',
@@ -2390,19 +2236,6 @@ class AppStrings {
     return t('$joined sold', '$joined ang nabenta');
   }
 
-  String salesWindow(String startIso, String endIso) {
-    final start = DateTime.tryParse(startIso);
-    final end = DateTime.tryParse(endIso);
-    if (start == null || end == null) {
-      return t('$startIso to $endIso', '$startIso hanggang $endIso');
-    }
-
-    return t(
-      '${_shortMonth(start, english: true)} ${start.day} to ${_shortMonth(end, english: true)} ${end.day}',
-      '${_shortMonth(start, english: false)} ${start.day} hanggang ${_shortMonth(end, english: false)} ${end.day}',
-    );
-  }
-
   String _shortMonth(DateTime date, {required bool english}) {
     const en = [
       'Jan',
@@ -2437,22 +2270,6 @@ class AppStrings {
   }
 
   String get rating => t('Rating', 'Rating');
-
-  String orderStatus(String status) => switch (status.toLowerCase()) {
-    'placed' => placed,
-    'confirmed' => confirmed,
-    'ready' => ready,
-    'completed' => completed,
-    'cancelled' => cancelled,
-    _ => status,
-  };
-
-  String stockLabel({required bool out, required bool low}) {
-    if (out) {
-      return outOfStock;
-    }
-    return low ? lowStock : inStock;
-  }
 
   String notificationTitle(String? type, String fallback) => switch (type) {
     'order_confirmed' => t('Order confirmed', 'Kumpirmado na ang order'),

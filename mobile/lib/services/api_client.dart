@@ -542,16 +542,6 @@ class ApiClient {
     });
   }
 
-  Future<List<FavoriteRecord>> favorites() {
-    return _list('/buyer/favorites', parse: FavoriteRecord.fromJson);
-  }
-
-  Future<void> addFavorite(int listingId) =>
-      _post('/buyer/favorites', {'listing_id': listingId});
-
-  Future<void> removeFavorite(int listingId) =>
-      _delete('/buyer/favorites/$listingId');
-
   Future<List<ShopFavoriteRecord>> shopFavorites() {
     return _list('/buyer/shop-favorites', parse: ShopFavoriteRecord.fromJson);
   }
@@ -890,14 +880,6 @@ class ApiClient {
     return OrderRecord.fromJson(_asMap(response['data'] ?? response));
   }
 
-  Future<List<OrderMessage>> orderMessages(int orderId, {int? afterId}) {
-    return _list(
-      '/orders/$orderId/messages',
-      query: {'after_id': ?afterId},
-      parse: OrderMessage.fromJson,
-    );
-  }
-
   Future<OrderMessage> sendOrderMessage(
     int orderId, {
     required String body,
@@ -1004,16 +986,6 @@ class ApiClient {
     return FaqAnswer.fromJson(_asMap(response['data'] ?? response));
   }
 
-  Future<Map<String, dynamic>> authorizeBroadcast({
-    required String socketId,
-    required String channelName,
-  }) {
-    return _postAbsolute(ApiConfig.broadcastingAuthUrl, {
-      'socket_id': socketId,
-      'channel_name': channelName,
-    });
-  }
-
   Future<List<CartLine>> cartItems() {
     return _list(CartRequests.cartPath, parse: CartLine.fromJson);
   }
@@ -1038,10 +1010,6 @@ class ApiClient {
   }
 
   Future<void> removeCartItem(int id) => _delete(CartRequests.cartItemPath(id));
-
-  Future<List<PaymentQrCode>> listPaymentQrs() {
-    return _list('/farmer/payment-qrs', parse: PaymentQrCode.fromJson);
-  }
 
   Future<PaymentQrCode> addPaymentQr({
     required String imagePath,
@@ -1148,15 +1116,6 @@ class ApiClient {
     } on DioException catch (error) {
       throw ApiException(_messageFrom(error));
     }
-  }
-
-  Future<void> reportOrder(int orderId, {String? details}) {
-    return submitReport(
-      targetType: 'order',
-      targetId: orderId,
-      reason: 'payment_problem',
-      details: details,
-    );
   }
 
   Future<List<OrderRecord>> checkout({
@@ -1533,18 +1492,6 @@ class ApiClient {
   ) async {
     try {
       final response = await _dio.post(path, data: body);
-      return _asMap(response.data);
-    } on DioException catch (error) {
-      throw ApiException(_messageFrom(error));
-    }
-  }
-
-  Future<Map<String, dynamic>> _postAbsolute(
-    String url,
-    Map<String, dynamic> body,
-  ) async {
-    try {
-      final response = await _dio.postUri(Uri.parse(url), data: body);
       return _asMap(response.data);
     } on DioException catch (error) {
       throw ApiException(_messageFrom(error));

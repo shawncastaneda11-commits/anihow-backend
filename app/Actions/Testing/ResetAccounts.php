@@ -153,10 +153,6 @@ class ResetAccounts
                 $inner->whereIn('buyer_id', $this->removedUserIds())
                     ->orWhereIn('listing_id', $this->removedListingIds());
             }),
-            'favorites' => fn (Builder $query): Builder => $query->where(function (Builder $inner): void {
-                $inner->whereIn('buyer_id', $this->removedUserIds())
-                    ->orWhereIn('listing_id', $this->removedListingIds());
-            }),
             'listings' => fn (Builder $query): Builder => $query->whereIn('id', $this->removedListingIds()),
             'farm_favorites' => fn (Builder $query): Builder => $query->where(function (Builder $inner): void {
                 $inner->whereIn('buyer_id', $this->removedUserIds())

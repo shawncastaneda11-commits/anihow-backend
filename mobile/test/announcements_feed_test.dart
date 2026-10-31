@@ -3,7 +3,6 @@ import 'package:anihow/screens/buyer/announcements_feed_screen.dart';
 import 'package:anihow/services/api_client.dart';
 import 'package:anihow/state/preferences_controller.dart';
 import 'package:anihow/theme/anihow_theme.dart';
-import 'package:anihow/widgets/farm_updates_strip.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -31,40 +30,6 @@ BuyerFarmAnnouncement _post(int id, String title, {String? body}) {
 }
 
 void main() {
-  testWidgets(
-    'the updates strip shows at most three posts and hides when empty',
-    (tester) async {
-      await tester.pumpWidget(
-        _app(
-          Scaffold(
-            body: FarmUpdatesStrip(
-              items: [
-                _post(1, 'One'),
-                _post(2, 'Two'),
-                _post(3, 'Three'),
-                _post(4, 'Four'),
-              ],
-            ),
-          ),
-        ),
-      );
-      await tester.pump();
-
-      expect(find.text('Updates from farms'), findsOneWidget);
-      expect(find.text('One'), findsOneWidget);
-      expect(find.text('Two'), findsOneWidget);
-      expect(find.text('Three'), findsOneWidget);
-      expect(find.text('Four'), findsNothing);
-
-      await tester.pumpWidget(
-        _app(const Scaffold(body: FarmUpdatesStrip(items: []))),
-      );
-      await tester.pump();
-
-      expect(find.text('Updates from farms'), findsNothing);
-    },
-  );
-
   testWidgets('the feed renders cards and the empty state', (tester) async {
     await tester.binding.setSurfaceSize(const Size(400, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));

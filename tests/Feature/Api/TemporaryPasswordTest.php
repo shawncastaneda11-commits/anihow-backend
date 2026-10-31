@@ -160,40 +160,6 @@ class TemporaryPasswordTest extends TestCase
         $this->assertTrue(Hash::check('New-Pass#123', $buyer->password));
     }
 
-    public function test_admin_create_returns_a_temporary_password_once_and_ignores_a_client_password(): void
-    {
-        $admin = User::factory()->create();
-        $admin->syncRoles(Role::SuperAdmin);
-
-        $response = $this->withToken($admin->createToken('mobile')->plainTextToken)
-            ->postJson('/api/admin/farmer-sellers', [
-                'name' => 'Juan Farmer',
-                'email' => 'juan.temp@farm.ph',
-                'password' => 'password123',
-                'password_confirmation' => 'password123',
-                'phone' => '09180001111',
-            ])
-            ->assertCreated()
-            ->assertJsonPath('data.must_change_password', true)
-            ->assertJsonMissingPath('data.temporary_password');
-
-        $temporaryPassword = $response->json('temporary_password');
-        $seller = User::query()->where('email', 'juan.temp@farm.ph')->first();
-
-        $this->assertIsString($temporaryPassword);
-        $this->assertNotNull($seller);
-        $this->assertTrue($seller->must_change_password);
-        $this->assertTrue(Hash::check($temporaryPassword, $seller->password));
-        $this->assertFalse(Hash::check('password123', $seller->password));
-
-        $this->postJson('/api/auth/login', [
-            'email' => 'juan.temp@farm.ph',
-            'password' => 'password123',
-        ])
-            ->assertUnprocessable()
-            ->assertJsonPath('errors.email.0', __('auth.failed'));
-    }
-
     public function test_a_self_registered_buyer_is_not_flagged(): void
     {
         $this->postJson('/api/auth/register', [

@@ -1,17 +1,18 @@
-# anihow
+# AniHow mobile app
 
-A new Flutter project.
+The Flutter (Android) app for buyers and farmer-sellers.
 
-## Getting Started
+Setup, running on the emulator, building the APK and the test accounts are all in the main [README](../README.md):
 
-This project is a starting point for a Flutter application.
+- [Run the app on the emulator](../README.md#5-run-the-app-on-the-emulator)
+- [Build the Android app](../README.md#build-the-android-app)
+- [Test copy (staging)](../README.md#test-copy-staging)
 
-A few resources to get you started if this is your first Flutter project:
+Server addresses for release builds live in `dart_defines/` (`vps.json` for the live server, `staging.json` for the test copy).
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Checks that run on every pull request:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+flutter analyze
+flutter test
+```

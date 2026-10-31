@@ -94,7 +94,7 @@ function Open-AniHowAdmin {
     $command = '/c start "" "{0}"' -f $url
     Start-Process -FilePath 'cmd.exe' -ArgumentList $command -WindowStyle Hidden
     Write-Host "Opened AniHow admin: $url"
-    Write-Host 'Login: admin@anihow.local / password'
+    Write-Host 'Logins: see Test accounts in README.md'
 }
 
 function Get-AdbEmulatorStatus {
@@ -252,7 +252,7 @@ function Open-AniHowMobile {
             }
             Write-Host 'Demo buyer: carla.santos@demo.anihow.local / password'
             Write-Host 'Demo farmer: nena.villanueva@demo.anihow.local / password'
-            Write-Host 'Admin CMS: admin@anihow.local / password'
+            Write-Host 'Admin CMS logins: see Test accounts in README.md'
             return
         }
 

@@ -136,7 +136,7 @@ void main() {
           find.byKey(const ValueKey('availability-pill-8')),
           findsOneWidget,
         );
-        expect(find.text('Reserve · from Oct 20'), findsOneWidget);
+        expect(find.text('Pre-order · ready Oct 20'), findsOneWidget);
         expect(find.byKey(const ValueKey('upcoming-badge')), findsNothing);
       }
     },

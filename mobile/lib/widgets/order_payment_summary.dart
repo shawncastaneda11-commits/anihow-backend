@@ -266,18 +266,30 @@ class OrderPaymentSummary extends StatelessWidget {
             ],
             if (order.refundReference != null && order.refundReference!.isNotEmpty)
               Text('${s.refundReference}: ${order.refundReference}'),
-            if (forSeller && order.paymentStatus == 'refund_due')
+            if (forSeller && order.paymentStatus == 'refund_due') ...[
+              const SizedBox(height: AniHowSpace.cardGap),
               PrimaryButton(
                 key: const ValueKey('mark-refunded'),
                 label: s.markRefunded,
                 onPressed: () => _refund(context),
               ),
-            if (forSeller && order.paymentStatus == 'refund_due' && order.paidAt == null)
+            ],
+            if (forSeller && order.paymentStatus == 'refund_due' && order.paidAt == null) ...[
+              const SizedBox(height: AniHowSpace.cardGap),
               OutlinedButton(
                 key: const ValueKey('payment-never-arrived'),
                 onPressed: () => _neverArrived(context),
                 child: Text(s.paymentNeverArrived),
               ),
+              const SizedBox(height: 6),
+              Text(
+                s.neverArrivedHelp,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.68),
+                ),
+              ),
+            ],
           ],
         ),
       ),

@@ -17,9 +17,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Crop types belong to one farm. A farm with its own rows uses only those.
- * Rows with no farm are the shared catalog, used only by farms that have
- * not added their own yet.
+ * Rows with no farm are the shared catalog, which every farm uses. A farm may
+ * add crop types of its own; only that farm sees them, next to the shared
+ * ones.
  *
  * A farm may tighten floor_price and max_discount for itself, never loosen
  * them. PriceGuardResolver is what listing, tawad, checkout, and walk-in
@@ -116,6 +116,16 @@ class CropType extends Model
         return $this->hasMany(Listing::class);
     }
 
+    /**
+     * Harvest and stock records keep the crop type for the reports, so a crop
+     * with any of them cannot be deleted; it is turned off instead.
+     */
+    public function hasHarvestHistory(): bool
+    {
+        return HarvestRecord::query()->where('crop_type_id', $this->id)->exists()
+            || StockRemoval::query()->where('crop_type_id', $this->id)->exists();
+    }
+
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);
@@ -184,18 +194,21 @@ class CropType extends Model
     }
 
     /**
-     * A farm that has added its own crop types sees only those. A farm that
-     * has not still sees the shared catalog.
+     * The crop types a farm can use: the shared catalog plus the farm's own.
+     * Adding a farm crop never hides the shared ones. A seller's crop list
+     * is the way to narrow what one seller may list.
      *
      * @param  Builder<CropType>  $query
      * @return Builder<CropType>
      */
     public function scopeForFarm(Builder $query, int|string|null $farmId): Builder
     {
-        if ($farmId !== null && static::query()->where('farm_id', $farmId)->exists()) {
-            return $query->where('crop_types.farm_id', $farmId);
+        if ($farmId === null) {
+            return $query->whereNull('crop_types.farm_id');
         }
 
-        return $query->whereNull('crop_types.farm_id');
+        return $query->where(fn (Builder $crops): Builder => $crops
+            ->whereNull('crop_types.farm_id')
+            ->orWhere('crop_types.farm_id', $farmId));
     }
 }

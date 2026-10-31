@@ -4,11 +4,15 @@ namespace Tests\Feature;
 
 use App\Enums\Role;
 use App\Filament\Resources\CropTypes\CropTypeResource;
+use App\Filament\Resources\CropTypes\Pages\EditCropType;
 use App\Models\Farm;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
+use Filament\Actions\DeleteAction;
+use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
+use Livewire\Livewire;
 use Tests\Concerns\CreatesMarketplaceActors;
 use Tests\TestCase;
 
@@ -86,7 +90,7 @@ class FarmerCropListTest extends TestCase
             ->assertJsonCount(2, 'data');
     }
 
-    public function test_each_farm_keeps_its_own_crop_types(): void
+    public function test_each_farm_keeps_its_own_crop_types_next_to_the_shared_ones(): void
     {
         $farmA = Farm::factory()->create();
         $farmB = Farm::factory()->create();
@@ -95,7 +99,7 @@ class FarmerCropListTest extends TestCase
         $editorA = $this->staff(Role::ContentEditor, $farmA);
         $own = $this->cropType(['farm_id' => $farmA->id, 'name' => 'Kamatis']);
         $other = $this->cropType(['farm_id' => $farmB->id, 'name' => 'Sitaw']);
-        $shared = $this->cropType(['name' => 'Shared crop']);
+        $shared = $this->cropType(['name' => 'Shared crop', 'floor_price' => 0, 'max_discount' => 0]);
 
         $this->actingAs($editorA);
 
@@ -110,17 +114,15 @@ class FarmerCropListTest extends TestCase
         $this->assertTrue(Gate::forUser($editorA)->denies('update', $other));
         $this->assertTrue(Gate::forUser($editorA)->denies('update', $shared));
 
-        $this->asUser($sellerA)
-            ->getJson('/api/crop-types')
-            ->assertOk()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.id', $own->id);
-
-        $this->asUser($sellerB)
-            ->getJson('/api/crop-types')
-            ->assertOk()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.id', $other->id);
+        // A farm crop is added to the shared catalog; it never hides it.
+        $this->assertEqualsCanonicalizing(
+            [$own->id, $shared->id],
+            $this->asUser($sellerA)->getJson('/api/crop-types')->assertOk()->json('data.*.id'),
+        );
+        $this->assertEqualsCanonicalizing(
+            [$other->id, $shared->id],
+            $this->asUser($sellerB)->getJson('/api/crop-types')->assertOk()->json('data.*.id'),
+        );
 
         $this->asUser($sellerA)
             ->postJson('/api/farmer/listings', [
@@ -132,6 +134,51 @@ class FarmerCropListTest extends TestCase
             ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['crop_type_id']);
+
+        $this->asUser($sellerA)
+            ->postJson('/api/farmer/listings', [
+                'title' => 'Shared crop from farm A',
+                'crop_type_id' => $shared->id,
+                'unit' => $shared->unit_of_measure->value,
+                'price_per_unit' => 30,
+                'quantity_available' => 10,
+            ])
+            ->assertCreated();
+    }
+
+    public function test_a_crop_type_with_harvest_records_is_not_deleted_and_the_page_says_why(): void
+    {
+        $admin = $this->staff(Role::SuperAdmin);
+        $farmer = $this->farmer();
+        $used = $this->cropType(['farm_id' => $farmer->farm_id, 'name' => '1', 'floor_price' => 0, 'max_discount' => 0]);
+        $unused = $this->cropType(['farm_id' => $farmer->farm_id, 'name' => 'Spare', 'floor_price' => 0, 'max_discount' => 0]);
+        $this->asUser($farmer)->postJson('/api/farmer/listings', [
+            'title' => 'Matamis na kalabasa',
+            'crop_type_id' => $used->id,
+            'unit' => $used->unit_of_measure->value,
+            'price_per_unit' => 30,
+            'quantity_harvested' => 5,
+            'harvested_on' => now()->toDateString(),
+        ])->assertCreated();
+
+        $this->assertTrue($used->hasHarvestHistory());
+        $this->assertFalse($unused->hasHarvestHistory());
+
+        // The listing above was made through the API as the seller.
+        $this->app['auth']->forgetGuards();
+        $this->app['auth']->shouldUse('web');
+        $this->actingAs($admin);
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        Livewire::actingAs($admin);
+
+        Livewire::test(EditCropType::class, ['record' => $used->getRouteKey()])
+            ->callAction(DeleteAction::class)
+            ->assertNotified("1 can't be deleted");
+        $this->assertNotNull($used->fresh());
+
+        Livewire::test(EditCropType::class, ['record' => $unused->getRouteKey()])
+            ->callAction(DeleteAction::class);
+        $this->assertNull($unused->fresh());
     }
 
     public function test_a_super_admin_sees_every_farms_crop_types(): void

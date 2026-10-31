@@ -659,9 +659,9 @@ class CreateTestFixtures
     }
 
     /**
-     * Adds the value-added crop type to the catalog the farm already uses: its
-     * own rows when it has any, otherwise the shared catalog. A farm that owns
-     * crop types sees only those, so a farm row is never added on its own.
+     * Adds the value-added crop type next to the crops the farm already uses:
+     * as a farm row when the farm keeps its own crop types, otherwise to the
+     * shared catalog.
      */
     private function valueAddedCropType(?Farm $farm): void
     {

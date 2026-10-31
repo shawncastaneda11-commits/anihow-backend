@@ -12,6 +12,7 @@ use App\Enums\ReservationCancellationReason;
 use App\Enums\ReservationStatus;
 use App\Enums\Role;
 use App\Filament\Resources\Payments\Pages\ListPayments;
+use App\Filament\Resources\Reservations\Pages\ListReservations;
 use App\Models\InAppNotification;
 use App\Models\Listing;
 use App\Models\Order;
@@ -437,7 +438,22 @@ class ReservationPaymentTest extends TestCase
         Livewire::actingAs($admin)
             ->test(ListPayments::class)
             ->assertCanSeeTableRecords([$proof])
-            ->assertSee('Reservation');
+            ->assertSee('Reservation')
+            ->assertTableColumnStateSet('paid_for', "Reservation · {$reservation->listing_name}", $proof)
+            ->assertTableColumnStateSet('farm_name', $reservation->fresh()->farm?->name, $proof)
+            ->assertTableColumnStateSet('payment_status', 'Payment sent', $proof)
+            ->filterTable('farm', $reservation->farm_id)
+            ->assertCanSeeTableRecords([$proof]);
+
+        $reservation->refresh();
+        Livewire::actingAs($admin)
+            ->test(ListReservations::class)
+            ->assertCanSeeTableRecords([$reservation])
+            ->assertTableColumnFormattedStateSet('quantity', '1 '.$reservation->unit->value, $reservation)
+            ->filterTable('payment_status', OrderPaymentStatus::PaymentSent->value)
+            ->assertCanSeeTableRecords([$reservation])
+            ->filterTable('payment_status', OrderPaymentStatus::RefundDue->value)
+            ->assertCanNotSeeTableRecords([$reservation]);
     }
 
     /**

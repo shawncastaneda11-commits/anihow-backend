@@ -13,6 +13,23 @@ class _RecordingApi extends ApiClient {
   _RecordingApi() : super(onUnauthorized: () {});
 
   Map<String, dynamic>? created;
+  Map<String, Object?>? tawad;
+
+  @override
+  Future<TawadRule> saveTawad({
+    required int listingId,
+    required String type,
+    required String discountAmount,
+    String? minQuantity,
+  }) async {
+    tawad = {
+      'listing': listingId,
+      'type': type,
+      'amount': discountAmount,
+      'min': minQuantity,
+    };
+    return TawadRule(id: 3, type: type, discountAmount: discountAmount);
+  }
 
   @override
   Future<ListingItem> createListing(
@@ -220,6 +237,45 @@ void main() {
     );
   });
 
+  testWidgets('the crop type is locked when editing, not when creating', (
+    tester,
+  ) async {
+    await pumpForm(tester);
+    final newPicker = tester.widget<DropdownButton<int>>(
+      find.descendant(
+        of: find.byKey(const ValueKey('listing-crop-type')),
+        matching: find.byType(DropdownButton<int>),
+      ),
+    );
+    expect(newPicker.onChanged, isNotNull);
+
+    await tester.pumpWidget(const SizedBox());
+    await pumpForm(
+      tester,
+      listing: const ListingItem(
+        id: 9,
+        title: 'Kamatis',
+        pricePerUnit: '40',
+        quantityAvailable: '50',
+        unit: 'kg',
+        category: _crop,
+      ),
+    );
+    final editPicker = tester.widget<DropdownButton<int>>(
+      find.descendant(
+        of: find.byKey(const ValueKey('listing-crop-type')),
+        matching: find.byType(DropdownButton<int>),
+      ),
+    );
+    expect(editPicker.onChanged, isNull);
+    expect(
+      find.text(
+        "The crop type can't be changed. Make a new listing for a different crop.",
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('tapping a step chip scrolls to that card', (tester) async {
     await tester.binding.setSurfaceSize(const Size(400, 640));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -270,6 +326,65 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.created?['growing_method'], 'naturally_grown');
+  });
+
+  testWidgets('a new listing can set its tawad when it is created', (
+    tester,
+  ) async {
+    final api = _RecordingApi();
+    await pumpForm(tester, api: api, user: _seller(certified: false));
+
+    await tester.enterText(find.byType(TextField).first, 'Tomato');
+    await tester.tap(find.byType(DropdownButtonFormField<int>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tomato').last);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('harvest-quantity')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('harvest-quantity')),
+      '10',
+    );
+    final section = find.byKey(const ValueKey('new-discount-section'));
+    await tester.scrollUntilVisible(
+      section,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(section);
+    await tester.pumpAndSettle();
+    final minimumRule = find.text('Peso off at a minimum quantity');
+    await tester.ensureVisible(minimumRule);
+    await tester.pumpAndSettle();
+    await tester.tap(minimumRule);
+    await tester.pumpAndSettle();
+    final amount = find.byKey(const ValueKey('new-tawad-amount'));
+    await tester.ensureVisible(amount);
+    await tester.pumpAndSettle();
+    await tester.enterText(amount, '5');
+
+    await tester.tap(find.text('Save listing'));
+    await tester.pumpAndSettle();
+    expect(api.created, isNull);
+    expect(find.byKey(const ValueKey('new-tawad-error')), findsOneWidget);
+
+    final minimum = find.byKey(const ValueKey('new-tawad-min-quantity'));
+    await tester.ensureVisible(minimum);
+    await tester.pumpAndSettle();
+    await tester.enterText(minimum, '3');
+    await tester.tap(find.text('Save listing'));
+    await tester.pumpAndSettle();
+
+    expect(api.created, isNotNull);
+    expect(api.tawad, {
+      'listing': 1,
+      'type': 'min_quantity',
+      'amount': '5',
+      'min': '3',
+    });
   });
 
   testWidgets('a certified farm can save certified organic', (tester) async {

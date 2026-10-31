@@ -11,6 +11,7 @@ use App\Enums\ReservationStatus;
 use App\Enums\Role;
 use App\Enums\TawadType;
 use App\Filament\Resources\Farms\Pages\EditFarm;
+use App\Http\Requests\Api\Listings\UpdateListingRequest;
 use App\Models\CropType;
 use App\Models\Farm;
 use App\Models\Listing;
@@ -195,7 +196,7 @@ class FarmFeatureSwitchTest extends TestCase
                 'crop_type_id' => $jam->id,
             ])
             ->assertUnprocessable()
-            ->assertJsonPath('errors.crop_type_id.0', Farm::VALUE_ADDED_OFF_MESSAGE);
+            ->assertJsonPath('errors.crop_type_id.0', UpdateListingRequest::CROP_LOCKED_MESSAGE);
 
         $farmerTypes = $this->asUser($farmerA)->getJson('/api/crop-types')->assertOk()->json('data');
         $this->assertNull(collect($farmerTypes)->firstWhere('id', $jam->id));

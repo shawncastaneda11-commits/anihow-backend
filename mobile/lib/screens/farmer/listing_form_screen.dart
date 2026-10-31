@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../../services/api_client.dart';
+import '../../services/tawad_requests.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/readable_accent.dart';
 import '../../widgets/dashed_photo_box.dart';
@@ -19,6 +21,7 @@ import '../../state/preferences_controller.dart';
 import '../../support/order_quantity.dart';
 import 'cancel_reservations_dialog.dart';
 import 'listing_delete.dart';
+import 'listing_reservations_screen.dart';
 import 'harvest_form.dart';
 import 'stock_history_screen.dart';
 import 'stock_sheets.dart';
@@ -69,6 +72,13 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   String _growingMethod = '';
   bool _isActive = true;
   bool _discountOpen = false;
+
+  /// A tawad typed in while creating the listing. It is saved right after
+  /// the listing, since a rule needs the listing's id.
+  String _newTawadType = TawadRequests.flat;
+  final _newTawadAmount = TextEditingController();
+  final _newTawadMinQty = TextEditingController();
+  String? _newTawadError;
   bool _busy = false;
   final _photoKey = GlobalKey();
   final _detailsKey = GlobalKey();
@@ -189,6 +199,8 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     _minOrder.dispose();
     _orderStep.dispose();
     _description.dispose();
+    _newTawadAmount.dispose();
+    _newTawadMinQty.dispose();
     super.dispose();
   }
 
@@ -273,6 +285,9 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     if (problem != null) {
       return;
     }
+    if (!_newTawadValid(s)) {
+      return;
+    }
     final listing = widget.listing;
     final turningOff = listing != null && listing.isActive && !_isActive;
     if (!confirmed &&
@@ -319,7 +334,10 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     };
     try {
       if (listing == null) {
-        await api.createListing(body, imagePath: _imagePath);
+        final created = await api.createListing(body, imagePath: _imagePath);
+        if (mounted) {
+          await _saveNewTawad(created);
+        }
       } else {
         await api.updateListing(
           listing.id,
@@ -357,6 +375,51 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       if (mounted) {
         setState(() => _busy = false);
       }
+    }
+  }
+
+  /// True when the new listing's tawad is either left empty or complete.
+  bool _newTawadValid(AppStrings s) {
+    if (widget.listing != null || !_discountOpen) {
+      return true;
+    }
+    final amount = _newTawadAmount.text.trim();
+    final minimum = _newTawadMinQty.text.trim();
+    String? error;
+    if (amount.isEmpty) {
+      error = minimum.isEmpty ? null : s.enterPesoOff;
+    } else if ((double.tryParse(amount) ?? 0) <= 0) {
+      error = s.enterPesoOff;
+    } else if (_newTawadType == TawadRequests.minQuantity &&
+        (double.tryParse(minimum) ?? 0) <= 0) {
+      error = s.enterMinQty;
+    }
+    setState(() => _newTawadError = error);
+    return error == null;
+  }
+
+  /// Saves the tawad typed in on the new listing. The listing is already
+  /// saved, so a refused discount is reported but does not undo it.
+  Future<void> _saveNewTawad(ListingItem created) async {
+    final amount = _newTawadAmount.text.trim();
+    if (!_discountOpen || amount.isEmpty) {
+      return;
+    }
+    final s = AppStrings.read(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await context.read<AuthController>().api.saveTawad(
+        listingId: created.id,
+        type: _newTawadType,
+        discountAmount: amount,
+        minQuantity: _newTawadType == TawadRequests.minQuantity
+            ? _newTawadMinQty.text.trim()
+            : null,
+      );
+    } on ApiException catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(s.listingSavedTawadNot(error.message))),
+      );
     }
   }
 
@@ -687,6 +750,14 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     onPicked: (date) => setState(() => _harvestedOn = date),
   );
 
+  Future<void> _openReservations() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => ListingReservationsScreen(listing: _listing!),
+      ),
+    );
+  }
+
   void _openStockHistory() {
     final listing = _listing ?? widget.listing!;
     Navigator.of(context).push(
@@ -887,7 +958,14 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                             AniHowField(
                               label: s.cropType,
                               child: DropdownButtonFormField<int>(
+                                key: const ValueKey('listing-crop-type'),
                                 initialValue: _cropTypeId,
+                                decoration: InputDecoration(
+                                  helperText: widget.listing == null
+                                      ? null
+                                      : s.cropTypeLocked,
+                                  helperMaxLines: 2,
+                                ),
                                 items: cropTypes
                                     .map(
                                       (cropType) => DropdownMenuItem(
@@ -902,12 +980,16 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                                       ),
                                     )
                                     .toList(),
-                                onChanged: (value) => setState(() {
-                                  _cropTypeId = value;
-                                  _unit = _resolvedUnit(
-                                    _selectedCrop(cropTypes),
-                                  );
-                                }),
+                                // Fixed once the listing exists; the server
+                                // refuses a change too.
+                                onChanged: widget.listing != null
+                                    ? null
+                                    : (value) => setState(() {
+                                        _cropTypeId = value;
+                                        _unit = _resolvedUnit(
+                                          _selectedCrop(cropTypes),
+                                        );
+                                      }),
                               ),
                             ),
                             const SizedBox(height: AniHowSpace.fieldGap),
@@ -1362,6 +1444,24 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                                     setState(() => _harvestedOn = null),
                               ),
                             ],
+                            if (widget.listing != null &&
+                                _listing!.isUpcoming) ...[
+                              const SizedBox(height: AniHowSpace.fieldGap),
+                              OutlinedButton.icon(
+                                key: const ValueKey('listing-reservations'),
+                                onPressed: _openReservations,
+                                icon: const Icon(
+                                  Icons.event_note_outlined,
+                                  size: 20,
+                                ),
+                                label: Text(
+                                  (_listing!.activeReservationsCount ?? 0) > 0
+                                      ? '${s.reservationsTab} '
+                                            '(${_listing!.activeReservationsCount})'
+                                      : s.reservationsTab,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -1397,29 +1497,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                             initiallyExpanded: _discountOpen,
                             onExpansionChanged: (open) =>
                                 setState(() => _discountOpen = open),
-                            leading: DecoratedBox(
-                              decoration: BoxDecoration(
-                                color:
-                                    Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? const Color(0xFF5A431C)
-                                    : const Color(0xFFFBF3DC),
-                                shape: BoxShape.circle,
-                              ),
-                              child: SizedBox(
-                                width: 36,
-                                height: 36,
-                                child: Icon(
-                                  Icons.local_offer_outlined,
-                                  size: 18,
-                                  color:
-                                      Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? const Color(0xFFF6D48A)
-                                      : const Color(0xFF7A4E0C),
-                                ),
-                              ),
-                            ),
+                            leading: const _DiscountBadge(),
                             tilePadding: const EdgeInsets.symmetric(
                               horizontal: 16,
                             ),
@@ -1507,6 +1585,22 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                             ],
                           ),
                         ),
+                      ),
+                    ],
+                    if (widget.listing == null &&
+                        _showDiscount(context)) ...[
+                      const SizedBox(height: AniHowSpace.cardGap),
+                      _NewTawadCard(
+                        open: _discountOpen,
+                        onOpen: (open) => setState(() => _discountOpen = open),
+                        type: _newTawadType,
+                        onType: (type) =>
+                            setState(() => _newTawadType = type),
+                        amount: _newTawadAmount,
+                        minQuantity: _newTawadMinQty,
+                        unit: _unit,
+                        crop: selectedCrop,
+                        error: _newTawadError,
                       ),
                     ],
                     if (_listing != null &&
@@ -2025,6 +2119,159 @@ class _FormStepBar extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The round tag icon in front of both discount sections.
+class _DiscountBadge extends StatelessWidget {
+  const _DiscountBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: dark ? const Color(0xFF5A431C) : const Color(0xFFFBF3DC),
+        shape: BoxShape.circle,
+      ),
+      child: SizedBox(
+        width: 36,
+        height: 36,
+        child: Icon(
+          Icons.local_offer_outlined,
+          size: 18,
+          color: dark ? const Color(0xFFF6D48A) : const Color(0xFF7A4E0C),
+        ),
+      ),
+    );
+  }
+}
+
+/// The optional tawad on a new listing: the same choices as the Tawad
+/// discount screen, saved together with the listing.
+class _NewTawadCard extends StatelessWidget {
+  const _NewTawadCard({
+    required this.open,
+    required this.onOpen,
+    required this.type,
+    required this.onType,
+    required this.amount,
+    required this.minQuantity,
+    required this.unit,
+    required this.crop,
+    required this.error,
+  });
+
+  final bool open;
+  final ValueChanged<bool> onOpen;
+  final String type;
+  final ValueChanged<String> onType;
+  final TextEditingController amount;
+  final TextEditingController minQuantity;
+  final String? unit;
+  final CategoryItem? crop;
+  final String? error;
+
+  static final _number = FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'));
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final language = context.watch<PreferencesController>().language;
+    final maxDiscount = crop?.sellerMaxDiscount;
+    return Card(
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          key: const ValueKey('new-discount-section'),
+          initiallyExpanded: open,
+          onExpansionChanged: onOpen,
+          leading: const _DiscountBadge(),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+          title: Text(s.discountOptionalTitle),
+          subtitle: Text(s.discountOptionalHelp),
+          children: [
+            if (crop != null && (maxDiscount?.isNotEmpty ?? false)) ...[
+              Text(
+                s.maxTawadFor(
+                  crop!.labelFor(language),
+                  AniHowMoney.peso(maxDiscount),
+                ),
+              ),
+              const SizedBox(height: AniHowSpace.cardGap),
+            ],
+            Row(
+              children: [
+                Expanded(
+                  child: AniHowChoiceTile(
+                    icon: Icons.payments_outlined,
+                    label: s.tawadFlat,
+                    selected: type == TawadRequests.flat,
+                    onTap: () => onType(TawadRequests.flat),
+                  ),
+                ),
+                const SizedBox(width: AniHowSpace.cardGap),
+                Expanded(
+                  child: AniHowChoiceTile(
+                    icon: Icons.stacked_bar_chart,
+                    label: s.tawadMinQty,
+                    selected: type == TawadRequests.minQuantity,
+                    onTap: () => onType(TawadRequests.minQuantity),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AniHowSpace.fieldGap),
+            AniHowField(
+              label: s.pesoOff,
+              child: TextField(
+                key: const ValueKey('new-tawad-amount'),
+                controller: amount,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: [_number],
+                decoration: const InputDecoration(
+                  prefixText: '₱ ',
+                  hintText: '0.00',
+                ),
+              ),
+            ),
+            if (type == TawadRequests.minQuantity) ...[
+              const SizedBox(height: AniHowSpace.fieldGap),
+              AniHowField(
+                label: s.minQuantity,
+                child: TextField(
+                  key: const ValueKey('new-tawad-min-quantity'),
+                  controller: minQuantity,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  inputFormatters: [_number],
+                  decoration: InputDecoration(
+                    hintText: 'e.g. 5',
+                    suffixText: unit,
+                  ),
+                ),
+              ),
+            ],
+            if (error != null) ...[
+              const SizedBox(height: AniHowSpace.cardGap),
+              Text(
+                error!,
+                key: const ValueKey('new-tawad-error'),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );

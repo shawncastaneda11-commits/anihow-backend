@@ -4,15 +4,19 @@ namespace App\Filament\Resources\CropTypes\Tables;
 
 use App\Enums\Permission;
 use App\Enums\ProductCategory;
+use App\Models\CropType;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Collection;
 
 class CropTypesTable
 {
@@ -63,13 +67,41 @@ class CropTypesTable
             ->recordActions([
                 EditAction::make(),
                 DeleteAction::make()
-                    ->modalDescription('This removes the crop type and its listings. Past orders keep their item names and prices.'),
+                    ->modalDescription('This removes the crop type and its listings. Past orders keep their item names and prices.')
+                    ->before(fn (CropType $record, DeleteAction $action) => self::refuseIfUsed(collect([$record]), $action)),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
-                        ->modalDescription('This removes the selected crop types and their listings. Past orders keep their item names and prices.'),
+                        ->modalDescription('This removes the selected crop types and their listings. Past orders keep their item names and prices.')
+                        ->before(fn (Collection $records, DeleteBulkAction $action) => self::refuseIfUsed($records, $action)),
                 ]),
             ]);
+    }
+
+    /**
+     * Stops a delete that the database would refuse, with a reason instead of
+     * an error page.
+     *
+     * @param  Collection<int, CropType>  $cropTypes
+     */
+    public static function refuseIfUsed(Collection $cropTypes, Action $action): void
+    {
+        $used = $cropTypes->filter(fn (CropType $cropType): bool => $cropType->hasHarvestHistory());
+
+        if ($used->isEmpty()) {
+            return;
+        }
+
+        Notification::make()
+            ->danger()
+            ->title($used->count() === 1
+                ? "{$used->first()->name} can't be deleted"
+                : "{$used->count()} crop types can't be deleted")
+            ->body('It has harvest records that the reports still use. Turn it off instead: its listings leave the market and sellers can no longer pick it.')
+            ->persistent()
+            ->send();
+
+        $action->halt();
     }
 }

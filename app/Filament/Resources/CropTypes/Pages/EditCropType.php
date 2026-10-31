@@ -4,6 +4,7 @@ namespace App\Filament\Resources\CropTypes\Pages;
 
 use App\Actions\Pricing\ChangeCropTypeUnitAction;
 use App\Filament\Resources\CropTypes\CropTypeResource;
+use App\Filament\Resources\CropTypes\Tables\CropTypesTable;
 use App\Models\CropType;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
@@ -17,7 +18,8 @@ class EditCropType extends EditRecord
     {
         return [
             DeleteAction::make()
-                ->modalDescription('This removes the crop type and its listings. Past orders keep their item names and prices.'),
+                ->modalDescription('This removes the crop type and its listings. Past orders keep their item names and prices.')
+                ->before(fn (CropType $record, DeleteAction $action) => CropTypesTable::refuseIfUsed(collect([$record]), $action)),
         ];
     }
 

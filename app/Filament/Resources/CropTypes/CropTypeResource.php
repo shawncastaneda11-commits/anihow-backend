@@ -83,7 +83,7 @@ class CropTypeResource extends Resource
 
     /**
      * A Content Editor's table is their farm only. The Super Admin sees
-     * every farm, including shared rows that no farm has replaced yet.
+     * every farm's rows and the shared catalog.
      */
     public static function getEloquentQuery(): Builder
     {

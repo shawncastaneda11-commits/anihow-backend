@@ -320,9 +320,6 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.byKey(const Key('favorite-farms-tab')));
-    await tester.pumpAndSettle();
-
     expect(find.text('Manggahan Farm'), findsOneWidget);
     expect(find.text('Manggahan, General Trias'), findsOneWidget);
     expect(find.text(s.noFavoriteFarms), findsNothing);

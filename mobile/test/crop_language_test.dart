@@ -1,5 +1,6 @@
 import 'package:anihow/l10n/app_strings.dart';
 import 'package:anihow/models/models.dart';
+import 'package:anihow/screens/profile/my_data_screen.dart';
 import 'package:anihow/screens/profile/settings_screen.dart';
 import 'package:anihow/screens/profile/verify_email_screen.dart';
 import 'package:anihow/state/auth_controller.dart';
@@ -98,7 +99,6 @@ void main() {
     );
 
     expect(find.text('Mga setting'), findsOneWidget);
-    expect(find.text('Mga tanong'), findsOneWidget);
     expect(find.text('Bilingual'), findsNothing);
     await tester.scrollUntilVisible(
       find.text('English'),
@@ -108,15 +108,15 @@ void main() {
     expect(find.text('English'), findsOneWidget);
     expect(find.text('Filipino'), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('Hindi pa'),
+      find.text('Mga tanong at paano gumagana ang AniHow'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('Hindi pa'), findsOneWidget);
+    expect(find.text('Mga tanong at paano gumagana ang AniHow'), findsOneWidget);
   });
 
   testWidgets(
-    'a verified email shows a snackbar instead of the verify screen',
+    'a verified profile card opens My data instead of the verify screen',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(360, 1400));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -145,13 +145,11 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Email'));
-      await tester.pump();
+      expect(find.text('Verified'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('settings-profile')));
+      await tester.pumpAndSettle();
 
-      expect(
-        find.text('Your email ana@example.com is verified.'),
-        findsOneWidget,
-      );
+      expect(find.byType(MyDataScreen), findsOneWidget);
       expect(find.byType(VerifyEmailScreen), findsNothing);
     },
   );

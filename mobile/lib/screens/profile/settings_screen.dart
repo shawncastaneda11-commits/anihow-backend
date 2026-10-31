@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/app_strings.dart';
+import '../../models/models.dart';
 import '../auth/terms_screen.dart';
 import '../../push/push_preferences.dart';
 import '../../push/push_runtime.dart';
@@ -11,15 +12,16 @@ import '../../state/theme_controller.dart';
 import '../../support/crop_language.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
+import '../../theme/readable_accent.dart';
 import '../../widgets/account_menu_button.dart';
 import '../../widgets/anihow_logo.dart';
+import '../../widgets/profile_avatar_button.dart';
 import '../../widgets/status_pill.dart';
 import 'change_password_screen.dart';
 import 'my_data_screen.dart';
 import 'profile_screen.dart';
 import 'verify_email_screen.dart';
 import '../auth/seller_info_screen.dart';
-import '../faq/faq_bot_screen.dart';
 import 'help_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -42,20 +44,93 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: AniHowSpace.screenPadding,
         children: [
-          _SectionTitle(s.help, first: true),
+          if (user != null) _ProfileCard(user: user),
+          _SectionTitle(s.account),
+          _SettingsCard(
+            children: [
+              if (user?.isFarmerSeller == true)
+                _SettingsRow(
+                  icon: Icons.storefront_outlined,
+                  label: s.editProfile,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(builder: (_) => const FarmerProfileScreen()),
+                  ),
+                ),
+              if (user?.isBuyer == true || user?.isFarmerSeller == true)
+                _SettingsRow(
+                  key: const Key('settings-my-data'),
+                  icon: Icons.shield_outlined,
+                  label: s.myData,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(builder: (_) => const MyDataScreen()),
+                  ),
+                ),
+              _SettingsRow(
+                icon: Icons.lock_outline,
+                label: s.changePassword,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const ChangePasswordScreen()),
+                ),
+              ),
+            ],
+          ),
+          _SectionTitle(s.notifications),
+          const _PushSettings(),
+          _SectionTitle(s.display),
+          _SettingsCard(
+            children: [
+              Padding(
+                padding: AniHowSpace.cardPadding,
+                child: Row(
+                  children: [
+                    const Icon(Icons.contrast),
+                    const SizedBox(width: AniHowSpace.cardGap),
+                    Expanded(
+                      child: SegmentedButton<ThemeMode>(
+                        key: const Key('settings-theme'),
+                        showSelectedIcon: false,
+                        segments: [
+                          ButtonSegment(value: ThemeMode.light, label: _SegmentLabel(s.light)),
+                          ButtonSegment(value: ThemeMode.dark, label: _SegmentLabel(s.dark)),
+                          ButtonSegment(value: ThemeMode.system, label: _SegmentLabel(s.system)),
+                        ],
+                        selected: {theme.mode},
+                        onSelectionChanged: (value) => theme.setMode(value.first),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: AniHowSpace.cardPadding,
+                child: Row(
+                  children: [
+                    const Icon(Icons.translate),
+                    const SizedBox(width: AniHowSpace.cardGap),
+                    Expanded(
+                      child: SegmentedButton<CropLanguage>(
+                        key: const Key('settings-language'),
+                        showSelectedIcon: false,
+                        segments: [
+                          ButtonSegment(value: CropLanguage.english, label: _SegmentLabel(s.english)),
+                          ButtonSegment(value: CropLanguage.filipino, label: _SegmentLabel(s.filipinoLabel)),
+                        ],
+                        selected: {language},
+                        onSelectionChanged: (value) => prefs.setLanguage(value.first),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          _SectionTitle(s.helpAndAbout),
           _SettingsCard(
             children: [
               _SettingsRow(
-                icon: Icons.help_outline,
-                label: s.faq,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const FaqBotScreen()),
-                ),
-              ),
-              _SettingsRow(
                 key: const Key('help-how-it-works'),
-                icon: Icons.menu_book_outlined,
-                label: s.howAnihowWorks,
+                icon: Icons.help_outline,
+                label: s.faqAndHowItWorks,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(builder: (_) => const HelpScreen()),
                 ),
@@ -65,139 +140,9 @@ class SettingsScreen extends StatelessWidget {
                   icon: Icons.storefront_outlined,
                   label: s.wantToBeASeller,
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const SellerInfoScreen(),
-                    ),
+                    MaterialPageRoute<void>(builder: (_) => const SellerInfoScreen()),
                   ),
                 ),
-            ],
-          ),
-          _SectionTitle(s.appearance),
-          _SettingsCard(
-            child: Padding(
-              padding: AniHowSpace.cardPadding,
-              child: SegmentedButton<ThemeMode>(
-                segments: [
-                  ButtonSegment(
-                    value: ThemeMode.light,
-                    label: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(s.light),
-                    ),
-                    icon: const Icon(Icons.light_mode_outlined),
-                  ),
-                  ButtonSegment(
-                    value: ThemeMode.dark,
-                    label: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(s.dark),
-                    ),
-                    icon: const Icon(Icons.dark_mode_outlined),
-                  ),
-                  ButtonSegment(
-                    value: ThemeMode.system,
-                    label: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(s.system),
-                    ),
-                    icon: const Icon(Icons.phone_android),
-                  ),
-                ],
-                selected: {theme.mode},
-                onSelectionChanged: (value) => theme.setMode(value.first),
-              ),
-            ),
-          ),
-          _SectionTitle(s.preferences),
-          const _PushSettings(),
-          _SectionTitle(s.language),
-          _SettingsCard(
-            child: Padding(
-              padding: AniHowSpace.cardPadding,
-              child: SegmentedButton<CropLanguage>(
-                segments: [
-                  ButtonSegment(
-                    value: CropLanguage.english,
-                    label: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(s.english),
-                    ),
-                  ),
-                  ButtonSegment(
-                    value: CropLanguage.filipino,
-                    label: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(s.filipinoLabel),
-                    ),
-                  ),
-                ],
-                selected: {language},
-                onSelectionChanged: (value) => prefs.setLanguage(value.first),
-              ),
-            ),
-          ),
-          _SectionTitle(s.account),
-          _SettingsCard(
-            children: [
-              if (user?.isFarmerSeller == true)
-                _SettingsRow(
-                  icon: Icons.storefront_outlined,
-                  label: s.editProfile,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const FarmerProfileScreen(),
-                    ),
-                  ),
-                ),
-              if (user?.isBuyer == true || user?.isFarmerSeller == true)
-                _SettingsRow(
-                  icon: Icons.shield_outlined,
-                  label: s.myData,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const MyDataScreen(),
-                    ),
-                  ),
-                ),
-              _SettingsRow(
-                icon: Icons.lock_outline,
-                label: s.changePassword,
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const ChangePasswordScreen(),
-                  ),
-                ),
-              ),
-              _SettingsRow(
-                icon: Icons.mail_outline,
-                label: s.email,
-                onTap: () {
-                  if (user?.isVerified == true) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(s.emailVerifiedNotice(user!.email)),
-                      ),
-                    );
-                    return;
-                  }
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const VerifyEmailScreen(),
-                    ),
-                  );
-                },
-                trailing: user?.isVerified == true
-                    ? StatusPill(label: s.verified, color: AniHowColors.ready)
-                    : StatusPill(
-                        label: s.unverified,
-                        color: AniHowColors.pending,
-                      ),
-              ),
-            ],
-          ),
-          _SectionTitle(s.about),
-          _SettingsCard(
-            children: [
               _SettingsRow(
                 icon: Icons.info_outline,
                 label: s.aboutAniHow,
@@ -209,10 +154,7 @@ class SettingsScreen extends StatelessWidget {
                       showBrandLogo: true,
                       sections: [
                         for (final section in s.aboutSections)
-                          _CopySection(
-                            title: section.title,
-                            body: section.body,
-                          ),
+                          _CopySection(title: section.title, body: section.body),
                       ],
                     ),
                   ),
@@ -238,6 +180,102 @@ class SettingsScreen extends StatelessWidget {
             child: Text(s.logOut),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SegmentLabel extends StatelessWidget {
+  const _SegmentLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return FittedBox(fit: BoxFit.scaleDown, child: Text(text));
+  }
+}
+
+/// Who is signed in, with the email's verified state. Tapping it verifies an
+/// unverified email, or opens My data to edit the profile.
+class _ProfileCard extends StatelessWidget {
+  const _ProfileCard({required this.user});
+
+  final UserAccount user;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+    final verified = user.isVerified;
+    final canEdit = user.isBuyer || user.isFarmerSeller;
+    return Card(
+      key: const Key('settings-profile'),
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          if (!verified) {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const VerifyEmailScreen()),
+            );
+            return;
+          }
+          if (canEdit) {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const MyDataScreen()),
+            );
+            return;
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(s.emailVerifiedNotice(user.email))),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              AniHowAvatar(name: user.name, radius: 26),
+              const SizedBox(width: AniHowSpace.cardGap),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          user.email,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                        ),
+                        verified
+                            ? StatusPill(label: s.verified, color: AniHowColors.ready)
+                            : StatusPill(label: s.unverified, color: AniHowColors.pending),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (canEdit && verified)
+                Text(
+                  s.editAction,
+                  style: theme.textTheme.labelLarge?.copyWith(color: readableAccent(context)),
+                ),
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -330,6 +368,7 @@ class _PushSettingsState extends State<_PushSettings> {
         children: [
           SwitchListTile(
             key: const ValueKey('push-master'),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
             secondary: const Icon(Icons.notifications_outlined),
             title: Text(strings.pushOnThisPhone),
             value: master,
@@ -344,14 +383,18 @@ class _PushSettingsState extends State<_PushSettings> {
               ),
             ),
           for (final row in rows)
-            SwitchListTile(
-              key: ValueKey('push-${row.key}'),
-              title: Text(row.label),
-              value: _categories[row.key] ?? true,
-              onChanged: master ? (value) => _setCategory(row.key, value) : null,
+            Opacity(
+              opacity: master ? 1 : 0.5,
+              child: SwitchListTile(
+                key: ValueKey('push-${row.key}'),
+                contentPadding: const EdgeInsets.only(left: 56, right: 16),
+                title: Text(row.label),
+                value: _categories[row.key] ?? true,
+                onChanged: master ? (value) => _setCategory(row.key, value) : null,
+              ),
             ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            padding: const EdgeInsets.fromLTRB(56, 0, 16, 16),
             child: Text(
               strings.pushAlwaysOn,
               style: Theme.of(context).textTheme.bodyMedium,
@@ -364,16 +407,22 @@ class _PushSettingsState extends State<_PushSettings> {
 }
 
 class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.label, {this.first = false});
+  const _SectionTitle(this.label);
 
   final String label;
-  final bool first;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(top: first ? 0 : AniHowSpace.section, bottom: 8),
-      child: Text(label, style: Theme.of(context).textTheme.titleMedium),
+      padding: const EdgeInsets.only(top: AniHowSpace.section, bottom: 8, left: 4),
+      child: Text(
+        label.toUpperCase(),
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.6,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.68),
+        ),
+      ),
     );
   }
 }

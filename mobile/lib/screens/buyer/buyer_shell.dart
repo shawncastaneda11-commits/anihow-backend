@@ -81,7 +81,11 @@ class _BuyerShellState extends State<BuyerShell> {
           const ShopsScreen(showAccountMenu: true),
           const MarketplaceScreen(showAccountMenu: true),
           OrderHistoryScreen(active: _index == 2, showAccountMenu: true),
-          FavoritesScreen(active: _index == 3, showAccountMenu: true),
+          FavoritesScreen(
+            active: _index == 3,
+            showAccountMenu: true,
+            onOpenTab: (tab) => setState(() => _index = tab),
+          ),
         ];
 
     return VerifyBannerScope(

@@ -194,6 +194,7 @@ class ReviewShopFavoriteOrderApiTest extends TestCase
             ->getJson('/api/buyer/shop-favorites')
             ->assertOk()
             ->assertJsonCount(1, 'data');
+        $this->assertSame(0, $list->json('data.0.in_stock_count'));
 
         $encoded = json_encode($list->json());
         $this->assertStringNotContainsString('nena-shop@example.com', (string) $encoded);
@@ -214,6 +215,25 @@ class ReviewShopFavoriteOrderApiTest extends TestCase
         $this->asUser($buyer)
             ->getJson('/api/buyer/shop-favorites')
             ->assertJsonCount(0, 'data');
+    }
+
+    public function test_shop_favorites_count_only_listings_in_stock_now(): void
+    {
+        $farmer = $this->farmer();
+        $this->listingFor($farmer, ['quantity_available' => 5]);
+        $this->listingFor($farmer, ['quantity_available' => 3]);
+        $this->listingFor($farmer, ['quantity_available' => 0]);
+        $this->listingFor($farmer, ['quantity_available' => 9, 'available_from' => now()->addDays(3)]);
+        $buyer = $this->buyer();
+
+        $this->asUser($buyer)
+            ->postJson('/api/buyer/shop-favorites', ['farmer_seller_id' => $farmer->id])
+            ->assertCreated();
+
+        $this->asUser($buyer)
+            ->getJson('/api/buyer/shop-favorites')
+            ->assertOk()
+            ->assertJsonPath('data.0.in_stock_count', 2);
     }
 
     public function test_farmer_and_content_editor_cannot_manage_shop_favorites(): void

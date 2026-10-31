@@ -159,7 +159,14 @@ void main() {
 
     await tester.pumpWidget(_app(home: const SettingsScreen(), auth: auth));
     await tester.pump();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('help-how-it-works')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.byKey(const Key('help-how-it-works')), findsOneWidget);
+    await tester.ensureVisible(find.text('Want to be a seller?'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Want to be a seller?'));
     await tester.pumpAndSettle();
     expect(find.byType(SellerInfoScreen), findsOneWidget);
@@ -174,6 +181,11 @@ void main() {
 
     await tester.pumpWidget(_app(home: const SettingsScreen(), auth: auth));
     await tester.pump();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('help-how-it-works')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.byKey(const Key('help-how-it-works')));
     await tester.pumpAndSettle();
     expect(find.byType(HelpScreen), findsOneWidget);
@@ -188,9 +200,14 @@ void main() {
 
     await tester.pumpWidget(_app(home: const SettingsScreen(), auth: auth));
     await tester.pump();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('help-how-it-works')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
 
     expect(find.text('Want to be a seller?'), findsNothing);
     expect(find.byKey(const Key('help-how-it-works')), findsOneWidget);
-    expect(find.text('FAQ'), findsOneWidget);
+    expect(find.text('FAQ & how AniHow works'), findsOneWidget);
   });
 }

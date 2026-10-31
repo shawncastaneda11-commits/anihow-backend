@@ -44,13 +44,15 @@ class AppStrings {
   String t(String english, String tagalog) => filipino ? tagalog : english;
 
   String get settings => t('Settings', 'Mga setting');
-  String get help => t('Help', 'Tulong');
   String get faq => t('FAQ', 'Mga tanong');
-  String get appearance => t('Appearance', 'Itsura');
+  String get faqAndHowItWorks =>
+      t('FAQ & how AniHow works', 'Mga tanong at paano gumagana ang AniHow');
+  String get display => t('Display', 'Display');
+  String get helpAndAbout => t('Help & about', 'Tulong at tungkol');
+  String get editAction => t('Edit', 'I-edit');
   String get light => t('Light', 'Maliwanag');
   String get dark => t('Dark', 'Madilim');
   String get system => t('System', 'Sistema');
-  String get preferences => t('Preferences', 'Mga kagustuhan');
   String get notifications => t('Notifications', 'Mga abiso');
   String get allCaughtUp => t("You're all caught up", 'Nabasa mo na lahat');
   String get newNotifications => t('New', 'Bago');
@@ -220,6 +222,16 @@ class AppStrings {
   String get downloadMyData =>
       t('Download my data', 'I-download ang aking datos');
   String get dataSavedTo => t('Saved to', 'Nai-save sa');
+  String get saveChanges => t('Save changes', 'I-save ang mga pagbabago');
+  String get yourData => t('Your data', 'Ang iyong datos');
+  String get downloadMyDataBody => t(
+    'Your profile, orders, reviews and favorites as a file.',
+    'Ang profile, mga order, review at paborito mo bilang isang file.',
+  );
+  String get downloadAction => t('Download', 'I-download');
+  String get deleteMyAccount => t('Delete my account', 'Burahin ang account ko');
+  String get phoneHint => t('09XX XXX XXXX', '09XX XXX XXXX');
+  String get locationHint => t('Town or barangay', 'Bayan o barangay');
   String get requestAccountDeletion =>
       t('Request account deletion', 'Humiling ng pagbura ng account');
   String get deletionKeptHint => t(
@@ -319,6 +331,20 @@ class AppStrings {
   String get marketplace => t('Marketplace', 'Palengke');
   String get favorites => t('Favorites', 'Mga paborito');
   String get favoriteStores => t('Stores', 'Mga tindahan');
+  String get freshFromFavorites =>
+      t('Fresh from your favorites', 'Bagong ani mula sa mga paborito mo');
+  String inStockCount(int count) => t('$count in stock', '$count may stock');
+  String storesCount(int count) =>
+      t(count == 1 ? '1 store' : '$count stores', '$count tindahan');
+  String get noFavoritesYet => t('No favorites yet', 'Wala pang paborito');
+  String get noFavoritesBody => t(
+    'Tap the heart on a shop, or Follow on a farm page, to keep them here.',
+    'I-tap ang puso sa tindahan, o Follow sa pahina ng bukid, para makita sila rito.',
+  );
+  String get browseMarket => t('Browse market', 'Tingnan ang market');
+  String get browseFarms => t('Browse farms', 'Tingnan ang mga bukid');
+  String removedFavorite(String name) =>
+      t('$name removed from favorites', 'Inalis ang $name sa mga paborito');
   String get favoriteFarms => t('Farms', 'Mga bukid');
   String get noFavoriteFarms =>
       t('No farms yet.', 'Wala pang sinusundang bukid.');

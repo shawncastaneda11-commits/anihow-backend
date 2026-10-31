@@ -68,7 +68,14 @@ class ShopFavoriteController extends Controller
             'farmerSeller' => fn ($query) => $query
                 ->with('farm')
                 ->withAvg($visible, 'rating')
-                ->withCount($visible),
+                ->withCount($visible)
+                ->withCount(['listings as in_stock_count' => fn (Builder $listings): Builder => $listings
+                    ->buyerVisible()
+                    ->allowedByFarmFeatures()
+                    ->whereRaw('listings.quantity_available - listings.quantity_held > 0')
+                    ->where(fn (Builder $open): Builder => $open
+                        ->whereNull('listings.available_from')
+                        ->orWhere('listings.available_from', '<=', now()))]),
         ];
     }
 }

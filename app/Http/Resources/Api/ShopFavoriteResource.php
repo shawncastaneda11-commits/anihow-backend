@@ -16,6 +16,7 @@ class ShopFavoriteResource extends JsonResource
             'id' => $this->id,
             'farmer_seller_id' => $this->farmer_seller_id,
             'shop' => new ShopProfileResource($this->whenLoaded('farmerSeller')),
+            'in_stock_count' => (int) ($this->farmerSeller?->in_stock_count ?? 0),
             'created_at' => $this->created_at,
         ];
     }

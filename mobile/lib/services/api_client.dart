@@ -89,6 +89,7 @@ class MarketplaceFlags {
     this.onlinePayment = false,
     this.tawad = false,
     this.topRated = false,
+    this.favorites = false,
   });
 
   final bool inStock;
@@ -99,6 +100,10 @@ class MarketplaceFlags {
   final bool tawad;
   final bool topRated;
 
+  /// Only favorite shops and followed farms. Used by the Favorites tab, not
+  /// shown as a marketplace filter.
+  final bool favorites;
+
   int get count => [inStock, upcoming, onlinePayment, tawad, topRated].where((on) => on).length;
 
   MarketplaceFlags copyWith({
@@ -107,6 +112,7 @@ class MarketplaceFlags {
     bool? onlinePayment,
     bool? tawad,
     bool? topRated,
+    bool? favorites,
   }) {
     return MarketplaceFlags(
       inStock: inStock ?? this.inStock,
@@ -114,6 +120,7 @@ class MarketplaceFlags {
       onlinePayment: onlinePayment ?? this.onlinePayment,
       tawad: tawad ?? this.tawad,
       topRated: topRated ?? this.topRated,
+      favorites: favorites ?? this.favorites,
     );
   }
 
@@ -123,6 +130,7 @@ class MarketplaceFlags {
     if (onlinePayment) 'online_payment': 1,
     if (tawad) 'tawad': 1,
     if (topRated) 'top_rated': 1,
+    if (favorites) 'favorites': 1,
   };
 }
 
@@ -545,6 +553,12 @@ class ApiClient {
   Future<List<ShopFavoriteRecord>> shopFavorites() {
     return _list('/buyer/shop-favorites', parse: ShopFavoriteRecord.fromJson);
   }
+
+  /// Produce in stock now from favorite shops and followed farms.
+  Future<MarketplaceFeed> favoritesInStock({int? page}) => marketplace(
+    page: page,
+    flags: const MarketplaceFlags(inStock: true, favorites: true),
+  );
 
   Future<void> addShopFavorite(int sellerId) =>
       _post('/buyer/shop-favorites', {'farmer_seller_id': sellerId});

@@ -46,7 +46,9 @@ void main() {
     expect(find.text(s.emailNotEditable), findsOneWidget);
     expect(find.text('Ana Buyer'), findsOneWidget);
     expect(find.text('ana@example.com'), findsOneWidget);
-    expect(find.text(s.saveProfile), findsOneWidget);
+    expect(find.text(s.saveChanges), findsOneWidget);
+    expect(find.text(s.deleteMyAccount), findsOneWidget);
+    expect(find.text('Verified'), findsNothing);
     expect(find.text(s.downloadMyData), findsOneWidget);
     expect(find.text(s.requestAccountDeletion), findsWidgets);
     expect(find.text(s.deletionKeptHint), findsOneWidget);

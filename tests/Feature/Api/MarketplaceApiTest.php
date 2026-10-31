@@ -3,6 +3,8 @@
 namespace Tests\Feature\Api;
 
 use App\Enums\TawadType;
+use App\Models\FarmFavorite;
+use App\Models\ShopFavorite;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesMarketplaceActors;
@@ -49,6 +51,32 @@ class MarketplaceApiTest extends TestCase
         $filtered->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.title', 'Fresh kamatis')
             ->assertJsonPath('data.0.crop_type.id', $kamatis->id);
+    }
+
+    public function test_the_favorites_filter_keeps_favorite_shops_and_followed_farms(): void
+    {
+        $favoriteShop = $this->farmer();
+        $followedFarmSeller = $this->farmer();
+        $stranger = $this->farmer();
+        $this->listingFor($favoriteShop, ['title' => 'From my shop']);
+        $this->listingFor($followedFarmSeller, ['title' => 'From my farm']);
+        $this->listingFor($stranger, ['title' => 'From a stranger']);
+
+        $buyer = $this->buyer();
+        ShopFavorite::query()->create(['buyer_id' => $buyer->id, 'farmer_seller_id' => $favoriteShop->id]);
+        FarmFavorite::query()->create(['buyer_id' => $buyer->id, 'farm_id' => $followedFarmSeller->farm_id]);
+
+        $titles = collect($this->asUser($buyer)
+            ->getJson('/api/buyer/marketplace?favorites=1&in_stock=1')
+            ->assertOk()
+            ->json('data'))->pluck('title')->sort()->values()->all();
+
+        $this->assertSame(['From my farm', 'From my shop'], $titles);
+
+        $this->asUser($this->buyer())
+            ->getJson('/api/buyer/marketplace?favorites=1')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
     }
 
     public function test_marketplace_hides_inactive_listings_and_rejects_an_invalid_sort(): void

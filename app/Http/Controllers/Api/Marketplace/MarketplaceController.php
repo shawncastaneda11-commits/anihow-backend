@@ -6,7 +6,9 @@ use App\Enums\GrowingMethod;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Marketplace\MarketplaceIndexRequest;
 use App\Http\Resources\Api\ListingResource;
+use App\Models\FarmFavorite;
 use App\Models\Listing;
+use App\Models\ShopFavorite;
 use App\Support\FarmProximity;
 use App\Support\Marketplace\FairMixOrdering;
 use Illuminate\Database\Eloquent\Builder;
@@ -98,6 +100,19 @@ class MarketplaceController extends Controller
                         [false, self::TOP_RATED],
                     ),
                 ),
+            )
+            // Only shops the buyer favorited and farms they follow.
+            ->when(
+                $request->boolean('favorites'),
+                fn (Builder $query): Builder => $query->where(fn (Builder $mine): Builder => $mine
+                    ->whereIn(
+                        'listings.farmer_seller_id',
+                        ShopFavorite::query()->select('farmer_seller_id')->where('buyer_id', $request->user()?->id),
+                    )
+                    ->orWhereIn(
+                        'listings.farm_id',
+                        FarmFavorite::query()->select('farm_id')->where('buyer_id', $request->user()?->id),
+                    )),
             )
             ->when(
                 $request->validated('search'),

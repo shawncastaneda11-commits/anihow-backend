@@ -34,6 +34,7 @@ const _stores = [
   ShopFavoriteRecord(
     id: 1,
     sellerId: 7,
+    inStockCount: 6,
     shop: ShopProfile(
       id: 7,
       shopName: 'Aling Nena Produce',
@@ -44,7 +45,7 @@ const _stores = [
 ];
 
 void main() {
-  testWidgets('Favorites shows the store empty state', (tester) async {
+  testWidgets('Favorites with nothing saved explains how to add some', (tester) async {
     await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -53,9 +54,9 @@ void main() {
     );
     await tester.pump();
 
-    final s = AppStrings(false);
     expect(find.text('Crops'), findsNothing);
-    expect(find.text(s.noFavoriteStores), findsOneWidget);
+    expect(find.text('No favorites yet'), findsOneWidget);
+    expect(find.byKey(const ValueKey('favorites-empty')), findsOneWidget);
   });
 
   testWidgets('Favorites lists one saved store', (tester) async {
@@ -70,9 +71,47 @@ void main() {
     await tester.pump();
 
     expect(find.text('Aling Nena Produce'), findsOneWidget);
-    expect(find.text('Nena Villanueva'), findsOneWidget);
-    expect(find.text('Manggahan, General Trias'), findsOneWidget);
+    expect(
+      find.textContaining('Manggahan, General Trias · 6 in stock', findRichText: true),
+      findsOneWidget,
+    );
     expect(find.text('PYAP Manggahan Chapter'), findsNothing);
     expect(find.text(AppStrings(false).noFavoriteStores), findsNothing);
+    expect(find.text(AppStrings(false).noFavoriteFarms), findsOneWidget);
+    expect(find.byKey(const ValueKey('unfavorite-store-7')), findsOneWidget);
+    expect(find.byIcon(Icons.delete_outline), findsNothing);
+  });
+
+  testWidgets('Favorites is one page: fresh produce, stores, then farms', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _app(
+        home: const FavoritesScreen(
+          preview: FavoritesPreview(
+            stores: _stores,
+            farms: [
+              FarmFavoriteRecord(id: 2, farmId: 3, name: 'PYAP Manggahan', place: 'General Trias', sellersCount: 4),
+            ],
+            fresh: [
+              ListingItem(id: 11, title: 'Kalabasa', pricePerUnit: '36', quantityAvailable: '25', unit: 'kg', sellerName: 'Bautista Morning Pick'),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(TabBar), findsNothing);
+    expect(find.textContaining('Fresh from your favorites', findRichText: true), findsOneWidget);
+    expect(find.byKey(const ValueKey('favorites-fresh-11')), findsOneWidget);
+    expect(find.textContaining('General Trias · 4 stores', findRichText: true), findsOneWidget);
+
+    final fresh = tester.getTopLeft(find.textContaining('Fresh from your favorites', findRichText: true)).dy;
+    final stores = tester.getTopLeft(find.textContaining('Stores  1', findRichText: true)).dy;
+    final farms = tester.getTopLeft(find.textContaining('Farms  1', findRichText: true)).dy;
+    expect(fresh, lessThan(stores));
+    expect(stores, lessThan(farms));
   });
 }

@@ -50,6 +50,7 @@ class MarketplaceIndexRequest extends FormRequest
             'online_payment' => ['sometimes', 'boolean'],
             'tawad' => ['sometimes', 'boolean'],
             'top_rated' => ['sometimes', 'boolean'],
+            'favorites' => ['sometimes', 'boolean'],
         ];
     }
 }

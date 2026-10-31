@@ -1303,11 +1303,15 @@ class ShopFavoriteRecord {
     required this.id,
     required this.sellerId,
     this.shop,
+    this.inStockCount = 0,
   });
 
   final int id;
   final int sellerId;
   final ShopProfile? shop;
+
+  /// Listings this shop has in stock right now.
+  final int inStockCount;
 
   factory ShopFavoriteRecord.fromJson(Map<String, dynamic> json) {
     final shopJson = json['shop'];
@@ -1317,6 +1321,7 @@ class ShopFavoriteRecord {
       shop: shopJson is Map
           ? ShopProfile.fromJson(Map<String, dynamic>.from(shopJson))
           : null,
+      inStockCount: ListingItem._asCount(json['in_stock_count']) ?? 0,
     );
   }
 }

@@ -99,6 +99,7 @@ class _ProductsApi extends ApiClient {
     int? page,
     String? mixDay,
     int? farmId,
+    MarketplaceFlags flags = const MarketplaceFlags(),
   }) async {
     calls.add({'farmId': farmId, 'page': page, 'mixDay': mixDay, 'sort': sort});
     if (crash) {

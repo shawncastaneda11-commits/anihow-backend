@@ -29,6 +29,7 @@ class _RecordingApi extends ApiClient {
     int? page,
     String? mixDay,
     int? farmId,
+    MarketplaceFlags flags = const MarketplaceFlags(),
   }) async {
     this.category = category;
     return const MarketplaceFeed(items: []);

@@ -25,7 +25,7 @@ class BuyerReservationController extends Controller
 
         $reservations = Reservation::query()
             ->where('buyer_id', $request->user()->id)
-            ->with('latestProof.paymentQr')
+            ->with(['latestProof.paymentQr', 'farmerSeller', 'listing'])
             ->orderByRaw('case when status = ? then 0 else 1 end', [ReservationStatus::Active->value])
             ->orderByDesc('id')
             ->get();

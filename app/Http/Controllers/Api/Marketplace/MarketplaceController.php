@@ -14,6 +14,9 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class MarketplaceController extends Controller
 {
+    /** The average rating a seller needs for the Top-rated sellers filter. */
+    public const TOP_RATED = 4;
+
     public function index(MarketplaceIndexRequest $request): AnonymousResourceCollection
     {
         $listings = Listing::query()
@@ -49,6 +52,52 @@ class MarketplaceController extends Controller
 
                     return $query;
                 },
+            )
+            ->when(
+                $request->boolean('in_stock'),
+                fn (Builder $query): Builder => $query
+                    ->whereRaw('listings.quantity_available - listings.quantity_held > 0')
+                    ->where(fn (Builder $open): Builder => $open
+                        ->whereNull('listings.available_from')
+                        ->orWhere('listings.available_from', '<=', now())),
+            )
+            // Pre-order: harvests that have not opened yet, which buyers reserve.
+            ->when(
+                $request->boolean('upcoming'),
+                fn (Builder $query): Builder => $query
+                    ->whereNotNull('listings.available_from')
+                    ->where('listings.available_from', '>', now()),
+            )
+            ->when(
+                $request->boolean('online_payment'),
+                fn (Builder $query): Builder => $query->whereHas(
+                    'farmerSeller',
+                    fn (Builder $seller): Builder => $seller
+                        ->where('accepts_online_payment', true)
+                        ->whereHas('paymentQrs'),
+                ),
+            )
+            // A rule only counts while the farm has tawad switched on.
+            ->when(
+                $request->boolean('tawad'),
+                fn (Builder $query): Builder => $query
+                    ->whereHas('activeTawadRule')
+                    ->where(fn (Builder $farm): Builder => $farm
+                        ->whereNull('listings.farm_id')
+                        ->orWhereHas('farm', fn (Builder $farms): Builder => $farms
+                            ->where(fn (Builder $on): Builder => $on
+                                ->whereNull('tawad_enabled')
+                                ->orWhere('tawad_enabled', true)))),
+            )
+            ->when(
+                $request->boolean('top_rated'),
+                fn (Builder $query): Builder => $query->whereHas(
+                    'farmerSeller',
+                    fn (Builder $seller): Builder => $seller->whereRaw(
+                        '(select avg(reviews.rating) from reviews where reviews.farmer_seller_id = users.id and reviews.is_removed = ?) >= ?',
+                        [false, self::TOP_RATED],
+                    ),
+                ),
             )
             ->when(
                 $request->validated('search'),

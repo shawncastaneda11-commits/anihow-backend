@@ -2,6 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Enums\TawadType;
+use App\Models\Listing;
+use App\Models\Review;
+use App\Models\TawadRule;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -193,6 +197,53 @@ class MarketplaceFairMixTest extends TestCase
         );
     }
 
+    public function test_the_quick_filters_narrow_the_marketplace(): void
+    {
+        $online = $this->farmer();
+        $cash = $this->farmer();
+        $later = $this->farmer();
+        $this->acceptOnlinePayment($online);
+
+        $discounted = $this->listingFor($online, ['title' => 'Online with tawad', 'price_per_unit' => 40, 'quantity_available' => 10]);
+        TawadRule::factory()->create([
+            'listing_id' => $discounted->id,
+            'type' => TawadType::Flat,
+            'discount_amount' => 2,
+            'min_quantity' => null,
+        ]);
+        $this->listingFor($cash, ['title' => 'Sold out', 'price_per_unit' => 40, 'quantity_available' => 0]);
+        $this->listingFor($later, [
+            'title' => 'Coming soon',
+            'price_per_unit' => 40,
+            'quantity_available' => 10,
+            'available_from' => now()->addDays(3),
+        ]);
+        $buyer = $this->buyer();
+        $this->review($online, $buyer, $discounted, 5);
+        $past = $this->listingFor($later, ['title' => 'Past harvest', 'price_per_unit' => 40, 'quantity_available' => 5]);
+        $this->review($later, $buyer, $past, 3);
+        $past->forceFill(['is_active' => false])->save();
+
+        $titles = fn (string $query): array => collect(
+            $this->asUser($buyer)->getJson('/api/buyer/marketplace?'.$query)->assertOk()->json('data'),
+        )->pluck('title')->sort()->values()->all();
+
+        $this->assertSame(['Online with tawad'], $titles('in_stock=1'));
+        $this->assertSame(['Coming soon'], $titles('upcoming=1'));
+        $this->assertSame(['Online with tawad'], $titles('online_payment=1'));
+        $this->assertSame(['Online with tawad'], $titles('tawad=1'));
+        $this->assertSame(['Online with tawad'], $titles('top_rated=1'));
+        $this->assertSame([], $titles('upcoming=1&online_payment=1'));
+
+        $online->farm->forceFill(['tawad_enabled' => false])->save();
+        $this->assertSame([], $titles('tawad=1'));
+
+        $later->farm->forceFill(['is_active' => false])->save();
+        $farms = collect($this->asUser($buyer)->getJson('/api/farms')->assertOk()->json('data'));
+        $this->assertTrue($farms->contains('id', $online->farm_id));
+        $this->assertFalse($farms->contains('id', $later->farm_id));
+    }
+
     public function test_other_sorts_and_filters_still_work_and_a_bad_mix_day_is_rejected(): void
     {
         $this->travelTo(Carbon::parse('2026-10-06 10:00:00', 'Asia/Manila'));
@@ -261,5 +312,19 @@ class MarketplaceFairMixTest extends TestCase
     private function marketplace(): TestResponse
     {
         return $this->asUser($this->buyer())->getJson('/api/buyer/marketplace')->assertOk();
+    }
+
+    private function review(User $farmer, User $buyer, Listing $listing, int $rating): void
+    {
+        $order = $this->completeOrder($farmer, $this->placeOrder($buyer, $listing, 1), 40);
+
+        Review::query()->create([
+            'order_id' => $order->id,
+            'buyer_id' => $buyer->id,
+            'farmer_seller_id' => $farmer->id,
+            'rating' => $rating,
+            'comment' => 'Ok.',
+            'is_removed' => false,
+        ]);
     }
 }

@@ -69,7 +69,24 @@ class FarmerPaymentController extends Controller
             ],
         );
 
-        return PaymentListItemResource::collection($paginator);
+        return PaymentListItemResource::collection($paginator)->additional([
+            'meta' => [
+                // Every tab's count, so the tab bar is right before a tab is opened.
+                'counts' => collect([
+                    'to_check' => OrderPaymentStatus::PaymentSent,
+                    'confirmed' => OrderPaymentStatus::Paid,
+                    'refund_due' => OrderPaymentStatus::RefundDue,
+                ])->map(fn (OrderPaymentStatus $status): int => Order::query()
+                    ->where('farmer_seller_id', $sellerId)
+                    ->where('payment_status', $status)
+                    ->count()
+                    + Reservation::query()
+                        ->where('farmer_seller_id', $sellerId)
+                        ->where('payment_status', $status)
+                        ->count())->all(),
+                'total_amount' => round((float) $items->sum('amount'), 2),
+            ],
+        ]);
     }
 
     /**
@@ -85,6 +102,7 @@ class FarmerPaymentController extends Controller
             'kind' => 'order',
             'id' => $order->id,
             'buyer_name' => $order->buyer?->name,
+            'buyer_avatar_url' => $order->buyer?->avatarUrl(),
             'title' => implode(', ', $names),
             'items' => $names,
             'amount' => (float) $order->total,
@@ -111,6 +129,7 @@ class FarmerPaymentController extends Controller
             'kind' => 'reservation',
             'id' => $reservation->id,
             'buyer_name' => $reservation->buyer?->name,
+            'buyer_avatar_url' => $reservation->buyer?->avatarUrl(),
             'title' => $reservation->listing_name,
             'items' => [$reservation->listing_name],
             'amount' => (float) $reservation->line_total,

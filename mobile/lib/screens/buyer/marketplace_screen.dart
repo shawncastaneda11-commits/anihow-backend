@@ -7,9 +7,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
+import '../../services/api_client.dart';
 import '../../services/buyer_location.dart';
 import '../../state/auth_controller.dart';
 import '../../state/preferences_controller.dart';
+import '../../support/crop_language.dart';
 import '../../theme/anihow_space.dart';
 import '../../widgets/main_tab_app_bar.dart';
 import '../../widgets/async_view.dart';
@@ -42,6 +44,10 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   String _sort = 'fair';
   String? _mixDay;
   String? _growingMethod;
+  int? _farmId;
+  MarketplaceFlags _flags = const MarketplaceFlags();
+  Future<List<FarmOption>>? _farmsFuture;
+  List<FarmOption>? _farms;
   double? _nearLat;
   double? _nearLng;
   bool _locationUnavailable = false;
@@ -59,11 +65,13 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   List<ListingItem> _items = const [];
   List<BuyerFarmAnnouncement> _updates = const [];
   late Future<List<CategoryItem>> _cropTypes;
+  List<CategoryItem> _loadedCrops = const [];
 
   @override
   void initState() {
     super.initState();
     _cropTypes = context.read<AuthController>().api.cropTypes();
+    _cropTypes.then((crops) => _loadedCrops = crops, onError: (_) {});
     _scroll.addListener(_onScroll);
     _search.addListener(_onSearchText);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -121,8 +129,15 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     });
   }
 
-  bool get _filtersActive =>
-      _sort != 'fair' || _growingMethod != null || _cropTypeId != null;
+  /// How many filters the sheet has on; shown on the filter button.
+  int get _activeFilterCount =>
+      (_sort != 'fair' ? 1 : 0) +
+      (_growingMethod != null ? 1 : 0) +
+      (_cropTypeId != null ? 1 : 0) +
+      (_farmId != null ? 1 : 0) +
+      _flags.count;
+
+  bool get _filtersActive => _activeFilterCount > 0;
 
   String _today() {
     final now = DateTime.now();
@@ -180,6 +195,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         nearLat: _sort == 'nearest' ? _nearLat : null,
         nearLng: _sort == 'nearest' ? _nearLng : null,
         growingMethod: _growingMethod,
+        farmId: _farmId,
+        flags: _flags,
       );
       if (!mounted || request != _requestId) {
         return;
@@ -243,6 +260,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         growingMethod: _growingMethod,
         page: nextPage,
         mixDay: _mixDay,
+        farmId: _farmId,
+        flags: _flags,
       );
       if (!mounted || request != _requestId) {
         return;
@@ -272,7 +291,13 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   }
 
   Future<void> _openFilters() async {
+    final api = context.read<AuthController>().api;
     final cropTypes = await _cropTypes;
+    // The farm filter is optional: the sheet opens at once and the farm
+    // chips appear when the list arrives.
+    _farmsFuture ??= api.farms().then((farms) => _farms = farms).catchError(
+      (Object _) => const <FarmOption>[],
+    );
     if (!mounted) {
       return;
     }
@@ -280,16 +305,37 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       context: context,
       isScrollControlled: true,
       builder: (context) => _FilterSheet(
-        sort: _sort,
-        growingMethod: _growingMethod,
-        cropTypeId: _cropTypeId,
+        current: _MarketFilters(
+          sort: _sort,
+          growingMethod: _growingMethod,
+          cropTypeId: _cropTypeId,
+          farmId: _farmId,
+          flags: _flags,
+        ),
         cropTypes: cropTypes,
+        farms: _farmsFuture!,
+        countFor: _countFor,
       ),
     );
     if (!mounted || choice == null) {
       return;
     }
     await _applyFilters(choice);
+  }
+
+  /// How many listings a set of filters would show, for the sheet's button.
+  Future<int?> _countFor(_MarketFilters filters) async {
+    final feed = await context.read<AuthController>().api.marketplace(
+      search: _search.text.trim(),
+      cropTypeId: filters.cropTypeId,
+      // The order does not change the count; nearest needs a location.
+      sort: filters.sort == 'nearest' ? 'fair' : filters.sort,
+      category: _category,
+      growingMethod: filters.growingMethod,
+      farmId: filters.farmId,
+      flags: filters.flags,
+    );
+    return feed.total ?? feed.items.length;
   }
 
   Future<void> _applyFilters(_MarketFilters choice) async {
@@ -328,6 +374,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       _sort = choice.sort;
       _growingMethod = choice.growingMethod;
       _cropTypeId = choice.cropTypeId;
+      _farmId = choice.farmId;
+      _flags = choice.flags;
       _nearLat = latitude;
       _nearLng = longitude;
       _locationUnavailable = unavailable;
@@ -379,7 +427,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                       height: 80,
                       child: _SearchRow(
                         controller: _search,
-                        filtersActive: _filtersActive,
+                        filterCount: _activeFilterCount,
                         onChanged: _onSearchChanged,
                         onSubmit: _submitSearch,
                         onClear: _clearSearch,
@@ -389,6 +437,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                   ),
                 ),
                 SliverToBoxAdapter(child: _chipRow(s)),
+                if (_filtersActive)
+                  SliverToBoxAdapter(child: _activeFilterRow(s)),
                 if (_locating)
                   SliverToBoxAdapter(
                     child: Padding(
@@ -457,6 +507,69 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       ],
       ),
     );
+  }
+
+  /// Each filter that is on, as a chip whose x turns it off.
+  Widget _activeFilterRow(AppStrings s) {
+    final language = context.read<PreferencesController>().language;
+    final chips = <(String, String, VoidCallback)>[
+      if (_sort != 'fair')
+        ('sort', _sortLabel(s, _sort), () => _sort = 'fair'),
+      if (_flags.inStock)
+        ('in-stock', s.inStockNow, () => _flags = _flags.copyWith(inStock: false)),
+      if (_flags.upcoming)
+        ('upcoming', s.preorderFilter, () => _flags = _flags.copyWith(upcoming: false)),
+      if (_flags.onlinePayment)
+        ('online', s.onlinePaymentFilter, () => _flags = _flags.copyWith(onlinePayment: false)),
+      if (_flags.tawad) ('tawad', s.tawadFilter, () => _flags = _flags.copyWith(tawad: false)),
+      if (_flags.topRated)
+        ('top-rated', s.topRatedFilter, () => _flags = _flags.copyWith(topRated: false)),
+      if (_growingMethod != null)
+        (
+          'growing',
+          _growingMethod == 'certified_organic' ? s.certifiedOrganicFilter : s.naturallyGrown,
+          () => _growingMethod = null,
+        ),
+      if (_farmId != null)
+        (
+          'farm',
+          _farms?.where((farm) => farm.id == _farmId).firstOrNull?.name ?? s.farmFilter,
+          () => _farmId = null,
+        ),
+      if (_cropTypeId != null)
+        ('crop', _cropName(language) ?? s.cropFilter, () => _cropTypeId = null),
+    ];
+    return SizedBox(
+      key: const Key('marketplace-active-filters'),
+      height: 44,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AniHowSpace.screen),
+        children: [
+          for (final chip in chips)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: InputChip(
+                key: ValueKey('active-filter-${chip.$1}'),
+                label: Text(chip.$2),
+                onDeleted: () {
+                  setState(chip.$3);
+                  unawaited(_reload(scrollToTop: true));
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String? _cropName(CropLanguage language) {
+    for (final crop in _loadedCrops) {
+      if (crop.id == _cropTypeId) {
+        return crop.labelFor(language);
+      }
+    }
+    return null;
   }
 
   Widget _chipRow(AppStrings s) {
@@ -628,7 +741,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 class _SearchRow extends StatelessWidget {
   const _SearchRow({
     required this.controller,
-    required this.filtersActive,
+    required this.filterCount,
     required this.onChanged,
     required this.onSubmit,
     required this.onClear,
@@ -636,7 +749,7 @@ class _SearchRow extends StatelessWidget {
   });
 
   final TextEditingController controller;
-  final bool filtersActive;
+  final int filterCount;
   final ValueChanged<String> onChanged;
   final VoidCallback onSubmit;
   final VoidCallback onClear;
@@ -682,8 +795,9 @@ class _SearchRow extends StatelessWidget {
             onPressed: onFilter,
             style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
             icon: Badge(
-              isLabelVisible: filtersActive,
-              smallSize: 8,
+              key: const Key('marketplace-filter-count'),
+              isLabelVisible: filterCount > 0,
+              label: Text('$filterCount'),
               child: const Icon(Icons.tune),
             ),
           ),
@@ -800,46 +914,114 @@ class _UpdatesBanner extends StatelessWidget {
   }
 }
 
+String _sortLabel(AppStrings s, String sort) => switch (sort) {
+  'freshest' => s.sortNewest,
+  'price_asc' => s.priceLowHigh,
+  'price_desc' => s.priceHighLow,
+  'availability' => s.inStockFirst,
+  'nearest' => s.nearest,
+  _ => s.sortDefault,
+};
+
 class _MarketFilters {
   const _MarketFilters({
     required this.sort,
     required this.growingMethod,
     required this.cropTypeId,
+    this.farmId,
+    this.flags = const MarketplaceFlags(),
   });
 
   final String sort;
   final String? growingMethod;
   final int? cropTypeId;
+  final int? farmId;
+  final MarketplaceFlags flags;
+
+  _MarketFilters copyWith({
+    String? sort,
+    String? Function()? growingMethod,
+    int? Function()? cropTypeId,
+    int? Function()? farmId,
+    MarketplaceFlags? flags,
+  }) {
+    return _MarketFilters(
+      sort: sort ?? this.sort,
+      growingMethod: growingMethod == null ? this.growingMethod : growingMethod(),
+      cropTypeId: cropTypeId == null ? this.cropTypeId : cropTypeId(),
+      farmId: farmId == null ? this.farmId : farmId(),
+      flags: flags ?? this.flags,
+    );
+  }
 }
 
 class _FilterSheet extends StatefulWidget {
   const _FilterSheet({
-    required this.sort,
-    required this.growingMethod,
-    required this.cropTypeId,
+    required this.current,
     required this.cropTypes,
+    required this.farms,
+    required this.countFor,
   });
 
-  final String sort;
-  final String? growingMethod;
-  final int? cropTypeId;
+  final _MarketFilters current;
   final List<CategoryItem> cropTypes;
+  final Future<List<FarmOption>> farms;
+
+  /// How many listings the chosen filters would show.
+  final Future<int?> Function(_MarketFilters filters) countFor;
 
   @override
   State<_FilterSheet> createState() => _FilterSheetState();
 }
 
 class _FilterSheetState extends State<_FilterSheet> {
-  late String _sort;
-  String? _growingMethod;
-  int? _cropTypeId;
+  static const _cropsShown = 8;
+
+  late _MarketFilters _filters;
+  bool _allCrops = false;
+  int? _count;
+  int _countRequest = 0;
+  Timer? _countTimer;
+  List<FarmOption> _farms = const [];
 
   @override
   void initState() {
     super.initState();
-    _sort = widget.sort;
-    _growingMethod = widget.growingMethod;
-    _cropTypeId = widget.cropTypeId;
+    _filters = widget.current;
+    _recount();
+    widget.farms.then((farms) {
+      if (mounted) {
+        setState(() => _farms = farms);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _countTimer?.cancel();
+    super.dispose();
+  }
+
+  void _set(_MarketFilters next) {
+    setState(() => _filters = next);
+    _recount();
+  }
+
+  void _recount() {
+    _countTimer?.cancel();
+    _countTimer = Timer(const Duration(milliseconds: 300), () async {
+      final request = ++_countRequest;
+      try {
+        final count = await widget.countFor(_filters);
+        if (mounted && request == _countRequest) {
+          setState(() => _count = count);
+        }
+      } catch (_) {
+        if (mounted && request == _countRequest) {
+          setState(() => _count = null);
+        }
+      }
+    });
   }
 
   @override
@@ -847,94 +1029,150 @@ class _FilterSheetState extends State<_FilterSheet> {
     final s = AppStrings.of(context);
     final theme = Theme.of(context);
     final language = context.watch<PreferencesController>().language;
+    final flags = _filters.flags;
+    final crops = widget.cropTypes;
+    final selectedIndex = crops.indexWhere((crop) => crop.id == _filters.cropTypeId);
+    final hidden = crops.length - _cropsShown;
+    final shownCrops = _allCrops || hidden <= 0 || selectedIndex >= _cropsShown
+        ? crops
+        : crops.take(_cropsShown).toList();
+
+    Widget heading(String text) => Padding(
+      padding: const EdgeInsets.only(top: AniHowSpace.cardGap, bottom: 8),
+      child: Text(
+        text.toUpperCase(),
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+
+    Widget toggle(
+      String key,
+      IconData icon,
+      String title,
+      String hint,
+      bool value,
+      MarketplaceFlags Function(bool on) change,
+    ) {
+      return SwitchListTile(
+        key: ValueKey('filter-$key'),
+        contentPadding: EdgeInsets.zero,
+        secondary: Icon(icon),
+        title: Text(title),
+        subtitle: Text(hint),
+        value: value,
+        onChanged: (on) => _set(_filters.copyWith(flags: change(on))),
+      );
+    }
+
     return SafeArea(
       child: Padding(
-        padding: AniHowSpace.screenPadding,
+        padding: const EdgeInsets.fromLTRB(AniHowSpace.screen, 4, AniHowSpace.screen, AniHowSpace.screen),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    s.filtersTitle,
+                    style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                TextButton(
+                  key: const Key('filters-reset'),
+                  onPressed: () => _set(
+                    const _MarketFilters(sort: 'fair', growingMethod: null, cropTypeId: null),
+                  ),
+                  child: Text(s.resetAll),
+                ),
+              ],
+            ),
+            const Divider(height: 1),
             Flexible(
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(s.sort, style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 8),
+                    heading(s.sort),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _chip(
-                          s.sortNewest,
-                          _sort == 'freshest',
-                          () => _sort = 'freshest',
-                          key: const Key('sort-newest'),
-                        ),
-                        _chip(
-                          s.priceLowHigh,
-                          _sort == 'price_asc',
-                          () => _sort = 'price_asc',
-                        ),
-                        _chip(
-                          s.priceHighLow,
-                          _sort == 'price_desc',
-                          () => _sort = 'price_desc',
-                        ),
-                        _chip(
-                          s.inStockFirst,
-                          _sort == 'availability',
-                          () => _sort = 'availability',
-                        ),
-                        _chip(
-                          s.nearest,
-                          _sort == 'nearest',
-                          () => _sort = 'nearest',
-                        ),
+                        for (final sort in const ['fair', 'freshest', 'price_asc', 'price_desc', 'availability', 'nearest'])
+                          _chip(
+                            _sortLabel(s, sort),
+                            _filters.sort == sort,
+                            () => _set(_filters.copyWith(sort: sort)),
+                            key: Key(sort == 'fair' ? 'sort-default' : sort == 'freshest' ? 'sort-newest' : 'sort-$sort'),
+                          ),
                       ],
                     ),
-                    const SizedBox(height: AniHowSpace.cardGap),
-                    Text(s.growingMethod, style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 8),
+                    heading(s.showFilters),
+                    toggle('in-stock', Icons.check_circle_outline, s.inStockNow, s.inStockNowHint,
+                        flags.inStock, (on) => flags.copyWith(inStock: on)),
+                    toggle('upcoming', Icons.event_outlined, s.preorderFilter, s.preorderFilterHint,
+                        flags.upcoming, (on) => flags.copyWith(upcoming: on)),
+                    toggle('online', Icons.qr_code_2, s.onlinePaymentFilter, s.onlinePaymentFilterHint,
+                        flags.onlinePayment, (on) => flags.copyWith(onlinePayment: on)),
+                    toggle('tawad', Icons.local_offer_outlined, s.tawadFilter, s.tawadFilterHint,
+                        flags.tawad, (on) => flags.copyWith(tawad: on)),
+                    toggle('top-rated', Icons.star_outline, s.topRatedFilter, s.topRatedFilterHint,
+                        flags.topRated, (on) => flags.copyWith(topRated: on)),
+                    heading(s.growingMethod),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _chip(
-                          s.any,
-                          _growingMethod == null,
-                          () => _growingMethod = null,
-                        ),
-                        _chip(
-                          s.certifiedOrganicFilter,
-                          _growingMethod == 'certified_organic',
-                          () => _growingMethod = 'certified_organic',
-                        ),
-                        _chip(
-                          s.naturallyGrown,
-                          _growingMethod == 'naturally_grown',
-                          () => _growingMethod = 'naturally_grown',
-                        ),
+                        _chip(s.any, _filters.growingMethod == null,
+                            () => _set(_filters.copyWith(growingMethod: () => null))),
+                        _chip(s.certifiedOrganicFilter, _filters.growingMethod == 'certified_organic',
+                            () => _set(_filters.copyWith(growingMethod: () => 'certified_organic'))),
+                        _chip(s.naturallyGrown, _filters.growingMethod == 'naturally_grown',
+                            () => _set(_filters.copyWith(growingMethod: () => 'naturally_grown'))),
                       ],
                     ),
-                    const SizedBox(height: AniHowSpace.cardGap),
-                    Text(s.cropFilter, style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 8),
+                    if (_farms.isNotEmpty) ...[
+                      heading(s.farmFilter),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _chip(s.allFarms, _filters.farmId == null,
+                              () => _set(_filters.copyWith(farmId: () => null))),
+                          for (final farm in _farms)
+                            _chip(
+                              farm.name,
+                              _filters.farmId == farm.id,
+                              () => _set(_filters.copyWith(farmId: () => farm.id)),
+                              key: ValueKey('farm-${farm.id}'),
+                            ),
+                        ],
+                      ),
+                    ],
+                    heading(s.cropFilter),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _chip(
-                          s.any,
-                          _cropTypeId == null,
-                          () => _cropTypeId = null,
-                        ),
-                        for (final cropType in widget.cropTypes)
+                        _chip(s.any, _filters.cropTypeId == null,
+                            () => _set(_filters.copyWith(cropTypeId: () => null))),
+                        for (final cropType in shownCrops)
                           _chip(
                             cropType.labelFor(language),
-                            _cropTypeId == cropType.id,
-                            () => _cropTypeId = cropType.id,
+                            _filters.cropTypeId == cropType.id,
+                            () => _set(_filters.copyWith(cropTypeId: () => cropType.id)),
                             key: ValueKey('crop-${cropType.id}'),
+                          ),
+                        if (shownCrops.length < crops.length)
+                          ActionChip(
+                            key: const Key('crops-more'),
+                            label: Text(s.moreItems(crops.length - shownCrops.length)),
+                            onPressed: () => setState(() => _allCrops = true),
                           ),
                       ],
                     ),
@@ -947,35 +1185,26 @@ class _FilterSheetState extends State<_FilterSheet> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(48, 48),
+                    style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48)),
+                    onPressed: () => _set(
+                      const _MarketFilters(sort: 'fair', growingMethod: null, cropTypeId: null),
                     ),
-                    onPressed: () {
-                      setState(() {
-                        _sort = 'fair';
-                        _growingMethod = null;
-                        _cropTypeId = null;
-                      });
-                    },
                     child: Text(s.clear),
                   ),
                 ),
                 const SizedBox(width: AniHowSpace.cardGap),
                 Expanded(
+                  flex: 2,
                   child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(48, 48),
-                    ),
+                    key: const Key('filters-apply'),
+                    style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
                     onPressed: () {
-                      Navigator.of(context).pop(
-                        _MarketFilters(
-                          sort: _sort,
-                          growingMethod: _growingMethod,
-                          cropTypeId: _cropTypeId,
-                        ),
-                      );
+                      // No count request may land after the real reload.
+                      _countTimer?.cancel();
+                      _countRequest++;
+                      Navigator.of(context).pop(_filters);
                     },
-                    child: Text(s.apply),
+                    child: Text(s.showResultsCount(_count)),
                   ),
                 ),
               ],
@@ -996,7 +1225,7 @@ class _FilterSheetState extends State<_FilterSheet> {
         if (!chosen) {
           return;
         }
-        setState(select);
+        select();
       },
     );
   }

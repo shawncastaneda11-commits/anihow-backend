@@ -458,6 +458,8 @@ void main() {
       api,
       user: seller,
     );
+    await tester.ensureVisible(find.byKey(const ValueKey('payment-never-arrived')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('payment-never-arrived')));
     await tester.pumpAndSettle();
     expect(find.text('Close this refund?'), findsOneWidget);
@@ -478,6 +480,48 @@ void main() {
     );
     expect(find.byKey(const ValueKey('mark-refunded')), findsOneWidget);
     expect(find.byKey(const ValueKey('payment-never-arrived')), findsNothing);
+  });
+
+  testWidgets('a seller refund shows what to send back and what the buyer sent', (tester) async {
+    final api = _Api();
+    await _pump(
+      tester,
+      ReservationDetailScreen(
+        forSeller: true,
+        reservation: _reservation(
+          paymentStatus: 'refund_due',
+          cancellationReason: 'listing_removed',
+          proof: PaymentProofRecord(
+            id: 9,
+            reference: '88883333',
+            amount: '80.00',
+            wallet: 'gcash',
+            accountLast4: '1234',
+            status: 'rejected',
+            sentAt: DateTime(2026, 10, 30, 9),
+          ),
+        ),
+      ),
+      api,
+      user: const UserAccount(id: 4, name: 'Jun', email: 'jun@example.com', roles: ['farmer_seller']),
+    );
+
+    expect(find.byKey(const ValueKey('reservation-buyer-card')), findsOneWidget);
+    expect(find.text('Reservation · Pechay · 2 kg'), findsOneWidget);
+    final card = find.byKey(const ValueKey('refund-due-card'));
+    expect(find.descendant(of: card, matching: find.text('₱80.00')), findsOneWidget);
+    expect(
+      find.descendant(of: card, matching: find.textContaining('the listing was taken down')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: card, matching: find.text('Open GCash and send ₱80.00 back to Ana.')),
+      findsOneWidget,
+    );
+    final sent = find.byKey(const ValueKey('buyer-sent-card'));
+    expect(find.descendant(of: sent, matching: find.text('3333')), findsOneWidget);
+    expect(find.descendant(of: sent, matching: find.text('GCash •••• 1234')), findsOneWidget);
+    expect(find.descendant(of: sent, matching: find.text('Not yet')), findsOneWidget);
   });
 
   testWidgets('the reservations list shows a pill, pay now, and cancel only while awaiting', (
@@ -502,13 +546,80 @@ void main() {
       ),
       _Api(),
     );
-    expect(find.text('Awaiting payment'), findsOneWidget);
-    expect(find.text('Payment sent'), findsOneWidget);
+    expect(find.textContaining('Awaiting payment'), findsOneWidget);
+    expect(find.textContaining('Payment sent'), findsOneWidget);
+    expect(find.text('Reserved'), findsNWidgets(3));
+    expect(find.textContaining('Step 1 of 4'), findsOneWidget);
+    expect(find.text('Step 2 of 4 · The seller is checking your payment'), findsOneWidget);
     expect(find.byKey(const ValueKey('reservation-pay-now-4')), findsOneWidget);
     expect(find.byKey(const ValueKey('reservation-view-payment-6')), findsOneWidget);
     expect(find.byKey(const ValueKey('reservation-cancel-4')), findsOneWidget);
     expect(find.byKey(const ValueKey('reservation-cancel-5')), findsOneWidget);
     expect(find.text('Cancel reservation'), findsNWidgets(2));
+  });
+
+  testWidgets('reservation cards read like order cards', (tester) async {
+    int? openedOrder;
+    await _pump(
+      tester,
+      BuyerReservationsList(
+        reservations: [
+          ReservationRecord(
+            id: 1,
+            listingName: 'Kamatis',
+            quantity: 3,
+            unit: 'kg',
+            lineTotal: 156,
+            status: 'active',
+            paymentStatus: 'paid',
+            shopName: 'Kuya Jun Harvest',
+            opensAt: DateTime(2026, 11, 2, 8),
+          ),
+          ReservationRecord(
+            id: 2,
+            listingName: 'tt',
+            quantity: 5,
+            unit: 'kg',
+            lineTotal: 155,
+            status: 'cancelled',
+            paymentStatus: 'refund_due',
+            cancellationReason: 'listing_removed',
+            cancelledAt: DateTime(2026, 10, 30, 12),
+            shopName: 'Kuya Jun Harvest',
+          ),
+          const ReservationRecord(
+            id: 3,
+            listingName: 'Kalabasa',
+            quantity: 2,
+            unit: 'kg',
+            lineTotal: 90,
+            status: 'converted',
+            orderId: 77,
+            paymentStatus: 'paid',
+            shopName: 'Aling Nena Produce',
+          ),
+        ],
+        onOpenOrder: (reservation) => openedOrder = reservation.orderId,
+      ),
+      _Api(),
+    );
+
+    expect(find.text('ACTIVE'), findsOneWidget);
+    expect(find.text('HISTORY'), findsOneWidget);
+    expect(find.text('Kuya Jun Harvest'), findsNWidgets(2));
+    expect(find.text('Kamatis · 3 kg'), findsOneWidget);
+    expect(find.text('₱156.00 · Paid · Opens Nov 2'), findsOneWidget);
+    expect(find.text('Step 3 of 4 · Becomes an order on Nov 2'), findsOneWidget);
+    expect(
+      find.text('₱155.00 · Refund due · The listing was taken down · Oct 30'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('reservation-view-payment-2')), findsOneWidget);
+    expect(find.text('Became an order'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('reservation-view-order-3')));
+    await tester.pumpAndSettle();
+    expect(openedOrder, 77);
   });
 
   testWidgets('seller reservation review needs the dialog and a refund reference', (

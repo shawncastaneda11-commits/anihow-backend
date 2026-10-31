@@ -32,6 +32,7 @@ class _FairApi extends ApiClient {
     int? page,
     String? mixDay,
     int? farmId,
+    MarketplaceFlags flags = const MarketplaceFlags(),
   }) async {
     calls.add({
       'sort': sort,
@@ -148,7 +149,7 @@ void main() {
     },
   );
 
-  testWidgets('the sort sheet hides fair mix and leaves no sort highlighted', (
+  testWidgets('the sort sheet starts on Default, the fair mix order', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
@@ -165,6 +166,10 @@ void main() {
     expect(find.byKey(const Key('sort-fair')), findsNothing);
     expect(find.text('Fair mix'), findsNothing);
     expect(
+      tester.widget<ChoiceChip>(find.byKey(const Key('sort-default'))).selected,
+      isTrue,
+    );
+    expect(
       find.text('Every farm takes turns at the top. Changes daily.'),
       findsNothing,
     );
@@ -176,7 +181,7 @@ void main() {
 
     await tester.tap(find.text('Clear'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Apply'));
+    await tester.tap(find.byKey(const Key('filters-apply')));
     await tester.pumpAndSettle();
 
     expect(api.calls.last['sort'], 'fair');
@@ -253,6 +258,7 @@ class _GatedApi extends _FairApi {
     int? page,
     String? mixDay,
     int? farmId,
+    MarketplaceFlags flags = const MarketplaceFlags(),
   }) {
     calls.add({
       'sort': sort,

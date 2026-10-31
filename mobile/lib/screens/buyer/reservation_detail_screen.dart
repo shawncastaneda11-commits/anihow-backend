@@ -11,6 +11,7 @@ import '../../widgets/chat_message_bubble.dart';
 import '../../widgets/order_payment_summary.dart';
 import '../../widgets/payment_card.dart';
 import '../../widgets/primary_button.dart';
+import '../../widgets/profile_avatar_button.dart';
 import '../../widgets/status_pill.dart';
 import 'pay_now_screen.dart';
 
@@ -205,20 +206,24 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
       body: ListView(
         padding: AniHowSpace.screenPadding,
         children: [
-          Text(
-            reservation.buyerName ?? reservation.listingName,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text(AniHowMoney.peso(reservation.lineTotal)),
-              PaymentTrackingPill(status: reservation.paymentStatus),
-            ],
-          ),
+          if (widget.forSeller)
+            _SellerBuyerCard(reservation: reservation)
+          else ...[
+            Text(
+              reservation.buyerName ?? reservation.listingName,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(AniHowMoney.peso(reservation.lineTotal)),
+                PaymentTrackingPill(status: reservation.paymentStatus),
+              ],
+            ),
+          ],
           if (reservation.isAwaitingPayment && reservation.paymentDueAt != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -269,20 +274,35 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
               },
               child: Text(s.viewPayment),
             ),
-          if (widget.forSeller && reservation.paymentStatus == 'refund_due')
+          if (widget.forSeller && reservation.paymentStatus == 'refund_due') ...[
+            _RefundDueCard(reservation: reservation),
+            if (proof != null) ...[
+              const SizedBox(height: AniHowSpace.cardGap),
+              _BuyerSentCard(reservation: reservation),
+            ],
+            const SizedBox(height: AniHowSpace.cardGap),
             PrimaryButton(
               key: const ValueKey('mark-refunded'),
               label: s.markRefunded,
               onPressed: _refund,
             ),
-          if (widget.forSeller &&
-              reservation.paymentStatus == 'refund_due' &&
-              reservation.paidAt == null)
-            OutlinedButton(
-              key: const ValueKey('payment-never-arrived'),
-              onPressed: _neverArrived,
-              child: Text(s.paymentNeverArrived),
-            ),
+            if (reservation.paidAt == null) ...[
+              const SizedBox(height: AniHowSpace.cardGap),
+              OutlinedButton(
+                key: const ValueKey('payment-never-arrived'),
+                onPressed: _neverArrived,
+                child: Text(s.paymentNeverArrived),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                s.neverArrivedHelp,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.68),
+                ),
+              ),
+            ],
+          ],
           if (widget.forSeller && reservation.isActive && reservation.listingId != null)
             TextButton(
               onPressed: _cancel,
@@ -398,6 +418,214 @@ class _CheckCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The seller's header: who reserved, what, and where the payment stands.
+class _SellerBuyerCard extends StatelessWidget {
+  const _SellerBuyerCard({required this.reservation});
+
+  final ReservationRecord reservation;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+    final name = reservation.buyerName ?? reservation.listingName;
+    final refundDue = reservation.paymentStatus == 'refund_due';
+    return Card(
+      key: const ValueKey('reservation-buyer-card'),
+      child: Padding(
+        padding: AniHowSpace.cardPadding,
+        child: Row(
+          children: [
+            AniHowAvatar(name: name, imageUrl: reservation.buyerAvatarUrl, radius: 20),
+            const SizedBox(width: AniHowSpace.cardGap),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name, style: theme.textTheme.titleMedium),
+                  Text(
+                    s.reservationSubtitle(reservation.listingName, reservation.quantityLabel),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (refundDue)
+              StatusPill(label: s.paymentStatusLabel('refund_due'), color: AniHowColors.root)
+            else
+              PaymentTrackingPill(status: reservation.paymentStatus),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// How much to send back, why, and the two steps to finish the refund.
+class _RefundDueCard extends StatelessWidget {
+  const _RefundDueCard({required this.reservation});
+
+  final ReservationRecord reservation;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.68);
+    final amount = AniHowMoney.peso(reservation.lineTotal);
+    final wallet = s.walletLabel(reservation.latestProof?.wallet);
+    return DecoratedBox(
+      key: const ValueKey('refund-due-card'),
+      decoration: paymentCardDecoration(context, borderColor: AniHowColors.root, width: 2),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              s.sendBackLabel,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: muted,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.6,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              amount,
+              style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              s.cancelledOnBecause(
+                reservation.cancelledAt,
+                s.reservationCancelReasonForSeller(reservation.cancellationReason),
+              ),
+              style: theme.textTheme.bodyMedium?.copyWith(color: muted),
+            ),
+            const SizedBox(height: AniHowSpace.cardGap),
+            _RefundStep(
+              number: 1,
+              text: s.refundStepSend(
+                wallet.isEmpty ? s.walletGcash : wallet,
+                amount,
+                reservation.buyerName ?? '',
+              ),
+            ),
+            const SizedBox(height: 8),
+            _RefundStep(number: 2, text: s.refundStepMark),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RefundStep extends StatelessWidget {
+  const _RefundStep({required this.number, required this.text});
+
+  final int number;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AniHowColors.root.withValues(alpha: 0.18),
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            '$number',
+            style: const TextStyle(
+              color: AniHowColors.root,
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(child: Text(text)),
+      ],
+    );
+  }
+}
+
+/// The buyer's payment, so the seller can find it in their wallet.
+class _BuyerSentCard extends StatelessWidget {
+  const _BuyerSentCard({required this.reservation});
+
+  final ReservationRecord reservation;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.68);
+    final proof = reservation.latestProof!;
+    final wallet = s.walletLabel(proof.wallet);
+    final last4 = proof.accountLast4;
+    final paidTo = last4 == null || last4.isEmpty ? wallet : '$wallet ${s.maskedLast4(last4)}';
+    final rows = <(String, String, Color?)>[
+      (s.referenceEndsIn, lastFourOf(proof.reference), null),
+      (s.proofAmount, AniHowMoney.peso(proof.amount ?? reservation.amountLabel), null),
+      if (paidTo.isNotEmpty) (s.toLabel, paidTo, null),
+      if (proof.sentAt != null) (s.sentLabel, s.shortDate(proof.sentAt!.toLocal()), null),
+      (
+        s.youConfirmed,
+        reservation.paidAt == null ? s.notYet : s.yesLabel,
+        reservation.paidAt == null ? AniHowColors.root : null,
+      ),
+    ];
+    return Card(
+      key: const ValueKey('buyer-sent-card'),
+      child: Padding(
+        padding: AniHowSpace.cardPadding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              s.whatBuyerSent,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: muted,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.6,
+              ),
+            ),
+            const SizedBox(height: 8),
+            for (final row in rows)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  children: [
+                    SizedBox(width: 130, child: Text(row.$1, style: TextStyle(color: muted))),
+                    Expanded(
+                      child: Text(
+                        row.$2,
+                        style: TextStyle(
+                          color: row.$3,
+                          fontWeight: row.$3 == null ? null : FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ),
       ),
     );

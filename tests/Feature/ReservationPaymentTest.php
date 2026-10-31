@@ -415,6 +415,10 @@ class ReservationPaymentTest extends TestCase
         $this->assertSame('1009', $list->json('data.0.reference'));
         $this->assertSame($listing->title, $list->json('data.1.title'));
         $this->assertSame($reservation->id, $list->json('data.1.reservation_id'));
+        $list->assertJsonPath('meta.counts.to_check', 2)
+            ->assertJsonPath('meta.counts.confirmed', 0)
+            ->assertJsonPath('meta.counts.refund_due', 0);
+        $this->assertEquals(60, $list->json('meta.total_amount'));
 
         Storage::fake('local');
         Storage::disk('local')->put($qr->image_path, 'img');

@@ -31,6 +31,7 @@ class _HeaderApi extends ApiClient {
     int? page,
     String? mixDay,
     int? farmId,
+    MarketplaceFlags flags = const MarketplaceFlags(),
   }) async => const MarketplaceFeed(items: []);
 
   @override

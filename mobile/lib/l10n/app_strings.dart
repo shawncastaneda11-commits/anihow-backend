@@ -448,6 +448,31 @@ class AppStrings {
   String get hideUpdates => t('Hide updates', 'Itago ang mga update');
   String get seeAll => t('See all', 'Tingnan lahat');
   String get allFarms => t('All farms', 'Lahat ng bukid');
+  String get filtersTitle => t('Filters', 'Mga filter');
+  String get resetAll => t('Reset all', 'I-reset lahat');
+  String get showFilters => t('Show', 'Ipakita');
+  String get sortDefault => t('Default', 'Default');
+  String get farmFilter => t('Farm', 'Bukid');
+  String get inStockNowHint => t('Hide sold-out listings', 'Itago ang ubos na');
+  String get preorderFilter => t('Pre-order', 'Pre-order');
+  String get preorderFilterHint => t(
+    'Harvests you can reserve before they open',
+    'Ani na puwedeng i-reserba bago magbukas',
+  );
+  String get onlinePaymentFilter => t('Online payment', 'Online na bayad');
+  String get onlinePaymentFilterHint =>
+      t('Pay by GCash, Maya or bank QR', 'Magbayad sa GCash, Maya o bank QR');
+  String get tawadFilter => t('Tawad discount', 'May tawad');
+  String get tawadFilterHint =>
+      t('Listings with a discount on', 'Mga listing na may diskwento');
+  String get topRatedFilter => t('Top-rated sellers', 'Mataas ang rating');
+  String get topRatedFilterHint => t('4 stars and up', '4 star pataas');
+  String showResultsCount(int? count) => count == null
+      ? t('Show results', 'Ipakita')
+      : t(
+          'Show $count ${count == 1 ? 'result' : 'results'}',
+          'Ipakita ang $count',
+        );
   String get farmsIFollow => t('Farms I follow', 'Mga bukid na sinusundan ko');
   String get readMore => t('Read more', 'Basahin pa');
   String get noFarmUpdates =>
@@ -472,6 +497,23 @@ class AppStrings {
   String get orderHistory => t('Order history', 'Kasaysayan ng order');
   String get pastOrders => t('Past', 'Nakaraan');
   String stepOfFour(int step) => t('Step $step of 4', 'Hakbang $step sa 4');
+  String get reservedPill => t('Reserved', 'Naka-reserba');
+  String get becameAnOrder => t('Became an order', 'Naging order na');
+  String opensOn(DateTime local) =>
+      t('Opens ${_monthDay(local)}', 'Magbubukas ${_monthDay(local)}');
+  String get reservationStepPay =>
+      t('Pay to keep your reservation', 'Magbayad para manatili ang reserbasyon');
+  String get reservationStepChecking => t(
+    'The seller is checking your payment',
+    'Sinusuri ng seller ang bayad mo',
+  );
+  String reservationStepOpens(DateTime? local) => local == null
+      ? t('Becomes an order when the harvest opens', 'Magiging order pagbukas ng ani')
+      : t(
+          'Becomes an order on ${_monthDay(local)}',
+          'Magiging order sa ${_monthDay(local)}',
+        );
+  String monthDay(DateTime local) => _monthDay(local);
   String moreItems(int count) => t('+$count more', '+$count pa');
 
   String get back => t('Back', 'Bumalik');
@@ -1321,6 +1363,38 @@ class AppStrings {
       t('No tawad on this listing.', 'Walang tawad sa listing na ito.');
   String get recordWalkIn => t('Record walk-in sale', 'Itala ang walk-in sale');
   String get editShop => t('Edit shop', 'I-edit ang tindahan');
+  String get addCover => t('Add cover', 'Magdagdag ng cover');
+  String get finishYourShop => t('Finish your shop', 'Tapusin ang tindahan mo');
+  String finishProgress(int done, int total) =>
+      t('$done of $total', '$done sa $total');
+  String get finishShopHint => t(
+    'Buyers trust shops with full details.',
+    'Mas pinagkakatiwalaan ng buyer ang tindahang kumpleto ang detalye.',
+  );
+  String get shopNameDone => t('Shop name', 'Pangalan ng tindahan');
+  String get addShopPhoto => t('Add a profile photo', 'Magdagdag ng profile photo');
+  String get addShopPhotoHint =>
+      t('Your face or your farm logo', 'Mukha mo o logo ng bukid');
+  String get addShortBio => t('Add a short bio', 'Magdagdag ng maikling bio');
+  String get addShortBioHint =>
+      t('What you grow, how you farm', 'Ano ang tanim mo, paano ka magsaka');
+  String get addYourLocation => t('Add your location', 'Ilagay ang lokasyon mo');
+  String get addYourLocationHint =>
+      t('Where buyers pick up', 'Saan kukunin ng buyer');
+  String get addContactNumber => t('Add a contact number', 'Maglagay ng contact number');
+  String get aboutShop => t('About', 'Tungkol sa tindahan');
+  String get manageLink => t('Manage', 'Ayusin');
+  String get onlinePaymentIsOn => t('Online payment is on', 'Naka-on ang online na bayad');
+  String get onlinePaymentIsOff => t('Online payment is off', 'Naka-off ang online na bayad');
+  String onlinePaymentDetail(int qrs, int hours) => t(
+    '$qrs QR ${qrs == 1 ? 'code' : 'codes'} · buyers have $hours ${hours == 1 ? 'hour' : 'hours'} to pay',
+    '$qrs QR code · may $hours oras ang buyer para magbayad',
+  );
+  String get onlinePaymentOffDetail => t(
+    'Buyers pay cash only. Add a QR code to turn it on.',
+    'Cash lang ang bayad. Magdagdag ng QR code para i-on.',
+  );
+  String get yourListings => t('Your listings', 'Mga listing mo');
   String get editShopProfile =>
       t('Edit shop profile', 'I-edit ang profile ng tindahan');
   String get saveShopProfile =>
@@ -1577,6 +1651,32 @@ class AppStrings {
       t('$wallet · ref ending $reference', '$wallet · ref …$reference');
   String get checkNow => t('Check now', 'Suriin ngayon');
   String toCheckCount(int count) => t('To check ($count)', 'Susuriin ($count)');
+  String get toCheckTab => t('To check', 'Susuriin');
+  String get orderBadge => t('Order', 'Order');
+  String paymentsSummary(String tab, int count, String total) => switch (tab) {
+    'refund_due' => t(
+      '$count ${count == 1 ? 'refund' : 'refunds'} to send · $total',
+      '$count refund na ibabalik · $total',
+    ),
+    'to_check' => t(
+      '$count ${count == 1 ? 'payment' : 'payments'} to check · $total',
+      '$count bayad na susuriin · $total',
+    ),
+    _ => t('$count confirmed · $total', '$count kumpirmado · $total'),
+  };
+  String paymentsSummaryHint(String tab) => switch (tab) {
+    'refund_due' => t(
+      'Send the money back, then mark each one refunded.',
+      'Ibalik ang pera, saka markahan ang bawat isa na na-refund.',
+    ),
+    'to_check' => t(
+      'Open each one and look for its reference in your wallet.',
+      'Buksan ang bawat isa at hanapin ang reference sa wallet mo.',
+    ),
+    _ => t('Payments you confirmed.', 'Mga bayad na kinumpirma mo.'),
+  };
+  String dueSince(DateTime local) =>
+      t('due since ${_monthDay(local)}', 'dapat mula ${_monthDay(local)}');
   String get paymentsEmpty =>
       t('Nothing here right now.', 'Wala rito sa ngayon.');
   String get toLabel => t('To', 'Kay');
@@ -1651,6 +1751,39 @@ class AppStrings {
     'payment_expired' => t('the payment time expired', 'lumipas ang oras ng bayad'),
     _ => '',
   };
+  /// [reservationCancelReason] in the seller's words.
+  String reservationCancelReasonForSeller(String? value) => switch (value) {
+    'buyer_cancelled' => t('the buyer cancelled', 'kinansela ng buyer'),
+    'seller_cancelled' => t('you cancelled it', 'kinansela mo'),
+    _ => reservationCancelReason(value),
+  };
+  String get sendBackLabel => t('SEND BACK', 'IBALIK');
+  String cancelledOnBecause(DateTime? day, String reason) {
+    final when = day == null ? null : _monthDay(day.toLocal());
+    final parts = [
+      when == null ? t('Cancelled', 'Kinansela') : t('Cancelled $when', 'Kinansela $when'),
+      if (reason.isNotEmpty) reason,
+    ];
+    return parts.join(' · ');
+  }
+  String refundStepSend(String wallet, String amount, String buyer) => t(
+    'Open $wallet and send $amount back to $buyer.',
+    'Buksan ang $wallet at ibalik ang $amount kay $buyer.',
+  );
+  String get refundStepMark => t(
+    'Tap Mark as refunded and type the refund reference.',
+    'I-tap ang Markahan na na-refund at ilagay ang reference ng refund.',
+  );
+  String get whatBuyerSent => t('WHAT THE BUYER SENT', 'ANG IPINADALA NG BUYER');
+  String get youConfirmed => t('You confirmed', 'Kinumpirma mo');
+  String get notYet => t('Not yet', 'Hindi pa');
+  String get yesLabel => t('Yes', 'Oo');
+  String get neverArrivedHelp => t(
+    'Only if this money never reached your account. No refund will be sent.',
+    'Kung hindi talaga dumating ang pera sa account mo. Walang refund na ipapadala.',
+  );
+  String reservationSubtitle(String listing, String quantity) =>
+      t('Reservation · $listing · $quantity', 'Reserbasyon · $listing · $quantity');
   String get notReceivedBuyerTitle =>
       t('Seller did not receive the payment', 'Hindi natanggap ng seller ang bayad');
   String notReceivedBuyerNote({required bool canReport}) => canReport

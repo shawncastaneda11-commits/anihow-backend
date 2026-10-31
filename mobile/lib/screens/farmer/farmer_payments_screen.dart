@@ -7,8 +7,10 @@ import '../../services/api_client.dart';
 import '../../state/auth_controller.dart';
 import '../../theme/anihow_space.dart';
 import '../../theme/anihow_theme.dart';
+import '../../theme/readable_accent.dart';
 import '../../widgets/brand_tab_bar.dart';
 import '../../widgets/payment_card.dart';
+import '../../widgets/profile_avatar_button.dart';
 import '../buyer/reservation_detail_screen.dart';
 import 'farmer_orders_screen.dart';
 
@@ -22,7 +24,7 @@ class FarmerPaymentsScreen extends StatefulWidget {
 class _FarmerPaymentsScreenState extends State<FarmerPaymentsScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabs;
-  final List<int> _counts = [0, 0, 0];
+  final Map<String, int> _counts = {};
 
   @override
   void initState() {
@@ -36,11 +38,44 @@ class _FarmerPaymentsScreenState extends State<FarmerPaymentsScreen>
     super.dispose();
   }
 
-  void _setCount(int index, int count) {
-    if (_counts[index] == count) {
+  void _setCounts(Map<String, int> counts) {
+    if (counts.entries.every((entry) => _counts[entry.key] == entry.value)) {
       return;
     }
-    setState(() => _counts[index] = count);
+    setState(() => _counts.addAll(counts));
+  }
+
+  Widget _tab(String label, String status) {
+    final count = _counts[status] ?? 0;
+    return Tab(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label),
+          if (count > 0) ...[
+            const SizedBox(width: 6),
+            Container(
+              key: ValueKey('payments-tab-count-$status'),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: status == 'refund_due'
+                    ? const Color(0xFFE9B566)
+                    : Colors.white.withValues(alpha: 0.22),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w800,
+                  color: status == 'refund_due' ? const Color(0xFF2A1D05) : Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   @override
@@ -53,18 +88,18 @@ class _FarmerPaymentsScreenState extends State<FarmerPaymentsScreen>
           controller: _tabs,
           isScrollable: true,
           tabs: [
-            Tab(text: s.toCheckCount(_counts[0])),
-            Tab(text: s.confirmedPayments),
-            Tab(text: s.refundDueTab),
+            _tab(s.toCheckTab, 'to_check'),
+            _tab(s.confirmedPayments, 'confirmed'),
+            _tab(s.refundDueTab, 'refund_due'),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabs,
         children: [
-          _PaymentList(status: 'to_check', onCount: (count) => _setCount(0, count)),
-          _PaymentList(status: 'confirmed', onCount: (count) => _setCount(1, count)),
-          _PaymentList(status: 'refund_due', onCount: (count) => _setCount(2, count)),
+          _PaymentList(status: 'to_check', onCounts: _setCounts),
+          _PaymentList(status: 'confirmed', onCounts: _setCounts),
+          _PaymentList(status: 'refund_due', onCounts: _setCounts),
         ],
       ),
     );
@@ -72,10 +107,12 @@ class _FarmerPaymentsScreenState extends State<FarmerPaymentsScreen>
 }
 
 class _PaymentList extends StatefulWidget {
-  const _PaymentList({required this.status, required this.onCount});
+  const _PaymentList({required this.status, required this.onCounts});
 
   final String status;
-  final ValueChanged<int> onCount;
+
+  /// Every tab's count from the server, or this tab's own when it sends none.
+  final ValueChanged<Map<String, int>> onCounts;
 
   @override
   State<_PaymentList> createState() => _PaymentListState();
@@ -87,6 +124,7 @@ class _PaymentListState extends State<_PaymentList> {
   bool _loading = true;
   bool _complete = false;
   Object? _error;
+  double? _total;
 
   @override
   void initState() {
@@ -113,9 +151,12 @@ class _PaymentListState extends State<_PaymentList> {
           ..clear()
           ..addAll(page.items);
         _complete = page.complete;
+        _total = page.totalAmount;
         _loading = false;
       });
-      widget.onCount(page.items.length);
+      widget.onCounts(
+        page.counts.isEmpty ? {widget.status: page.items.length} : page.counts,
+      );
     } on ApiException catch (error) {
       if (mounted) {
         setState(() {
@@ -140,7 +181,9 @@ class _PaymentListState extends State<_PaymentList> {
       _items.addAll(page.items);
       _complete = page.complete;
     });
-    widget.onCount(_items.length);
+    if (page.counts.isEmpty) {
+      widget.onCounts({widget.status: _items.length});
+    }
   }
 
   Future<void> _open(PaymentListItem item) async {
@@ -214,9 +257,21 @@ class _PaymentListState extends State<_PaymentList> {
             )
           : ListView.separated(
               padding: AniHowSpace.screenPadding,
-              itemCount: _items.length + (_complete ? 0 : 1),
+              itemCount: _items.length + 1 + (_complete ? 0 : 1),
               separatorBuilder: (_, _) => const SizedBox(height: AniHowSpace.cardGap),
               itemBuilder: (context, index) {
+                if (index == 0) {
+                  return _PaymentsSummary(
+                    status: widget.status,
+                    count: _items.length,
+                    total: _total ??
+                        _items.fold<double>(
+                          0,
+                          (sum, item) => sum + (double.tryParse(item.amount) ?? 0),
+                        ),
+                  );
+                }
+                index -= 1;
                 if (index >= _items.length) {
                   return TextButton(
                     key: ValueKey('payments-more-${widget.status}'),
@@ -236,6 +291,59 @@ class _PaymentListState extends State<_PaymentList> {
   }
 }
 
+/// The tab's total at the top, e.g. "3 refunds to send · ₱289.00".
+class _PaymentsSummary extends StatelessWidget {
+  const _PaymentsSummary({
+    required this.status,
+    required this.count,
+    required this.total,
+  });
+
+  final String status;
+  final int count;
+  final double total;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+    final tone = switch (status) {
+      'refund_due' => AniHowColors.root,
+      'confirmed' => AniHowColors.inStock,
+      _ => AniHowColors.confirmedBlue,
+    };
+    return DecoratedBox(
+      key: ValueKey('payments-summary-$status'),
+      decoration: BoxDecoration(
+        color: tone.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(paymentCardRadius),
+        border: Border.all(color: tone.withValues(alpha: 0.4)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              s.paymentsSummary(status, count, AniHowMoney.peso(total)),
+              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              s.paymentsSummaryHint(status),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One payment: who and how much, what it was for, and the wallet and date.
+/// The tab already says the status, so the row carries no status pill.
 class _PaymentRow extends StatelessWidget {
   const _PaymentRow({
     required this.item,
@@ -251,12 +359,15 @@ class _PaymentRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     final theme = Theme.of(context);
-    final muted = theme.textTheme.bodyMedium?.copyWith(
-      color: theme.colorScheme.onSurface.withValues(alpha: 0.62),
-    );
+    final mutedColor = theme.colorScheme.onSurface.withValues(alpha: 0.66);
+    final muted = theme.textTheme.bodyMedium?.copyWith(color: mutedColor);
     final wallet = s.walletLabel(item.wallet);
     final reference = item.reference;
-    final detail = item.isReservation ? item.title : item.title;
+    final ref = wallet.isNotEmpty && reference != null && reference.isNotEmpty
+        ? s.walletRef(wallet, lastFourOf(reference))
+        : null;
+    final when = _when(s);
+    final tagColor = item.isReservation ? readableAccent(context) : AniHowColors.confirmedBlue;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -267,10 +378,11 @@ class _PaymentRow extends StatelessWidget {
         onTap: onTap,
         child: Ink(
           decoration: paymentCardDecoration(context),
-          padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+          padding: const EdgeInsets.fromLTRB(12, 12, 6, 12),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              AniHowAvatar(name: item.buyerName, imageUrl: item.buyerAvatarUrl, radius: 20),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -280,6 +392,8 @@ class _PaymentRow extends StatelessWidget {
                         Expanded(
                           child: Text(
                             item.buyerName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
@@ -293,34 +407,59 @@ class _PaymentRow extends StatelessWidget {
                         ),
                       ],
                     ),
-                    if (detail.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(detail, style: muted),
-                    ],
-                    if (item.isReservation)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: PaymentTonePill(
-                          key: ValueKey('reservation-badge-${item.id}'),
-                          label: s.reservationBadge,
-                          foreground: AniHowColors.brand,
-                          background: AniHowColors.inStockBg,
-                        ),
-                      ),
-                    if (wallet.isNotEmpty && reference != null && reference.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(s.walletRef(wallet, lastFourOf(reference)), style: muted),
-                    ],
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      crossAxisAlignment: WrapCrossAlignment.center,
+                    const SizedBox(height: 2),
+                    Row(
                       children: [
-                        _pill(s),
-                        if (_when(s) case final time?) Text(time, style: muted),
+                        if (item.title.isNotEmpty)
+                          Flexible(
+                            child: Text(
+                              item.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: muted,
+                            ),
+                          ),
+                        const SizedBox(width: 6),
+                        Container(
+                          key: item.isReservation ? ValueKey('reservation-badge-${item.id}') : null,
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: tagColor.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            item.isReservation ? s.reservationBadge : s.orderBadge,
+                            style: TextStyle(
+                              color: tagColor,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
+                    if (ref != null || when != null) ...[
+                      const SizedBox(height: 2),
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            if (ref != null) TextSpan(text: ref),
+                            if (ref != null && when != null) const TextSpan(text: ' · '),
+                            if (when != null)
+                              TextSpan(
+                                text: when,
+                                style: tab == 'refund_due'
+                                    ? const TextStyle(
+                                        color: AniHowColors.root,
+                                        fontWeight: FontWeight.w600,
+                                      )
+                                    : null,
+                              ),
+                          ],
+                        ),
+                        style: muted,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -332,30 +471,10 @@ class _PaymentRow extends StatelessWidget {
     );
   }
 
-  Widget _pill(AppStrings s) {
-    return switch (tab) {
-      'confirmed' => PaymentTonePill(
-        label: s.paymentStatusLabel('paid'),
-        foreground: AniHowColors.inStock,
-        background: AniHowColors.inStockBg,
-      ),
-      'refund_due' => PaymentTonePill(
-        label: s.refundDueTab,
-        foreground: AniHowColors.root,
-        background: const Color(0xFFFFF4D6),
-      ),
-      _ => PaymentTonePill(
-        label: s.checkNow,
-        foreground: AniHowColors.confirmedBlue,
-        background: const Color(0xFFDBEAFE),
-      ),
-    };
-  }
-
   String? _when(AppStrings s) {
     return switch (tab) {
       'confirmed' => item.paidAt == null ? null : s.paidOn(item.paidAt!),
-      'refund_due' => item.statusAt == null ? null : s.sinceDate(item.statusAt!),
+      'refund_due' => item.statusAt == null ? null : s.dueSince(item.statusAt!),
       _ => item.sentAt == null ? null : s.sentAgo(item.sentAt!),
     };
   }

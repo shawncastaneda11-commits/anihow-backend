@@ -45,6 +45,11 @@ class MarketplaceIndexRequest extends FormRequest
             ...FarmPin::nearRules(),
             'category' => ['sometimes', 'nullable', Rule::enum(ProductCategory::class)],
             'growing_method' => ['sometimes', 'nullable', Rule::enum(GrowingMethod::class)],
+            'in_stock' => ['sometimes', 'boolean'],
+            'upcoming' => ['sometimes', 'boolean'],
+            'online_payment' => ['sometimes', 'boolean'],
+            'tawad' => ['sometimes', 'boolean'],
+            'top_rated' => ['sometimes', 'boolean'],
         ];
     }
 }

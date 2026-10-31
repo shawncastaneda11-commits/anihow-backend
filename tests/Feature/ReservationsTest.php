@@ -668,7 +668,9 @@ class ReservationsTest extends TestCase
 
         $this->asUser($buyer)->getJson('/api/buyer/reservations')
             ->assertOk()
-            ->assertJsonPath('data.0.id', $id);
+            ->assertJsonPath('data.0.id', $id)
+            ->assertJsonPath('data.0.seller.shop_name', $farmer->shop_name)
+            ->assertJsonPath('data.0.opens_at', $listing->available_from->toIso8601String());
         $this->asUser($other)->getJson('/api/buyer/reservations')
             ->assertOk()
             ->assertJsonCount(0, 'data');

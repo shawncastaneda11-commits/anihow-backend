@@ -21,6 +21,7 @@ class PaymentListItemResource extends JsonResource
             'kind' => $this->resource['kind'],
             'id' => $this->resource['id'],
             'buyer_name' => $this->resource['buyer_name'],
+            'buyer_avatar_url' => $this->resource['buyer_avatar_url'] ?? null,
             'title' => $this->resource['title'],
             'items' => $this->resource['items'],
             'amount' => $this->resource['amount'],

@@ -22,11 +22,20 @@ class PasswordRules {
   static bool allMet(String password) => metCount(password) == 5;
 }
 
-/// Live checklist and strength bar shown under a new-password field.
+/// Live checklist and strength bar shown under a new-password field. Unmet
+/// rules show a grey cross; after a save attempt they turn red and the box
+/// says how many rules are left.
 class PasswordRulesChecklist extends StatelessWidget {
-  const PasswordRulesChecklist({super.key, required this.password});
+  const PasswordRulesChecklist({
+    super.key,
+    required this.password,
+    this.showErrors = false,
+  });
 
   final String password;
+
+  /// Set once the person has tried to save with a password that breaks a rule.
+  final bool showErrors;
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +49,8 @@ class PasswordRulesChecklist extends StatelessWidget {
     final almost = dark ? const Color(0xFFE0A84A) : const Color(0xFF8A5A00);
     final checks = PasswordRules.check(password);
     final met = checks.where((value) => value).length;
+    final failing = showErrors && met < checks.length;
+    final unmet = failing ? weak : off;
     final (label, color) = met <= 2
         ? (s.strengthWeak, weak)
         : met <= 4
@@ -93,9 +104,15 @@ class PasswordRulesChecklist extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         DecoratedBox(
+          key: ValueKey('password-rules-box${failing ? '-failing' : ''}'),
           decoration: BoxDecoration(
-            color: dark ? const Color(0xFF16201C) : AniHowColors.cream,
-            border: Border.all(color: track),
+            color: failing
+                ? (dark ? const Color(0xFF2C1C1A) : const Color(0xFFFBEDEB))
+                : (dark ? const Color(0xFF16201C) : AniHowColors.cream),
+            border: Border.all(
+              color: failing ? weak : track,
+              width: failing ? 1.5 : 1,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Padding(
@@ -105,12 +122,29 @@ class PasswordRulesChecklist extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    s.passwordMustInclude,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
+                  if (failing)
+                    Row(
+                      children: [
+                        Icon(Icons.error, size: 16, color: weak),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            s.passwordFixRules(checks.length - met),
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: weak,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Text(
+                      s.passwordMustInclude,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 6),
                   for (var index = 0; index < rules.length; index++)
                     Padding(
@@ -118,22 +152,23 @@ class PasswordRulesChecklist extends StatelessWidget {
                       child: Row(
                         children: [
                           Icon(
-                            checks[index]
-                                ? Icons.check_circle
-                                : Icons.radio_button_unchecked,
+                            checks[index] ? Icons.check_circle : Icons.cancel,
                             key: ValueKey(
                               'password-rule-$index-${checks[index] ? 'met' : 'unmet'}',
                             ),
                             size: 16,
-                            color: checks[index] ? ok : off,
+                            color: checks[index] ? ok : unmet,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               rules[index],
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: checks[index] ? ok : off,
+                                color: checks[index] ? ok : unmet,
                                 fontSize: 13,
+                                fontWeight: !checks[index] && failing
+                                    ? FontWeight.w600
+                                    : null,
                               ),
                             ),
                           ),

@@ -741,6 +741,10 @@ class AppStrings {
   );
   String get passwordMustInclude =>
       t('Password must include:', 'Dapat mayroon ang password:');
+  String passwordFixRules(int count) => t(
+    'Fix $count ${count == 1 ? 'rule' : 'rules'} to continue',
+    'Ayusin ang $count patakaran para magpatuloy',
+  );
   String get pwRuleLength =>
       t('At least 8 characters', 'Hindi bababa sa 8 character');
   String get pwRuleUpper => t('One uppercase letter', 'Isang malaking titik');

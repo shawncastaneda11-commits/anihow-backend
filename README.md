@@ -185,6 +185,38 @@ The server address and Reverb settings come from `mobile/dart_defines/<server>.j
 
 Push notifications need `mobile/android/app/google-services.json` from Firebase. It is ignored by git; never commit it.
 
+### Publish on Google Play
+
+Google Play takes an app bundle (`.aab`) signed with your own upload key, not the debug key.
+
+1. Make the upload key once and keep it outside the project folder (for example `C:\keys\anihow-upload.jks`). `keytool` asks for the passwords; back the file up somewhere safe, because a lost key has to be reset through Play support.
+
+   ```powershell
+   keytool -genkeypair -v -keystore C:\keys\anihow-upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000
+   ```
+
+2. Create `mobile/android/key.properties` (ignored by git; never commit it):
+
+   ```properties
+   storeFile=C:/keys/anihow-upload.jks
+   keyAlias=upload
+   storePassword=...
+   keyPassword=...
+   ```
+
+3. Raise the number after `+` in `mobile/pubspec.yaml` (`version: 1.0.0+1`) for every upload; Play rejects a number it has seen before.
+4. Build the bundle. It is saved as `dist\AniHow-vps.aab`.
+
+   ```powershell
+   .\scripts\build-anihow-apk.cmd -Bundle
+   ```
+
+5. Upload it in Play Console and turn on Play App Signing. The store listing needs these public pages, which the server provides:
+   - Privacy policy: `https://anihow.tech/privacy`
+   - Account deletion: `https://anihow.tech/delete-account`
+
+   Add `?lang=fil` for the Filipino version.
+
 ## Production (VPS)
 
 The live server is an Ubuntu VPS running Nginx, PHP-FPM 8.4, MySQL 8 and Supervisor (queue worker and Reverb). Scripts in `scripts/vps/`:

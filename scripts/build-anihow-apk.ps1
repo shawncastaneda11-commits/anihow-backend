@@ -1,5 +1,7 @@
 param(
-    [string]$Server = 'vps'
+    [string]$Server = 'vps',
+    # Build a signed .aab for Google Play instead of an APK.
+    [switch]$Bundle
 )
 
 $ErrorActionPreference = 'Stop'
@@ -56,7 +58,18 @@ try {
         }
     }
 
-    Write-Host "Building AniHow release APK for $Server"
+    if ($Bundle) {
+        if ($Server -ne 'vps') {
+            throw 'Play Store bundles are built for the live server only. Use -Server vps.'
+        }
+        $keyProperties = Join-Path $MobileRoot 'android\key.properties'
+        if (-not (Test-Path -LiteralPath $keyProperties)) {
+            throw 'No mobile\android\key.properties. Play needs the upload key; see "Publish on Google Play" in README.md.'
+        }
+    }
+
+    $kind = if ($Bundle) { 'app bundle' } else { 'APK' }
+    Write-Host "Building AniHow release $kind for $Server"
     Set-Location -LiteralPath $MobileRoot
     if ($null -ne $mappedDrive) {
         flutter pub get
@@ -64,20 +77,34 @@ try {
             throw "flutter pub get failed with exit code $LASTEXITCODE"
         }
     }
-    flutter build apk --release --dart-define-from-file="dart_defines/$Server.json"
-    if ($LASTEXITCODE -ne 0) {
-        throw "flutter build apk failed with exit code $LASTEXITCODE"
+    if ($Bundle) {
+        flutter build appbundle --release --dart-define-from-file="dart_defines/$Server.json"
+        if ($LASTEXITCODE -ne 0) {
+            throw "flutter build appbundle failed with exit code $LASTEXITCODE"
+        }
+        $built = Join-Path $MobileRoot 'build\app\outputs\bundle\release\app-release.aab'
+    } else {
+        flutter build apk --release --dart-define-from-file="dart_defines/$Server.json"
+        if ($LASTEXITCODE -ne 0) {
+            throw "flutter build apk failed with exit code $LASTEXITCODE"
+        }
+        $built = Join-Path $MobileRoot 'build\app\outputs\flutter-apk\app-release.apk'
     }
-
-    $built = Join-Path $MobileRoot 'build\app\outputs\flutter-apk\app-release.apk'
     if (-not (Test-Path -LiteralPath $built)) {
-        throw "Build finished without an APK at $built"
+        throw "Build finished without a file at $built"
     }
 
     $dist = Join-Path $ProjectRoot 'dist'
     New-Item -ItemType Directory -Force -Path $dist | Out-Null
-    $destination = Join-Path $dist "AniHow-$Server.apk"
+    $extension = if ($Bundle) { 'aab' } else { 'apk' }
+    $destination = Join-Path $dist "AniHow-$Server.$extension"
     Copy-Item -LiteralPath $built -Destination $destination -Force
+
+    if ($Bundle) {
+        Write-Host "App bundle for Google Play: $destination"
+        Start-Process explorer.exe -ArgumentList $dist
+        return
+    }
 
     $adb = Join-Path $env:ANDROID_HOME 'platform-tools\adb.exe'
     if (Test-Path -LiteralPath $adb) {

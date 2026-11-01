@@ -1,4 +1,5 @@
 import java.util.Base64
+import java.util.Properties
 
 plugins {
     id("com.android.application")
@@ -18,6 +19,18 @@ val dartDefines: Map<String, String> = (findProperty("dart-defines") as String?)
     .associate { it.substringBefore("=") to it.substringAfter("=") }
 val isStagingBuild = dartDefines["APP_VARIANT"] == "staging"
 
+// The Play upload key. android/key.properties points at the keystore and holds
+// its passwords; both stay out of git. Without it, release builds fall back to
+// the debug key so local and CI builds still work, but Play rejects those.
+val uploadKey = Properties().apply {
+    val file = rootProject.file("key.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+val hasUploadKey = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+    .all { !uploadKey.getProperty(it).isNullOrBlank() }
+
 android {
     namespace = "com.anihow.anihow"
     compileSdk = flutter.compileSdkVersion
@@ -30,7 +43,6 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = if (isStagingBuild) "com.anihow.anihow.staging" else "com.anihow.anihow"
         manifestPlaceholders["appLabel"] = if (isStagingBuild) "AniHow Staging" else "AniHow"
         // You can update the following values to match your application needs.
@@ -45,11 +57,24 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasUploadKey) {
+            create("upload") {
+                storeFile = file(uploadKey.getProperty("storeFile"))
+                storePassword = uploadKey.getProperty("storePassword")
+                keyAlias = uploadKey.getProperty("keyAlias")
+                keyPassword = uploadKey.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasUploadKey) {
+                signingConfigs.getByName("upload")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }

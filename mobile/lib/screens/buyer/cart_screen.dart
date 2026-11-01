@@ -17,6 +17,7 @@ import '../../widgets/order_look.dart';
 import '../../widgets/order_quantity_stepper.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/profile_avatar_button.dart';
+import '../../widgets/line_price.dart';
 import 'checkout_screen.dart';
 
 class CartScreen extends StatefulWidget {
@@ -522,9 +523,10 @@ class _CartLineState extends State<_CartLine> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          AniHowMoney.peso(item.lineTotal),
-                          key: ValueKey('cart-line-total-${item.id}'),
+                        LinePrice(
+                          total: item.lineTotal,
+                          original: item.lineSubtotal,
+                          totalKey: ValueKey('cart-line-total-${item.id}'),
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),

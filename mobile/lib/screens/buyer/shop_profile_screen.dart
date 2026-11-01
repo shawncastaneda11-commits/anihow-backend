@@ -44,6 +44,8 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
   bool _loadingMore = false;
   String? _reviewsError;
 
+  final _reviewsKey = GlobalKey();
+
   bool get _previewing => widget.preview != null;
 
   bool get _canFavorite {
@@ -208,158 +210,154 @@ class _ShopProfileScreenState extends State<ShopProfileScreen> {
             snapshot: snapshot,
             onRetry: _reload,
             emptyMessage: AppStrings.of(context).shopNotFound,
-            builder: (context, shop) {
-              final s = AppStrings.of(context);
-              return RefreshIndicator(
-                onRefresh: _reload,
-                child: ListView(
-                  padding: AniHowSpace.screenPadding,
-                  children: [
-                    if (shop.coverUrl != null && shop.coverUrl!.isNotEmpty) ...[
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          shop.coverUrl!,
-                          height: 140,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      const SizedBox(height: AniHowSpace.cardGap),
-                    ],
-                    Card(
-                      child: Padding(
-                        padding: AniHowSpace.cardPadding,
-                        child: ShopIdentityHeader(shop: shop),
-                      ),
-                    ),
-                    if (_canFavorite) ...[
-                      const SizedBox(height: AniHowSpace.cardGap),
-                      OutlinedButton.icon(
-                        onPressed: _favoriteBusy
-                            ? null
-                            : () => _toggleFavorite(shop),
-                        icon: Icon(
-                          _isFavorited(shop)
-                              ? Icons.favorite
-                              : Icons.favorite_outline,
-                        ),
-                        label: Text(
-                          _isFavorited(shop)
-                              ? s.removeStoreFromFavorites
-                              : s.addStoreToFavorites,
-                        ),
-                      ),
-                    ],
-                    if (!_previewing && _canFavorite) ...[
-                      const SizedBox(height: AniHowSpace.cardGap),
-                      ChatWithStallButton(sellerId: shop.id),
-                    ],
-                    if (shop.farmId != null && shop.farmIsActive) ...[
-                      const SizedBox(height: AniHowSpace.cardGap),
-                      FarmLinkChip(
-                        farmId: shop.farmId!,
-                        openCombinedPage: true,
-                        logoUrl: shop.farmLogoUrl,
-                        label: shop.farmName == null || shop.farmName!.isEmpty
-                            ? s.farm
-                            : s.farmLine(shop.farmName!),
-                      ),
-                    ] else if (shop.farmName != null &&
-                        shop.farmName!.isNotEmpty) ...[
-                      const SizedBox(height: AniHowSpace.cardGap),
-                      Text(
-                        s.farmLine(shop.farmName!),
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
-                    const SizedBox(height: AniHowSpace.section),
-                    Text(
-                      s.pickupOnly,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: AniHowSpace.labelGap),
-                    Text(
-                      s.callToPickup,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: AniHowSpace.section),
-                    Text(
-                      s.activeListings,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: AniHowSpace.cardGap),
-                    if (shop.listings.isEmpty)
-                      const ShopListingsEmpty()
-                    else
-                      ...shop.listings.map(
-                        (listing) => Padding(
-                          padding: const EdgeInsets.only(
-                            bottom: AniHowSpace.cardGap,
-                          ),
-                          child: ProduceCard(
-                            listing: listing,
-                            showSeller: false,
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => ListingDetailScreen(
-                                    listingId: listing.id,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: AniHowSpace.section),
-                    Text(
-                      s.reviews,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: AniHowSpace.cardGap),
-                    if (_loadingReviews)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(
-                          vertical: AniHowSpace.section,
-                        ),
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    else if (_reviewsError != null)
-                      Text(
-                        _reviewsError!,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      )
-                    else if (_reviews.isEmpty)
-                      const _EmptyNote(
-                        icon: Icons.rate_review_outlined,
-                        message: 'No reviews yet',
-                      )
-                    else ...[
-                      ..._reviews.map(
-                        (review) => Padding(
-                          padding: const EdgeInsets.only(
-                            bottom: AniHowSpace.cardGap,
-                          ),
-                          child: ShopReviewTile(review: review),
-                        ),
-                      ),
-                      if (_page < _lastPage)
-                        TextButton(
-                          onPressed: _loadingMore
-                              ? null
-                              : () => _loadReviews(more: true),
-                          child: Text(_loadingMore ? 'Loading…' : 'Show more'),
-                        ),
-                    ],
-                  ],
-                ),
-              );
-            },
+            builder: (context, shop) => _body(context, shop),
           );
         },
       ),
     );
+  }
+
+  Widget _body(BuildContext context, ShopProfile shop) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+    final farmName = shop.farmName?.trim();
+    return RefreshIndicator(
+      onRefresh: _reload,
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          ShopHero(shop: shop),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AniHowSpace.screen,
+              8,
+              AniHowSpace.screen,
+              AniHowSpace.screen + AniHowSpace.section,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  shop.shopName,
+                  key: const ValueKey('shop-profile-name'),
+                  style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (shop.farmId != null && shop.farmIsActive)
+                      FarmLinkChip(
+                        farmId: shop.farmId!,
+                        openCombinedPage: true,
+                        logoUrl: shop.farmLogoUrl,
+                        label: farmName == null || farmName.isEmpty ? s.farm : s.farmLine(farmName),
+                      )
+                    else if (farmName != null && farmName.isNotEmpty)
+                      Text(s.farmLine(farmName), style: theme.textTheme.bodyMedium),
+                    if (shop.hasRating) RatingLabel(rating: shop.averageRating!, count: shop.reviewsCount),
+                  ],
+                ),
+                const SizedBox(height: AniHowSpace.cardGap),
+                ShopStats(
+                  listings: shop.listings.length,
+                  rating: shop.hasRating ? shop.averageRating : null,
+                  reviews: shop.reviewsCount,
+                  onReviews: _showReviews,
+                ),
+                if (_canFavorite) ...[
+                  const SizedBox(height: AniHowSpace.cardGap),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.icon(
+                          key: const ValueKey('shop-favorite'),
+                          onPressed: _favoriteBusy ? null : () => _toggleFavorite(shop),
+                          icon: Icon(
+                            _isFavorited(shop) ? Icons.favorite : Icons.favorite_outline,
+                            size: 18,
+                          ),
+                          label: Text(
+                            _isFavorited(shop) ? s.removeStoreFromFavorites : s.addStoreToFavorites,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      if (!_previewing) ...[
+                        const SizedBox(width: AniHowSpace.cardGap),
+                        Expanded(child: ChatWithStallButton(sellerId: shop.id)),
+                      ],
+                    ],
+                  ),
+                ],
+                const SizedBox(height: AniHowSpace.cardGap),
+                if (ShopAbout.hasAny(shop, showContact: false)) ...[
+                  ShopAbout(shop: shop),
+                  const SizedBox(height: AniHowSpace.cardGap),
+                ],
+                ShopPaymentsCard(shop: shop),
+                const SizedBox(height: AniHowSpace.section),
+                Text(s.activeListings, style: theme.textTheme.titleMedium),
+                const SizedBox(height: AniHowSpace.cardGap),
+                if (shop.listings.isEmpty)
+                  const ShopListingsEmpty()
+                else
+                  ...shop.listings.map(
+                    (listing) => Padding(
+                      padding: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
+                      child: ProduceCard(
+                        listing: listing,
+                        showSeller: false,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => ListingDetailScreen(listingId: listing.id),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: AniHowSpace.section),
+                Text(s.reviews, key: _reviewsKey, style: theme.textTheme.titleMedium),
+                const SizedBox(height: AniHowSpace.cardGap),
+                if (_loadingReviews)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: AniHowSpace.section),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (_reviewsError != null)
+                  Text(_reviewsError!, style: theme.textTheme.bodyMedium)
+                else if (_reviews.isEmpty)
+                  _EmptyNote(icon: Icons.rate_review_outlined, message: s.noReviewsShort)
+                else ...[
+                  ..._reviews.map(
+                    (review) => Padding(
+                      padding: const EdgeInsets.only(bottom: AniHowSpace.cardGap),
+                      child: ShopReviewTile(review: review),
+                    ),
+                  ),
+                  if (_page < _lastPage)
+                    TextButton(
+                      onPressed: _loadingMore ? null : () => _loadReviews(more: true),
+                      child: Text(_loadingMore ? 'Loading…' : 'Show more'),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The stats card's reviews cell jumps down to the reviews on this page.
+  void _showReviews() {
+    final target = _reviewsKey.currentContext;
+    if (target != null) {
+      Scrollable.ensureVisible(target, duration: const Duration(milliseconds: 300));
+    }
   }
 }
 

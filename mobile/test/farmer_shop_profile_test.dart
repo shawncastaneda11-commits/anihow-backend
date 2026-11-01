@@ -62,7 +62,7 @@ void main() {
 
     expect(find.text('sariwa ang ani'), findsOneWidget);
     expect(find.text('malaki ako'), findsNothing);
-    expect(find.text(s.noBioYet), findsNothing);
+    expect(find.text('No bio yet'), findsNothing);
   });
 
   testWidgets('a finished shop shows About and the payment status, not the checklist', (

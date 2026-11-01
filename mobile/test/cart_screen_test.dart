@@ -228,12 +228,18 @@ void main() {
 
     expect(find.byKey(const ValueKey('cart-discount-nudge')), findsOneWidget);
     expect(find.textContaining('Tawad applied:'), findsNothing);
+    expect(find.byKey(const ValueKey('cart-line-total-1-original')), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('order-qty-plus-1')));
     await tester.pump();
 
     expect(find.byKey(const ValueKey('cart-discount-nudge')), findsNothing);
     expect(find.text('Tawad applied: ₱5.00 off'), findsOneWidget);
+
+    final original = tester.widget<Text>(find.byKey(const ValueKey('cart-line-total-1-original')));
+    expect(original.data, '₱120.00');
+    expect(original.style?.decoration, TextDecoration.lineThrough);
+    expect(tester.widget<Text>(find.byKey(const ValueKey('cart-line-total-1'))).data, '₱115.00');
   });
 
   testWidgets('the checkout bar matches the summary and opens checkout', (

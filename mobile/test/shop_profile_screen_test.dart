@@ -70,4 +70,60 @@ void main() {
     expect(find.byIcon(Icons.phone_outlined), findsNothing);
     expect(find.text('Mang Tonyo Farm'), findsOneWidget);
   });
+
+  testWidgets('buyers see the seller profile layout without the seller-only parts', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(400, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _app(
+        home: const ShopProfileScreen(
+          sellerId: 7,
+          preview: ShopProfile(
+            id: 7,
+            shopName: 'Kuya Jun Harvest',
+            name: 'Jun',
+            bio: 'Fresh squash every week.',
+            location: 'Manggahan, General Trias',
+            averageRating: '4.0',
+            reviewsCount: 5,
+            acceptsOnlinePayment: true,
+            paymentTimeLimitHours: 24,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('shop-profile-name')), findsOneWidget);
+    expect(find.byKey(const ValueKey('farmer-shop-reviews')), findsOneWidget);
+    expect(find.byKey(const ValueKey('shop-about')), findsOneWidget);
+    expect(find.text('Fresh squash every week.'), findsOneWidget);
+    expect(find.byKey(const ValueKey('shop-payments')), findsOneWidget);
+    expect(find.text('Online payment or cash'), findsOneWidget);
+    expect(find.text('Pickup only'), findsOneWidget);
+
+    expect(find.byKey(const ValueKey('shop-cover-button')), findsNothing);
+    expect(find.byKey(const ValueKey('shop-payments-manage')), findsNothing);
+    expect(find.byKey(const ValueKey('shop-checklist')), findsNothing);
+    expect(find.byKey(const ValueKey('shop-edit')), findsNothing);
+  });
+
+  testWidgets('a cash-only shop says so to buyers', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(400, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _app(
+        home: const ShopProfileScreen(
+          sellerId: 8,
+          preview: ShopProfile(id: 8, shopName: 'Aling Nena', name: 'Nena', acceptsOnlinePayment: false),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Cash only'), findsOneWidget);
+    expect(find.text('Online payment is off'), findsNothing);
+  });
 }

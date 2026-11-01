@@ -54,7 +54,7 @@ digraph G {
     by3 [label="Place and cancel\norders"];
     by4 [label="Choose fulfillment"];
     by5 [label="Leave review"];
-    by6 [label="Save favorite listings\nand shops"];
+    by6 [label="Save favorites and\nfollow farms"];
   }
 
   sa -> {sa1 sa2 sa3 sa4 sa5 sa6 sa7 sa8 sa9};

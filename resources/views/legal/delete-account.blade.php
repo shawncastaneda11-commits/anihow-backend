@@ -16,8 +16,9 @@
         <h2>Ano ang binubura at ano ang naiiwan</h2>
         <ul>
             <li><strong>Binubura:</strong> ang pangalan, email, phone at mga larawan mo, ang cart, mga paborito at sinusundang bukid, mga abiso, at ang pag-sign in mo.</li>
-            <li><strong>Naiiwan:</strong> ang mga natapos na order, na makikita bilang "Deleted user" at wala na ang mga detalye mo, para tama ang tala ng benta ng bukid.</li>
+            <li><strong>Naiiwan:</strong> ang mga natapos na order, na makikita bilang "Deleted user" at wala na ang mga detalye mo, para tama ang tala ng benta ng bukid. Mananatili ang mga ito hangga't ginagamit ng bukid ang AniHow para sa tala ng benta nito.</li>
         </ul>
+        <p>Binubura ang mga detalye mo kapag inaprubahan ng administrator ang kahilingan. Ang mga kopya sa backup ng server ay nabubura sa loob ng 30 araw.</p>
     @else
         <p>You can delete the account you use in AniHow, the market hub app for farmers in Cavite.</p>
         <h2>In the app</h2>
@@ -33,7 +34,8 @@
         <h2>What is deleted and what is kept</h2>
         <ul>
             <li><strong>Deleted:</strong> your name, email, phone and photos, your cart, favorites and followed farms, your notifications, and your sign-in.</li>
-            <li><strong>Kept:</strong> completed orders, shown as "Deleted user" without your details, so the farm's sales records stay correct.</li>
+            <li><strong>Kept:</strong> completed orders, shown as "Deleted user" without your details, so the farm's sales records stay correct. They are kept for as long as the farm uses AniHow for its sales records.</li>
         </ul>
+        <p>Your details are deleted when an administrator approves the request. Copies in the server's backups are removed within 30 days.</p>
     @endif
 @endsection

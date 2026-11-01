@@ -32,7 +32,8 @@ class LegalPagesTest extends TestCase
             ->assertSee('Delete your AniHow account')
             ->assertSee('Request account deletion')
             ->assertSee('mailto:help@example.com', false)
-            ->assertSee('Deleted user');
+            ->assertSee('Deleted user')
+            ->assertSee('removed within 30 days');
 
         $this->get('/delete-account?lang=fil')
             ->assertOk()

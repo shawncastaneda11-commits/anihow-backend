@@ -13,7 +13,7 @@ class SellerHelpTest extends TestCase
     public function test_seller_help_is_public_and_lists_only_active_farms(): void
     {
         config([
-            'anihow.seller_help.email' => 'ict@lpu.edu.ph',
+            'anihow.seller_help.email' => 'ictd@lpu.edu.ph',
             'anihow.seller_help.office' => 'LPU ICTD',
             'anihow.seller_help.phone' => null,
             'anihow.auth.temporary_password_days' => 7,
@@ -35,7 +35,7 @@ class SellerHelpTest extends TestCase
 
         $response = $this->getJson('/api/seller-help')
             ->assertOk()
-            ->assertJsonPath('data.contact.email', 'ict@lpu.edu.ph')
+            ->assertJsonPath('data.contact.email', 'ictd@lpu.edu.ph')
             ->assertJsonPath('data.contact.office', 'LPU ICTD')
             ->assertJsonPath('data.contact.phone', null)
             ->assertJsonPath('data.temporary_password_days', 7)

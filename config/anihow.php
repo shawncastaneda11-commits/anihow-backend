@@ -88,7 +88,7 @@ return [
     | optional; an empty value is stored as null so the app can hide Call.
     */
     'seller_help' => [
-        'email' => env('ANIHOW_SELLER_HELP_EMAIL', 'ict@lpu.edu.ph'),
+        'email' => env('ANIHOW_SELLER_HELP_EMAIL', 'ictd@lpu.edu.ph'),
         'phone' => env('ANIHOW_SELLER_HELP_PHONE') ?: null,
         'office' => env('ANIHOW_SELLER_HELP_OFFICE', 'LPU ICTD'),
     ],

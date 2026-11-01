@@ -93,7 +93,7 @@ L2['3'] = ('Browse Marketplace', [
   ('fs','b','shop profile\\nupdates'), ('b','D1','shop profile'), ('b','fs','own shop reviews,\\nrating'),
   ('by','c','farm selection'), ('fs','c','farm selection'), ('D2','c','profile, photos,\\ncontact number'), ('D12','c','public\\nannouncements'),
   ('c','by','farm page without\\ncontact number'), ('c','fs','farm page, contact\\nnumber if own farm'),
-  ('by','d','listing and shop\\nfavorites'), ('d','D10','favorites'), ('D10','d','saved favorites'), ('d','by','favorites list')])
+  ('by','d','shop\\nfavorites'), ('d','D10','favorites'), ('D10','d','saved favorites'), ('d','by','favorites list')])
 L2['4'] = ('Process Orders', [
   ('a','4.1','Manage\\nCart'), ('b','4.2','Check Out'), ('c','4.3','Update\\nOrder\\nStatus'), ('d','4.4','Record\\nWalk-in\\nSale'),
   ('e','4.5','Sweep\\nStale\\nOrders'), ('f','4.6','Review\\nOrders'), ('g','4.7','Provide\\nOrder\\nRecords')], [

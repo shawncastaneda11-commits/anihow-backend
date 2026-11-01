@@ -17,10 +17,9 @@
         p, li { margin: 0 0 10px; }
         .muted { color: var(--muted); font-size: 14px; }
         .lang { margin: 0 0 20px; font-size: 14px; }
-        .lang a { color: var(--brand); font-weight: 600; }
+        a { color: var(--brand); font-weight: 600; }
         ol { padding-left: 22px; }
         footer { border-top: 1px solid var(--line); margin-top: 36px; padding-top: 16px; font-size: 14px; color: var(--muted); }
-        footer a { color: var(--brand); }
     </style>
 </head>
 <body>

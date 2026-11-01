@@ -23,6 +23,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _next = TextEditingController();
   final _confirm = TextEditingController();
   bool _busy = false;
+  bool _showRuleErrors = false;
 
   @override
   void dispose() {
@@ -33,6 +34,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   }
 
   Future<void> _save() async {
+    if (!PasswordRules.allMet(_next.text)) {
+      setState(() => _showRuleErrors = true);
+      return;
+    }
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final auth = context.read<AuthController>();
@@ -100,8 +105,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             const SizedBox(height: 8),
             ListenableBuilder(
               listenable: _next,
-              builder: (context, _) =>
-                  PasswordRulesChecklist(password: _next.text),
+              builder: (context, _) => PasswordRulesChecklist(
+                password: _next.text,
+                showErrors: _showRuleErrors,
+              ),
             ),
             const SizedBox(height: AniHowSpace.fieldGap),
             PasswordField(

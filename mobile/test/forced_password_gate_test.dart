@@ -27,13 +27,16 @@ class _QuietApi extends ApiClient {
   _QuietApi(this.account) : super(onUnauthorized: () {});
 
   UserAccount account;
+  int changeCalls = 0;
 
   @override
   Future<void> changePassword({
     required String currentPassword,
     required String password,
     required String passwordConfirmation,
-  }) async {}
+  }) async {
+    changeCalls += 1;
+  }
 
   @override
   Future<UserAccount> currentUser() async => account;
@@ -154,8 +157,8 @@ void main() {
     expect(find.text('Set your own password'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField).at(0), 'temp-password');
-    await tester.enterText(find.byType(TextField).at(1), 'new-password-1');
-    await tester.enterText(find.byType(TextField).at(2), 'new-password-1');
+    await tester.enterText(find.byType(TextField).at(1), 'New-password-1');
+    await tester.enterText(find.byType(TextField).at(2), 'New-password-1');
     await tester.tap(find.widgetWithText(FilledButton, 'Save password'));
     await tester.pump();
     await tester.pump();
@@ -163,5 +166,48 @@ void main() {
     expect(auth.user?.mustChangePassword, isFalse);
     expect(find.byType(AdminGateScreen), findsOneWidget);
     expect(find.text('Set your own password'), findsNothing);
+  });
+
+  testWidgets('saving a password that breaks a rule marks the rules in red', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(412, 915));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final api = _QuietApi(_account(roles: const ['super_admin']));
+    final auth = AuthController(api: api);
+    auth.restoring = false;
+    auth.user = _account(
+      roles: const ['super_admin'],
+      mustChangePassword: true,
+    );
+
+    await tester.pumpWidget(_gate(auth));
+    await tester.pump();
+
+    await tester.enterText(find.byType(TextField).at(0), 'temp-password');
+    await tester.enterText(find.byType(TextField).at(1), 'Anihow1');
+    await tester.enterText(find.byType(TextField).at(2), 'Anihow1');
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('password-rules-box')), findsOneWidget);
+    expect(find.byIcon(Icons.cancel), findsNWidgets(2));
+    expect(find.text('Fix 2 rules to continue'), findsNothing);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Save password'));
+    await tester.pump();
+
+    expect(api.changeCalls, 0);
+    expect(
+      find.byKey(const ValueKey('password-rules-box-failing')),
+      findsOneWidget,
+    );
+    expect(find.text('Fix 2 rules to continue'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).at(1), 'Anihow#2026');
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('password-rules-box')), findsOneWidget);
+    expect(find.byIcon(Icons.cancel), findsNothing);
   });
 }

@@ -235,7 +235,7 @@ class _SellerInfoScreenState extends State<SellerInfoScreen> {
                 children: [
                   for (var i = 0; i < help.farms.length; i++) ...[
                     if (i > 0) const Divider(height: 1),
-                    _FarmRow(farm: help.farms[i], onCall: _dial),
+                    _FarmRow(farm: help.farms[i]),
                   ],
                 ],
               ),
@@ -282,10 +282,9 @@ class _NumberedStep extends StatelessWidget {
 }
 
 class _FarmRow extends StatelessWidget {
-  const _FarmRow({required this.farm, required this.onCall});
+  const _FarmRow({required this.farm});
 
   final SellerHelpFarm farm;
-  final Future<void> Function(String number) onCall;
 
   @override
   Widget build(BuildContext context) {
@@ -294,7 +293,6 @@ class _FarmRow extends StatelessWidget {
       farm.municipality,
       farm.contactPerson,
     ].whereType<String>().where((part) => part.isNotEmpty).join(' · ');
-    final digits = dialablePhone(farm.contactNumber);
 
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 56),
@@ -319,18 +317,6 @@ class _FarmRow extends StatelessWidget {
                 ],
               ),
             ),
-            if (digits != null)
-              SizedBox(
-                width: 44,
-                height: 44,
-                child: IconButton(
-                  key: Key('seller-farm-call-${farm.id}'),
-                  padding: EdgeInsets.zero,
-                  tooltip: farm.contactNumber,
-                  onPressed: () => onCall(farm.contactNumber!),
-                  icon: const Icon(Icons.phone_outlined),
-                ),
-              ),
           ],
         ),
       ),

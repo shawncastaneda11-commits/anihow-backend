@@ -10,10 +10,13 @@ use Illuminate\Support\Collection;
 class SellerHelpResource extends JsonResource
 {
     /**
+     * Public: anyone can open this before signing in, so a farm's contact
+     * number (private to its sellers and the Super Admin) is never included.
+     *
      * @return array{
      *     contact: array{office: ?string, email: ?string, phone: ?string},
      *     temporary_password_days: int,
-     *     farms: list<array{id: int, name: string, municipality: ?string, contact_person: ?string, contact_number: ?string}>
+     *     farms: list<array{id: int, name: string, municipality: ?string, contact_person: ?string}>
      * }
      */
     public function toArray(Request $request): array
@@ -34,7 +37,6 @@ class SellerHelpResource extends JsonResource
                     'name' => $farm->name,
                     'municipality' => $this->blank($farm->municipality),
                     'contact_person' => $this->blank($farm->contact_person),
-                    'contact_number' => $this->blank($farm->contact_number),
                 ])
                 ->values()
                 ->all(),

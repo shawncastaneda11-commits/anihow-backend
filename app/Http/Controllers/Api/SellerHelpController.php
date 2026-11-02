@@ -13,7 +13,7 @@ class SellerHelpController extends Controller
         $farms = Farm::query()
             ->active()
             ->orderBy('name')
-            ->get(['id', 'name', 'municipality', 'contact_person', 'contact_number']);
+            ->get(['id', 'name', 'municipality', 'contact_person']);
 
         return new SellerHelpResource($farms);
     }

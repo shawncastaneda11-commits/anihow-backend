@@ -10,7 +10,7 @@ class SellerHelpTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_seller_help_is_public_and_lists_only_active_farms(): void
+    public function test_seller_help_is_public_lists_only_active_farms_and_hides_farm_numbers(): void
     {
         config([
             'anihow.seller_help.email' => 'ictd@lpu.edu.ph',
@@ -45,18 +45,17 @@ class SellerHelpTest extends TestCase
 
         $farm = $response->json('data.farms.0');
         $this->assertSame(
-            ['id', 'name', 'municipality', 'contact_person', 'contact_number'],
+            ['id', 'name', 'municipality', 'contact_person'],
             array_keys($farm),
         );
         $this->assertSame('General Trias', $farm['municipality']);
         $this->assertSame('Elena Ramos', $farm['contact_person']);
-        $this->assertSame('09171234567', $farm['contact_number']);
 
         $blank = $response->json('data.farms.1');
         $this->assertNull($blank['municipality']);
         $this->assertNull($blank['contact_person']);
-        $this->assertNull($blank['contact_number']);
         $this->assertStringNotContainsString('Closed Farm', $response->getContent());
+        $this->assertStringNotContainsString('09171234567', $response->getContent());
     }
 
     public function test_phone_and_temporary_password_days_come_from_config(): void

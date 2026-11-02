@@ -38,7 +38,6 @@ SellerHelp _help({String? phone, int days = 11}) {
         name: 'Apple Farm',
         municipality: 'General Trias',
         contactPerson: 'Elena Ramos',
-        contactNumber: '0917 123 4567',
       ),
       SellerHelpFarm(
         id: 2,
@@ -98,7 +97,7 @@ void main() {
     expect(find.textContaining('within 11 days'), findsOneWidget);
   });
 
-  testWidgets('partner farms render a call button only with a number', (
+  testWidgets('partner farms show no call button, only the office does', (
     tester,
   ) async {
     await _pump(tester, _SellerApi(_help(phone: '09170001111')));
@@ -107,7 +106,7 @@ void main() {
     expect(find.text('General Trias · Elena Ramos'), findsOneWidget);
     expect(find.text('Hill Farm'), findsOneWidget);
     expect(find.text('Amadeo'), findsOneWidget);
-    expect(find.byKey(const Key('seller-farm-call-1')), findsOneWidget);
+    expect(find.byKey(const Key('seller-farm-call-1')), findsNothing);
     expect(find.byKey(const Key('seller-farm-call-2')), findsNothing);
     expect(find.text('Call LPU ICTD'), findsOneWidget);
   });

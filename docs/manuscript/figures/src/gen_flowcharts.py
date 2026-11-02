@@ -141,7 +141,7 @@ save('fig5c_flow_content_editor', role_chart('ce', 'Log in to the\\nCMS', 'Conte
   ('Post an\\nannouncement?', [('io', 'Set audience,\\nschedule, pin'), ('d', 'Starts\\nnow?', 'Scheduler notifies\\nat start time'), ('p', 'Notify own\\nfarm’s sellers')]),
   ('Edit farm\\nanswers?', [('io', 'Add or override\\na farm answer'), ('p', 'Save for\\nmoderation')]),
   ('Set price\\nguards?', [('io', 'Enter farm floor\\nand discount'), ('d', 'Tighter than\\nsystem values?', 'Reject the\\nchange'), ('p', 'Save; notify\\nlistings')]),
-  ('View roster or\\nanalytics?', [('p', 'View roster and\\nfarm analytics')]),
+  ('View roster or\\nanalytics?', [('p', 'View roster and\\nfarm analytics'), ('io', 'Download Excel\\nreports')]),
 ]))
 
 # ---------------------------------------------------------------- Figure: Farmer-seller

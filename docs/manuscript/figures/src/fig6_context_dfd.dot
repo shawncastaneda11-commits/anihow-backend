@@ -18,8 +18,8 @@ digraph G {
   sa -> sys [label="approvals, system price guards,\ntaxonomy, moderation, system FAQ\nanswers, report and deletion decisions"];
   sys -> sa [label="order ledger, analytics, exports,\ncontent reports, deletion requests"];
 
-  ce -> sys [label="articles, farm profile and photos,\nfarm price guards, announcements,\nfarm FAQ answers"];
-  sys -> ce [label="farm roster, farm analytics,\nmoderation notices"];
+  ce -> sys [label="articles, farm profile and photos,\nfarm price guards, announcements,\nfarm FAQ answers, report dates or year"];
+  sys -> ce [label="farm roster, farm analytics,\nExcel reports, moderation notices"];
 
   sys -> fs [label="orders, crop-care articles, announcements,\nMy Sales figures, chat messages,\nnotifications, FAQ answers, data export"];
   sys -> fs [dir=back, label="listings, tawad rules, order updates,\nwalk-in sales, chat messages, review reports,\nprofile corrections, deletion requests"];

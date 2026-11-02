@@ -45,7 +45,7 @@ F1 = [
  ('p6','ce','moderation notices'), ('sch','p6','five-minute check'),
  ('p6','D2','profile, photos'), ('p6','D11','articles'), ('D11','p6','published articles'), ('p6','D12','announcements'), ('D12','p6','due announcements'),
  ('p6','D13','answers'), ('D13','p6','matching answers'), ('p6','D8','announcement notices'),
- ('D6','p7','completed orders'), ('p7','sa','system analytics,\\nexports, export log'), ('p7','ce','farm analytics'), ('p7','fs','My Sales'),
+ ('D6','p7','completed orders'), ('p7','sa','system analytics,\\nexports, export log'), ('p7','ce','farm analytics,\\nExcel reports'), ('ce','p7','report dates\\nor year'), ('p7','fs','My Sales'),
  ('sa','p7','export requests'), ('p7','D14','export entries'), ('D14','p7','export history'),
  ('by','p8','corrections, download\\nand deletion requests'), ('fs','p8','corrections, download\\nand deletion requests'),
  ('sa','p8','deletion decisions'), ('p8','sa','pending requests'), ('p8','by','own data export'), ('p8','fs','own data export'),
@@ -128,6 +128,7 @@ L2['7'] = ('Report Analytics and Exports', [
   ('D6','a','completed orders,\\nwalk-ins included'), ('a','sa','system-wide\\ndashboard'), ('a','ce','own farm\\ndashboard'),
   ('a','fs','My Sales,\\n7 or 30 days'), ('a','b','summaries'),
   ('sa','b','ledger or analytics\\nexport, filters'), ('D6','b','order ledger'), ('b','sa','export file\\n(no contact data)'),
+  ('ce','b','report dates or year\\n(own farm)'), ('b','ce','Excel report'),
   ('b','D14','export entry'), ('D14','b','export history')])
 L2['8'] = ('Handle Data Rights', [
   ('a','8.1','Correct\\nProfile'), ('b','8.2','Download\\nOwn Data'), ('c','8.3','Request\\nDeletion'), ('d','8.4','Decide\\nDeletion')], [

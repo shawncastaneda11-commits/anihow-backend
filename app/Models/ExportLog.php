@@ -57,6 +57,7 @@ class ExportLog extends Model
             ],
             ExportType::Analytics => [
                 $this->dateRange('', $filters['since'] ?? null, $filters['until'] ?? null) ?? 'Any date',
+                $this->farmName($filters['farm_id'] ?? null),
             ],
             default => [],
         };

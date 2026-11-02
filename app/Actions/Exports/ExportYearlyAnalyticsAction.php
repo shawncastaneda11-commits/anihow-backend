@@ -2,8 +2,8 @@
 
 namespace App\Actions\Exports;
 
+use App\Actions\Exports\Concerns\ResolvesExportFarm;
 use App\Enums\ExportType;
-use App\Enums\Permission;
 use App\Models\ExportLog;
 use App\Models\Farm;
 use App\Models\User;
@@ -17,6 +17,8 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ExportYearlyAnalyticsAction
 {
+    use ResolvesExportFarm;
+
     public function __construct(
         private FarmerSalesAnalytics $sales,
         private HarvestAnalytics $harvest,
@@ -67,23 +69,6 @@ class ExportYearlyAnalyticsAction
         ]);
 
         return $export['response'];
-    }
-
-    private function resolvedFarmId(User $actor, ?int $farmId): ?int
-    {
-        if ($actor->can(Permission::GenerateExports->value)) {
-            return $farmId;
-        }
-
-        if ($actor->can(Permission::ExportFarmAnalytics->value) && $actor->farm_id !== null) {
-            if ($farmId !== null && (int) $farmId !== (int) $actor->farm_id) {
-                abort(403);
-            }
-
-            return (int) $actor->farm_id;
-        }
-
-        abort(403);
     }
 
     /**

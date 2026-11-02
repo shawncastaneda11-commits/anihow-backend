@@ -168,10 +168,44 @@ class ExportCsvTest extends TestCase
         $this->assertGreaterThan(0, ExportLog::query()->first()->row_count);
     }
 
-    public function test_a_content_editor_and_farmer_seller_cannot_export(): void
+    public function test_a_content_editor_downloads_the_date_range_report_for_their_own_farm_only(): void
+    {
+        $farm = Farm::factory()->create(['name' => 'Editor Farm']);
+        $other = Farm::factory()->create();
+        $editor = $this->staff(Role::ContentEditor, $farm);
+        $own = $this->farmer([], $farm);
+        $elsewhere = $this->farmer([], $other);
+        $ownListing = $this->listingFor($own, ['crop_type_id' => $this->cropType(['name' => 'Own crop'])->id, 'price_per_unit' => 40, 'quantity_available' => 10]);
+        $theirListing = $this->listingFor($elsewhere, ['crop_type_id' => $this->cropType(['name' => 'Theirs'])->id, 'price_per_unit' => 90, 'quantity_available' => 10]);
+        $this->completeOrder($own, $this->placeOrder($this->buyer(), $ownListing, 1), 40);
+        $this->completeOrder($elsewhere, $this->placeOrder($this->buyer(), $theirListing, 1), 90);
+
+        $since = now()->startOfDay()->subDays(29);
+        $until = now()->endOfDay();
+
+        $response = app(ExportAnalyticsAction::class)->download($editor, $since, $until);
+        $this->assertStringContainsString('anihow-analytics-2026-09-24-farm-'.$farm->id.'.xlsx', (string) $response->headers->get('Content-Disposition'));
+        ['sheets' => $sheets, 'formulas' => $formulas] = $this->readXlsx($response);
+
+        $this->assertFalse($formulas);
+        $this->assertSame('AniHow analytics — Editor Farm', $sheets['Summary'][0][0]);
+        $this->assertEquals(40, $this->summaryValue($sheets, 'Total sales'));
+        $this->assertEquals(1, $this->summaryValue($sheets, 'Completed orders'));
+        $this->assertStringContainsString('Own crop', $this->allText($sheets));
+        $this->assertStringNotContainsString('Theirs', $this->allText($sheets));
+
+        $log = ExportLog::query()->sole();
+        $this->assertSame(ExportType::Analytics, $log->type);
+        $this->assertSame($editor->id, $log->user_id);
+        $this->assertSame($farm->id, $log->filters['farm_id']);
+        $this->assertStringEndsWith(' · Editor Farm', $log->filterSummary());
+    }
+
+    public function test_the_ledger_stays_with_the_super_admin_and_others_cannot_export_analytics(): void
     {
         $farm = Farm::factory()->create();
         $editor = $this->staff(Role::ContentEditor, $farm);
+        $unassigned = $this->staff(Role::ContentEditor);
         $farmer = $this->farmer([], $farm);
 
         $this->assertFalse(OrderResource::canAccess());
@@ -190,11 +224,13 @@ class ExportCsvTest extends TestCase
             $this->assertSame(403, $exception->getStatusCode());
         }
 
-        try {
-            app(ExportAnalyticsAction::class)->download($farmer, now()->startOfDay()->subDays(29));
-            $this->fail('Farmer-seller was allowed to export analytics.');
-        } catch (HttpException $exception) {
-            $this->assertSame(403, $exception->getStatusCode());
+        foreach (['Farmer-seller' => $farmer, 'Content Editor without a farm' => $unassigned, 'Buyer' => $this->buyer()] as $who => $user) {
+            try {
+                app(ExportAnalyticsAction::class)->download($user, now()->startOfDay()->subDays(29));
+                $this->fail($who.' was allowed to export analytics.');
+            } catch (HttpException $exception) {
+                $this->assertSame(403, $exception->getStatusCode());
+            }
         }
 
         $this->assertSame(0, ExportLog::query()->count());

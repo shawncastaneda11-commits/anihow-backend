@@ -108,7 +108,7 @@ class Dashboard extends BaseDashboard
                 ->label('Export report')
                 ->icon(Heroicon::OutlinedArrowDownTray)
                 ->modalSubmitActionLabel('Download Excel')
-                ->visible(fn (): bool => auth()->user()?->can(Permission::GenerateExports->value) ?? false)
+                ->visible(fn (): bool => $this->canDownloadReports())
                 ->schema([
                     DatePicker::make('from')
                         ->label('From')
@@ -129,7 +129,7 @@ class Dashboard extends BaseDashboard
                 ->label('Yearly report')
                 ->icon(Heroicon::OutlinedCalendarDays)
                 ->modalSubmitActionLabel('Download Excel')
-                ->visible(fn (): bool => $this->canDownloadYearly())
+                ->visible(fn (): bool => $this->canDownloadReports())
                 ->schema(fn (): array => $this->yearlyReportSchema())
                 ->action(function (array $data, ExportYearlyAnalyticsAction $export): BinaryFileResponse {
                     $user = auth()->user();
@@ -312,7 +312,10 @@ class Dashboard extends BaseDashboard
             && ! $user->can(Permission::ViewSystemAnalytics->value);
     }
 
-    private function canDownloadYearly(): bool
+    /**
+     * The Super Admin, or a Content Editor who looks after a farm.
+     */
+    private function canDownloadReports(): bool
     {
         $user = auth()->user();
 

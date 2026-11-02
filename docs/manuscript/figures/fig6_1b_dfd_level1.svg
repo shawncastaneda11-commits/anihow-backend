@@ -442,7 +442,7 @@
 <path fill="none" stroke="#333333" stroke-width="0.9" d="M103.34,-699.66C164.11,-699.05 261.26,-698.07 313.13,-697.55"/>
 <polygon fill="#333333" stroke="#333333" stroke-width="0.9" points="103.19,-697.56 97.21,-699.72 103.23,-701.76 103.19,-697.56"/>
 <text text-anchor="middle" x="205" y="-709.4" font-family="Liberation Sans" font-size="8.50">system analytics,</text>
-<text text-anchor="middle" x="205" y="-700.4" font-family="Liberation Sans" font-size="8.50">CSV exports, export log</text>
+<text text-anchor="middle" x="205" y="-700.4" font-family="Liberation Sans" font-size="8.50">exports, export log</text>
 </g>
 <!-- sa_p7&#45;&gt;p7 -->
 <g id="edge31" class="edge">

@@ -131,7 +131,7 @@ save('fig5b_flow_super_admin', role_chart('sa', 'Log in to the\\nCMS', 'Super Ad
   ('Moderate\\ncontent?', [('p', 'Review listings,\\nreviews, answers'), ('p', 'Take down, remove,\\nor deactivate')]),
   ('Handle a\\nreport?', [('p', 'Open the\\nreport'), ('d', 'Action\\nwarranted?', 'Dismiss;\\nnotify reporter'), ('p', 'Resolve; take down\\nor remove')]),
   ('Deletion\\nrequest?', [('p', 'Open the\\nrequest'), ('d', 'No open orders\\nand approved?', 'Reject;\\nnotify user'), ('p', 'Anonymize;\\nemail notice')]),
-  ('View\\nrecords?', [('p', 'View ledger, chats,\\nand analytics'), ('io', 'Export CSV\\n(logged)')]),
+  ('View\\nrecords?', [('p', 'View ledger, chats,\\nand analytics'), ('io', 'Export reports\\n(logged)')]),
 ]))
 
 # ---------------------------------------------------------------- Figure: Content Editor

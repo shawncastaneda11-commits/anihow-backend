@@ -9,21 +9,20 @@ use App\Models\Farm;
 use App\Models\User;
 use App\Services\FarmerSalesAnalytics;
 use App\Services\HarvestAnalytics;
-use App\Support\Analytics\AnalyticsCsvSections;
 use App\Support\Analytics\AnalyticsRange;
-use App\Support\CsvDownload;
+use App\Support\Analytics\AnalyticsWorkbook;
+use App\Support\Spreadsheet\XlsxReport;
 use Illuminate\Support\Carbon;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ExportYearlyAnalyticsAction
 {
     public function __construct(
         private FarmerSalesAnalytics $sales,
         private HarvestAnalytics $harvest,
-        private CsvDownload $csv,
     ) {}
 
-    public function download(User $actor, int $year, ?int $farmId, string $category): StreamedResponse
+    public function download(User $actor, int $year, ?int $farmId, string $category): BinaryFileResponse
     {
         $farmId = $this->resolvedFarmId($actor, $farmId);
         $category = in_array($category, ['all', 'fresh', 'value_added'], true) ? $category : 'all';
@@ -32,10 +31,29 @@ class ExportYearlyAnalyticsAction
         $year = (int) $range->year;
         $sales = $this->sales->build($actor, $range, $farmId);
         $harvest = $this->harvest->build($actor, $range, $farmId);
-        $lines = $this->lines($actor, $year, $farmId, $category, $sales, $harvest);
         $filename = $farmId === null
-            ? 'anihow-analytics-'.$year.'.csv'
-            : 'anihow-analytics-'.$year.'-farm-'.$farmId.'.csv';
+            ? 'anihow-analytics-'.$year.'.xlsx'
+            : 'anihow-analytics-'.$year.'-farm-'.$farmId.'.xlsx';
+        $farm = $farmId === null ? 'All farms' : (Farm::query()->find($farmId)?->name ?? 'Farm '.$farmId);
+        $product = match ($category) {
+            'fresh' => 'Fresh',
+            'value_added' => 'Value-added',
+            default => 'All',
+        };
+        $best = $sales['year_total']['best_month'] ?? null;
+        $bestMonth = is_array($best)
+            ? [Carbon::createFromFormat('!Y-m', (string) $best['key'])->format('M'), (float) $best['sales']]
+            : null;
+
+        $export = AnalyticsWorkbook::download(
+            $filename,
+            'AniHow yearly analytics — '.$farm,
+            'Year '.$year.'  ·  Category: '.$product.'  ·  Generated '.now()->timezone('Asia/Manila')->format('M j, Y g:i A'),
+            $sales,
+            $harvest,
+            $this->months($actor, $year, $farmId, $category),
+            $bestMonth,
+        );
 
         ExportLog::query()->create([
             'user_id' => $actor->id,
@@ -45,14 +63,10 @@ class ExportYearlyAnalyticsAction
                 'farm_id' => $farmId,
                 'category' => $category,
             ],
-            'row_count' => count(array_filter($lines, fn (array $line): bool => $line !== [])),
+            'row_count' => $export['rows'],
         ]);
 
-        return $this->csv->stream($filename, function ($handle) use ($lines): void {
-            foreach ($lines as $line) {
-                fputcsv($handle, $this->csv->row($line));
-            }
-        });
+        return $export['response'];
     }
 
     private function resolvedFarmId(User $actor, ?int $farmId): ?int
@@ -73,48 +87,9 @@ class ExportYearlyAnalyticsAction
     }
 
     /**
-     * @param  array<string, mixed>  $sales
-     * @param  array<string, mixed>  $harvest
-     * @return list<list<mixed>>
-     */
-    private function lines(User $actor, int $year, ?int $farmId, string $category, array $sales, array $harvest): array
-    {
-        $farm = $farmId === null ? 'All farms' : (Farm::query()->find($farmId)?->name ?? 'Farm '.$farmId);
-        $product = match ($category) {
-            'fresh' => 'Fresh',
-            'value_added' => 'Value-added',
-            default => 'All',
-        };
-        $best = $sales['year_total']['best_month'] ?? null;
-        $bestMonth = is_array($best)
-            ? [Carbon::createFromFormat('!Y-m', (string) $best['key'])->format('M'), $best['sales']]
-            : ['', ''];
-
-        return [
-            ['AniHow yearly analytics'],
-            ['Year', $year],
-            ['Farm', $farm],
-            ['Category', $product],
-            ['Generated at', now()->timezone('Asia/Manila')->format('M j, Y g:i A')],
-            [],
-            ...AnalyticsCsvSections::sales($sales, $bestMonth),
-            [],
-            ['Sales over time'],
-            ['Month', 'Orders', 'Sales', 'Cash sales', 'Online sales', 'App sales', 'Walk-in sales'],
-            ...$this->months($actor, $year, $farmId, $category),
-            [],
-            ...AnalyticsCsvSections::topCrops($sales),
-            [],
-            ...AnalyticsCsvSections::splits($sales),
-            [],
-            ...AnalyticsCsvSections::harvest($harvest),
-            [],
-            ...AnalyticsCsvSections::harvestByCrop($harvest),
-        ];
-    }
-
-    /**
-     * @return list<list<mixed>>
+     * One row per month. Months still to come stay blank.
+     *
+     * @return array{columns: list<array{0: string, 1: float, 2?: ?string}>, rows: list<list<mixed>>, total: list<mixed>}
      */
     private function months(User $actor, int $year, ?int $farmId, string $category): array
     {
@@ -126,7 +101,7 @@ class ExportYearlyAnalyticsAction
             $future = $year === (int) now()->year && $month > (int) now()->month;
 
             if ($future) {
-                $rows[] = [$label, '', '', '', '', '', ''];
+                $rows[] = [$label, null, null, null, null, null, null];
 
                 continue;
             }
@@ -149,6 +124,26 @@ class ExportYearlyAnalyticsAction
             ];
         }
 
-        return $rows;
+        $total = ['Total'];
+
+        foreach (range(1, 6) as $column) {
+            $total[] = round(array_sum(array_map(fn (array $row): float => (float) ($row[$column] ?? 0), $rows)), 2);
+        }
+
+        $total[1] = (int) $total[1];
+
+        return [
+            'columns' => [
+                ['Month', 10],
+                ['Orders', 10, XlsxReport::COUNT],
+                ['Sales', 15, XlsxReport::PESO],
+                ['Cash sales', 14, XlsxReport::PESO],
+                ['Online sales', 14, XlsxReport::PESO],
+                ['App sales', 14, XlsxReport::PESO],
+                ['Walk-in sales', 14, XlsxReport::PESO],
+            ],
+            'rows' => $rows,
+            'total' => $total,
+        ];
     }
 }

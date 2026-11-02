@@ -21,7 +21,7 @@ digraph G {
     sa4 [label="Moderate listings, reviews,\nand farm FAQ answers"];
     sa5 [label="Manage system\nFAQ answers"];
     sa6 [label="Process account\ndeletion requests"];
-    sa7 [label="View ledger and analytics;\nexport CSV"];
+    sa7 [label="View ledger and analytics;\nexport reports"];
     sa8 [label="Read order chat\nthreads"];
     sa9 [label="Resolve reports on\nlistings and reviews"];
 

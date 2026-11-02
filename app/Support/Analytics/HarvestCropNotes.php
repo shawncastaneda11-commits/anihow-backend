@@ -7,7 +7,7 @@ use App\Enums\StockRemovalReason;
 
 /**
  * Rejected and removed stock by reason, and quantities with their units, shared
- * by the dashboard's harvest table and the analytics CSVs.
+ * by the dashboard's harvest table and the analytics Excel report.
  */
 final class HarvestCropNotes
 {

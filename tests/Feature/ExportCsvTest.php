@@ -22,11 +22,13 @@ use Illuminate\Support\Carbon;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Concerns\CreatesMarketplaceActors;
+use Tests\Concerns\ReadsXlsxReports;
 use Tests\TestCase;
 
 class ExportCsvTest extends TestCase
 {
     use CreatesMarketplaceActors;
+    use ReadsXlsxReports;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -129,7 +131,7 @@ class ExportCsvTest extends TestCase
         $this->assertStringNotContainsString($farmer->email, $csv);
     }
 
-    public function test_super_admin_can_download_analytics_csv_matching_the_service(): void
+    public function test_super_admin_can_download_the_analytics_report_matching_the_service(): void
     {
         $admin = $this->staff(Role::SuperAdmin);
         $farmer = $this->farmer(['shop_name' => 'Analytics Stall']);
@@ -139,13 +141,14 @@ class ExportCsvTest extends TestCase
         $since = now()->startOfDay()->subDays(29);
         $until = now()->endOfDay();
 
-        $csv = $this->csvBody(app(ExportAnalyticsAction::class)->download($admin, $since, $until));
+        $response = app(ExportAnalyticsAction::class)->download($admin, $since, $until);
+        $this->assertStringContainsString('anihow-analytics-2026-09-24.xlsx', (string) $response->headers->get('Content-Disposition'));
+        ['sheets' => $sheets, 'formulas' => $formulas] = $this->readXlsx($response);
 
-        $this->assertStringContainsString('anihow-analytics-2026-09-24.csv', (string) $this->lastDisposition);
-
-        foreach (['AniHow analytics', 'Sales over time', 'Top crops', 'How buyers paid', 'Where sales came from', 'Harvest by crop', 'No cost recorded'] as $section) {
-            $this->assertStringContainsString($section, $csv);
-        }
+        $this->assertSame(['Summary', 'Sales over time', 'Top crops', 'Payments & sources', 'Harvest by crop'], array_keys($sheets));
+        $this->assertFalse($formulas);
+        $this->assertSame('AniHow analytics — All farms', $sheets['Summary'][0][0]);
+        $this->assertSame('No cost recorded', $this->summaryValue($sheets, 'Profit so far'));
 
         $built = app(FarmerSalesAnalytics::class)->build(
             $admin,
@@ -153,12 +156,13 @@ class ExportCsvTest extends TestCase
         );
 
         $this->assertEquals(80, $built['totals']['sales']);
-        $this->assertEquals($built['totals']['sales'], $this->labeledRow($csv, 'Total sales')[1]);
-        $this->assertEquals($built['totals']['orders'], $this->labeledRow($csv, 'Completed orders')[1]);
-        $this->assertEquals($built['totals']['sales'], $this->sectionSum($csv, 'Top crops', 4));
-        $this->assertEquals($built['totals']['sales'], $this->sectionSum($csv, 'Sales over time', 2));
-        $this->assertEquals($built['totals']['orders'], $this->sectionSum($csv, 'Sales over time', 1));
-        $this->assertSame(['Cash', '1', '80', '100'], $this->labeledRow($csv, 'Cash'));
+        $this->assertEquals($built['totals']['sales'], $this->summaryValue($sheets, 'Total sales'));
+        $this->assertEquals($built['totals']['orders'], $this->summaryValue($sheets, 'Completed orders'));
+        $this->assertEquals($built['totals']['sales'], $this->columnSum($sheets, 'Top crops', 4));
+        $this->assertEquals($built['totals']['sales'], $this->columnSum($sheets, 'Sales over time', 2));
+        $this->assertEquals($built['totals']['orders'], $this->columnSum($sheets, 'Sales over time', 1));
+        $this->assertEquals(['Total', $built['totals']['orders'], $built['totals']['sales']], $this->sheetRow($sheets, 'Sales over time', 'Total'));
+        $this->assertEquals(['Cash', 1, 80, 100], $this->sheetRow($sheets, 'Payments & sources', 'Cash'));
 
         $this->assertSame(ExportType::Analytics, ExportLog::query()->first()->type);
         $this->assertGreaterThan(0, ExportLog::query()->first()->row_count);
@@ -292,12 +296,12 @@ class ExportCsvTest extends TestCase
         $this->assertEquals(30, $row['total']);
     }
 
-    public function test_analytics_csv_prefixes_a_formula_crop_label_and_leaves_numbers(): void
+    public function test_the_analytics_report_keeps_a_formula_like_crop_name_as_text(): void
     {
         $admin = $this->staff(Role::SuperAdmin);
         $farmer = $this->farmer();
         $cropType = CropType::factory()->create([
-            'name' => '@Nightshade',
+            'name' => '=Nightshade+1',
             'floor_price' => 25,
             'max_discount' => 20,
         ]);
@@ -308,23 +312,20 @@ class ExportCsvTest extends TestCase
         ]);
         $this->completeOrder($farmer, $this->placeOrder($this->buyer(), $listing, 2), 80);
 
-        $csv = $this->csvBody(app(ExportAnalyticsAction::class)->download(
+        ['sheets' => $sheets, 'formulas' => $formulas] = $this->readXlsx(app(ExportAnalyticsAction::class)->download(
             $admin,
             now()->startOfDay()->subDays(29),
             now()->endOfDay(),
         ));
 
-        $this->assertStringContainsString("'@Nightshade", $csv);
-        $this->assertDoesNotMatchRegularExpression('/(?<!\')@Nightshade/', $csv);
+        $this->assertFalse($formulas);
+        $row = $this->sheetRow($sheets, 'Top crops', '=Nightshade+1', 1);
+        $this->assertEquals(2, $row[3]);
+        $this->assertEquals(80, $row[4]);
 
         $sanitiser = app(CsvDownload::class);
         $this->assertSame(["'@Nightshade", 2.0], $sanitiser->row(['@Nightshade', 2.0]));
         $this->assertSame([-10.5], $sanitiser->row([-10.5]));
-
-        $units = $this->sectionSum($csv, 'Top crops', 3);
-        $revenue = $this->sectionSum($csv, 'Top crops', 4);
-        $this->assertEquals(2, $units);
-        $this->assertEquals(80, $revenue);
     }
 
     public function test_content_editor_cannot_export_another_farms_orders_through_the_action(): void
@@ -383,60 +384,6 @@ class ExportCsvTest extends TestCase
         }
 
         $this->fail('Expected a ledger data row.');
-    }
-
-    /**
-     * @return list<string|null>
-     */
-    private function labeledRow(string $csv, string $label): array
-    {
-        foreach (preg_split('/\R/', ltrim($csv, "\xEF\xBB\xBF")) ?: [] as $line) {
-            $cells = str_getcsv($line);
-
-            if (($cells[0] ?? null) === $label) {
-                return $cells;
-            }
-        }
-
-        $this->fail('Missing CSV row '.$label);
-    }
-
-    private function sectionSum(string $csv, string $heading, int $column): float
-    {
-        $lines = preg_split('/\R/', $csv) ?: [];
-        $total = 0.0;
-        $inSection = false;
-        $seenHeader = false;
-
-        foreach ($lines as $line) {
-            $line = ltrim($line, "\xEF\xBB\xBF");
-            $cells = str_getcsv($line);
-
-            if (($cells[0] ?? '') === $heading && count($cells) === 1) {
-                $inSection = true;
-                $seenHeader = false;
-
-                continue;
-            }
-
-            if ($inSection && ($line === '' || $cells === [''])) {
-                break;
-            }
-
-            if (! $inSection) {
-                continue;
-            }
-
-            if (! $seenHeader) {
-                $seenHeader = true;
-
-                continue;
-            }
-
-            $total += (float) ($cells[$column] ?? 0);
-        }
-
-        return $total;
     }
 
     private function staff(Role $role, ?Farm $farm = null): User

@@ -88,7 +88,7 @@ digraph G {
   q4 -> q5 [label="No", minlen=2];
   s5_0 [shape=box, label="View ledger, chats,\nand analytics"];
   q5 -> s5_0 [label="Yes"];
-  s5_1 [shape=parallelogram, fillcolor="#F8F9FA", label="Export CSV\n(logged)", margin="0.30,0.12"];
+  s5_1 [shape=parallelogram, fillcolor="#F8F9FA", label="Export reports\n(logged)", margin="0.30,0.12"];
   s5_0 -> s5_1;
   r5 [shape=circle, width=0.5, fixedsize=true, fillcolor="#F8F9FA", label="R"];
   s5_1 -> r5;

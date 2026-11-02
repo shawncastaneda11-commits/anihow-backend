@@ -527,7 +527,7 @@
 <g id="node40" class="node">
 <title>s5_1</title>
 <polygon fill="#f8f9fa" stroke="#333333" points="741.94,-262 563.87,-262 518.06,-174 696.13,-174 741.94,-262"/>
-<text text-anchor="middle" x="630" y="-221.4" font-family="Liberation Sans" font-size="12.00">Export CSV</text>
+<text text-anchor="middle" x="630" y="-221.4" font-family="Liberation Sans" font-size="12.00">Export reports</text>
 <text text-anchor="middle" x="630" y="-208.4" font-family="Liberation Sans" font-size="12.00">(logged)</text>
 </g>
 <!-- s5_0&#45;&gt;s5_1 -->

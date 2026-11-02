@@ -25,14 +25,15 @@ use Livewire\Livewire;
 use Spatie\Permission\Models\Permission as PermissionModel;
 use Spatie\Permission\Models\Role as RoleModel;
 use Spatie\Permission\PermissionRegistrar;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Concerns\CreatesMarketplaceActors;
+use Tests\Concerns\ReadsXlsxReports;
 use Tests\TestCase;
 
 class YearlyAnalyticsExportTest extends TestCase
 {
     use CreatesMarketplaceActors;
+    use ReadsXlsxReports;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -85,7 +86,7 @@ class YearlyAnalyticsExportTest extends TestCase
         );
     }
 
-    public function test_a_super_admin_csv_covers_every_section_and_leaves_future_months_blank(): void
+    public function test_a_super_admin_report_covers_every_section_and_leaves_future_months_blank(): void
     {
         $admin = $this->staff(Role::SuperAdmin);
         $farm = Farm::factory()->create(['name' => 'North Farm']);
@@ -114,24 +115,30 @@ class YearlyAnalyticsExportTest extends TestCase
         ]);
 
         $response = app(ExportYearlyAnalyticsAction::class)->download($admin, 2026, null, 'all');
-        $csv = $this->csvBody($response);
 
-        $this->assertStringContainsString('anihow-analytics-2026.csv', (string) $response->headers->get('Content-Disposition'));
+        $this->assertStringContainsString('anihow-analytics-2026.xlsx', (string) $response->headers->get('Content-Disposition'));
         $this->assertStringNotContainsString('-farm-', (string) $response->headers->get('Content-Disposition'));
+        ['sheets' => $sheets, 'formulas' => $formulas] = $this->readXlsx($response);
 
-        foreach (['AniHow yearly analytics', 'Sales over time', 'Top crops', 'How buyers paid', 'Where sales came from', 'Harvest by crop', 'No cost recorded', 'All farms'] as $section) {
-            $this->assertStringContainsString($section, $csv);
-        }
+        $this->assertSame(['Summary', 'Sales over time', 'Top crops', 'Payments & sources', 'Harvest by crop'], array_keys($sheets));
+        $this->assertSame('AniHow yearly analytics — All farms', $sheets['Summary'][0][0]);
+        $this->assertSame('No cost recorded', $this->summaryValue($sheets, 'Profit so far'));
+        $this->assertSame('How buyers paid', $sheets['Payments & sources'][0][0]);
+        $this->assertSame('Where sales came from', $this->sheetRow($sheets, 'Payments & sources', 'Where sales came from')[0]);
 
-        $parsed = $this->parsedCells($csv);
-        $formula = collect($parsed)->flatten()->first(fn (mixed $cell): bool => is_string($cell) && str_starts_with($cell, "'="));
-        $this->assertNotNull($formula);
+        $this->assertFalse($formulas);
+        $this->assertSame(1, $this->sheetRow($sheets, 'Top crops', '=1+1', 1)[0]);
+        $this->assertSame('=1+1', $this->sheetRow($sheets, 'Harvest by crop', '=1+1')[0]);
 
         $yearly = app(FarmerSalesAnalytics::class)->build(
             $admin,
             AnalyticsRange::fromValues('yearly', null, null, 2026, 'all', true),
         );
-        $months = $this->monthlyRows($parsed);
+        $months = [];
+
+        foreach (array_slice($sheets['Sales over time'], 1, 12) as $row) {
+            $months[(string) $row[0]] = $row;
+        }
 
         $this->assertCount(12, $months);
 
@@ -140,7 +147,7 @@ class YearlyAnalyticsExportTest extends TestCase
             $row = $months[$label];
 
             if ($bucket['future']) {
-                $this->assertSame(['', '', '', '', '', ''], array_slice($row, 1));
+                $this->assertSame([], array_filter(array_slice($row, 1), fn (mixed $cell): bool => $cell !== '' && $cell !== null));
 
                 continue;
             }
@@ -150,16 +157,16 @@ class YearlyAnalyticsExportTest extends TestCase
         }
 
         $this->assertEquals(80, $yearly['totals']['sales']);
-        $this->assertEquals(40, $this->labeled($parsed, 'Value of harvested stock')[1]);
-        $this->assertSame(['Cash', '2', '80', '100'], $this->labeled($parsed, 'Cash'));
-        $this->assertSame(['Best month', 'Jun', '80'], $this->labeled($parsed, 'Best month'));
+        $this->assertEquals(80, $this->sheetRow($sheets, 'Sales over time', 'Total')[2]);
+        $this->assertEquals(40, $this->summaryValue($sheets, 'Value of harvested stock'));
+        $this->assertEquals(['Cash', 2, 80, 100], $this->sheetRow($sheets, 'Payments & sources', 'Cash'));
+        $this->assertSame('Jun · ₱80.00', $this->summaryValue($sheets, 'Best month'));
 
         $oneFarm = app(ExportYearlyAnalyticsAction::class)->download($admin, 2026, $farm->id, 'all');
-        $farmCsv = $this->csvBody($oneFarm);
-        $this->assertStringContainsString('anihow-analytics-2026-farm-'.$farm->id.'.csv', (string) $oneFarm->headers->get('Content-Disposition'));
-        $this->assertStringContainsString('North Farm', $farmCsv);
-        $total = $this->labeled($this->parsedCells($farmCsv), 'Total sales');
-        $this->assertEquals(50, $total[1]);
+        $this->assertStringContainsString('anihow-analytics-2026-farm-'.$farm->id.'.xlsx', (string) $oneFarm->headers->get('Content-Disposition'));
+        $farmSheets = $this->readXlsx($oneFarm)['sheets'];
+        $this->assertSame('AniHow yearly analytics — North Farm', $farmSheets['Summary'][0][0]);
+        $this->assertEquals(50, $this->summaryValue($farmSheets, 'Total sales'));
 
         $log = ExportLog::query()->where('type', ExportType::AnalyticsYearly)->latest('id')->first();
         $this->assertNotNull($log);
@@ -183,12 +190,11 @@ class YearlyAnalyticsExportTest extends TestCase
         $this->sale($elsewhere, $this->cropType(['name' => 'Theirs']), $this->listingFor($elsewhere), 1, 90, Carbon::parse('2026-06-04 09:00:00', 'Asia/Manila'));
 
         $response = app(ExportYearlyAnalyticsAction::class)->download($editor, 2026, null, 'all');
-        $csv = $this->csvBody($response);
-        $total = $this->labeled($this->parsedCells($csv), 'Total sales');
+        $this->assertStringContainsString('anihow-analytics-2026-farm-'.$farm->id.'.xlsx', (string) $response->headers->get('Content-Disposition'));
+        $sheets = $this->readXlsx($response)['sheets'];
 
-        $this->assertEquals(40, $total[1]);
-        $this->assertStringContainsString('anihow-analytics-2026-farm-'.$farm->id.'.csv', (string) $response->headers->get('Content-Disposition'));
-        $this->assertStringNotContainsString('Theirs', $csv);
+        $this->assertEquals(40, $this->summaryValue($sheets, 'Total sales'));
+        $this->assertStringNotContainsString('Theirs', $this->allText($sheets));
         $this->assertSame($farm->id, ExportLog::query()->first()->filters['farm_id']);
 
         $before = ExportLog::query()->count();
@@ -213,12 +219,12 @@ class YearlyAnalyticsExportTest extends TestCase
 
         Livewire::actingAs($editor)
             ->test(Dashboard::class)
-            ->mountAction('yearlyCsv')
+            ->mountAction('yearlyReport')
             ->assertFormFieldExists('year')
             ->assertFormFieldDoesNotExist('farm_id');
     }
 
-    public function test_a_farmer_seller_and_a_buyer_cannot_download_the_yearly_csv(): void
+    public function test_a_farmer_seller_and_a_buyer_cannot_download_the_yearly_report(): void
     {
         foreach ([$this->farmer(), $this->buyer()] as $user) {
             try {
@@ -272,74 +278,5 @@ class YearlyAnalyticsExportTest extends TestCase
         ]);
 
         return $order;
-    }
-
-    private function csvBody(StreamedResponse $response): string
-    {
-        ob_start();
-        $response->sendContent();
-
-        return (string) ob_get_clean();
-    }
-
-    /**
-     * @return list<list<string|null>>
-     */
-    private function parsedCells(string $csv): array
-    {
-        $lines = preg_split('/\R/', ltrim($csv, "\xEF\xBB\xBF")) ?: [];
-        $rows = [];
-
-        foreach ($lines as $line) {
-            if (trim($line) === '') {
-                $rows[] = [];
-
-                continue;
-            }
-
-            $rows[] = str_getcsv($line);
-        }
-
-        return $rows;
-    }
-
-    /**
-     * @param  list<list<string|null>>  $rows
-     * @return array<string, list<string|null>>
-     */
-    private function monthlyRows(array $rows): array
-    {
-        $start = null;
-
-        foreach ($rows as $index => $row) {
-            if (($row[0] ?? null) === 'Month') {
-                $start = $index + 1;
-                break;
-            }
-        }
-
-        $this->assertNotNull($start);
-        $months = [];
-
-        for ($index = $start; $index < $start + 12; $index++) {
-            $months[(string) $rows[$index][0]] = $rows[$index];
-        }
-
-        return $months;
-    }
-
-    /**
-     * @param  list<list<string|null>>  $rows
-     * @return list<string|null>
-     */
-    private function labeled(array $rows, string $label): array
-    {
-        foreach ($rows as $row) {
-            if (($row[0] ?? null) === $label) {
-                return $row;
-            }
-        }
-
-        $this->fail('Missing CSV row '.$label);
     }
 }

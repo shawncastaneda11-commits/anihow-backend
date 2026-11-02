@@ -16,7 +16,7 @@ digraph G {
        <TR><TD CELLPADDING="14"><FONT POINT-SIZE="15">AniHow<BR/>System</FONT></TD></TR></TABLE>>];
 
   sa -> sys [label="approvals, system price guards,\ntaxonomy, moderation, system FAQ\nanswers, report and deletion decisions"];
-  sys -> sa [label="order ledger, analytics, CSV exports,\ncontent reports, deletion requests"];
+  sys -> sa [label="order ledger, analytics, exports,\ncontent reports, deletion requests"];
 
   ce -> sys [label="articles, farm profile and photos,\nfarm price guards, announcements,\nfarm FAQ answers"];
   sys -> ce [label="farm roster, farm analytics,\nmoderation notices"];

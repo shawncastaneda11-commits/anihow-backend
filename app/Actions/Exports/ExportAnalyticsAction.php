@@ -8,26 +8,25 @@ use App\Models\ExportLog;
 use App\Models\User;
 use App\Services\FarmerSalesAnalytics;
 use App\Services\HarvestAnalytics;
-use App\Support\Analytics\AnalyticsCsvSections;
 use App\Support\Analytics\AnalyticsRange;
-use App\Support\CsvDownload;
+use App\Support\Analytics\AnalyticsWorkbook;
+use App\Support\Spreadsheet\XlsxReport;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
- * Every farm's analytics for the chosen dates, in the dashboard's sections
- * and with the dashboard's numbers.
+ * Every farm's analytics for the chosen dates as an Excel report, in the
+ * dashboard's sections and with the dashboard's numbers.
  */
 class ExportAnalyticsAction
 {
     public function __construct(
         private FarmerSalesAnalytics $sales,
         private HarvestAnalytics $harvest,
-        private CsvDownload $csv,
     ) {}
 
-    public function download(User $actor, CarbonInterface $since, ?CarbonInterface $until = null): StreamedResponse
+    public function download(User $actor, CarbonInterface $since, ?CarbonInterface $until = null): BinaryFileResponse
     {
         abort_unless($actor->can(Permission::GenerateExports->value), 403);
 
@@ -40,8 +39,16 @@ class ExportAnalyticsAction
         $range = AnalyticsRange::fromValues('custom', $since->toDateString(), $until->toDateString(), null, 'all');
         $sales = $this->sales->build($actor, $range);
         $harvest = $this->harvest->build($actor, $range);
-        $lines = $this->lines($range, $sales, $harvest);
-        $filename = 'anihow-analytics-'.now()->toDateString().'.csv';
+
+        $export = AnalyticsWorkbook::download(
+            'anihow-analytics-'.now()->toDateString().'.xlsx',
+            'AniHow analytics — All farms',
+            $range->from->format('M j, Y').' – '.$range->to->format('M j, Y')
+                .'  ·  Category: All  ·  Generated '.now()->timezone('Asia/Manila')->format('M j, Y g:i A'),
+            $sales,
+            $harvest,
+            $this->overTime($range, $sales['per_period']),
+        );
 
         ExportLog::query()->create([
             'user_id' => $actor->id,
@@ -50,54 +57,21 @@ class ExportAnalyticsAction
                 'since' => $since->toIso8601String(),
                 'until' => $until->toIso8601String(),
             ],
-            'row_count' => count(array_filter($lines, fn (array $line): bool => $line !== [])),
+            'row_count' => $export['rows'],
         ]);
 
-        return $this->csv->stream($filename, function ($handle) use ($lines): void {
-            foreach ($lines as $line) {
-                fputcsv($handle, $this->csv->row($line));
-            }
-        });
-    }
-
-    /**
-     * @param  array<string, mixed>  $sales
-     * @param  array<string, mixed>  $harvest
-     * @return list<list<mixed>>
-     */
-    private function lines(AnalyticsRange $range, array $sales, array $harvest): array
-    {
-        return [
-            ['AniHow analytics'],
-            ['From', $range->from->format('M j, Y')],
-            ['Until', $range->to->format('M j, Y')],
-            ['Farm', 'All farms'],
-            ['Category', 'All'],
-            ['Generated at', now()->timezone('Asia/Manila')->format('M j, Y g:i A')],
-            [],
-            ...AnalyticsCsvSections::sales($sales),
-            [],
-            ['Sales over time'],
-            [ucfirst($range->grouping), 'Orders', 'Sales'],
-            ...$this->periods($range, $sales['per_period']),
-            [],
-            ...AnalyticsCsvSections::topCrops($sales),
-            [],
-            ...AnalyticsCsvSections::splits($sales),
-            [],
-            ...AnalyticsCsvSections::harvest($harvest),
-            [],
-            ...AnalyticsCsvSections::harvestByCrop($harvest),
-        ];
+        return $export['response'];
     }
 
     /**
      * @param  list<array{start: string, end: string, future: bool, orders: int, sales: float}>  $buckets
-     * @return list<list<mixed>>
+     * @return array{columns: list<array{0: string, 1: float, 2?: ?string}>, rows: list<list<mixed>>, total: list<mixed>}
      */
-    private function periods(AnalyticsRange $range, array $buckets): array
+    private function overTime(AnalyticsRange $range, array $buckets): array
     {
         $rows = [];
+        $orders = 0;
+        $sales = 0.0;
 
         foreach ($buckets as $bucket) {
             if ($bucket['future']) {
@@ -116,8 +90,14 @@ class ExportAnalyticsAction
                 $bucket['orders'],
                 $bucket['sales'],
             ];
+            $orders += (int) $bucket['orders'];
+            $sales += (float) $bucket['sales'];
         }
 
-        return $rows;
+        return [
+            'columns' => [[ucfirst($range->grouping), 24], ['Orders', 10, XlsxReport::COUNT], ['Sales', 15, XlsxReport::PESO]],
+            'rows' => $rows,
+            'total' => ['Total', $orders, round($sales, 2)],
+        ];
     }
 }

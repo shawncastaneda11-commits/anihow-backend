@@ -2,9 +2,10 @@
 
 namespace App\Actions\Exports;
 
+use App\Actions\Exports\Concerns\ResolvesExportFarm;
 use App\Enums\ExportType;
-use App\Enums\Permission;
 use App\Models\ExportLog;
+use App\Models\Farm;
 use App\Models\User;
 use App\Services\FarmerSalesAnalytics;
 use App\Services\HarvestAnalytics;
@@ -16,11 +17,14 @@ use Illuminate\Support\Carbon;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
- * Every farm's analytics for the chosen dates as an Excel report, in the
- * dashboard's sections and with the dashboard's numbers.
+ * The analytics for the chosen dates as an Excel report, in the dashboard's
+ * sections and with the dashboard's numbers. The Super Admin gets every farm;
+ * a Content Editor gets only their own farm.
  */
 class ExportAnalyticsAction
 {
+    use ResolvesExportFarm;
+
     public function __construct(
         private FarmerSalesAnalytics $sales,
         private HarvestAnalytics $harvest,
@@ -28,8 +32,7 @@ class ExportAnalyticsAction
 
     public function download(User $actor, CarbonInterface $since, ?CarbonInterface $until = null): BinaryFileResponse
     {
-        abort_unless($actor->can(Permission::GenerateExports->value), 403);
-
+        $farmId = $this->resolvedFarmId($actor, null);
         $until ??= now();
 
         if ($since->greaterThan($until)) {
@@ -37,12 +40,16 @@ class ExportAnalyticsAction
         }
 
         $range = AnalyticsRange::fromValues('custom', $since->toDateString(), $until->toDateString(), null, 'all');
-        $sales = $this->sales->build($actor, $range);
-        $harvest = $this->harvest->build($actor, $range);
+        $sales = $this->sales->build($actor, $range, $farmId);
+        $harvest = $this->harvest->build($actor, $range, $farmId);
+        $filename = $farmId === null
+            ? 'anihow-analytics-'.now()->toDateString().'.xlsx'
+            : 'anihow-analytics-'.now()->toDateString().'-farm-'.$farmId.'.xlsx';
+        $farm = $farmId === null ? 'All farms' : (Farm::query()->find($farmId)?->name ?? 'Farm '.$farmId);
 
         $export = AnalyticsWorkbook::download(
-            'anihow-analytics-'.now()->toDateString().'.xlsx',
-            'AniHow analytics — All farms',
+            $filename,
+            'AniHow analytics — '.$farm,
             $range->from->format('M j, Y').' – '.$range->to->format('M j, Y')
                 .'  ·  Category: All  ·  Generated '.now()->timezone('Asia/Manila')->format('M j, Y g:i A'),
             $sales,
@@ -56,6 +63,7 @@ class ExportAnalyticsAction
             'filters' => [
                 'since' => $since->toIso8601String(),
                 'until' => $until->toIso8601String(),
+                'farm_id' => $farmId,
             ],
             'row_count' => $export['rows'],
         ]);

@@ -33,7 +33,7 @@ Live server: `https://anihow.tech` (API at `/api`, CMS at `/admin`).
 **Content Editor (CMS, one farm)**
 
 - My Farm profile (logo, cover, map pin, contact, pickup point, farm feature switches), farm photos, price guards and seller crop lists.
-- Crop types, crop-care articles, announcements, FAQ answers and the farm's analytics dashboard with a yearly Excel report.
+- Crop types, crop-care articles, announcements, FAQ answers and the farm's analytics dashboard with Excel reports for a date range or a year.
 
 **Super Admin (CMS)**
 

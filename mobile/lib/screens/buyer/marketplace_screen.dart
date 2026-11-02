@@ -52,6 +52,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   double? _nearLng;
   bool _locationUnavailable = false;
   bool _locationNoFix = false;
+  bool _locationOutside = false;
   bool _locating = false;
   bool _updatesHidden = false;
   bool _loading = true;
@@ -343,6 +344,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     double? longitude;
     var unavailable = false;
     var noFix = false;
+    var outside = false;
     if (choice.sort == 'nearest') {
       setState(() => _locating = true);
       try {
@@ -358,6 +360,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
             unavailable = true;
           case BuyerLocationNoFix():
             noFix = true;
+          case BuyerLocationOutsideArea():
+            outside = true;
         }
       } catch (_) {
         noFix = true;
@@ -380,6 +384,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       _nearLng = longitude;
       _locationUnavailable = unavailable;
       _locationNoFix = noFix;
+      _locationOutside = outside;
     });
     await _reload(scrollToTop: true);
   }
@@ -466,6 +471,21 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                       child: Text(
                         s.locationUnavailable,
                         key: const Key('location-unavailable'),
+                      ),
+                    ),
+                  ),
+                if (_locationOutside)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AniHowSpace.screen,
+                        AniHowSpace.cardGap,
+                        AniHowSpace.screen,
+                        0,
+                      ),
+                      child: Text(
+                        s.locationOutsideArea,
+                        key: const Key('location-outside-area'),
                       ),
                     ),
                   ),

@@ -395,6 +395,40 @@ void main() {
     expect(found.point.longitude, 120.88);
   });
 
+  test('a point outside the Philippines is an outside-area result', () async {
+    final result = await BuyerLocation.lookup(
+      current: () async => const BuyerPoint(37.42, -122.08),
+      lastKnown: () async => null,
+    );
+
+    expect(result, isA<BuyerLocationOutsideArea>());
+  });
+
+  testWidgets('farms nearest outside the Philippines keeps the usual order', (
+    tester,
+  ) async {
+    BuyerLocation.read = () async => const BuyerLocationOutsideArea();
+    final api = _ShopsApi();
+    final auth = AuthController(api: api)..restoring = false;
+
+    await tester.pumpWidget(_app(const ShopsScreen(), auth: auth));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(FilterChip));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('location-outside-area')), findsOneWidget);
+    expect(
+      find.text(
+        'Your location is outside the Philippines. Showing the usual order.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Something went wrong.'), findsNothing);
+    expect(api.nearLat, isNull);
+    expect(api.nearLng, isNull);
+  });
+
   test('no fresh fix and no last known point is a no-fix result', () async {
     final result = await BuyerLocation.lookup(
       current: () => Future<BuyerPoint?>.error(TimeoutException('no fix')),

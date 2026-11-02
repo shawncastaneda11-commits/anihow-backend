@@ -608,6 +608,10 @@ class AppStrings {
     'Location is off. Showing the usual order.',
     'Naka-off ang lokasyon. Ipinapakita ang karaniwang ayos.',
   );
+  String get locationOutsideArea => t(
+    'Your location is outside the Philippines. Showing the usual order.',
+    'Nasa labas ng Pilipinas ang lokasyon mo. Ipinapakita ang karaniwang ayos.',
+  );
   String get locationNoFix => t(
     "Couldn't get your location. Try again outside or check that location is on.",
     'Hindi makuha ang lokasyon mo. Subukan ulit sa labas o tingnan kung naka-on ang lokasyon.',

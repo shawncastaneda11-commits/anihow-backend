@@ -20,7 +20,7 @@ use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class Dashboard extends BaseDashboard
 {
@@ -104,8 +104,10 @@ class Dashboard extends BaseDashboard
     protected function getHeaderActions(): array
     {
         return [
-            Action::make('exportCsv')
-                ->label('Export CSV')
+            Action::make('exportReport')
+                ->label('Export report')
+                ->icon(Heroicon::OutlinedArrowDownTray)
+                ->modalSubmitActionLabel('Download Excel')
                 ->visible(fn (): bool => auth()->user()?->can(Permission::GenerateExports->value) ?? false)
                 ->schema([
                     DatePicker::make('from')
@@ -123,13 +125,13 @@ class Dashboard extends BaseDashboard
 
                     return $export->download(auth()->user(), $since, $until);
                 }),
-            Action::make('yearlyCsv')
-                ->label('Yearly CSV')
+            Action::make('yearlyReport')
+                ->label('Yearly report')
                 ->icon(Heroicon::OutlinedCalendarDays)
-                ->modalSubmitActionLabel('Download CSV')
+                ->modalSubmitActionLabel('Download Excel')
                 ->visible(fn (): bool => $this->canDownloadYearly())
-                ->schema(fn (): array => $this->yearlyCsvSchema())
-                ->action(function (array $data, ExportYearlyAnalyticsAction $export): StreamedResponse {
+                ->schema(fn (): array => $this->yearlyReportSchema())
+                ->action(function (array $data, ExportYearlyAnalyticsAction $export): BinaryFileResponse {
                     $user = auth()->user();
                     abort_unless($user instanceof User, 403);
 
@@ -149,7 +151,7 @@ class Dashboard extends BaseDashboard
     /**
      * @return list<Component>
      */
-    private function yearlyCsvSchema(): array
+    private function yearlyReportSchema(): array
     {
         $canChooseFarm = auth()->user()?->can(Permission::GenerateExports->value) ?? false;
 

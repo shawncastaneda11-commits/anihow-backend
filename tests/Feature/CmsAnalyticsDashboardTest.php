@@ -334,7 +334,7 @@ class CmsAnalyticsDashboardTest extends TestCase
             ->assertSee('Showing Oct 1 – Oct 10, 2026 · All categories · All farms');
     }
 
-    public function test_the_old_export_stays_on_the_dashboard_and_yearly_csv_follows_the_role(): void
+    public function test_the_old_export_stays_on_the_dashboard_and_yearly_report_follows_the_role(): void
     {
         $admin = $this->staff(Role::SuperAdmin);
         $editor = $this->staff(Role::ContentEditor, Farm::factory()->create(['value_added_enabled' => false]));
@@ -342,25 +342,25 @@ class CmsAnalyticsDashboardTest extends TestCase
 
         Livewire::actingAs($admin)
             ->test(Dashboard::class)
-            ->assertActionVisible('exportCsv')
-            ->assertActionVisible('yearlyCsv')
-            ->mountAction('yearlyCsv')
+            ->assertActionVisible('exportReport')
+            ->assertActionVisible('yearlyReport')
+            ->mountAction('yearlyReport')
             ->assertFormFieldExists('year')
             ->assertFormFieldExists('farm_id')
             ->assertFormFieldExists('category');
 
         Livewire::actingAs($editor)
             ->test(Dashboard::class)
-            ->assertActionHidden('exportCsv')
-            ->assertActionVisible('yearlyCsv')
-            ->mountAction('yearlyCsv')
+            ->assertActionHidden('exportReport')
+            ->assertActionVisible('yearlyReport')
+            ->mountAction('yearlyReport')
             ->assertFormFieldExists('year')
             ->assertFormFieldDoesNotExist('farm_id')
             ->assertFormFieldDoesNotExist('category');
 
         Livewire::actingAs($unassigned)
             ->test(Dashboard::class)
-            ->assertActionHidden('yearlyCsv');
+            ->assertActionHidden('yearlyReport');
 
         $this->assertTrue($editor->can(Permission::ExportFarmAnalytics->value));
         $this->assertFalse($editor->can(Permission::GenerateExports->value));

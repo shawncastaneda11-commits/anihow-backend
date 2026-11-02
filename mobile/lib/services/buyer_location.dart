@@ -31,7 +31,24 @@ class BuyerLocationNoFix extends BuyerLocationResult {
   const BuyerLocationNoFix();
 }
 
+/// The point is outside the Philippines, which the server does not sort by.
+/// An emulator's default location (California) lands here.
+class BuyerLocationOutsideArea extends BuyerLocationResult {
+  const BuyerLocationOutsideArea();
+}
+
 class BuyerLocation {
+  /// The same bounds the server accepts for near_lat and near_lng.
+  static bool isInServiceArea(BuyerPoint point) =>
+      point.latitude >= 4 &&
+      point.latitude <= 22 &&
+      point.longitude >= 116 &&
+      point.longitude <= 127;
+
+  static BuyerLocationResult _found(BuyerPoint point) => isInServiceArea(point)
+      ? BuyerLocationFound(point)
+      : const BuyerLocationOutsideArea();
+
   /// Tests replace this so the device GPS is never called.
   static Future<BuyerLocationResult> Function() read = device;
 
@@ -74,7 +91,8 @@ class BuyerLocation {
     );
   }
 
-  /// A fresh fix, then the last known point, then [BuyerLocationNoFix].
+  /// A fresh fix, then the last known point, then [BuyerLocationNoFix]. A
+  /// point outside the Philippines becomes [BuyerLocationOutsideArea].
   static Future<BuyerLocationResult> lookup({
     required Future<BuyerPoint?> Function() current,
     required Future<BuyerPoint?> Function() lastKnown,
@@ -82,7 +100,7 @@ class BuyerLocation {
     try {
       final point = await current();
       if (point != null) {
-        return BuyerLocationFound(point);
+        return _found(point);
       }
     } on TimeoutException {
       // The fresh read gave up; the last known point may still be usable.
@@ -93,7 +111,7 @@ class BuyerLocation {
     try {
       final last = await lastKnown();
       if (last != null) {
-        return BuyerLocationFound(last);
+        return _found(last);
       }
     } catch (_) {
       return const BuyerLocationNoFix();

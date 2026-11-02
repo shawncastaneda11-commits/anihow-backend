@@ -51,6 +51,7 @@ class _ShopsScreenState extends State<ShopsScreen> {
   double? _nearLng;
   bool _locationUnavailable = false;
   bool _locationNoFix = false;
+  bool _locationOutside = false;
   bool _locating = false;
   int _requestId = 0;
   late Future<List<ShopProfile>> _future;
@@ -95,6 +96,7 @@ class _ShopsScreenState extends State<ShopsScreen> {
     double? longitude;
     var unavailable = false;
     var noFix = false;
+    var outside = false;
     if (value == 'nearest') {
       setState(() => _locating = true);
       try {
@@ -110,6 +112,8 @@ class _ShopsScreenState extends State<ShopsScreen> {
             unavailable = true;
           case BuyerLocationNoFix():
             noFix = true;
+          case BuyerLocationOutsideArea():
+            outside = true;
         }
       } catch (_) {
         noFix = true;
@@ -128,6 +132,7 @@ class _ShopsScreenState extends State<ShopsScreen> {
       _nearLng = longitude;
       _locationUnavailable = unavailable;
       _locationNoFix = noFix;
+      _locationOutside = outside;
     });
     await _reload();
   }
@@ -320,6 +325,20 @@ class _ShopsScreenState extends State<ShopsScreen> {
                 child: Text(
                   s.locationUnavailable,
                   key: const Key('location-unavailable'),
+                  style: muted,
+                ),
+              )
+            else if (_locationOutside)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AniHowSpace.screen,
+                  0,
+                  AniHowSpace.screen,
+                  AniHowSpace.cardGap,
+                ),
+                child: Text(
+                  s.locationOutsideArea,
+                  key: const Key('location-outside-area'),
                   style: muted,
                 ),
               )

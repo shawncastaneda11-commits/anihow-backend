@@ -210,4 +210,23 @@ void main() {
     expect(find.byKey(const ValueKey('password-rules-box')), findsOneWidget);
     expect(find.byIcon(Icons.cancel), findsNothing);
   });
+
+  testWidgets('a content editor is pointed to the admin panel', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(412, 915));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final auth = AuthController();
+    auth.restoring = false;
+    auth.user = _account(roles: const ['content_editor']);
+
+    await tester.pumpWidget(_gate(auth));
+    await tester.pump();
+
+    expect(find.byType(AdminGateScreen), findsOneWidget);
+    expect(find.text('Content editor'), findsOneWidget);
+    expect(find.text('Your work is in the admin panel'), findsOneWidget);
+    expect(find.text('http://127.0.0.1:8000/admin'), findsOneWidget);
+    expect(find.byKey(const ValueKey('admin-open-cms')), findsOneWidget);
+    expect(find.byKey(const ValueKey('admin-log-out')), findsOneWidget);
+  });
 }

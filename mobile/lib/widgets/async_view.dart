@@ -102,7 +102,11 @@ class AsyncViewError extends StatelessWidget {
             const SizedBox(height: AniHowSpace.cardGap),
             Text(
               AppStrings.maybeOf(context).somethingWentWrong,
-              style: theme.textTheme.titleMedium?.copyWith(color: AniHowColors.deepGreen),
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.brightness == Brightness.dark
+                    ? theme.colorScheme.onSurface
+                    : AniHowColors.deepGreen,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AniHowSpace.section),

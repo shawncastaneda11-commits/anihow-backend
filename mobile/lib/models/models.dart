@@ -3369,14 +3369,12 @@ class SellerHelpFarm {
     required this.name,
     this.municipality,
     this.contactPerson,
-    this.contactNumber,
   });
 
   final int id;
   final String name;
   final String? municipality;
   final String? contactPerson;
-  final String? contactNumber;
 
   factory SellerHelpFarm.fromJson(Map<String, dynamic> json) {
     return SellerHelpFarm(
@@ -3384,7 +3382,6 @@ class SellerHelpFarm {
       name: json['name'] as String? ?? '',
       municipality: _blankToNull(json['municipality']),
       contactPerson: _blankToNull(json['contact_person']),
-      contactNumber: _blankToNull(json['contact_number']),
     );
   }
 }

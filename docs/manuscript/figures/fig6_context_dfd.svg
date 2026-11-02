@@ -73,7 +73,7 @@
 <title>sys&#45;&gt;sa</title>
 <path fill="none" stroke="#333333" stroke-width="1.1" d="M513.95,-320.15C453.99,-330.47 336.62,-351.53 238,-374.5 204.79,-382.24 168.3,-392.02 137.52,-400.65"/>
 <polygon fill="#333333" stroke="#333333" stroke-width="1.1" points="136.74,-398.15 130.23,-402.71 138.16,-403.2 136.74,-398.15"/>
-<text text-anchor="middle" x="322" y="-388.5" font-family="Liberation Sans" font-size="10.00">order ledger, analytics, CSV exports,</text>
+<text text-anchor="middle" x="322" y="-388.5" font-family="Liberation Sans" font-size="10.00">order ledger, analytics, exports,</text>
 <text text-anchor="middle" x="322" y="-377.5" font-family="Liberation Sans" font-size="10.00">content reports, deletion requests</text>
 </g>
 <!-- sys&#45;&gt;ce -->

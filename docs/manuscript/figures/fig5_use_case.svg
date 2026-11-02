@@ -94,7 +94,7 @@
 <title>sa7</title>
 <ellipse fill="none" stroke="black" stroke-width="1.1" cx="324.12" cy="-1015" rx="100.32" ry="22.76"/>
 <text text-anchor="middle" x="324.12" y="-1018.2" font-family="Liberation Sans" font-size="11.00">View ledger and analytics;</text>
-<text text-anchor="middle" x="324.12" y="-1006.2" font-family="Liberation Sans" font-size="11.00">export CSV</text>
+<text text-anchor="middle" x="324.12" y="-1006.2" font-family="Liberation Sans" font-size="11.00">export reports</text>
 </g>
 <!-- sa&#45;&gt;sa7 -->
 <g id="edge7" class="edge">

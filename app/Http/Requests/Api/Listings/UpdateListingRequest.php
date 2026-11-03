@@ -5,6 +5,7 @@ namespace App\Http\Requests\Api\Listings;
 use App\Enums\GrowingMethod;
 use App\Enums\ListingUnit;
 use App\Models\Listing;
+use App\Support\FormBooleans;
 use App\Support\Pricing\PriceGuardResolver;
 use App\Support\Pricing\UnitConverter;
 use Illuminate\Contracts\Validation\Validator;
@@ -14,6 +15,15 @@ use Illuminate\Validation\Rule;
 class UpdateListingRequest extends FormRequest
 {
     public const CROP_LOCKED_MESSAGE = "The crop type can't be changed. Create a new listing for a different crop.";
+
+    /**
+     * A save with a photo arrives as a multipart form, with its switches as
+     * the words "true" and "false".
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge(FormBooleans::fromWords($this->all(), ['is_active', 'confirm_cancel_reservations']));
+    }
 
     public function authorize(): bool
     {

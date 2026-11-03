@@ -204,7 +204,7 @@ Google Play takes an app bundle (`.aab`) signed with your own upload key, not th
    keyPassword=...
    ```
 
-3. Raise the number after `+` in `mobile/pubspec.yaml` (`version: 1.0.0+1`) for every upload; Play rejects a number it has seen before.
+3. Raise the number after `+` in `mobile/pubspec.yaml` for every upload (for example, `version: 1.0.1+2` becomes `1.0.1+3`); Play rejects a number it has seen before.
 4. Build the bundle. It is saved as `dist\AniHow-vps.aab`.
 
    ```powershell

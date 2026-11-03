@@ -172,6 +172,36 @@ class FarmerListingApiTest extends TestCase
         Storage::disk(ListingStorage::diskName())->assertMissing($stored->image_path);
     }
 
+    /**
+     * A save with a photo is a multipart form, where the app writes its
+     * switches as the words "true" and "false".
+     */
+    public function test_a_form_save_accepts_true_and_false_as_words(): void
+    {
+        $farmer = $this->farmer();
+        $listing = $this->listingFor($farmer, ['is_active' => true]);
+
+        $this->asUser($farmer)->post("/api/farmer/listings/{$listing->id}", [
+            'title' => 'Kalabasa, pangkare-kare',
+            'is_active' => 'false',
+            'confirm_cancel_reservations' => 'true',
+        ], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.title', 'Kalabasa, pangkare-kare');
+        $this->assertFalse($listing->fresh()->is_active);
+
+        $this->asUser($farmer)->post("/api/farmer/listings/{$listing->id}", [
+            'is_active' => 'true',
+        ], ['Accept' => 'application/json'])->assertOk();
+        $this->assertTrue($listing->fresh()->is_active);
+
+        $this->asUser($farmer)->post("/api/farmer/listings/{$listing->id}", [
+            'is_active' => 'maybe',
+        ], ['Accept' => 'application/json'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['is_active']);
+    }
+
     public function test_seller_cannot_view_or_update_another_sellers_listing(): void
     {
         $owner = $this->farmer(['email' => 'owner@example.com']);

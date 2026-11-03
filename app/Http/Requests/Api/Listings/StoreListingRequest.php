@@ -8,6 +8,7 @@ use App\Enums\ProductCategory;
 use App\Models\CropType;
 use App\Models\Farm;
 use App\Models\Listing;
+use App\Support\FormBooleans;
 use App\Support\HarvestInput;
 use App\Support\Pricing\PriceGuardResolver;
 use App\Support\Pricing\UnitConverter;
@@ -240,6 +241,9 @@ class StoreListingRequest extends FormRequest
         }
 
         $this->merge(HarvestInput::prepare($this->all()));
+
+        // A save with a photo is a multipart form, with switches as words.
+        $this->merge(FormBooleans::fromWords($this->all(), ['is_active']));
     }
 
     public static function assertAvailabilityWindow(Validator $validator, mixed $from, mixed $until): void

@@ -335,8 +335,9 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     try {
       if (listing == null) {
         final created = await api.createListing(body, imagePath: _imagePath);
-        if (mounted) {
-          await _saveNewTawad(created);
+        final tawadRefusal = mounted ? await _saveNewTawad(created) : null;
+        if (tawadRefusal != null && mounted) {
+          await _showTawadNotSaved(tawadRefusal);
         }
       } else {
         await api.updateListing(
@@ -399,14 +400,13 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   }
 
   /// Saves the tawad typed in on the new listing. The listing is already
-  /// saved, so a refused discount is reported but does not undo it.
-  Future<void> _saveNewTawad(ListingItem created) async {
+  /// saved, so a refused discount does not undo it. Returns the server's
+  /// reason when the tawad is refused, or null.
+  Future<String?> _saveNewTawad(ListingItem created) async {
     final amount = _newTawadAmount.text.trim();
     if (!_discountOpen || amount.isEmpty) {
-      return;
+      return null;
     }
-    final s = AppStrings.read(context);
-    final messenger = ScaffoldMessenger.of(context);
     try {
       await context.read<AuthController>().api.saveTawad(
         listingId: created.id,
@@ -416,11 +416,32 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
             ? _newTawadMinQty.text.trim()
             : null,
       );
+      return null;
     } on ApiException catch (error) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(s.listingSavedTawadNot(error.message))),
-      );
+      return error.message;
     }
+  }
+
+  /// A dialog rather than a snackbar: leaving the form clears every
+  /// snackbar, so the reason would vanish before the seller could read it.
+  Future<void> _showTawadNotSaved(String reason) {
+    return showDialog<void>(
+      context: context,
+      builder: (context) {
+        final s = AppStrings.of(context);
+        return AlertDialog(
+          key: const ValueKey('new-tawad-refused'),
+          title: Text(s.tawadNotSavedTitle),
+          content: Text(s.listingSavedTawadNot(reason)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(s.ok),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   /// The quantity this form needs before saving: the harvest for a new

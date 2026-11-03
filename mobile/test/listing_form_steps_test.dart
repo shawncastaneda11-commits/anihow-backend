@@ -46,6 +46,18 @@ class _RecordingApi extends ApiClient {
   }
 }
 
+class _RefusingTawadApi extends _RecordingApi {
+  @override
+  Future<TawadRule> saveTawad({
+    required int listingId,
+    required String type,
+    required String discountAmount,
+    String? minQuantity,
+  }) async {
+    throw ApiException('The maximum tawad for Kamatis is PHP 10.00.');
+  }
+}
+
 Widget _app(Widget home, {ApiClient? api, UserAccount? user}) {
   final auth = AuthController(api: api)..restoring = false;
   auth.user = user;
@@ -413,6 +425,56 @@ void main() {
       'min': '3',
     });
   });
+
+  testWidgets(
+    'a refused tawad on a new listing stays on screen with its reason',
+    (tester) async {
+      final api = _RefusingTawadApi();
+      await pumpForm(tester, api: api, user: _seller(certified: false));
+
+      await tester.enterText(find.byType(TextField).first, 'Tomato');
+      await tester.tap(find.byType(DropdownButtonFormField<int>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tomato').last);
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('harvest-quantity')),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('harvest-quantity')),
+        '10',
+      );
+      final section = find.byKey(const ValueKey('new-discount-section'));
+      await tester.scrollUntilVisible(
+        section,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(section);
+      await tester.pumpAndSettle();
+      final amount = find.byKey(const ValueKey('new-tawad-amount'));
+      await tester.ensureVisible(amount);
+      await tester.pumpAndSettle();
+      await tester.enterText(amount, '15');
+
+      await tester.tap(find.text('Save listing'));
+      await tester.pumpAndSettle();
+
+      expect(api.created, isNotNull);
+      expect(find.byKey(const ValueKey('new-tawad-refused')), findsOneWidget);
+      expect(find.text('Tawad not saved'), findsOneWidget);
+      expect(
+        find.textContaining('The maximum tawad for Kamatis is PHP 10.00.'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('new-tawad-refused')), findsNothing);
+    },
+  );
 
   testWidgets('a certified farm can save certified organic', (tester) async {
     final api = _RecordingApi();

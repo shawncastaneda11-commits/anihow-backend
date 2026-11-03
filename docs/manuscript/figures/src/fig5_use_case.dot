@@ -31,7 +31,7 @@ digraph G {
     ce3 [label="Post farm\nannouncements"];
     ce4 [label="Manage farm\nFAQ answers"];
     ce5 [label="Set farm price guards"];
-    ce6 [label="View farm roster\nand analytics"];
+    ce6 [label="View roster and analytics;\ndownload Excel reports"];
 
     // Farmer-Seller (app)
     fs1 [label="Manage listings\nand tawad"];

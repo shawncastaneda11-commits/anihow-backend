@@ -193,14 +193,14 @@
 <!-- ce6 -->
 <g id="node19" class="node">
 <title>ce6</title>
-<ellipse fill="none" stroke="black" stroke-width="1.1" cx="324.12" cy="-39" rx="83" ry="22.76"/>
-<text text-anchor="middle" x="324.12" y="-42.2" font-family="Liberation Sans" font-size="11.00">View farm roster</text>
-<text text-anchor="middle" x="324.12" y="-30.2" font-family="Liberation Sans" font-size="11.00">and analytics</text>
+<ellipse fill="none" stroke="black" stroke-width="1.1" cx="324.12" cy="-39" rx="98.99" ry="22.76"/>
+<text text-anchor="middle" x="324.12" y="-42.2" font-family="Liberation Sans" font-size="11.00">View roster and analytics;</text>
+<text text-anchor="middle" x="324.12" y="-30.2" font-family="Liberation Sans" font-size="11.00">download Excel reports</text>
 </g>
 <!-- ce&#45;&gt;ce6 -->
 <g id="edge15" class="edge">
 <title>ce&#45;&gt;ce6</title>
-<path fill="none" stroke="#333333" d="M74.54,-196.67C101.06,-167.38 156.93,-109.87 215,-76 230,-67.25 247.37,-60.16 263.75,-54.62"/>
+<path fill="none" stroke="#333333" d="M74.54,-196.67C101.06,-167.38 156.93,-109.87 215,-76 228.62,-68.05 244.21,-61.48 259.23,-56.18"/>
 </g>
 <!-- fs -->
 <g id="node3" class="node">

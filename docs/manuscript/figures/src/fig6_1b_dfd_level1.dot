@@ -73,7 +73,8 @@ digraph G {
   p6 -> D8_p6 [label="announcement notices"];
   p7 -> D6_p7 [label="completed orders", dir=back];
   sa_p7 -> p7 [label="system analytics,\nexports, export log", dir=back];
-  ce_p7 -> p7 [label="farm analytics", dir=back];
+  ce_p7 -> p7 [label="farm analytics,\nExcel reports", dir=back];
+  ce_p7 -> p7 [label="report dates\nor year"];
   fs_p7 -> p7 [label="My Sales", dir=back];
   sa_p7 -> p7 [label="export requests"];
   p7 -> D14_p7 [label="export entries"];

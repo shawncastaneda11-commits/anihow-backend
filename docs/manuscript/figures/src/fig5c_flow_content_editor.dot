@@ -88,9 +88,11 @@ digraph G {
   q4 -> q5 [label="No", minlen=2];
   s5_0 [shape=box, label="View roster and\nfarm analytics"];
   q5 -> s5_0 [label="Yes"];
+  s5_1 [shape=parallelogram, fillcolor="#F8F9FA", label="Download Excel\nreports", margin="0.30,0.12"];
+  s5_0 -> s5_1;
   r5 [shape=circle, width=0.5, fixedsize=true, fillcolor="#F8F9FA", label="R"];
-  s5_0 -> r5;
-  {rank=same; q5; s5_0; r5}
+  s5_1 -> r5;
+  {rank=same; q5; s5_0; s5_1; r5}
   q5 -> lo [label="No"];
   lo -> end;
   s [group=trunk];

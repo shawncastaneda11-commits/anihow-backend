@@ -32,9 +32,9 @@ class CropTypeForm
                     ->searchable()
                     ->preload()
                     ->native(false)
-                    ->required()
+                    ->placeholder('Shared: every farm')
                     ->visible(fn (): bool => auth()->user()?->can(Permission::ManageCropTypes->value) ?? false)
-                    ->helperText('This crop type belongs to one farm. Other farms do not see it.'),
+                    ->helperText('Leave blank for a shared crop that every farm can use. Pick a farm to make it that farm\'s own; other farms do not see it.'),
 
                 TextInput::make('name')
                     ->required()

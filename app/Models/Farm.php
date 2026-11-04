@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ListingUnit;
 use App\Enums\Role;
 use App\Support\FarmPin;
 use App\Support\ImageVariants;
@@ -344,14 +345,22 @@ class Farm extends Model
      * whole relation, not one constrained row: a constrained eager load
      * resolves a single crop type per farm and misses on the next cart line.
      */
-    public function overrideFor(int $cropTypeId): ?FarmCropTypeOverride
+    public function overrideFor(int $cropTypeId, ?ListingUnit $unit = null): ?FarmCropTypeOverride
     {
         if ($this->relationLoaded('cropTypeOverrides')) {
-            return $this->getRelation('cropTypeOverrides')->firstWhere('crop_type_id', $cropTypeId);
+            return $this->getRelation('cropTypeOverrides')->first(
+                fn (FarmCropTypeOverride $override): bool => (int) $override->crop_type_id === $cropTypeId
+                    && $override->unit === $unit,
+            );
         }
 
         return $this->cropTypeOverrides()
             ->where('crop_type_id', $cropTypeId)
+            ->when(
+                $unit === null,
+                fn ($query) => $query->whereNull('unit'),
+                fn ($query) => $query->where('unit', $unit?->value),
+            )
             ->first();
     }
 

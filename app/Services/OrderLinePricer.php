@@ -45,7 +45,7 @@ class OrderLinePricer
         $listingUnit = $listing->unit ?? $cropType->unit_of_measure;
         $unitPrice = (float) $listing->price_per_unit;
         $converter = app(UnitConverter::class);
-        $guardPrice = $converter->guardPrice($listingUnit, $cropType->unit_of_measure, $unitPrice);
+        $guardPrice = $converter->guardPrice($listingUnit, $guard->unit ?? $cropType->unit_of_measure, $unitPrice);
 
         // A floor may have risen since the listing was priced, the system one
         // or the farm's. The check is in the crop type's unit. A unit that

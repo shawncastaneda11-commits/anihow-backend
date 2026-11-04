@@ -753,13 +753,14 @@ class CreateTestFixtures
             return (string) $validator->errors()->first();
         }
 
-        $converted = $this->units->guardPrice($unit, $crop->unit_of_measure, $price);
-        $guard = $this->priceGuards->forFarmId($farm?->id ?? $seller?->farm_id, $crop);
+        $guard = $this->priceGuards->forFarmId($farm?->id ?? $seller?->farm_id, $crop, $unit);
+        $guardUnit = $guard->unit ?? $crop->unit_of_measure;
+        $converted = $this->units->guardPrice($unit, $guardUnit, $price);
 
         if ($converted === null || ! $guard->allowsPrice($converted)) {
             $floor = number_format($guard->floor, 2, '.', '');
 
-            return "The floor price for {$crop->name} is PHP {$floor} per {$crop->unit_of_measure->value}.";
+            return "The floor price for {$crop->name} is PHP {$floor} per {$guardUnit->value}.";
         }
 
         return null;
@@ -770,7 +771,7 @@ class CreateTestFixtures
      */
     private function tawadProblem(?Farm $farm, CropType $crop, ListingUnit $unit, float $price, array $tawad): ?string
     {
-        $guard = $this->priceGuards->forFarmId($farm?->id, $crop);
+        $guard = $this->priceGuards->forFarmId($farm?->id, $crop, $unit);
         $probe = new Listing([
             'price_per_unit' => $price,
             'unit' => $unit,
@@ -788,7 +789,7 @@ class CreateTestFixtures
 
         if ($problem === 'unit' || $problem === 'ceiling') {
             return $guard->hasCeiling()
-                ? "The maximum tawad for {$crop->name} is PHP {$guard->ceilingText()} per {$crop->unit_of_measure->value}."
+                ? "The maximum tawad for {$crop->name} is PHP {$guard->ceilingText()} per {($guard->unit ?? $crop->unit_of_measure)->value}."
                 : "This tawad does not fit {$crop->name}'s unit.";
         }
 

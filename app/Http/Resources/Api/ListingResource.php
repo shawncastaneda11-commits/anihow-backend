@@ -157,7 +157,7 @@ class ListingResource extends JsonResource
         }
 
         $guard = $this->resource->priceGuard();
-        $cropUnit = $cropType->unit_of_measure;
+        $cropUnit = $guard->unit ?? $cropType->unit_of_measure;
         $unit = $this->unit ?? $cropUnit;
         $converter = app(UnitConverter::class);
 

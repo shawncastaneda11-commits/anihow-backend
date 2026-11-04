@@ -13,8 +13,9 @@ use InvalidArgumentException;
  * Converts a price or a quantity inside one unit family, and decides which
  * units a seller may choose for a crop type.
  *
- * Price guards stay in the crop type's unit. Callers convert first:
- * ₱0.06 per g is ₱60 per kg. Quantity analytics convert the other way,
+ * Price guards stay in the crop type's unit, or in the unit of the crop's
+ * extra row for another unit family. Callers convert first: ₱0.06 per g is
+ * ₱60 per kg. Quantity analytics convert the other way,
  * into the family's base unit, so 500 g and 1 kg add up as 1.5 kg.
  */
 class UnitConverter
@@ -66,7 +67,7 @@ class UnitConverter
 
     public function accepts(CropType $cropType, ListingUnit $unit, ?int $farmId): bool
     {
-        if (! $this->isGuarded($cropType, $farmId)) {
+        if ($cropType->unitGuardFor($unit) !== null || ! $this->isGuarded($cropType, $farmId)) {
             return true;
         }
 
@@ -77,9 +78,9 @@ class UnitConverter
     {
         $cropUnit = $cropType->unit_of_measure;
         $allowed = collect($this->unitsInDisplayOrder())
-            ->filter(fn (ListingUnit $unit): bool => $cropUnit->convertsTo($unit))
+            ->filter(fn (ListingUnit $unit): bool => $this->hasLimitsFor($cropType, $unit))
             ->map(fn (ListingUnit $unit): string => $unit->value)
-            ->implode(' or ');
+            ->join(', ', ' or ');
         $kind = $this->hasFloor($cropType, $farmId) ? 'floor price' : 'maximum discount';
 
         return "This crop's {$kind} is per {$cropUnit->value}, so it can be sold per {$allowed}.";
@@ -90,7 +91,6 @@ class UnitConverter
      */
     public function allowedUnits(CropType $cropType, ?int $farmId): array
     {
-        $cropUnit = $cropType->unit_of_measure;
         $guarded = $this->isGuarded($cropType, $farmId);
 
         return array_values(array_map(
@@ -101,7 +101,7 @@ class UnitConverter
             ],
             array_filter(
                 $this->unitsInDisplayOrder(),
-                fn (ListingUnit $unit): bool => ! $guarded || $cropUnit->convertsTo($unit),
+                fn (ListingUnit $unit): bool => ! $guarded || $this->hasLimitsFor($cropType, $unit),
             ),
         ));
     }
@@ -137,8 +137,9 @@ class UnitConverter
 
     /**
      * True when the effective floor (already resolved in SQL) is above the
-     * listing price after both are expressed in the crop type's unit.
-     * Cross-multiplies so the comparison does not divide.
+     * listing price after both are expressed in the crop type's unit, or in
+     * the unit of the extra row that covers the listing. Cross-multiplies so
+     * the comparison does not divide.
      */
     public static function belowFloorComparison(string $floorSql): string
     {
@@ -146,19 +147,49 @@ class UnitConverter
         $cropFactor = self::sqlFactor('crop_types.unit_of_measure');
         $converts = self::sqlConverts('listings.unit', 'crop_types.unit_of_measure');
         $numeric = '('.$floorSql.') * ('.$listingFactor.') > listings.price_per_unit * ('.$cropFactor.')';
+        $rowFloor = self::sqlUnitRowFloor();
+        $rowConverts = self::sqlConverts('listings.unit', 'g.unit');
+        $rowFactor = self::sqlFactor('g.unit');
+        $belowRow = "EXISTS (
+            SELECT 1 FROM crop_type_unit_guards g
+            WHERE g.crop_type_id = listings.crop_type_id
+              AND {$rowConverts}
+              AND ({$rowFloor}) * ({$listingFactor}) > listings.price_per_unit * ({$rowFactor})
+        )";
 
-        return "(({$converts}) AND ({$numeric})) OR (".self::incompatibleGuardSql().')';
+        return "(({$converts}) AND ({$numeric})) OR ((NOT ({$converts})) AND {$belowRow}) OR (".self::incompatibleGuardSql().')';
     }
 
     /**
-     * A guarded crop whose listing unit cannot convert into the crop unit.
-     * Used by the below-floor filter and by the buyer catalogue.
+     * A guarded crop whose listing unit converts neither into the crop unit
+     * nor into one of its extra rows. Used by the below-floor filter and by
+     * the buyer catalogue.
      */
     public static function incompatibleGuardSql(): string
     {
         $converts = self::sqlConverts('listings.unit', 'crop_types.unit_of_measure');
+        $rowConverts = self::sqlConverts('listings.unit', 'g.unit');
 
-        return '(NOT ('.$converts.')) AND ('.self::sqlGuarded().')';
+        return '(NOT ('.$converts.')) AND (NOT EXISTS (
+            SELECT 1 FROM crop_type_unit_guards g
+            WHERE g.crop_type_id = listings.crop_type_id
+              AND '.$rowConverts.'
+        )) AND ('.self::sqlGuarded().')';
+    }
+
+    /**
+     * The extra row's floor, raised by the farm's override for that unit.
+     * CASE rather than GREATEST so the same SQL runs on MySQL and SQLite.
+     * Mirrors PriceGuardResolver.
+     */
+    private static function sqlUnitRowFloor(): string
+    {
+        $override = '(SELECT fo.floor_price FROM farm_crop_type_overrides fo
+            WHERE fo.farm_id = listings.farm_id
+              AND fo.crop_type_id = g.crop_type_id
+              AND fo.unit = g.unit)';
+
+        return "CASE WHEN COALESCE({$override}, g.floor_price) > g.floor_price THEN {$override} ELSE g.floor_price END";
     }
 
     public static function sqlConverts(string $listingUnit, string $cropUnit): string
@@ -196,6 +227,7 @@ class UnitConverter
                     SELECT 1 FROM farm_crop_type_overrides fo
                     WHERE fo.farm_id = listings.farm_id
                       AND fo.crop_type_id = listings.crop_type_id
+                      AND fo.unit IS NULL
                       AND (
                           COALESCE(fo.floor_price, 0) > 0
                           OR COALESCE(fo.max_discount, 0) > 0
@@ -256,6 +288,12 @@ class UnitConverter
         return $ordered;
     }
 
+    /** The crop's main unit family or one of its extra rows covers this unit. */
+    private function hasLimitsFor(CropType $cropType, ListingUnit $unit): bool
+    {
+        return $cropType->unit_of_measure->convertsTo($unit) || $cropType->unitGuardFor($unit) !== null;
+    }
+
     private function hasFloor(CropType $cropType, ?int $farmId): bool
     {
         if ((float) $cropType->floor_price > 0) {
@@ -287,6 +325,7 @@ class UnitConverter
         return FarmCropTypeOverride::query()
             ->where('farm_id', $farmId)
             ->where('crop_type_id', $cropType->getKey())
+            ->whereNull('unit')
             ->first();
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Actions\Pricing;
 
 use App\Enums\ListingStatus;
+use App\Enums\ListingUnit;
 use App\Models\CropType;
 use App\Models\Farm;
 use App\Models\Listing;
@@ -38,6 +39,10 @@ use Illuminate\Database\Eloquent\Collection;
  * already told about the floor is not told again about the ceiling. The floor
  * message is the more serious of the two, so it is the one that wins.
  *
+ * Units. A crop's main values and each of its extra unit rows are separate
+ * guards. $guardUnit names which one moved: null for the main unit, or the
+ * extra row's unit. Only listings checked against that guard are looked at.
+ *
  * Never moves a price, never ends a rule, never blocks the change.
  */
 class FlagStrandedListingsAction
@@ -50,15 +55,20 @@ class FlagStrandedListingsAction
     /**
      * @return list<int> ids of the listings notified
      */
-    public function floorRaised(Farm $farm, CropType $cropType, float $previousFloor, float $newFloor): array
-    {
+    public function floorRaised(
+        Farm $farm,
+        CropType $cropType,
+        float $previousFloor,
+        float $newFloor,
+        ?ListingUnit $guardUnit = null,
+    ): array {
         if (PriceGuard::centavos($newFloor) <= PriceGuard::centavos($previousFloor)) {
             return [];
         }
 
         $notified = [];
 
-        foreach ($this->candidates($farm, $cropType) as $listing) {
+        foreach ($this->candidates($farm, $cropType, $guardUnit) as $listing) {
             $seller = $listing->farmerSeller;
 
             if ($seller === null) {
@@ -67,7 +77,7 @@ class FlagStrandedListingsAction
 
             $converted = $this->units->guardPrice(
                 $listing->unit,
-                $cropType->unit_of_measure,
+                $cropType->guardUnitFor($listing->unit),
                 $listing->price_per_unit,
             );
 
@@ -108,6 +118,7 @@ class FlagStrandedListingsAction
         ?float $previousCeiling,
         ?float $newCeiling,
         array $alreadyNotified = [],
+        ?ListingUnit $guardUnit = null,
     ): array {
         // Null is no maximum, the loosest ceiling of all.
         if (! PriceGuard::ceilingTightened($previousCeiling, $newCeiling)) {
@@ -116,7 +127,7 @@ class FlagStrandedListingsAction
 
         $notified = [];
 
-        foreach ($this->candidates($farm, $cropType) as $listing) {
+        foreach ($this->candidates($farm, $cropType, $guardUnit) as $listing) {
             if (in_array($listing->getKey(), $alreadyNotified, true)) {
                 continue;
             }
@@ -169,7 +180,7 @@ class FlagStrandedListingsAction
             $seller = $listing->farmerSeller;
             $unit = $listing->unit;
 
-            if ($seller === null || ($unit !== null && $cropType->unit_of_measure->convertsTo($unit))) {
+            if ($seller === null || ($unit !== null && ($cropType->unit_of_measure->convertsTo($unit) || $cropType->unitGuardFor($unit) !== null))) {
                 continue;
             }
 
@@ -185,15 +196,20 @@ class FlagStrandedListingsAction
      * listings are included, because a paused listing is still stranded when its
      * seller turns it back on. Soft-deleted listings are excluded by default.
      *
+     * With $guardUnit set, only listings checked against that guard: the
+     * main unit's (null) or one extra row's.
+     *
      * @return Collection<int, Listing>
      */
-    private function candidates(Farm $farm, CropType $cropType): Collection
+    private function candidates(Farm $farm, CropType $cropType, ?ListingUnit $guardUnit = null): Collection
     {
         return Listing::query()
             ->forFarm($farm->getKey())
             ->where('listings.crop_type_id', $cropType->getKey())
             ->whereNull('listings.taken_down_at')
             ->with(['farmerSeller', 'farm', 'activeTawadRule', 'cropType'])
-            ->get();
+            ->get()
+            ->filter(fn (Listing $listing): bool => $cropType->unitGuardFor($listing->unit)?->unit === $guardUnit)
+            ->values();
     }
 }

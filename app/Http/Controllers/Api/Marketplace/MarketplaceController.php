@@ -180,7 +180,7 @@ class MarketplaceController extends Controller
     private function relations(): array
     {
         return [
-            'cropType',
+            'cropType.unitGuards',
             'farm',
             'activeTawadRule',
             'farmerSeller' => function ($query): void {

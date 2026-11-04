@@ -194,7 +194,9 @@ class InAppNotifier
     public function tawadCeilingLowered(User $farmer, Listing $listing, float $effectiveCeiling): InAppNotification
     {
         $ceiling = number_format($effectiveCeiling, 2, '.', '');
-        $unit = $listing->cropType?->unit_of_measure?->value;
+        $unit = $listing->cropType?->unit_of_measure === null
+            ? null
+            : $listing->cropType->guardUnitFor($listing->unit)->value;
         $per = $unit === null ? '' : " per {$unit}";
 
         return $this->send(

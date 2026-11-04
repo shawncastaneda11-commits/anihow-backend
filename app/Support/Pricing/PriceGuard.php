@@ -2,6 +2,8 @@
 
 namespace App\Support\Pricing;
 
+use App\Enums\ListingUnit;
+
 /**
  * The two numbers every price decision in the system resolves against.
  *
@@ -10,7 +12,10 @@ namespace App\Support\Pricing;
  *          crop type, or null when no maximum is set. With no maximum, the
  *          floor alone limits a tawad.
  *
- * Both are in the crop type's unit. All comparisons run in centavos so that
+ * unit     the unit both are in: the crop's main unit, or the unit of the
+ *          extra row that covers the listing (see CropTypeUnitGuard)
+ *
+ * Callers convert a listing price into this unit first. All comparisons run in centavos so that
  * 2dp peso amounts never lose a comparison to binary float representation.
  */
 final class PriceGuard
@@ -18,6 +23,7 @@ final class PriceGuard
     public function __construct(
         public readonly float $floor,
         public readonly ?float $ceiling,
+        public readonly ?ListingUnit $unit = null,
     ) {}
 
     /** A listing price is legal at or above the effective floor. */

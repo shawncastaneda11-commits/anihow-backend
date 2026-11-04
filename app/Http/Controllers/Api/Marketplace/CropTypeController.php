@@ -46,6 +46,7 @@ class CropTypeController extends Controller
             )
             ->orderBy('name')
             ->orderBy('id')
+            ->with('unitGuards')
             ->get();
 
         return CropTypeResource::collection($cropTypes);

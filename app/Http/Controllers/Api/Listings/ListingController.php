@@ -23,7 +23,7 @@ class ListingController extends Controller
     public static function relations(): array
     {
         return [
-            'cropType',
+            'cropType.unitGuards',
             'farm',
             'activeTawadRule',
             'farmerSeller' => fn ($query) => $query

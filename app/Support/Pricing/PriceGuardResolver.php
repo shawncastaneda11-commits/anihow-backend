@@ -2,8 +2,11 @@
 
 namespace App\Support\Pricing;
 
+use App\Enums\ListingUnit;
 use App\Models\CropType;
+use App\Models\CropTypeUnitGuard;
 use App\Models\Farm;
+use App\Models\FarmCropTypeOverride;
 use App\Models\Listing;
 
 /**
@@ -18,6 +21,12 @@ use App\Models\Listing;
  * guarantees the override sits on the correct side. Keeping them here means a
  * row written directly in the database by a fixture or a console command cannot
  * loosen a guard.
+ *
+ * Units. The crop's own values cover its main unit and every unit that
+ * converts to it. A listing in another unit family is checked against the
+ * crop's extra row for that family (CropTypeUnitGuard), tightened by the
+ * farm's override for that unit. A listing unit that neither covers gets the
+ * main guard, which its price cannot convert into, so it is refused.
  *
  * The same max() exists once more in SQL, in the "Priced below floor" filter on
  * ListingsTable. If this formula changes, change that one too. That filter
@@ -34,19 +43,11 @@ use App\Models\Listing;
  */
 class PriceGuardResolver
 {
-    public function for(Farm $farm, CropType $cropType): PriceGuard
+    public function for(Farm $farm, CropType $cropType, ?ListingUnit $unit = null): PriceGuard
     {
-        $override = $farm->overrideFor($cropType->getKey());
+        $row = $cropType->unitGuardFor($unit);
 
-        $systemFloor = (float) $cropType->floor_price;
-
-        return new PriceGuard(
-            floor: max($systemFloor, (float) ($override?->floor_price ?? $systemFloor)),
-            ceiling: self::tighterCeiling(
-                $cropType->max_discount === null ? null : (float) $cropType->max_discount,
-                $override?->max_discount === null ? null : (float) $override->max_discount,
-            ),
-        );
+        return $this->combine($cropType, $row, $farm->overrideFor($cropType->getKey(), $row?->unit));
     }
 
     /**
@@ -69,7 +70,7 @@ class PriceGuardResolver
      */
     public function forListing(Listing $listing): PriceGuard
     {
-        return $this->for($listing->farm, $listing->cropType);
+        return $this->for($listing->farm, $listing->cropType, $listing->unit);
     }
 
     /**
@@ -80,10 +81,10 @@ class PriceGuardResolver
      * and the system values stand. The constrained eager load is correct here:
      * exactly one crop type is being asked about.
      */
-    public function forFarmId(int|string|null $farmId, CropType $cropType): PriceGuard
+    public function forFarmId(int|string|null $farmId, CropType $cropType, ?ListingUnit $unit = null): PriceGuard
     {
         if ($farmId === null) {
-            return $this->system($cropType);
+            return $this->system($cropType, $unit);
         }
 
         $farm = Farm::query()
@@ -91,16 +92,29 @@ class PriceGuardResolver
             ->find($farmId);
 
         return $farm !== null
-            ? $this->for($farm, $cropType)
-            : $this->system($cropType);
+            ? $this->for($farm, $cropType, $unit)
+            : $this->system($cropType, $unit);
     }
 
     /** The system values with no farm layer, for Super Admin system-wide views. */
-    public function system(CropType $cropType): PriceGuard
+    public function system(CropType $cropType, ?ListingUnit $unit = null): PriceGuard
     {
+        return $this->combine($cropType, $cropType->unitGuardFor($unit), null);
+    }
+
+    /** The main values or the extra row's, tightened by the farm's override for that unit. */
+    private function combine(CropType $cropType, ?CropTypeUnitGuard $row, ?FarmCropTypeOverride $override): PriceGuard
+    {
+        $source = $row ?? $cropType;
+        $systemFloor = (float) $source->floor_price;
+
         return new PriceGuard(
-            floor: (float) $cropType->floor_price,
-            ceiling: $cropType->max_discount === null ? null : (float) $cropType->max_discount,
+            floor: max($systemFloor, (float) ($override?->floor_price ?? $systemFloor)),
+            ceiling: self::tighterCeiling(
+                $source->max_discount === null ? null : (float) $source->max_discount,
+                $override?->max_discount === null ? null : (float) $override->max_discount,
+            ),
+            unit: $row?->unit ?? $cropType->unit_of_measure,
         );
     }
 }

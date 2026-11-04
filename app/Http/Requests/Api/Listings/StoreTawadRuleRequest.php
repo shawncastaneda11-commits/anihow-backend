@@ -58,8 +58,8 @@ class StoreTawadRuleRequest extends FormRequest
 
                 $listing = $this->listing();
                 $cropType = $listing->cropType;
-                $guard = app(PriceGuardResolver::class)->forFarmId($listing->farm_id, $cropType);
-                $unit = $cropType->unit_of_measure->value;
+                $guard = app(PriceGuardResolver::class)->forFarmId($listing->farm_id, $cropType, $listing->unit);
+                $unit = ($guard->unit ?? $cropType->unit_of_measure)->value;
 
                 $rule = new TawadRule([
                     'type' => TawadType::from($this->validated('type')),

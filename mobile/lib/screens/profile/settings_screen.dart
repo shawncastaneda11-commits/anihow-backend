@@ -146,7 +146,7 @@ class SettingsScreen extends StatelessWidget {
               _SettingsRow(
                 icon: Icons.info_outline,
                 label: s.aboutAniHow,
-                trailing: const Text('v1.0.2'),
+                trailing: const Text('v1.0.3'),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => _SettingsCopyScreen(

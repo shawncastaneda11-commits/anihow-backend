@@ -1160,6 +1160,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                                               .language,
                                         ),
                                         AniHowMoney.peso(floor),
+                                        unit: selectedCrop.unit,
                                       ),
                                       style: Theme.of(context)
                                           .textTheme
@@ -2233,6 +2234,7 @@ class _NewTawadCard extends StatelessWidget {
                 s.maxTawadFor(
                   crop!.labelFor(language),
                   AniHowMoney.peso(maxDiscount),
+                  unit: crop!.unit,
                 ),
               ),
               const SizedBox(height: AniHowSpace.cardGap),

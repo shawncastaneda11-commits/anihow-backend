@@ -374,6 +374,51 @@ class TawadRule {
   }
 }
 
+/// The floor and maximum tawad a listing is held to, already in the
+/// listing's own unit, as the server computes them. The app compares like
+/// with like and does no unit maths of its own. Sent only for the seller's
+/// own listings.
+class ListingPriceGuard {
+  const ListingPriceGuard({
+    required this.unit,
+    this.floorPerUnit,
+    this.maxTawadPerUnit,
+    this.unitAllowed = true,
+  });
+
+  final String? unit;
+  final double? floorPerUnit;
+
+  /// Null when no maximum is set: the floor alone limits a tawad.
+  final double? maxTawadPerUnit;
+  final bool unitAllowed;
+
+  bool get hasMaxTawad => maxTawadPerUnit != null;
+
+  static ListingPriceGuard? fromJson(Object? json) {
+    if (json is! Map) {
+      return null;
+    }
+    final map = Map<String, dynamic>.from(json);
+    return ListingPriceGuard(
+      unit: map['unit'] as String?,
+      floorPerUnit: _number(map['floor_per_unit']),
+      maxTawadPerUnit: _number(map['max_tawad_per_unit']),
+      unitAllowed: map['unit_allowed'] != false,
+    );
+  }
+
+  static double? _number(Object? value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is num) {
+      return value.toDouble();
+    }
+    return double.tryParse(value.toString());
+  }
+}
+
 class ListingItem {
   const ListingItem({
     required this.id,
@@ -416,6 +461,7 @@ class ListingItem {
     this.expiredWithStock = false,
     this.hasHarvestRecords = false,
     this.stockBaseline,
+    this.priceGuard,
   });
 
   final int id;
@@ -460,6 +506,9 @@ class ListingItem {
 
   /// Stock right after the last restock (seller's own listings only).
   final double? stockBaseline;
+
+  /// Floor and maximum tawad in this listing's unit (seller's own listings only).
+  final ListingPriceGuard? priceGuard;
 
   bool get harvestDueSoon {
     if (!needsActualHarvest || availableFrom == null) {
@@ -556,6 +605,7 @@ class ListingItem {
       expiredWithStock: expiredWithStock,
       hasHarvestRecords: hasHarvestRecords,
       stockBaseline: stockBaseline,
+      priceGuard: priceGuard,
     );
   }
 
@@ -631,6 +681,7 @@ class ListingItem {
       expiredWithStock: json['expired_with_stock'] == true,
       hasHarvestRecords: json['has_harvest_records'] == true,
       stockBaseline: _asDouble(json['stock_baseline']),
+      priceGuard: ListingPriceGuard.fromJson(json['price_guard']),
     );
   }
 

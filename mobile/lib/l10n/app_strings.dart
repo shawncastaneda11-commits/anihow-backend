@@ -2021,9 +2021,9 @@ class AppStrings {
       t('Not filled in yet: $items', 'Hindi pa napupunan: $items');
   String get everythingFilledIn =>
       t('Everything is filled in.', 'Kumpleto na ang lahat.');
-  String floorPriceFor(String crop, String peso) => t(
-    'Floor price for $crop: $peso (set by your farm)',
-    'Floor price para sa $crop: $peso (itinakda ng farm)',
+  String floorPriceFor(String crop, String peso, {String? unit}) => t(
+    'Floor price for $crop: $peso${_perUnit(unit)} (set by your farm)',
+    'Floor price para sa $crop: $peso${_bawatUnit(unit)} (itinakda ng farm)',
   );
   String get tawadHint => t(
     'Tawad is a peso discount on the order.',
@@ -2059,14 +2059,22 @@ class AppStrings {
     'Enter the minimum quantity for this tawad.',
     'Ilagay ang minimum na dami para sa tawad na ito.',
   );
-  String maxTawadFor(String crop, String peso) => t(
-    'Maximum tawad for $crop is $peso.',
-    'Pinakamataas na tawad para sa $crop ay $peso.',
+  String maxTawadFor(String crop, String peso, {String? unit}) => t(
+    'Maximum tawad for $crop is $peso${_perUnit(unit)}.',
+    'Pinakamataas na tawad para sa $crop ay $peso${_bawatUnit(unit)}.',
   );
-  String unitFloor(String peso) => t(
-    'Unit price cannot fall below $peso.',
-    'Hindi puwedeng bumaba ang presyo sa $peso.',
+  String noMaxTawadFor(String crop) => t(
+    'No maximum tawad for $crop. Keep the price at or above the floor.',
+    'Walang pinakamataas na tawad para sa $crop. Huwag bumaba sa floor price.',
   );
+  String unitFloor(String peso, {String? unit}) => t(
+    'Unit price cannot fall below $peso${_perUnit(unit)}.',
+    'Hindi puwedeng bumaba ang presyo sa $peso${_bawatUnit(unit)}.',
+  );
+  static String _perUnit(String? unit) =>
+      unit == null || unit.isEmpty ? '' : ' per $unit';
+  static String _bawatUnit(String? unit) =>
+      unit == null || unit.isEmpty ? '' : ' bawat $unit';
   String get chooseListing => t('Choose a listing.', 'Pumili ng listing.');
   String get walkInRecorded =>
       t('Walk-in sale recorded', 'Naitala na ang walk-in sale');

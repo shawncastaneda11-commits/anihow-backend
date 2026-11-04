@@ -97,6 +97,7 @@ class _TawadFormScreenState extends State<TawadFormScreen> {
   @override
   Widget build(BuildContext context) {
     final crop = widget.listing.category;
+    final guard = widget.listing.priceGuard;
     final s = AppStrings.of(context);
     final language = context.watch<PreferencesController>().language;
     return Scaffold(
@@ -124,7 +125,30 @@ class _TawadFormScreenState extends State<TawadFormScreen> {
                 Text(
                   '${s.listed} ${AniHowMoney.pesoUnit(widget.listing.pricePerUnit)}',
                 ),
-                if ((crop?.sellerMaxDiscount?.isNotEmpty ?? false) ||
+                if (guard != null) ...[
+                  // The server's values, already in this listing's unit.
+                  const SizedBox(height: AniHowSpace.cardGap),
+                  Text(
+                    guard.hasMaxTawad
+                        ? s.maxTawadFor(
+                            crop?.labelFor(language) ?? widget.listing.title,
+                            AniHowMoney.peso(guard.maxTawadPerUnit),
+                            unit: guard.unit,
+                          )
+                        : s.noMaxTawadFor(
+                            crop?.labelFor(language) ?? widget.listing.title,
+                          ),
+                    key: const ValueKey('tawad-max-per-unit'),
+                  ),
+                  if (guard.floorPerUnit != null)
+                    Text(
+                      s.unitFloor(
+                        AniHowMoney.peso(guard.floorPerUnit),
+                        unit: guard.unit,
+                      ),
+                      key: const ValueKey('tawad-floor-per-unit'),
+                    ),
+                ] else if ((crop?.sellerMaxDiscount?.isNotEmpty ?? false) ||
                     (crop?.sellerFloorPrice?.isNotEmpty ?? false)) ...[
                   const SizedBox(height: AniHowSpace.cardGap),
                   if (crop?.sellerMaxDiscount?.isNotEmpty ?? false)
@@ -132,10 +156,16 @@ class _TawadFormScreenState extends State<TawadFormScreen> {
                       s.maxTawadFor(
                         crop!.labelFor(language),
                         AniHowMoney.peso(crop.sellerMaxDiscount),
+                        unit: crop.unit,
                       ),
                     ),
                   if (crop?.sellerFloorPrice?.isNotEmpty ?? false)
-                    Text(s.unitFloor(AniHowMoney.peso(crop!.sellerFloorPrice))),
+                    Text(
+                      s.unitFloor(
+                        AniHowMoney.peso(crop!.sellerFloorPrice),
+                        unit: crop.unit,
+                      ),
+                    ),
                 ],
               ],
             ),

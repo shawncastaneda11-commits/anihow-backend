@@ -51,7 +51,13 @@ class TawadPerUnitTest extends TestCase
 
     public function test_a_bulk_tawad_that_breaks_the_floor_is_refused_per_bundle(): void
     {
-        [$farmer, $listing] = $this->sitaw();
+        // A maximum of PHP 10 per bundle lets the PHP 6 per bundle through to
+        // the floor check: PHP 20 - 6 = PHP 14, below the PHP 15 floor.
+        [$farmer, $listing] = $this->listingOf(
+            $this->crop('Sitaw', ListingUnit::Bundle, floor: 15, max: 10),
+            ListingUnit::Bundle,
+            price: 20,
+        );
 
         $this->tawad($farmer, $listing, TawadType::MinimumQuantity, 18, 3)
             ->assertUnprocessable()

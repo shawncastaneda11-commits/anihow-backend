@@ -38,8 +38,11 @@ class StoreTawadRuleRequest extends FormRequest
     }
 
     /**
-     * Ceiling and floor are checked here as well as at checkout. This one
-     * gives the seller an immediate error; the checkout one is the guarantee.
+     * Ceiling and floor are checked here as well as at checkout, through the
+     * same TawadRule::guardProblem(). This one gives the seller an immediate
+     * error; the checkout one is the guarantee. The tawad is judged per unit:
+     * spread over the quantity it applies to, then compared in the crop
+     * type's unit.
      *
      * Both are the listing's farm's effective values: the system ceiling,
      * lowered by the farm where it has lowered it, and the system floor,
@@ -56,47 +59,43 @@ class StoreTawadRuleRequest extends FormRequest
                 $listing = $this->listing();
                 $cropType = $listing->cropType;
                 $guard = app(PriceGuardResolver::class)->forFarmId($listing->farm_id, $cropType);
-                $amount = (float) $this->validated('discount_amount');
-                $listingUnit = $listing->unit ?? $cropType->unit_of_measure;
-                $converter = app(UnitConverter::class);
-                $convertedAmount = $converter->guardPrice(
-                    $listingUnit,
-                    $cropType->unit_of_measure,
-                    $amount,
-                );
+                $unit = $cropType->unit_of_measure->value;
 
-                if ($convertedAmount === null) {
-                    if ($converter->isGuarded($cropType, $listing->farm_id)) {
-                        $validator->errors()->add(
-                            'discount_amount',
-                            $converter->refusalMessage($cropType, $listing->farm_id),
-                        );
-                    }
+                $rule = new TawadRule([
+                    'type' => TawadType::from($this->validated('type')),
+                    'discount_amount' => (float) $this->validated('discount_amount'),
+                    'min_quantity' => $this->validated('min_quantity'),
+                ]);
 
-                    return;
-                }
+                $problem = $rule->guardProblem($listing, $guard);
 
-                if (! $guard->allowsDiscount($convertedAmount)) {
-                    $max = number_format($guard->ceiling, 2, '.', '');
+                if ($problem === 'unit') {
                     $validator->errors()->add(
                         'discount_amount',
-                        "The maximum tawad for {$cropType->name} is PHP {$max}.",
+                        app(UnitConverter::class)->refusalMessage($cropType, $listing->farm_id),
                     );
 
                     return;
                 }
 
-                $rule = new TawadRule([
-                    'type' => TawadType::from($this->validated('type')),
-                    'discount_amount' => $amount,
-                    'min_quantity' => $this->validated('min_quantity'),
-                ]);
+                if ($problem === 'ceiling') {
+                    $perUnit = number_format((float) $rule->perUnitInCropUnit($listing), 2, '.', '');
+                    $validator->errors()->add(
+                        'discount_amount',
+                        $guard->hasCeiling() && (float) $guard->ceiling > 0
+                            ? "The maximum tawad for {$cropType->name} is PHP {$guard->ceilingText()} per {$unit}. "
+                                ."This tawad works out to PHP {$perUnit} per {$unit}."
+                            : "Tawad is turned off for {$cropType->name}.",
+                    );
 
-                if (! $rule->keepsUnitPriceAbove($listing, $guard->floor)) {
+                    return;
+                }
+
+                if ($problem === 'floor') {
                     $floor = number_format($guard->floor, 2, '.', '');
                     $validator->errors()->add(
                         'discount_amount',
-                        "This tawad would bring the unit price below the floor of PHP {$floor}.",
+                        "This tawad would bring the price below the floor of PHP {$floor} per {$unit}.",
                     );
                 }
             },

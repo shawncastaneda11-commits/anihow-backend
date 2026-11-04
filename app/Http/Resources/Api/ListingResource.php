@@ -4,6 +4,7 @@ namespace App\Http\Resources\Api;
 
 use App\Models\Listing;
 use App\Support\GeoDistance;
+use App\Support\Pricing\UnitConverter;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -63,6 +64,10 @@ class ListingResource extends JsonResource
             'thumbnail_url' => $this->thumbnailUrl(),
             'can_reserve' => $this->canReserve(),
             'crop_type' => new CropTypeResource($this->whenLoaded('cropType')),
+            'price_guard' => $this->when(
+                $this->isOwnedBy($request),
+                fn (): ?array => $this->priceGuardForListingUnit(),
+            ),
             'tawad' => $this->visibleTawadRule($request),
             'tawad_paused' => $this->tawadIsPaused($request),
             'farm' => new FarmResource($this->whenLoaded('farm')),
@@ -126,6 +131,53 @@ class ListingResource extends JsonResource
         $user = $request->user();
 
         return $user !== null && (int) $user->id === (int) $this->farmer_seller_id;
+    }
+
+    private function isOwnedBy(Request $request): bool
+    {
+        $user = $request->user();
+
+        return $user !== null && $this->farmer_seller_id === $user->getKey();
+    }
+
+    /**
+     * The floor and maximum tawad this listing is held to, in the listing's
+     * own unit, so the app compares like with like and does no unit maths.
+     * max_tawad_per_unit is null when no maximum is set. unit_allowed is
+     * false when the listing's unit cannot be checked against the crop.
+     *
+     * @return array{unit: ?string, floor_per_unit: ?float, max_tawad_per_unit: ?float, unit_allowed: bool}|null
+     */
+    private function priceGuardForListingUnit(): ?array
+    {
+        $cropType = $this->cropType;
+
+        if ($cropType === null) {
+            return null;
+        }
+
+        $guard = $this->resource->priceGuard();
+        $cropUnit = $cropType->unit_of_measure;
+        $unit = $this->unit ?? $cropUnit;
+        $converter = app(UnitConverter::class);
+
+        if (! $cropUnit->convertsTo($unit)) {
+            return [
+                'unit' => $unit->value,
+                'floor_per_unit' => null,
+                'max_tawad_per_unit' => null,
+                'unit_allowed' => ! $converter->isGuarded($cropType, $this->farm_id),
+            ];
+        }
+
+        return [
+            'unit' => $unit->value,
+            'floor_per_unit' => round($converter->priceIn($cropUnit, $unit, $guard->floor), 4),
+            'max_tawad_per_unit' => $guard->ceiling === null
+                ? null
+                : round($converter->priceIn($cropUnit, $unit, $guard->ceiling), 4),
+            'unit_allowed' => true,
+        ];
     }
 
     private function tawadIsPaused(Request $request): bool

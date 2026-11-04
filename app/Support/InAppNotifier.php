@@ -194,12 +194,14 @@ class InAppNotifier
     public function tawadCeilingLowered(User $farmer, Listing $listing, float $effectiveCeiling): InAppNotification
     {
         $ceiling = number_format($effectiveCeiling, 2, '.', '');
+        $unit = $listing->cropType?->unit_of_measure?->value;
+        $per = $unit === null ? '' : " per {$unit}";
 
         return $this->send(
             $farmer,
             NotificationType::TawadCeilingLowered,
             NotificationType::TawadCeilingLowered->label(),
-            "The maximum tawad for {$listing->title} is now PHP {$ceiling}. Your tawad is above it, so it will not apply at checkout until you lower it.",
+            "The maximum tawad for {$listing->title} is now PHP {$ceiling}{$per}. Your tawad is above it, so it will not apply at checkout until you lower it.",
             $listing,
         );
     }

@@ -608,7 +608,7 @@ class CreateTestFixtures
                 $changes['max_discount'] = $guard['max_discount'];
             }
 
-            if ($guard['min_discount'] !== null && (float) $crop->max_discount < $guard['min_discount']) {
+            if ($guard['min_discount'] !== null && $crop->max_discount !== null && (float) $crop->max_discount < $guard['min_discount']) {
                 $changes['max_discount'] = $guard['min_discount'];
             }
 
@@ -619,9 +619,9 @@ class CreateTestFixtures
             }
 
             $floor = $changes['floor_price'] ?? (float) $crop->floor_price;
-            $maxDiscount = $changes['max_discount'] ?? (float) $crop->max_discount;
+            $maxDiscount = $changes['max_discount'] ?? ($crop->max_discount === null ? null : (float) $crop->max_discount);
 
-            if ($maxDiscount >= $floor) {
+            if ($maxDiscount !== null && $maxDiscount >= $floor) {
                 $this->record($item, 'skipped: the maximum tawad must stay below the floor price of ₱'.number_format($floor, 2));
 
                 continue;
@@ -771,18 +771,11 @@ class CreateTestFixtures
     private function tawadProblem(?Farm $farm, CropType $crop, ListingUnit $unit, float $price, array $tawad): ?string
     {
         $guard = $this->priceGuards->forFarmId($farm?->id, $crop);
-        $amount = $this->units->guardPrice($unit, $crop->unit_of_measure, $tawad['amount']);
-
-        if ($amount === null || ! $guard->allowsDiscount($amount)) {
-            $max = number_format($guard->ceiling, 2, '.', '');
-
-            return "The maximum tawad for {$crop->name} is PHP {$max}.";
-        }
-
         $probe = new Listing([
             'price_per_unit' => $price,
             'unit' => $unit,
             'crop_type_id' => $crop->id,
+            'farm_id' => $farm?->id,
         ]);
         $probe->setRelation('cropType', $crop);
         $rule = new TawadRule([
@@ -791,7 +784,15 @@ class CreateTestFixtures
             'min_quantity' => $tawad['min_quantity'],
         ]);
 
-        if (! $rule->keepsUnitPriceAbove($probe, $guard->floor)) {
+        $problem = $rule->guardProblem($probe, $guard);
+
+        if ($problem === 'unit' || $problem === 'ceiling') {
+            return $guard->hasCeiling()
+                ? "The maximum tawad for {$crop->name} is PHP {$guard->ceilingText()} per {$crop->unit_of_measure->value}."
+                : "This tawad does not fit {$crop->name}'s unit.";
+        }
+
+        if ($problem === 'floor') {
             $floor = number_format($guard->floor, 2, '.', '');
 
             return "This tawad would bring the unit price below the floor of PHP {$floor}.";

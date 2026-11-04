@@ -77,10 +77,13 @@ class CropTypeOverridesRelationManager extends RelationManager
                     ->prefix('PHP')
                     ->nullable()
                     ->requiredWithout('floor_price')
-                    ->helperText(fn (Get $get, ?Model $record): string => self::systemMaximum($get, $record) === null
-                        ? 'Choose a crop type first.'
-                        : 'The system maximum is PHP '.number_format(self::systemMaximum($get, $record), 4)
-                            .'. The farm may lower it, never raise it. Leave blank to use the system maximum.'),
+                    ->helperText(fn (Get $get, ?Model $record): string => match (true) {
+                        self::cropType($get, $record) === null => 'Choose a crop type first.',
+                        self::systemMaximum($get, $record) === null => 'This crop has no system maximum, so the floor alone limits tawad. '
+                            .'The farm may set a maximum per unit. Leave blank for no maximum.',
+                        default => 'The system maximum is PHP '.number_format((float) self::systemMaximum($get, $record), 4)
+                            .' per unit. The farm may lower it, never raise it. Leave blank to use the system maximum.',
+                    }),
             ]);
     }
 
@@ -109,6 +112,7 @@ class CropTypeOverridesRelationManager extends RelationManager
                 TextColumn::make('cropType.max_discount')
                     ->label('System max tawad')
                     ->money('PHP')
+                    ->placeholder('No limit')
                     ->color('gray'),
             ])
             ->headerActions([
@@ -221,6 +225,6 @@ class CropTypeOverridesRelationManager extends RelationManager
     {
         $cropType = self::cropType($get, $record);
 
-        return $cropType === null ? null : (float) $cropType->max_discount;
+        return $cropType === null || $cropType->max_discount === null ? null : (float) $cropType->max_discount;
     }
 }

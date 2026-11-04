@@ -53,7 +53,7 @@ class CropTypeResource extends JsonResource
                 $request->user()?->farm_id,
             ),
             'floor_price' => (float) $this->floor_price,
-            'max_discount' => (float) $this->max_discount,
+            'max_discount' => $this->max_discount === null ? null : (float) $this->max_discount,
             'effective_floor_price' => $guard->floor,
             'effective_max_discount' => $guard->ceiling,
             'listings_count' => $this->whenCounted('listings'),

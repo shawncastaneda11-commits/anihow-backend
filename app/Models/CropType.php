@@ -181,7 +181,7 @@ class CropType extends Model
      */
     public function allowsDiscount(float $amount): bool
     {
-        return $amount > 0 && $amount <= (float) $this->max_discount;
+        return $amount > 0 && ($this->max_discount === null || $amount <= (float) $this->max_discount);
     }
 
     /**

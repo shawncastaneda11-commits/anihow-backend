@@ -129,18 +129,19 @@ class CropTypeForm
                     ->dehydrated(fn (?CropType $record): bool => self::canSetPricing($record))
                     ->helperText('No listing may be priced below this, and no tawad may bring a unit price below it.'),
                 TextInput::make('max_discount')
-                    ->label('Maximum tawad (PHP)')
+                    ->label('Maximum tawad per unit (PHP, optional)')
                     ->numeric()
                     ->step(0.0001)
                     ->rule('decimal:0,4')
                     ->prefix('PHP')
-                    ->required()
-                    ->default(0)
+                    ->nullable()
                     ->minValue(0)
                     ->lt('floor_price')
+                    ->placeholder('No limit')
                     ->disabled(fn (?CropType $record): bool => ! self::canSetPricing($record))
                     ->dehydrated(fn (?CropType $record): bool => self::canSetPricing($record))
-                    ->helperText('The largest peso discount a seller may set on this crop. Must stay below the floor price.'),
+                    ->helperText('Leave blank for no limit: a seller may give any tawad that keeps the price at or above the floor. '
+                        .'If set, it is the most a tawad may take off each unit, and it must stay below the floor. Set 0 to turn tawad off.'),
 
                 Textarea::make('description')
                     ->rows(3)

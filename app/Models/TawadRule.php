@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\TawadType;
+use App\Support\Pricing\PriceGuard;
 use App\Support\Pricing\UnitConverter;
 use Database\Factories\TawadRuleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -69,10 +70,8 @@ class TawadRule extends Model
     }
 
     /**
-     * Floor check against the crop type's system floor. Farm-blind.
-     *
-     * Kept so existing callers keep working until Pass 2C repoints them at
-     * keepsUnitPriceAbove() with the farm's effective floor.
+     * Floor check against the crop type's system floor. Farm-blind. Kept for
+     * the smoke-test seeder; enforcement uses withinGuard().
      */
     public function keepsUnitPriceAboveFloor(Listing $listing, CropType $cropType): bool
     {
@@ -80,41 +79,114 @@ class TawadRule extends Model
     }
 
     /**
-     * Floor check, by type, against an explicit floor. A flat rule is tested
-     * against a one-unit order, which is its worst case; a minimum-quantity
-     * rule is tested at exactly its threshold. Run this at rule creation AND
-     * again at checkout.
+     * How many listing units the discount is spread over when it is judged.
+     * A minimum-quantity rule applies from its threshold, so it is judged
+     * there. A flat rule applies to any order, so it is judged on the
+     * smallest order a buyer can place: the listing's minimum order.
+     */
+    public function quantityBasis(Listing $listing): float
+    {
+        if ($this->type === TawadType::MinimumQuantity) {
+            return (float) ($this->min_quantity ?? 0);
+        }
+
+        $minimum = (float) ($listing->min_order_quantity ?? 0);
+
+        return $minimum > 0 ? $minimum : 1.0;
+    }
+
+    /**
+     * Why this rule does not fit the guard, or null when it does.
      *
-     * Pass the farm's effective floor from PriceGuardResolver. The stranded
-     * listing flag also calls this twice, with the floor before and after a
-     * raise, to tell whether the raise is what broke the rule.
+     * The tawad is pesos off the whole line, so it is first spread over the
+     * quantity it applies to, giving pesos off each listing unit. That
+     * per-unit amount and the listing price are then converted into the crop
+     * type's unit, where the guard lives, and compared: the per-unit amount
+     * against the maximum tawad (when one is set), and the price after the
+     * tawad against the floor. Run when a rule is created and again at
+     * checkout and walk-in, so the three always agree.
+     *
+     * @return 'unit'|'ceiling'|'floor'|null
+     */
+    public function guardProblem(Listing $listing, PriceGuard $guard): ?string
+    {
+        $perUnit = $this->perUnitInCropUnit($listing);
+        $price = $this->priceInCropUnit($listing);
+
+        if ($perUnit === null || $price === null) {
+            $listing->loadMissing('cropType');
+            $cropType = $listing->cropType;
+
+            return $cropType !== null && app(UnitConverter::class)->isGuarded($cropType, $listing->farm_id)
+                ? 'unit'
+                : null;
+        }
+
+        if (! $guard->allowsDiscount($perUnit)) {
+            return 'ceiling';
+        }
+
+        if (! $guard->allowsResultingUnitPrice($price, $perUnit)) {
+            return 'floor';
+        }
+
+        return null;
+    }
+
+    public function withinGuard(Listing $listing, PriceGuard $guard): bool
+    {
+        return $this->guardProblem($listing, $guard) === null;
+    }
+
+    /**
+     * Floor check against an explicit floor, on the same per-unit basis as
+     * guardProblem(). The stranded-listing flag calls this twice, with the
+     * floor before and after a raise, to tell whether the raise is what broke
+     * the rule.
      */
     public function keepsUnitPriceAbove(Listing $listing, float $floor): bool
     {
-        $listing->loadMissing('cropType');
-        $cropUnit = $listing->cropType?->unit_of_measure;
-        $converter = app(UnitConverter::class);
-        $unitPrice = $cropUnit === null
-            ? (float) $listing->price_per_unit
-            : $converter->guardPrice($listing->unit, $cropUnit, $listing->price_per_unit);
-        $discount = $cropUnit === null
-            ? (float) $this->discount_amount
-            : $converter->guardPrice($listing->unit, $cropUnit, $this->discount_amount);
+        $perUnit = $this->perUnitInCropUnit($listing);
+        $price = $this->priceInCropUnit($listing);
 
-        if ($unitPrice === null || $discount === null) {
+        if ($perUnit === null || $price === null) {
             return $floor <= 0;
         }
 
-        $quantity = match ($this->type) {
-            TawadType::Flat => 1.0,
-            TawadType::MinimumQuantity => (float) ($this->min_quantity ?? 0),
-        };
+        return (new PriceGuard($floor, null))->allowsResultingUnitPrice($price, $perUnit);
+    }
 
-        if ($quantity <= 0) {
-            return false;
+    /**
+     * Pesos off one listing unit, converted into the crop type's unit, or
+     * null when the units cannot convert or the rule has no quantity.
+     */
+    public function perUnitInCropUnit(Listing $listing): ?float
+    {
+        $basis = $this->quantityBasis($listing);
+
+        if ($basis <= 0) {
+            return null;
         }
 
-        return ((($unitPrice * $quantity) - $discount) / $quantity) >= $floor;
+        return $this->inCropUnit($listing, (float) $this->discount_amount / $basis);
+    }
+
+    private function priceInCropUnit(Listing $listing): ?float
+    {
+        return $this->inCropUnit($listing, (float) $listing->price_per_unit);
+    }
+
+    /** A per-unit peso amount in the listing's unit, moved into the crop type's unit. */
+    private function inCropUnit(Listing $listing, float $perListingUnit): ?float
+    {
+        $listing->loadMissing('cropType');
+        $cropUnit = $listing->cropType?->unit_of_measure;
+
+        if ($cropUnit === null) {
+            return $perListingUnit;
+        }
+
+        return app(UnitConverter::class)->guardPrice($listing->unit ?? $cropUnit, $cropUnit, $perListingUnit);
     }
 
     /**

@@ -45,6 +45,7 @@ class CropTypesTable
                 TextColumn::make('max_discount')
                     ->label('Max tawad')
                     ->money('PHP')
+                    ->placeholder('No limit')
                     ->sortable(),
                 TextColumn::make('listings_count')
                     ->label('Listings')

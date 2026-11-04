@@ -56,8 +56,8 @@ class SetFarmPriceOverrideAction
             $toldAboutFloor = $this->flagStranded->floorRaised($farm, $cropType, $before->floor, $after->floor);
             $this->flagStranded->ceilingLowered($farm, $cropType, $before->ceiling, $after->ceiling, $toldAboutFloor);
 
-            $wasGuarded = $before->floor > 0 || $before->ceiling > 0;
-            $nowGuarded = $after->floor > 0 || $after->ceiling > 0;
+            $wasGuarded = $before->floor > 0 || (float) $before->ceiling > 0;
+            $nowGuarded = $after->floor > 0 || (float) $after->ceiling > 0;
 
             if (! $wasGuarded && $nowGuarded) {
                 $this->flagStranded->incompatibleUnits($farm, $cropType);
@@ -103,7 +103,10 @@ class SetFarmPriceOverrideAction
                 .number_format((float) $cropType->floor_price, 2).'.';
         }
 
+        // A crop with no system maximum takes any farm maximum: setting one
+        // only tightens.
         if ($maxDiscount !== null
+            && $cropType->max_discount !== null
             && PriceGuard::centavos($maxDiscount) > PriceGuard::centavos($cropType->max_discount)) {
             $errors['max_discount'] = 'The farm maximum tawad cannot exceed the system maximum of PHP '
                 .number_format((float) $cropType->max_discount, 2).'.';

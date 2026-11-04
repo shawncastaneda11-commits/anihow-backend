@@ -7,6 +7,7 @@ use App\Enums\ListingUnit;
 use App\Models\CropType;
 use App\Models\Farm;
 use App\Support\Pricing\PriceGuard;
+use App\Support\Pricing\PriceGuardResolver;
 
 /**
  * The system-layer caller of the stranded-listing flag. Until this existed, a
@@ -28,14 +29,15 @@ class CropTypeObserver
         // syncOriginal() runs after this event, not before it.
         $oldFloor = (float) $cropType->getOriginal('floor_price');
         $newFloor = (float) $cropType->floor_price;
-        $oldCeiling = (float) $cropType->getOriginal('max_discount');
-        $newCeiling = (float) $cropType->max_discount;
+        // A blank maximum is no maximum.
+        $oldCeiling = $cropType->getOriginal('max_discount') === null ? null : (float) $cropType->getOriginal('max_discount');
+        $newCeiling = $cropType->max_discount === null ? null : (float) $cropType->max_discount;
 
         $floorRaised = $cropType->wasChanged('floor_price')
             && PriceGuard::centavos($newFloor) > PriceGuard::centavos($oldFloor);
 
         $ceilingLowered = $cropType->wasChanged('max_discount')
-            && PriceGuard::centavos($newCeiling) < PriceGuard::centavos($oldCeiling);
+            && PriceGuard::ceilingTightened($oldCeiling, $newCeiling);
 
         $oldUnit = $this->unit($cropType->getOriginal('unit_of_measure'));
         $newUnit = $cropType->unit_of_measure;
@@ -43,8 +45,8 @@ class CropTypeObserver
             && $newUnit !== null
             && $oldUnit !== $newUnit
             && ! $oldUnit->convertsTo($newUnit);
-        $systemWasGuarded = $oldFloor > 0 || $oldCeiling > 0;
-        $systemNowGuarded = $newFloor > 0 || $newCeiling > 0;
+        $systemWasGuarded = $oldFloor > 0 || (float) $oldCeiling > 0;
+        $systemNowGuarded = $newFloor > 0 || (float) $newCeiling > 0;
 
         if (! $floorRaised && ! $ceilingLowered && ! $familyChanged && ! (! $systemWasGuarded && $systemNowGuarded)) {
             return;
@@ -80,12 +82,12 @@ class CropTypeObserver
                 }
 
                 if ($ceilingLowered) {
-                    $farmCeiling = $override?->max_discount;
+                    $farmCeiling = $override?->max_discount === null ? null : (float) $override->max_discount;
                     $this->flagStranded->ceilingLowered(
                         $farm,
                         $cropType,
-                        min($oldCeiling, (float) ($farmCeiling ?? $oldCeiling)),
-                        min($newCeiling, (float) ($farmCeiling ?? $newCeiling)),
+                        PriceGuardResolver::tighterCeiling($oldCeiling, $farmCeiling),
+                        PriceGuardResolver::tighterCeiling($newCeiling, $farmCeiling),
                         $toldAboutFloor,
                     );
                 }

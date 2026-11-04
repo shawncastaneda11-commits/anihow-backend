@@ -105,11 +105,12 @@ class FlagStrandedListingsAction
     public function ceilingLowered(
         Farm $farm,
         CropType $cropType,
-        float $previousCeiling,
-        float $newCeiling,
+        ?float $previousCeiling,
+        ?float $newCeiling,
         array $alreadyNotified = [],
     ): array {
-        if (PriceGuard::centavos($newCeiling) >= PriceGuard::centavos($previousCeiling)) {
+        // Null is no maximum, the loosest ceiling of all.
+        if (! PriceGuard::ceilingTightened($previousCeiling, $newCeiling)) {
             return [];
         }
 
@@ -127,20 +128,18 @@ class FlagStrandedListingsAction
                 continue;
             }
 
-            $converted = $this->units->guardPrice(
-                $listing->unit,
-                $cropType->unit_of_measure,
-                $rule->discount_amount,
-            );
+            // Judged per unit, as when the rule was created.
+            $perUnit = $rule->perUnitInCropUnit($listing);
 
-            if ($converted === null) {
+            if ($perUnit === null) {
                 continue;
             }
 
-            $amount = PriceGuard::centavos($converted);
+            $amount = PriceGuard::centavos($perUnit);
+            $fitBefore = $previousCeiling === null || $amount <= PriceGuard::centavos($previousCeiling);
 
-            if ($amount <= PriceGuard::centavos($previousCeiling) && $amount > PriceGuard::centavos($newCeiling)) {
-                $this->notifier->tawadCeilingLowered($seller, $listing, $newCeiling);
+            if ($fitBefore && $amount > PriceGuard::centavos((float) $newCeiling)) {
+                $this->notifier->tawadCeilingLowered($seller, $listing, (float) $newCeiling);
                 $notified[] = $listing->getKey();
             }
         }

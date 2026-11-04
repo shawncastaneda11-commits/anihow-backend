@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users\Pages;
 
+use App\Enums\Role;
 use App\Filament\Concerns\RedirectsToIndexAfterCreate;
 use App\Filament\Resources\Users\Actions\TemporaryPasswordAction;
 use App\Filament\Resources\Users\UserResource;
@@ -31,6 +32,12 @@ class CreateUser extends CreateRecord
 
         if (! $user instanceof User) {
             return;
+        }
+
+        // A buyer made here passes the same ID check as one who signed up.
+        // Only accounts that predate the ID feature are exempt.
+        if ($user->hasRole(Role::Buyer->value)) {
+            $user->forceFill(['requires_id_verification' => true])->save();
         }
 
         $plain = $user->issueTemporaryPassword();

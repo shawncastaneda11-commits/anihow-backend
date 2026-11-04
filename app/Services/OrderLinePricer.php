@@ -69,23 +69,15 @@ class OrderLinePricer
         if ($rule !== null && $rule->appliesTo($quantity)) {
             $candidate = $rule->discountFor($quantity);
 
-            // Second floor check, on the discounted unit price. The first ran
-            // when the rule was created; the floor or the ceiling may have
-            // moved since. A rule that fails is skipped, not rejected: the
-            // line goes through at the listed price. Decision 15.
-            // The recorded tawad stays in the listing's unit. Only the check
-            // is converted into the crop type's unit.
-            $discountedUnitPrice = ($lineSubtotal - $candidate) / $quantity;
-            $guardCandidate = $converter->guardPrice($listingUnit, $cropType->unit_of_measure, $candidate);
-            $guardDiscounted = $converter->guardPrice($listingUnit, $cropType->unit_of_measure, $discountedUnitPrice);
-
-            $withinGuard = $guardCandidate !== null
-                && $guardDiscounted !== null
-                && $guardCandidate <= $guard->ceiling
-                && $guardDiscounted >= $guard->floor;
-
-            if ($withinGuard || ! $converter->isGuarded($cropType, $listing->farm_id)) {
-                $tawadAmount = self::centavos($candidate);
+            // Second guard check, the same one the rule passed when it was
+            // created: the floor or the ceiling may have moved since. It is
+            // judged per unit at the rule's own basis, which is this line's
+            // worst case, since a line only qualifies at or above it. A rule
+            // that fails is skipped, not rejected: the line goes through at
+            // the listed price. Decision 15. The recorded tawad stays in the
+            // listing's unit.
+            if ($rule->withinGuard($listing, $guard)) {
+                $tawadAmount = self::centavos(min($candidate, $lineSubtotal));
             }
         }
 

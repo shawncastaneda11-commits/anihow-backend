@@ -11,7 +11,8 @@ use App\Models\Listing;
  * and a crop type.
  *
  *   effective floor   = max(system floor,  farm floor override)
- *   effective ceiling = min(system maximum, farm ceiling override)
+ *   effective ceiling = min(system maximum, farm ceiling override), where a
+ *                       blank maximum means none: the floor alone limits tawad
  *
  * Both max() and min() are belt and braces: tighten-only validation already
  * guarantees the override sits on the correct side. Keeping them here means a
@@ -38,12 +39,28 @@ class PriceGuardResolver
         $override = $farm->overrideFor($cropType->getKey());
 
         $systemFloor = (float) $cropType->floor_price;
-        $systemMaximum = (float) $cropType->max_discount;
 
         return new PriceGuard(
             floor: max($systemFloor, (float) ($override?->floor_price ?? $systemFloor)),
-            ceiling: min($systemMaximum, (float) ($override?->max_discount ?? $systemMaximum)),
+            ceiling: self::tighterCeiling(
+                $cropType->max_discount === null ? null : (float) $cropType->max_discount,
+                $override?->max_discount === null ? null : (float) $override->max_discount,
+            ),
         );
+    }
+
+    /**
+     * The stricter of two ceilings, where null means no maximum. A farm may
+     * set a maximum on a crop that has none system-wide; it can never remove
+     * or raise a system maximum.
+     */
+    public static function tighterCeiling(?float $system, ?float $farm): ?float
+    {
+        if ($system === null) {
+            return $farm;
+        }
+
+        return $farm === null ? $system : min($system, $farm);
     }
 
     /**
@@ -83,7 +100,7 @@ class PriceGuardResolver
     {
         return new PriceGuard(
             floor: (float) $cropType->floor_price,
-            ceiling: (float) $cropType->max_discount,
+            ceiling: $cropType->max_discount === null ? null : (float) $cropType->max_discount,
         );
     }
 }

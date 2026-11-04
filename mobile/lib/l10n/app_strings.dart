@@ -2076,7 +2076,7 @@ class AppStrings {
   static String _bawatUnit(String? unit) =>
       unit == null || unit.isEmpty ? '' : ' bawat $unit';
   /// A unit as a word after a number: "3 bundles", "1 bundle", "3 tali".
-  String unitWord(String? code, num quantity) {
+  String unitFor(String? code, num quantity) {
     final unit = code ?? '';
     if (filipino) {
       return switch (unit) {
@@ -2153,8 +2153,6 @@ class AppStrings {
   // Walk-in sale screen
 
   String get changeListing => t('Change', 'Palitan');
-  String quantityLeft(String quantity, String unit) =>
-      t('$quantity $unit left', '$quantity $unit pa ang natitira');
   String tawadTagEvery(String peso) =>
       t('Tawad: $peso off every order', 'Tawad: $peso bawas bawat order');
   String tawadTagBulk(String peso, String quantity, String unit) => t(
@@ -2167,7 +2165,6 @@ class AppStrings {
     'Add $quantity more $unit and the tawad of $peso applies.',
     'Magdagdag ng $quantity pang $unit para sa tawad na $peso.',
   );
-  String get cashReceived => t('Cash received', 'Cash na natanggap');
   String get exactAmount => t('Exact', 'Eksakto');
   String get changeToGive => t('Change to give', 'Sukli');
   String get shortBy => t('Short by', 'Kulang ng');
@@ -2182,7 +2179,7 @@ class AppStrings {
   );
   String recordSaleAmount(String peso) =>
       t('Record sale · $peso', 'Itala ang benta · $peso');
-  String get enterCashReceived =>
+  String get enterCashToRecord =>
       t('Enter the cash received', 'I-type ang cash na natanggap');
   String get checkQuantity => t('Check the quantity', 'Suriin ang dami');
   String get saleRecorded => t('Sale recorded', 'Naitala ang benta');

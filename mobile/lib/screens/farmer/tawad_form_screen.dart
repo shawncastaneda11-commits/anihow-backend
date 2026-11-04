@@ -175,7 +175,7 @@ class _TawadFormScreenState extends State<TawadFormScreen> {
                             inputFormatters: [_decimal],
                             decoration: InputDecoration(
                               hintText: 'e.g. 5',
-                              suffixText: s.unitWord(widget.listing.unit, 2),
+                              suffixText: s.unitFor(widget.listing.unit, 2),
                             ),
                           ),
                         ),
@@ -237,7 +237,7 @@ class _ListingLimits extends StatelessWidget {
     final guard = listing.priceGuard;
     final crop = listing.category;
     final unit = guard?.unit ?? listing.unit ?? crop?.unit;
-    final perUnit = s.unitWord(unit, 1);
+    final perUnit = s.unitFor(unit, 1);
 
     // Values the server sent in this listing's unit; an older server sends
     // only the crop's own values.
@@ -264,7 +264,7 @@ class _ListingLimits extends StatelessWidget {
                     Text(listing.title, style: theme.textTheme.titleMedium),
                     const SizedBox(height: 2),
                     Text(
-                      '${AniHowMoney.pesoUnit(listing.pricePerUnit)} / ${s.unitWord(listing.unit, 1)}',
+                      '${AniHowMoney.pesoUnit(listing.pricePerUnit)} / ${s.unitFor(listing.unit, 1)}',
                       style: TextStyle(color: muted),
                     ),
                   ],
@@ -379,10 +379,10 @@ class _BuyerPays extends StatelessWidget {
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurface.withValues(alpha: 0.7);
     final guard = listing.priceGuard;
-    final unit = s.unitWord(guard?.unit ?? listing.unit, 1);
+    final unit = s.unitFor(guard?.unit ?? listing.unit, 1);
     final quantity = preview.quantity;
     final quantityText =
-        '${_trim(quantity)} ${s.unitWord(listing.unit, quantity)}';
+        '${_trim(quantity)} ${s.unitFor(listing.unit, quantity)}';
 
     final (String note, SaleNoteTone tone) = switch (preview.status) {
       TawadPreviewStatus.empty => (

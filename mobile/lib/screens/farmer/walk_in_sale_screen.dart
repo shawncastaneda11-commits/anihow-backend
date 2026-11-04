@@ -172,7 +172,7 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
                   leading: ListingThumb(listing: listing, size: 40),
                   title: Text(listing.title),
                   subtitle: Text(
-                    '${AniHowMoney.pesoUnit(listing.pricePerUnit)} / ${s.unitWord(listing.unit, 1)}',
+                    '${AniHowMoney.pesoUnit(listing.pricePerUnit)} / ${s.unitFor(listing.unit, 1)}',
                   ),
                   selected: listing.id == _listingId,
                   onTap: () => Navigator.pop(sheetContext, listing.id),
@@ -290,14 +290,14 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
     final short = validQuantity && cash != null && cash > 0 && !paid;
     final rule = listing.tawad;
     final ruleMinimum = double.tryParse(rule?.minQuantity ?? '');
-    final unitOne = s.unitWord(listing.unit, 1);
+    final unitOne = s.unitFor(listing.unit, 1);
     final tawadTag = rule == null || !rule.isActive
         ? null
         : rule.isMinQuantity && ruleMinimum != null
         ? s.tawadTagBulk(
             AniHowMoney.peso(rule.discountAmount),
             _number(ruleMinimum),
-            s.unitWord(listing.unit, ruleMinimum),
+            s.unitFor(listing.unit, ruleMinimum),
           )
         : s.tawadTagEvery(AniHowMoney.peso(rule.discountAmount));
     final missing = rule != null &&
@@ -313,7 +313,7 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
     if (paid) {
       recordLabel = s.recordSaleAmount(AniHowMoney.peso(total));
     } else if (validQuantity) {
-      recordLabel = s.enterCashReceived;
+      recordLabel = s.enterCashToRecord;
     } else {
       recordLabel = s.checkQuantity;
     }
@@ -349,7 +349,7 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
                                   const SizedBox(height: 2),
                                   Text(
                                     '${AniHowMoney.pesoUnit(listing.pricePerUnit)} / $unitOne · '
-                                    '${s.quantityLeft(_number(available), s.unitWord(listing.unit, available))}',
+                                    '${s.quantityLeft(_number(available), s.unitFor(listing.unit, available))}',
                                     style: TextStyle(color: muted),
                                   ),
                                 ],
@@ -384,7 +384,7 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
                         children: [
                           Text(s.quantity, style: theme.textTheme.titleSmall),
                           Text(
-                            s.unitWord(listing.unit, 2),
+                            s.unitFor(listing.unit, 2),
                             style: TextStyle(color: muted, fontSize: 13),
                           ),
                         ],
@@ -451,7 +451,7 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
                         SaleNote(
                           text: s.addMoreForTawad(
                             _number(missing),
-                            s.unitWord(listing.unit, missing),
+                            s.unitFor(listing.unit, missing),
                             AniHowMoney.peso(rule!.discountAmount),
                           ),
                           tone: SaleNoteTone.nudge,
@@ -682,7 +682,7 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
                           ),
                         ),
                         Text(
-                          '${_number(recorded.quantity)} ${s.unitWord(recorded.unit, recorded.quantity)}',
+                          '${_number(recorded.quantity)} ${s.unitFor(recorded.unit, recorded.quantity)}',
                           style: TextStyle(color: muted),
                         ),
                       ],
@@ -734,7 +734,7 @@ class _WalkInSaleScreenState extends State<WalkInSaleScreen> {
               Text(
                 s.leftOnListing(
                   _number(recorded.left > 0 ? recorded.left : 0),
-                  s.unitWord(recorded.unit, recorded.left),
+                  s.unitFor(recorded.unit, recorded.left),
                 ),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: muted, fontSize: 13),

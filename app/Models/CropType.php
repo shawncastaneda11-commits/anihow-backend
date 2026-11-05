@@ -90,6 +90,7 @@ class CropType extends Model
     private function detachForDeletion(): void
     {
         $this->farmOverrides()->delete();
+        $this->unitGuards()->delete();
 
         $this->listings()->withTrashed()->pluck('id')->each(function (int|string $listingId): void {
             $listing = Listing::withTrashed()->find($listingId);
@@ -138,6 +139,36 @@ class CropType extends Model
     public function farmOverrides(): HasMany
     {
         return $this->hasMany(FarmCropTypeOverride::class);
+    }
+
+    /**
+     * Price limits for the crop's other unit families. The crop's own
+     * floor_price and max_discount cover its main unit.
+     */
+    public function unitGuards(): HasMany
+    {
+        return $this->hasMany(CropTypeUnitGuard::class);
+    }
+
+    /**
+     * The extra row that covers a listing in this unit, or null when the main
+     * unit covers it or no row does.
+     */
+    public function unitGuardFor(?ListingUnit $unit): ?CropTypeUnitGuard
+    {
+        if ($unit === null || $this->unit_of_measure === null || $this->unit_of_measure->convertsTo($unit)) {
+            return null;
+        }
+
+        return $this->unitGuards->first(
+            fn (CropTypeUnitGuard $row): bool => $row->unit->convertsTo($unit),
+        );
+    }
+
+    /** The unit a listing's price is checked in: the main unit, or its extra row's unit. */
+    public function guardUnitFor(?ListingUnit $unit): ListingUnit
+    {
+        return $this->unitGuardFor($unit)?->unit ?? $this->unit_of_measure;
     }
 
     public function articles(): BelongsToMany

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ListingUnit;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +13,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * floor_price   raises the farm's floor above the system floor. Never below it.
  * max_discount  lowers the farm's discount ceiling below the system maximum. Never above it.
  *
- * Null on either column means the system value applies for that side.
+ * unit          blank for the crop's main unit, or the unit of one of its
+ *               extra rows (CropTypeUnitGuard), which this override tightens
+ *
+ * Null on either price column means the system value applies for that side.
  */
 class FarmCropTypeOverride extends Model
 {
@@ -23,6 +27,7 @@ class FarmCropTypeOverride extends Model
     protected $fillable = [
         'farm_id',
         'crop_type_id',
+        'unit',
         'floor_price',
         'max_discount',
     ];
@@ -30,6 +35,7 @@ class FarmCropTypeOverride extends Model
     protected function casts(): array
     {
         return [
+            'unit' => ListingUnit::class,
             'floor_price' => 'decimal:4',
             'max_discount' => 'decimal:4',
         ];

@@ -3,7 +3,9 @@
 namespace App\Filament\Resources\Farms\RelationManagers;
 
 use App\Actions\Pricing\SetFarmPriceOverrideAction;
+use App\Enums\ListingUnit;
 use App\Models\CropType;
+use App\Models\CropTypeUnitGuard;
 use App\Models\Farm;
 use App\Models\FarmCropTypeOverride;
 use Filament\Actions\Action;
@@ -22,8 +24,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 
 /**
- * A farm's tighten-only price guards, one row per crop type the farm has moved
- * off the system values. Shown on the Farm edit page.
+ * A farm's tighten-only price guards, one row per crop type and unit the farm
+ * has moved off the system values. Shown on the Farm edit page. The unit is
+ * blank for the crop's main unit, or one of the crop's extra unit rows.
  *
  * Who sees it: anyone holding SetFarmPricing, through the policy's viewAny().
  * Which farm: the Super Admin reaches every farm; a Content Editor only ever
@@ -54,7 +57,17 @@ class CropTypeOverridesRelationManager extends RelationManager
                     ->searchable()
                     ->live()
                     ->disabledOn('edit')
-                    ->helperText('One set of guards per crop type. To change one, edit its row.'),
+                    ->afterStateUpdated(fn (callable $set) => $set('unit', null))
+                    ->helperText('One set of guards per crop type and unit. To change one, edit its row.'),
+
+                Select::make('unit')
+                    ->label('Unit')
+                    ->options(fn (Get $get, RelationManager $livewire, ?Model $record): array => self::availableUnits($get, $livewire, $record))
+                    ->placeholder(fn (Get $get, ?Model $record): string => self::mainUnitLabel($get, $record))
+                    ->native(false)
+                    ->live()
+                    ->disabledOn('edit')
+                    ->helperText('Blank is the crop\'s main unit. The other choices are the crop\'s extra unit rows.'),
 
                 TextInput::make('floor_price')
                     ->label('Farm floor price (PHP)')
@@ -91,26 +104,31 @@ class CropTypeOverridesRelationManager extends RelationManager
     {
         return $table
             ->recordTitle(fn (FarmCropTypeOverride $record): string => $record->cropType?->name ?? 'Crop type')
-            ->modifyQueryUsing(fn (Builder $query) => $query->with('cropType'))
+            ->modifyQueryUsing(fn (Builder $query) => $query->with('cropType.unitGuards'))
             ->columns([
                 TextColumn::make('cropType.name')
                     ->label('Crop type')
                     ->sortable()
                     ->searchable(),
+                TextColumn::make('unit')
+                    ->label('Unit')
+                    ->state(fn (FarmCropTypeOverride $record): ?string => ($record->unit ?? $record->cropType?->unit_of_measure)?->value),
                 TextColumn::make('floor_price')
                     ->label('Farm floor')
                     ->money('PHP')
                     ->placeholder('System value'),
-                TextColumn::make('cropType.floor_price')
+                TextColumn::make('system_floor')
                     ->label('System floor')
+                    ->state(fn (FarmCropTypeOverride $record): mixed => self::systemSource($record->cropType, $record->unit)?->floor_price)
                     ->money('PHP')
                     ->color('gray'),
                 TextColumn::make('max_discount')
                     ->label('Farm max tawad')
                     ->money('PHP')
                     ->placeholder('System value'),
-                TextColumn::make('cropType.max_discount')
+                TextColumn::make('system_max_discount')
                     ->label('System max tawad')
+                    ->state(fn (FarmCropTypeOverride $record): mixed => self::systemSource($record->cropType, $record->unit)?->max_discount)
                     ->money('PHP')
                     ->placeholder('No limit')
                     ->color('gray'),
@@ -118,12 +136,12 @@ class CropTypeOverridesRelationManager extends RelationManager
             ->headerActions([
                 CreateAction::make()
                     ->label('Tighten a crop type')
-                    ->using(fn (array $data, RelationManager $livewire, Action $action): Model => self::save($livewire, $data['crop_type_id'], $data, $action)
+                    ->using(fn (array $data, RelationManager $livewire, Action $action): Model => self::save($livewire, $data['crop_type_id'], $data, $action, self::unitFrom($data['unit'] ?? null))
                         ?? throw new \LogicException('A price guard needs a floor, a maximum tawad, or both.')),
             ])
             ->recordActions([
                 EditAction::make()
-                    ->using(fn (FarmCropTypeOverride $record, array $data, RelationManager $livewire, Action $action): Model => self::save($livewire, $record->crop_type_id, $data, $action)
+                    ->using(fn (FarmCropTypeOverride $record, array $data, RelationManager $livewire, Action $action): Model => self::save($livewire, $record->crop_type_id, $data, $action, $record->unit)
                         ?? $record),
 
                 // Removing the row is the same as saving both sides blank: the
@@ -137,7 +155,7 @@ class CropTypeOverridesRelationManager extends RelationManager
                     ->modalSubmitActionLabel('Reset')
                     ->successNotificationTitle('Reset to system values')
                     ->using(function (FarmCropTypeOverride $record, RelationManager $livewire): bool {
-                        self::save($livewire, $record->crop_type_id, ['floor_price' => null, 'max_discount' => null]);
+                        self::save($livewire, $record->crop_type_id, ['floor_price' => null, 'max_discount' => null], null, $record->unit);
 
                         return true;
                     }),
@@ -151,8 +169,13 @@ class CropTypeOverridesRelationManager extends RelationManager
      *
      * @param  array<string, mixed>  $data
      */
-    private static function save(RelationManager $livewire, int|string $cropTypeId, array $data, ?Action $action = null): ?FarmCropTypeOverride
-    {
+    private static function save(
+        RelationManager $livewire,
+        int|string $cropTypeId,
+        array $data,
+        ?Action $action = null,
+        ?ListingUnit $unit = null,
+    ): ?FarmCropTypeOverride {
         /** @var Farm $farm */
         $farm = $livewire->getOwnerRecord();
 
@@ -169,6 +192,7 @@ class CropTypeOverridesRelationManager extends RelationManager
                 CropType::findOrFail($cropTypeId),
                 $data['floor_price'] ?? null,
                 $data['max_discount'] ?? null,
+                $unit,
             );
         } catch (ValidationException $exception) {
             if ($action === null) {
@@ -186,21 +210,74 @@ class CropTypeOverridesRelationManager extends RelationManager
     }
 
     /**
-     * Crop types this farm has not tightened yet. On edit, the row's own crop
-     * type is included so the disabled select can still show its name.
+     * Active crop types. A crop with extra unit rows can be tightened once per
+     * unit, so a crop that already has a row here stays on the list; the unit
+     * choice below leaves out the units already taken. On edit, the row's own
+     * crop type is included so the disabled select can still show its name.
      *
      * @return array<int|string, string>
      */
     private static function availableCropTypes(RelationManager $livewire, ?Model $record): array
     {
-        $taken = $livewire->getOwnerRecord()->cropTypeOverrides()->pluck('crop_type_id');
-
         return CropType::query()
-            ->where(fn (Builder $query) => $query->active()->whereNotIn('id', $taken))
+            ->where(fn (Builder $query) => $query->active())
             ->when($record, fn (Builder $query) => $query->orWhere('id', $record->crop_type_id))
             ->orderBy('name')
             ->pluck('name', 'id')
             ->all();
+    }
+
+    /**
+     * The crop's extra unit rows this farm has not tightened yet. The main
+     * unit is the blank choice.
+     *
+     * @return array<string, string>
+     */
+    private static function availableUnits(Get $get, RelationManager $livewire, ?Model $record): array
+    {
+        $cropType = self::cropType($get, $record);
+
+        if ($cropType === null) {
+            return [];
+        }
+
+        $taken = $livewire->getOwnerRecord()->cropTypeOverrides()
+            ->where('crop_type_id', $cropType->getKey())
+            ->whereNotNull('unit')
+            ->pluck('unit')
+            ->map(fn (mixed $unit): string => $unit instanceof ListingUnit ? $unit->value : (string) $unit)
+            ->all();
+
+        return $cropType->unitGuards
+            ->filter(fn (CropTypeUnitGuard $row): bool => $record?->unit === $row->unit || ! in_array($row->unit->value, $taken, true))
+            ->mapWithKeys(fn (CropTypeUnitGuard $row): array => [$row->unit->value => 'Per '.$row->unit->value])
+            ->all();
+    }
+
+    private static function mainUnitLabel(Get $get, ?Model $record): string
+    {
+        $unit = self::cropType($get, $record)?->unit_of_measure;
+
+        return $unit === null ? 'Main unit' : "Main unit (per {$unit->value})";
+    }
+
+    private static function unitFrom(mixed $value): ?ListingUnit
+    {
+        if ($value instanceof ListingUnit) {
+            return $value;
+        }
+
+        return is_string($value) && $value !== '' ? ListingUnit::tryFrom($value) : null;
+    }
+
+    /** The crop's main values, or the extra row's for this unit. */
+    private static function systemSource(?CropType $cropType, ?ListingUnit $unit): CropType|CropTypeUnitGuard|null
+    {
+        if ($cropType === null || $unit === null) {
+            return $cropType;
+        }
+
+        return $cropType->unitGuards->first(fn (CropTypeUnitGuard $row): bool => $row->unit === $unit);
     }
 
     private static function cropType(Get $get, ?Model $record): ?CropType
@@ -216,15 +293,15 @@ class CropTypeOverridesRelationManager extends RelationManager
 
     private static function systemFloor(Get $get, ?Model $record): ?float
     {
-        $cropType = self::cropType($get, $record);
+        $source = self::systemSource(self::cropType($get, $record), self::unitFrom($get('unit') ?? $record?->unit));
 
-        return $cropType === null ? null : (float) $cropType->floor_price;
+        return $source === null ? null : (float) $source->floor_price;
     }
 
     private static function systemMaximum(Get $get, ?Model $record): ?float
     {
-        $cropType = self::cropType($get, $record);
+        $source = self::systemSource(self::cropType($get, $record), self::unitFrom($get('unit') ?? $record?->unit));
 
-        return $cropType === null || $cropType->max_discount === null ? null : (float) $cropType->max_discount;
+        return $source === null || $source->max_discount === null ? null : (float) $source->max_discount;
     }
 }

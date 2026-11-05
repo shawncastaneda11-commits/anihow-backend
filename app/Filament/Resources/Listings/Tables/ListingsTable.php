@@ -27,6 +27,9 @@ class ListingsTable
     /**
      * The effective floor in SQL, for the "Priced below floor" filter.
      *
+     * The main unit's floor. Extra unit rows are handled inside
+     * UnitConverter::belowFloorComparison().
+     *
      * Mirrors PriceGuardResolver::for(): the system floor, raised by the farm's
      * override where one exists, and never lowered by it. If that formula
      * changes, change this one too. CASE rather than GREATEST so the same SQL
@@ -37,12 +40,14 @@ class ListingsTable
             WHEN COALESCE(
                 (SELECT fo.floor_price FROM farm_crop_type_overrides fo
                   WHERE fo.farm_id = listings.farm_id
-                    AND fo.crop_type_id = listings.crop_type_id),
+                    AND fo.crop_type_id = listings.crop_type_id
+                    AND fo.unit IS NULL),
                 crop_types.floor_price
             ) > crop_types.floor_price
             THEN (SELECT fo.floor_price FROM farm_crop_type_overrides fo
                    WHERE fo.farm_id = listings.farm_id
-                     AND fo.crop_type_id = listings.crop_type_id)
+                     AND fo.crop_type_id = listings.crop_type_id
+                     AND fo.unit IS NULL)
             ELSE crop_types.floor_price
         END
         SQL;

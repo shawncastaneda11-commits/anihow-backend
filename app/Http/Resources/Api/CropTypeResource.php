@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api;
 
 use App\Models\CropType;
+use App\Models\CropTypeUnitGuard;
 use App\Models\Farm;
 use App\Support\Pricing\PriceGuard;
 use App\Support\Pricing\PriceGuardResolver;
@@ -56,6 +57,17 @@ class CropTypeResource extends JsonResource
             'max_discount' => $this->max_discount === null ? null : (float) $this->max_discount,
             'effective_floor_price' => $guard->floor,
             'effective_max_discount' => $guard->ceiling,
+            // Limits for the crop's other unit families, such as per bundle for
+            // a crop priced per kg. The system values; a listing's own
+            // price_guard carries its farm's effective ones.
+            'unit_guards' => $this->unitGuards
+                ->map(fn (CropTypeUnitGuard $row): array => [
+                    'unit' => $row->unit->value,
+                    'floor_price' => (float) $row->floor_price,
+                    'max_discount' => $row->max_discount === null ? null : (float) $row->max_discount,
+                ])
+                ->values()
+                ->all(),
             'listings_count' => $this->whenCounted('listings'),
         ];
     }

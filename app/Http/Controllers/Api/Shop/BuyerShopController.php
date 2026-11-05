@@ -60,7 +60,7 @@ class BuyerShopController extends Controller
             'listings' => fn ($query) => $query
                 ->buyerVisible()
                 ->allowedByFarmFeatures()
-                ->with(['cropType', 'farm', 'activeTawadRule'])
+                ->with(['cropType.unitGuards', 'farm', 'activeTawadRule'])
                 ->latest(),
         ]);
 

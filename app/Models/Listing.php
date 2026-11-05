@@ -350,8 +350,8 @@ class Listing extends Model
         $resolver = app(PriceGuardResolver::class);
 
         return $this->farm !== null
-            ? $resolver->for($this->farm, $this->cropType)
-            : $resolver->system($this->cropType);
+            ? $resolver->for($this->farm, $this->cropType, $this->unit)
+            : $resolver->system($this->cropType, $this->unit);
     }
 
     public function effectiveFloor(): float
@@ -370,7 +370,7 @@ class Listing extends Model
         $converter = app(UnitConverter::class);
         $price = $converter->guardPrice(
             $this->unit,
-            $this->cropType->unit_of_measure,
+            $this->cropType->guardUnitFor($this->unit),
             $this->price_per_unit,
         );
 

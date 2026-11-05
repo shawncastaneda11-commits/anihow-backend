@@ -17,6 +17,10 @@ use Illuminate\Validation\ValidationException;
  * farm override are converted so the real price does not change: ₱50/kg
  * saved as grams becomes ₱0.0500/g, and ₱45/kg becomes ₱0.0450/g. Amounts
  * are stored to 4 decimal places.
+ *
+ * The crop's extra unit rows (CropTypeUnitGuard) and the farm overrides for
+ * them are in their own units and are not touched. The main unit may not move
+ * into the family of one of those rows: each unit family has one set of limits.
  */
 class ChangeCropTypeUnitAction
 {
@@ -32,6 +36,16 @@ class ChangeCropTypeUnitAction
         return DB::transaction(function () use ($cropType, $attributes): CropType {
             $newUnit = $this->incomingUnit($cropType, $attributes);
             $oldUnit = $cropType->unit_of_measure;
+
+            $clash = $newUnit === $oldUnit ? null : $cropType->unitGuards()->get()
+                ->first(fn ($row): bool => $row->unit->convertsTo($newUnit));
+
+            if ($clash !== null) {
+                throw ValidationException::withMessages([
+                    'unit_of_measure' => "This crop already has its own price limits per {$clash->unit->value}. "
+                        .'Remove that row first, or choose another unit.',
+                ]);
+            }
 
             if ($newUnit !== $oldUnit && $this->isLocked($cropType) && ! $oldUnit->convertsTo($newUnit)) {
                 throw ValidationException::withMessages([
@@ -100,7 +114,7 @@ class ChangeCropTypeUnitAction
 
     private function convertOverrides(CropType $cropType, ListingUnit $from, ListingUnit $to): void
     {
-        $cropType->farmOverrides()->each(function ($override) use ($from, $to): void {
+        $cropType->farmOverrides()->whereNull('unit')->each(function ($override) use ($from, $to): void {
             $override->update([
                 'floor_price' => $this->convert($from, $to, $override->floor_price),
                 'max_discount' => $this->convert($from, $to, $override->max_discount),

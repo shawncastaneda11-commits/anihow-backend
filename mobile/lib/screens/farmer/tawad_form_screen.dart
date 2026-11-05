@@ -7,12 +7,19 @@ import '../../models/models.dart';
 import '../../services/api_client.dart';
 import '../../services/tawad_requests.dart';
 import '../../state/auth_controller.dart';
-import '../../state/preferences_controller.dart';
+import '../../support/tawad_preview.dart';
 import '../../theme/anihow_space.dart';
+import '../../theme/readable_accent.dart';
 import '../../widgets/form_label.dart';
-import '../../widgets/hint_card.dart';
 import '../../widgets/primary_button.dart';
+import '../../widgets/sale_parts.dart';
 
+/// Sets or replaces a listing's tawad.
+///
+/// One card shows the listing and its limits, already in the listing's own
+/// unit. The seller picks who gets the tawad, types the peso off, and the
+/// "What the buyer pays" box says at once whether it fits. Save stays off
+/// until it does. The server still checks on save.
 class TawadFormScreen extends StatefulWidget {
   const TawadFormScreen({super.key, required this.listing});
 
@@ -29,7 +36,9 @@ class _TawadFormScreenState extends State<TawadFormScreen> {
   bool _busy = false;
   String? _error;
 
-  static final _peso = FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'));
+  static final _decimal = FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'));
+
+  bool get _bulk => _type == TawadRequests.minQuantity;
 
   @override
   void initState() {
@@ -51,19 +60,16 @@ class _TawadFormScreenState extends State<TawadFormScreen> {
     super.dispose();
   }
 
+  TawadPreview get _preview => TawadPreview.of(
+    widget.listing,
+    bulk: _bulk,
+    amountText: _amount.text,
+    minQuantityText: _minQuantity.text,
+  );
+
   Future<void> _save() async {
-    final s = AppStrings.read(context);
-    final amount = _amount.text.trim();
-    if (amount.isEmpty || (double.tryParse(amount) ?? 0) <= 0) {
-      setState(() => _error = s.enterPesoOff);
+    if (!_preview.isOk) {
       return;
-    }
-    if (_type == TawadRequests.minQuantity) {
-      final minimum = _minQuantity.text.trim();
-      if (minimum.isEmpty || (double.tryParse(minimum) ?? 0) <= 0) {
-        setState(() => _error = s.enterMinQty);
-        return;
-      }
     }
     setState(() {
       _busy = true;
@@ -73,10 +79,8 @@ class _TawadFormScreenState extends State<TawadFormScreen> {
       await context.read<AuthController>().api.saveTawad(
         listingId: widget.listing.id,
         type: _type,
-        discountAmount: amount,
-        minQuantity: _type == TawadRequests.minQuantity
-            ? _minQuantity.text.trim()
-            : null,
+        discountAmount: _amount.text.trim(),
+        minQuantity: _bulk ? _minQuantity.text.trim() : null,
       );
       if (mounted) {
         Navigator.of(context).pop(true);
@@ -96,160 +100,374 @@ class _TawadFormScreenState extends State<TawadFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final crop = widget.listing.category;
-    final guard = widget.listing.priceGuard;
     final s = AppStrings.of(context);
-    final language = context.watch<PreferencesController>().language;
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.7);
+    final preview = _preview;
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.listing.tawad == null ? s.setTawad : s.replaceTawad),
       ),
-      body: ListView(
-        padding: AniHowSpace.screenPadding,
+      body: Column(
         children: [
-          AniHowHintCard(
-            icon: Icons.sell_outlined,
-            title: s.tawadHint,
-            body: s.tawadKeepPrice,
-            tone: AniHowHintTone.cash,
-          ),
-          const SizedBox(height: AniHowSpace.cardGap),
-          AniHowFormCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Expanded(
+            child: ListView(
+              padding: AniHowSpace.screenPadding,
               children: [
-                Text(
-                  widget.listing.title,
-                  style: Theme.of(context).textTheme.titleMedium,
+                _ListingLimits(listing: widget.listing),
+                const SizedBox(height: AniHowSpace.section),
+                Text(s.whoGetsTawad, style: theme.textTheme.titleSmall),
+                const SizedBox(height: 8),
+                SegmentedButton<String>(
+                  key: const ValueKey('tawad-type'),
+                  showSelectedIcon: false,
+                  segments: [
+                    ButtonSegment(
+                      value: TawadRequests.flat,
+                      label: Text(s.tawadEveryOrder),
+                    ),
+                    ButtonSegment(
+                      value: TawadRequests.minQuantity,
+                      label: Text(s.tawadBulkOrders),
+                    ),
+                  ],
+                  selected: {_type},
+                  onSelectionChanged: (value) =>
+                      setState(() => _type = value.first),
                 ),
+                const SizedBox(height: 8),
                 Text(
-                  '${s.listed} ${AniHowMoney.pesoUnit(widget.listing.pricePerUnit)}',
+                  _bulk ? s.tawadBulkHelp : s.tawadEveryHelp,
+                  style: TextStyle(color: muted, height: 1.4),
                 ),
-                if (guard != null) ...[
-                  // The server's values, already in this listing's unit.
-                  const SizedBox(height: AniHowSpace.cardGap),
-                  Text(
-                    guard.hasMaxTawad
-                        ? s.maxTawadFor(
-                            crop?.labelFor(language) ?? widget.listing.title,
-                            AniHowMoney.peso(guard.maxTawadPerUnit),
-                            unit: guard.unit,
-                          )
-                        : s.noMaxTawadFor(
-                            crop?.labelFor(language) ?? widget.listing.title,
+                const SizedBox(height: AniHowSpace.section),
+                AniHowFormCard(
+                  child: Column(
+                    children: [
+                      AniHowField(
+                        label: s.pesoOffShort,
+                        child: TextField(
+                          key: const ValueKey('tawad-amount'),
+                          controller: _amount,
+                          onChanged: (_) => setState(() {}),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
                           ),
-                    key: const ValueKey('tawad-max-per-unit'),
-                  ),
-                  if (guard.floorPerUnit != null)
-                    Text(
-                      s.unitFloor(
-                        AniHowMoney.peso(guard.floorPerUnit),
-                        unit: guard.unit,
+                          inputFormatters: [_decimal],
+                          decoration: const InputDecoration(
+                            prefixText: '₱ ',
+                            hintText: '0.00',
+                          ),
+                        ),
                       ),
-                      key: const ValueKey('tawad-floor-per-unit'),
-                    ),
-                ] else if ((crop?.sellerMaxDiscount?.isNotEmpty ?? false) ||
-                    (crop?.sellerFloorPrice?.isNotEmpty ?? false)) ...[
+                      if (_bulk) ...[
+                        const SizedBox(height: AniHowSpace.fieldGap),
+                        AniHowField(
+                          label: s.whenTheyBuyAtLeast,
+                          child: TextField(
+                            key: const ValueKey('tawad-min-quantity'),
+                            controller: _minQuantity,
+                            onChanged: (_) => setState(() {}),
+                            keyboardType:
+                                const TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                            inputFormatters: [_decimal],
+                            decoration: InputDecoration(
+                              hintText: 'e.g. 5',
+                              suffixText: s.unitFor(widget.listing.unit, 2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AniHowSpace.cardGap),
+                _BuyerPays(listing: widget.listing, preview: preview, bulk: _bulk),
+                if (_error != null) ...[
                   const SizedBox(height: AniHowSpace.cardGap),
-                  if (crop?.sellerMaxDiscount?.isNotEmpty ?? false)
-                    Text(
-                      s.maxTawadFor(
-                        crop!.labelFor(language),
-                        AniHowMoney.peso(crop.sellerMaxDiscount),
-                        unit: crop.unit,
-                      ),
-                    ),
-                  if (crop?.sellerFloorPrice?.isNotEmpty ?? false)
-                    Text(
-                      s.unitFloor(
-                        AniHowMoney.peso(crop!.sellerFloorPrice),
-                        unit: crop.unit,
-                      ),
-                    ),
+                  SaleNote(text: _error!, tone: SaleNoteTone.problem),
                 ],
+                const SizedBox(height: AniHowSpace.cardGap),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text(
+                    s.tawadSaveFootnote,
+                    style: TextStyle(color: muted, fontSize: 13, height: 1.4),
+                  ),
+                ),
               ],
             ),
           ),
-          const SizedBox(height: AniHowSpace.section),
-          Text(s.ruleType, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: AniHowSpace.cardGap),
-          Row(
-            children: [
-              Expanded(
-                child: AniHowChoiceTile(
-                  icon: Icons.payments_outlined,
-                  label: s.tawadFlat,
-                  selected: _type == TawadRequests.flat,
-                  onTap: () => setState(() => _type = TawadRequests.flat),
-                ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AniHowSpace.screen,
+                8,
+                AniHowSpace.screen,
+                AniHowSpace.screen,
               ),
-              const SizedBox(width: AniHowSpace.cardGap),
-              Expanded(
-                child: AniHowChoiceTile(
-                  icon: Icons.stacked_bar_chart,
-                  label: s.tawadMinQty,
-                  selected: _type == TawadRequests.minQuantity,
-                  onTap: () =>
-                      setState(() => _type = TawadRequests.minQuantity),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AniHowSpace.section),
-          AniHowFormCard(
-            child: Column(
-              children: [
-                AniHowField(
-                  label: s.pesoOff,
-                  child: TextField(
-                    controller: _amount,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    inputFormatters: [_peso],
-                    decoration: const InputDecoration(
-                      prefixText: '₱ ',
-                      hintText: '0.00',
-                    ),
-                  ),
-                ),
-                if (_type == TawadRequests.minQuantity) ...[
-                  const SizedBox(height: AniHowSpace.fieldGap),
-                  AniHowField(
-                    label: s.minQuantity,
-                    child: TextField(
-                      controller: _minQuantity,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      inputFormatters: [_peso],
-                      decoration: InputDecoration(
-                        hintText: 'e.g. 5',
-                        suffixText:
-                            widget.listing.unit ?? widget.listing.unitLabel,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: AniHowSpace.cardGap),
-            Text(
-              _error!,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.error,
-                fontWeight: FontWeight.w700,
+              child: PrimaryButton(
+                key: const ValueKey('save-tawad'),
+                label: s.saveTawad,
+                onPressed: preview.isOk ? _save : null,
+                busy: _busy,
               ),
             ),
-          ],
-          const SizedBox(height: AniHowSpace.section),
-          AniHowHintCard(icon: Icons.info_outline, title: s.tawadReplaceNote),
-          const SizedBox(height: AniHowSpace.section),
-          PrimaryButton(label: s.saveTawad, onPressed: _save, busy: _busy),
+          ),
         ],
       ),
     );
   }
+}
+
+/// The listing, its price, and its two limits side by side.
+class _ListingLimits extends StatelessWidget {
+  const _ListingLimits({required this.listing});
+
+  final ListingItem listing;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.7);
+    final guard = listing.priceGuard;
+    final crop = listing.category;
+    final unit = guard?.unit ?? listing.unit ?? crop?.unit;
+    final perUnit = s.unitFor(unit, 1);
+
+    // Values the server sent in this listing's unit; an older server sends
+    // only the crop's own values.
+    final floor = guard != null
+        ? guard.floorPerUnit
+        : double.tryParse(crop?.sellerFloorPrice ?? '');
+    final max = guard != null
+        ? guard.maxTawadPerUnit
+        : double.tryParse(crop?.sellerMaxDiscount ?? '');
+    final showLimits = guard != null || floor != null || max != null;
+
+    return AniHowFormCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              ListingThumb(listing: listing),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(listing.title, style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${AniHowMoney.pesoUnit(listing.pricePerUnit)} / ${s.unitFor(listing.unit, 1)}',
+                      style: TextStyle(color: muted),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (showLimits) ...[
+            const SizedBox(height: AniHowSpace.cardGap),
+            Row(
+              children: [
+                Expanded(
+                  child: _LimitBox(
+                    label: s.lowestPrice,
+                    value: floor == null ? '—' : AniHowMoney.pesoUnit(floor),
+                    unit: floor == null ? null : perUnit,
+                    valueKey: const ValueKey('tawad-floor-per-unit'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _LimitBox(
+                    label: s.maxTawadShort,
+                    value: max == null ? s.noLimit : AniHowMoney.pesoUnit(max),
+                    unit: max == null ? null : perUnit,
+                    valueKey: const ValueKey('tawad-max-per-unit'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _LimitBox extends StatelessWidget {
+  const _LimitBox({
+    required this.label,
+    required this.value,
+    required this.unit,
+    required this.valueKey,
+  });
+
+  final String label;
+  final String value;
+  final String? unit;
+  final Key valueKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.7);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: muted,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text.rich(
+            key: valueKey,
+            TextSpan(
+              text: value,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              children: [
+                if (unit != null)
+                  TextSpan(
+                    text: ' / $unit',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                      color: muted,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The example order with the tawad applied, and whether it fits.
+class _BuyerPays extends StatelessWidget {
+  const _BuyerPays({
+    required this.listing,
+    required this.preview,
+    required this.bulk,
+  });
+
+  final ListingItem listing;
+  final TawadPreview preview;
+  final bool bulk;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.7);
+    final guard = listing.priceGuard;
+    final unit = s.unitFor(guard?.unit ?? listing.unit, 1);
+    final quantity = preview.quantity;
+    final quantityText =
+        '${_trim(quantity)} ${s.unitFor(listing.unit, quantity)}';
+
+    final (String note, SaleNoteTone tone) = switch (preview.status) {
+      TawadPreviewStatus.empty => (
+        bulk ? s.tawadTypeAmountAndMin : s.tawadTypeAmount,
+        SaleNoteTone.neutral,
+      ),
+      TawadPreviewStatus.ok => (
+        s.tawadWithinLimits(AniHowMoney.pesoUnit(preview.perUnit), unit),
+        SaleNoteTone.good,
+      ),
+      TawadPreviewStatus.over => (
+        s.tawadOverMax(
+          AniHowMoney.pesoUnit(preview.perUnit),
+          AniHowMoney.pesoUnit(guard?.maxTawadPerUnit),
+          unit,
+        ),
+        SaleNoteTone.problem,
+      ),
+      TawadPreviewStatus.belowFloor => (
+        s.tawadBelowLowest(
+          AniHowMoney.pesoUnit(preview.unitPrice - preview.perUnit),
+          AniHowMoney.pesoUnit(guard?.floorPerUnit),
+          unit,
+        ),
+        SaleNoteTone.problem,
+      ),
+      TawadPreviewStatus.turnedOff => (s.tawadTurnedOff, SaleNoteTone.problem),
+      TawadPreviewStatus.unit => (s.tawadUnitNotAllowed, SaleNoteTone.problem),
+    };
+
+    return AniHowFormCard(
+      child: Semantics(
+        liveRegion: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              s.whatBuyerPays.toUpperCase(),
+              style: TextStyle(
+                color: muted,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.3,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Expanded(child: Text(quantityText)),
+                if (preview.isOk && preview.total < preview.listed) ...[
+                  Text(
+                    AniHowMoney.peso(preview.listed),
+                    style: TextStyle(
+                      color: muted,
+                      decoration: TextDecoration.lineThrough,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Text(
+                  AniHowMoney.peso(preview.total),
+                  key: const ValueKey('tawad-preview-total'),
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: readableAccent(context),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            SaleNote(
+              key: const ValueKey('tawad-preview-note'),
+              text: note,
+              tone: tone,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _trim(double value) => value == value.roundToDouble()
+      ? value.toStringAsFixed(0)
+      : value.toString();
 }

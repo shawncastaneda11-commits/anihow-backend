@@ -176,17 +176,22 @@ class TawadRule extends Model
         return $this->inCropUnit($listing, (float) $listing->price_per_unit);
     }
 
-    /** A per-unit peso amount in the listing's unit, moved into the crop type's unit. */
+    /**
+     * A per-unit peso amount in the listing's unit, moved into the unit the
+     * guard is in: the crop type's main unit, or its extra row's unit.
+     */
     private function inCropUnit(Listing $listing, float $perListingUnit): ?float
     {
         $listing->loadMissing('cropType');
-        $cropUnit = $listing->cropType?->unit_of_measure;
+        $cropType = $listing->cropType;
 
-        if ($cropUnit === null) {
+        if ($cropType?->unit_of_measure === null) {
             return $perListingUnit;
         }
 
-        return app(UnitConverter::class)->guardPrice($listing->unit ?? $cropUnit, $cropUnit, $perListingUnit);
+        $guardUnit = $cropType->guardUnitFor($listing->unit);
+
+        return app(UnitConverter::class)->guardPrice($listing->unit ?? $guardUnit, $guardUnit, $perListingUnit);
     }
 
     /**

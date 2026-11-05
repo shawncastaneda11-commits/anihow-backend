@@ -130,8 +130,9 @@ class UpdateListingRequest extends FormRequest
                     ? (float) $this->validated('price_per_unit')
                     : (float) $listing->price_per_unit;
 
-                $guard = app(PriceGuardResolver::class)->forFarmId($listing->farm_id, $cropType);
-                $price = $converter->guardPrice($unit, $cropType->unit_of_measure, $price);
+                $guard = app(PriceGuardResolver::class)->forFarmId($listing->farm_id, $cropType, $unit);
+                $guardUnit = $guard->unit ?? $cropType->unit_of_measure;
+                $price = $converter->guardPrice($unit, $guardUnit, $price);
 
                 if ($price === null) {
                     if ($converter->isGuarded($cropType, $listing->farm_id)) {
@@ -148,7 +149,7 @@ class UpdateListingRequest extends FormRequest
                     $floor = number_format($guard->floor, 2, '.', '');
                     $validator->errors()->add(
                         'price_per_unit',
-                        "The floor price for {$cropType->name} is PHP {$floor} per {$cropType->unit_of_measure->value}.",
+                        "The floor price for {$cropType->name} is PHP {$floor} per {$guardUnit->value}.",
                     );
                 }
             },

@@ -2075,6 +2075,124 @@ class AppStrings {
       unit == null || unit.isEmpty ? '' : ' per $unit';
   static String _bawatUnit(String? unit) =>
       unit == null || unit.isEmpty ? '' : ' bawat $unit';
+  /// A unit as a word after a number: "3 bundles", "1 bundle", "3 tali".
+  String unitFor(String? code, num quantity) {
+    final unit = code ?? '';
+    if (filipino) {
+      return switch (unit) {
+        'piece' => 'piraso',
+        'dozen' => 'dosena',
+        'bundle' => 'tali',
+        'sack' => 'sako',
+        'tray' => 'bandeha',
+        'pack' => 'pakete',
+        'bottle' => 'bote',
+        'liter' => 'L',
+        _ => unit,
+      };
+    }
+    final one = quantity == 1;
+    return switch (unit) {
+      'piece' || 'dozen' || 'bundle' || 'sack' || 'tray' || 'pack' ||
+      'bottle' => one ? unit : '${unit}s',
+      'liter' => one ? 'litre' : 'litres',
+      _ => unit,
+    };
+  }
+
+  // Tawad screen
+
+  String get lowestPrice => t('Lowest price', 'Pinakamababang presyo');
+  String get maxTawadShort => t('Max tawad', 'Pinakamataas na tawad');
+  String get noLimit => t('No limit', 'Walang limit');
+  String get whoGetsTawad => t('Who gets the tawad?', 'Sino ang may tawad?');
+  String get tawadEveryOrder => t('Every order', 'Bawat order');
+  String get tawadBulkOrders => t('Bulk orders', 'Maramihang order');
+  String get tawadEveryHelp => t(
+    'Every order gets the same peso off, whatever the amount.',
+    'Pareho ang bawas sa bawat order, kahit gaano karami.',
+  );
+  String get tawadBulkHelp => t(
+    'Only orders of at least the minimum get the tawad. Good for selling more at once.',
+    'May tawad lang ang order na umabot sa minimum. Mainam para makabenta nang mas marami.',
+  );
+  String get pesoOffShort => t('Peso off', 'Bawas sa presyo');
+  String get whenTheyBuyAtLeast =>
+      t('When they buy at least', 'Kapag bumili ng hindi bababa sa');
+  String get whatBuyerPays => t('What the buyer pays', 'Babayaran ng mamimili');
+  String tawadWithinLimits(String perUnit, String unit) => t(
+    'Within your limits: $perUnit off each $unit.',
+    'Pasok sa limit: $perUnit bawas bawat $unit.',
+  );
+  String tawadOverMax(String perUnit, String max, String unit) => t(
+    'That is $perUnit off each $unit. The most is $max.',
+    'Ito ay $perUnit bawas bawat $unit. Hanggang $max lang.',
+  );
+  String tawadBelowLowest(String price, String floor, String unit) => t(
+    'That brings each $unit to $price, below the lowest price of $floor.',
+    'Bababa sa $price ang bawat $unit, mas mababa sa pinakamababang presyo na $floor.',
+  );
+  String get tawadTypeAmountAndMin => t(
+    'Type the peso off and the minimum.',
+    'I-type ang bawas at ang minimum.',
+  );
+  String get tawadTypeAmount => t('Type the peso off.', 'I-type ang bawas.');
+  String get tawadTurnedOff => t(
+    'Tawad is turned off for this crop.',
+    'Naka-off ang tawad para sa pananim na ito.',
+  );
+  String get tawadUnitNotAllowed => t(
+    "This listing's unit can't be checked for this crop. Change the unit first.",
+    'Hindi masuri ang unit ng listing na ito para sa pananim. Palitan muna ang unit.',
+  );
+  String get tawadSaveFootnote => t(
+    'Saving replaces the current tawad. Orders already confirmed keep their price.',
+    'Papalitan ng pag-save ang kasalukuyang tawad. Hindi magbabago ang presyo ng na-confirm nang order.',
+  );
+
+  // Walk-in sale screen
+
+  String get changeListing => t('Change', 'Palitan');
+  String tawadTagEvery(String peso) =>
+      t('Tawad: $peso off every order', 'Tawad: $peso bawas bawat order');
+  String tawadTagBulk(String peso, String quantity, String unit) => t(
+    'Tawad: $peso off $quantity+ $unit',
+    'Tawad: $peso bawas sa $quantity+ $unit',
+  );
+  String get oneLess => t('One less', 'Bawasan ng isa');
+  String get oneMore => t('One more', 'Dagdagan ng isa');
+  String addMoreForTawad(String quantity, String unit, String peso) => t(
+    'Add $quantity more $unit and the tawad of $peso applies.',
+    'Magdagdag ng $quantity pang $unit para sa tawad na $peso.',
+  );
+  String get exactAmount => t('Exact', 'Eksakto');
+  String get changeToGive => t('Change to give', 'Sukli');
+  String get shortBy => t('Short by', 'Kulang ng');
+  String get changeRow => t('Change', 'Sukli');
+  String get buyerNameOrNote =>
+      t('Buyer name or note (optional)', 'Pangalan o tala (opsyonal)');
+  String get buyerNameLabel => t('Buyer name', 'Pangalan ng mamimili');
+  String get noteLabel => t('Note', 'Tala');
+  String get walkInCountCash => t(
+    'Count the cash first. AniHow only records the sale.',
+    'Bilangin muna ang cash. Nagtatala lang ang AniHow.',
+  );
+  String recordSaleAmount(String peso) =>
+      t('Record sale · $peso', 'Itala ang benta · $peso');
+  String get enterCashToRecord =>
+      t('Enter the cash received', 'I-type ang cash na natanggap');
+  String get checkQuantity => t('Check the quantity', 'Suriin ang dami');
+  String get saleRecorded => t('Sale recorded', 'Naitala ang benta');
+  String giveChange(String peso) =>
+      t('Give $peso change.', 'Magbigay ng $peso na sukli.');
+  String get noChangeToGive => t('No change to give.', 'Walang sukli.');
+  String leftOnListing(String quantity, String unit) => t(
+    '$quantity $unit left on this listing.',
+    '$quantity $unit pa ang natitira sa listing na ito.',
+  );
+  String get recordAnotherSale =>
+      t('Record another sale', 'Magtala ng isa pang benta');
+
   String get chooseListing => t('Choose a listing.', 'Pumili ng listing.');
   String get walkInRecorded =>
       t('Walk-in sale recorded', 'Naitala na ang walk-in sale');
@@ -2412,7 +2530,7 @@ class AppStrings {
             title: 'Sino ang gumagamit',
             body: 'Ang buyer ay puwedeng magpalista. Ang farmer-seller account ay ginagawa ng admin ng AniHow. Ang super admin at content editor ay nasa web panel, hindi sa app na ito.',
           ),
-          (title: 'Bersyon', body: 'Ang Android app na ito ay AniHow v1.0.2.'),
+          (title: 'Bersyon', body: 'Ang Android app na ito ay AniHow v1.0.3.'),
         ]
       : const [
           (
@@ -2427,7 +2545,7 @@ class AppStrings {
             title: 'Who uses the app',
             body: 'Buyers can create their own account. Farmer-seller accounts are created by the AniHow admin. Super admins and content editors use the web panel, not this app.',
           ),
-          (title: 'Version', body: 'This Android app is AniHow v1.0.2.'),
+          (title: 'Version', body: 'This Android app is AniHow v1.0.3.'),
         ];
 
   /// Terms of Service. Shown with [privacyPolicySections] on the terms page.

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\LogsCmsActivity;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -28,9 +29,17 @@ class SystemSetting extends Model
 
     protected $fillable = ['key', 'value'];
 
+    /**
+     * Falls back to the default while the database or the settings table is
+     * not there yet (package discovery, a deploy before migrations run).
+     */
     public static function get(string $key, ?string $default = null): ?string
     {
-        $all = Cache::remember('system_settings', 60, fn (): array => self::query()->pluck('value', 'key')->all());
+        try {
+            $all = Cache::remember('system_settings', 60, fn (): array => self::query()->pluck('value', 'key')->all());
+        } catch (QueryException) {
+            return $default;
+        }
 
         $value = $all[$key] ?? null;
 

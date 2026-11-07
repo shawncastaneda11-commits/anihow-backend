@@ -38,7 +38,7 @@ class TemporaryPasswordTest extends TestCase
 
     public function test_creating_an_account_issues_a_temporary_password_instead_of_a_typed_one(): void
     {
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $farm = Farm::factory()->create();
 
         $component = Livewire::actingAs($admin)
@@ -86,8 +86,8 @@ class TemporaryPasswordTest extends TestCase
 
     public function test_reset_temporary_password_is_hidden_for_self_and_super_admins_and_revokes_tokens(): void
     {
-        $admin = $this->staff(Role::SuperAdmin);
-        $otherAdmin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
+        $otherAdmin = $this->staff(Role::AccountManager);
         $editor = $this->staff(Role::ContentEditor, Farm::factory()->create());
         $token = $editor->createToken('mobile')->plainTextToken;
 

@@ -371,7 +371,7 @@ class ReservationsTest extends TestCase
 
     public function test_suspending_a_seller_cancels_active_reservations(): void
     {
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $farmer = $this->farmer();
         $buyer = $this->buyer();
         $listing = $this->upcoming($farmer);
@@ -559,7 +559,7 @@ class ReservationsTest extends TestCase
 
     public function test_filament_takedown_and_report_resolve_require_the_reservation_checkbox(): void
     {
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $farmer = $this->farmer();
         $buyer = $this->buyer();
         $reserved = $this->upcoming($farmer);

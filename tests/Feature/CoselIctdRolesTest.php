@@ -265,8 +265,8 @@ class CoselIctdRolesTest extends TestCase
             'unit' => $listing->unit?->value,
             'price_per_unit' => (float) $listing->price_per_unit,
             'quantity_available' => (float) $listing->quantity_available,
-            'min_order_quantity' => (float) $listing->min_order_quantity,
-            'order_step' => (float) $listing->order_step,
+            'min_order_quantity' => max(1.0, (float) $listing->min_order_quantity),
+            'order_step' => max(1.0, (float) $listing->order_step),
             'is_active' => (bool) $listing->is_active,
         ], $changes);
     }

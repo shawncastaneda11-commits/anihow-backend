@@ -32,8 +32,8 @@ class ReportApiTest extends TestCase
 
     public function test_buyer_reports_a_published_listing_and_notifies_every_super_admin(): void
     {
-        $adminA = $this->staff(Role::SuperAdmin);
-        $adminB = $this->staff(Role::SuperAdmin);
+        $adminA = $this->staff(Role::AccountManager);
+        $adminB = $this->staff(Role::AccountManager);
         $farmer = $this->farmer();
         $listing = $this->listingFor($farmer, ['title' => 'Morning crate']);
         $buyer = $this->buyer();

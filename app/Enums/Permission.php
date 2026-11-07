@@ -137,16 +137,13 @@ enum Permission: string
              * administrator accounts only, so a locked-out COSEL account can
              * always be recovered.
              *
-             * SetFarmPricing is governance, not seller pricing: it tightens a
-             * farm's guardrail and never sets a listing price. It stays here
-             * so a suspended Content Editor cannot leave a farm's numbers
-             * unfixable.
+             * System pricing (crop floors and maximums) is here; a farm's own
+             * tightening of those guards is with COSEL, beside the farm record.
              */
             Role::SuperAdmin => [
                 self::ManageAdminAccounts,
                 self::ManageCropTypes,
                 self::SetCropPricing,
-                self::SetFarmPricing,
                 self::ViewAllOrders,
                 self::ManageSystemFaq,
                 self::ViewSystemAnalytics,
@@ -160,11 +157,17 @@ enum Permission: string
              * requests, partner farm records, moderation, and system-wide
              * announcements. It cannot create or change administrator
              * accounts, and it has no technical settings.
+             *
+             * SetFarmPricing is governance, not seller pricing: it tightens a
+             * farm's guardrail and never sets a listing price. It sits with
+             * the farm record so a suspended Content Editor cannot leave a
+             * farm's numbers unfixable.
              */
             Role::AccountManager => [
                 self::ManageAccounts,
                 self::SuspendAccounts,
                 self::ManageFarms,
+                self::SetFarmPricing,
                 self::ManageOrganicCertification,
                 self::TakedownListings,
                 self::ViewAllOrders,

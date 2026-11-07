@@ -107,7 +107,7 @@ class IdVerificationTest extends TestCase
 
     public function test_approving_unlocks_orders_deletes_the_photos_and_notifies(): void
     {
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $buyer = $this->signUp();
         $this->submit($buyer)->assertCreated();
         $verification = $buyer->idVerifications()->firstOrFail();
@@ -148,7 +148,7 @@ class IdVerificationTest extends TestCase
 
     public function test_rejecting_needs_a_reason_shows_it_and_lets_the_buyer_try_again(): void
     {
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $buyer = $this->signUp();
         $this->submit($buyer)->assertCreated();
         $verification = $buyer->idVerifications()->firstOrFail();
@@ -192,7 +192,7 @@ class IdVerificationTest extends TestCase
             ->assertForbidden();
         $this->assertFalse(IdVerificationResource::canAccess());
 
-        $this->actingAs($this->staff(Role::SuperAdmin));
+        $this->actingAs($this->staff(Role::AccountManager));
         $this->assertTrue(IdVerificationResource::canAccess());
         $this->assertSame('1', IdVerificationResource::getNavigationBadge());
 
@@ -202,7 +202,7 @@ class IdVerificationTest extends TestCase
 
     public function test_the_cms_page_lists_checks_and_rejects_with_a_preset_reason(): void
     {
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $buyer = $this->signUp();
         $this->submit($buyer)->assertCreated();
         $verification = $buyer->idVerifications()->firstOrFail();

@@ -220,7 +220,7 @@ class TawadPerUnitTest extends TestCase
     {
         Filament::setCurrentPanel(Filament::getPanel('admin'));
         $admin = User::factory()->create(['status' => UserStatus::Active]);
-        $admin->syncRoles(Role::SuperAdmin);
+        $admin->syncRoles(Role::AccountManager);
 
         Livewire::actingAs($admin)
             ->test(CreateUser::class)

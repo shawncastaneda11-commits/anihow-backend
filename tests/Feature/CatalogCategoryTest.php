@@ -60,7 +60,7 @@ class CatalogCategoryTest extends TestCase
         $editor = User::factory()->create(['farm_id' => $farm->id]);
         $editor->syncRoles(RoleEnum::ContentEditor);
         $admin = User::factory()->create();
-        $admin->syncRoles(RoleEnum::SuperAdmin);
+        $admin->syncRoles(RoleEnum::AccountManager);
 
         $policy = app(FarmPolicy::class);
 

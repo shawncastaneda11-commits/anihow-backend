@@ -65,7 +65,7 @@ class UserSelfEditGuardTest extends TestCase
     {
         $farm = Farm::factory()->create();
         $otherFarm = Farm::factory()->create();
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $editor = $this->staff(Role::ContentEditor, $farm);
         $farmerRoleId = RoleModel::findByName(Role::FarmerSeller->value)->id;
 
@@ -106,7 +106,7 @@ class UserSelfEditGuardTest extends TestCase
 
     public function test_a_super_admin_can_change_their_own_password(): void
     {
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
 
         $this->openEditor($admin)
             ->assertFormFieldHidden('roles')
@@ -122,14 +122,14 @@ class UserSelfEditGuardTest extends TestCase
 
         $this->assertTrue(Hash::check('New-Pass#123', $admin->password));
         $this->assertSame(UserStatus::Active, $admin->status);
-        $this->assertTrue($admin->hasRole(Role::SuperAdmin));
+        $this->assertTrue($admin->hasRole(Role::AccountManager));
     }
 
     public function test_the_account_filters_match_what_each_role_can_see(): void
     {
         $farm = Farm::factory()->create();
         $editor = $this->staff(Role::ContentEditor, $farm);
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
 
         $this->listAccounts($editor)
             ->assertTableFilterHidden('role')

@@ -121,7 +121,7 @@ class ReportCmsTest extends TestCase
 
     public function test_content_editor_cannot_open_the_reports_resource(): void
     {
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $editor = $this->staff(Role::ContentEditor, Farm::factory()->create());
 
         $this->actingAs($admin)

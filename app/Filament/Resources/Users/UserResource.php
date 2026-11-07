@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Users;
 
-use App\Enums\Permission;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
@@ -12,6 +11,7 @@ use App\Filament\Resources\Users\Schemas\UserForm;
 use App\Filament\Resources\Users\Schemas\UserInfolist;
 use App\Filament\Resources\Users\Tables\UsersTable;
 use App\Models\User;
+use App\Support\Accounts\AccountAuthority;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -77,15 +77,15 @@ class UserResource extends Resource
         $query = parent::getEloquentQuery()->with(['roles', 'farm']);
         $user = auth()->user();
 
-        if ($user === null || $user->can(Permission::ManageAccounts->value)) {
+        if ($user === null) {
             return $query;
         }
 
-        return $query->where('farm_id', $user->farm_id);
+        return AccountAuthority::scope($query, $user);
     }
 
     public static function canCreate(): bool
     {
-        return auth()->user()?->can(Permission::ManageAccounts->value) ?? false;
+        return AccountAuthority::managesAny(auth()->user());
     }
 }

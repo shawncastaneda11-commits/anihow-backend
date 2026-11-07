@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ListingUnit;
 use App\Enums\Role;
+use App\Models\Concerns\LogsCmsActivity;
 use App\Support\FarmPin;
 use App\Support\ImageVariants;
 use Database\Factories\FarmFactory;
@@ -22,6 +23,8 @@ use Illuminate\Support\Facades\Validator;
     'description',
     'contact_person',
     'contact_number',
+    'partnered_since',
+    'partnership_notes',
     'address',
     'barangay',
     'municipality',
@@ -44,6 +47,8 @@ class Farm extends Model
     /** @use HasFactory<FarmFactory> */
     use HasFactory;
 
+    use LogsCmsActivity;
+
     protected function casts(): array
     {
         return [
@@ -53,6 +58,7 @@ class Farm extends Model
             'tawad_enabled' => 'boolean',
             'walk_in_enabled' => 'boolean',
             'organic_certified_until' => 'date',
+            'partnered_since' => 'date',
             'latitude' => 'decimal:7',
             'longitude' => 'decimal:7',
         ];

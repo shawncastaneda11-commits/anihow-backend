@@ -8,6 +8,7 @@ use App\Enums\OrderStatus;
 use App\Enums\ReservationStatus;
 use App\Enums\Role;
 use App\Enums\UserStatus;
+use App\Models\Concerns\LogsCmsActivity;
 use App\Notifications\ResetPasswordNotification;
 use App\Support\ImageVariants;
 use Database\Factories\UserFactory;
@@ -66,6 +67,8 @@ use Spatie\Permission\Traits\HasRoles;
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser, MustVerifyEmail
 {
+    use LogsCmsActivity;
+
     public const EXPIRED_TEMPORARY_PASSWORD_MESSAGE = 'Your temporary password has expired. Ask the AniHow administrator to reset it.';
 
     private const TEMPORARY_PASSWORD_ALPHABET = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -235,6 +238,18 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     public function isSuperAdmin(): bool
     {
         return $this->hasRole(Role::SuperAdmin);
+    }
+
+    /** COSEL's Account Manager. */
+    public function isAccountManager(): bool
+    {
+        return $this->hasRole(Role::AccountManager);
+    }
+
+    /** An administrator: the ICTD Super Admin or the COSEL Account Manager. */
+    public function isAdministrator(): bool
+    {
+        return $this->hasAnyRole(array_column(Role::adminRoles(), 'value'));
     }
 
     public function isContentEditor(): bool

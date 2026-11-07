@@ -9,6 +9,7 @@ use App\Enums\ListingUnit;
 use App\Enums\ProductCategory;
 use App\Enums\ReservationStatus;
 use App\Enums\UserStatus;
+use App\Models\Concerns\LogsCmsActivity;
 use App\Support\ImageVariants;
 use App\Support\Pricing\PriceGuard;
 use App\Support\Pricing\PriceGuardResolver;
@@ -58,6 +59,8 @@ class Listing extends Model
 {
     /** @use HasFactory<ListingFactory> */
     use HasFactory, SoftDeletes;
+
+    use LogsCmsActivity;
 
     protected function casts(): array
     {

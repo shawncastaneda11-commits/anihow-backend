@@ -17,11 +17,13 @@ enum NotificationType: string
     case ListingLowStock = 'listing_low_stock';
     case ListingTakenDown = 'listing_taken_down';
     case ListingRestored = 'listing_restored';
+    case ListingEditedByFarm = 'listing_edited_by_farm';
     /** No longer sent; kept so notifications already stored still load. */
     case AccountApproved = 'account_approved';
     case FloorPriceRaised = 'floor_price_raised';
     case TawadCeilingLowered = 'tawad_ceiling_lowered';
     case FarmAnnouncement = 'farm_announcement';
+    case SystemAnnouncement = 'system_announcement';
     case FaqEntryModerated = 'faq_entry_moderated';
     case AccountDeletionRequested = 'account_deletion_requested';
     case AccountDeletionRejected = 'account_deletion_rejected';
@@ -57,10 +59,12 @@ enum NotificationType: string
             self::ListingLowStock => 'Listing low on stock',
             self::ListingTakenDown => 'Listing taken down',
             self::ListingRestored => 'Listing restored',
+            self::ListingEditedByFarm => 'Listing edited by your farm',
             self::AccountApproved => 'Account approved',
             self::FloorPriceRaised => 'Floor price raised above your listing',
             self::TawadCeilingLowered => 'Tawad limit lowered below your discount',
             self::FarmAnnouncement => 'Farm announcement',
+            self::SystemAnnouncement => 'Announcement from AniHow',
             self::FaqEntryModerated => 'FAQ answer moderated',
             self::AccountDeletionRequested => 'Account deletion requested',
             self::AccountDeletionRejected => 'Account deletion request rejected',

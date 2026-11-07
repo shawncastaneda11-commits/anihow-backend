@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ListingUnit;
+use App\Models\Concerns\LogsCmsActivity;
 use App\Observers\CropTypeUnitGuardObserver;
 use Database\Factories\CropTypeUnitGuardFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -28,6 +29,8 @@ class CropTypeUnitGuard extends Model
 {
     /** @use HasFactory<CropTypeUnitGuardFactory> */
     use HasFactory;
+
+    use LogsCmsActivity;
 
     protected $fillable = [
         'crop_type_id',

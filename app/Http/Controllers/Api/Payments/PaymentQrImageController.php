@@ -40,7 +40,7 @@ class PaymentQrImageController extends Controller
 
     private function allowed(User $user, SellerPaymentQr $qr): bool
     {
-        if ($qr->farmer_seller_id === $user->id || $user->isSuperAdmin()) {
+        if ($qr->farmer_seller_id === $user->id || $user->isAdministrator()) {
             return true;
         }
 

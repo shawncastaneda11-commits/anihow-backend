@@ -67,7 +67,7 @@ class PaymentResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isSuperAdmin() ?? false;
+        return auth()->user()?->isAdministrator() ?? false;
     }
 
     public static function canCreate(): bool

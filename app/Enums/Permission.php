@@ -7,6 +7,8 @@ enum Permission: string
     // Accounts
     case ManageAccounts = 'manage_accounts';
     case SuspendAccounts = 'suspend_accounts';
+    case ManageAdminAccounts = 'manage_admin_accounts';
+    case ViewActivityLog = 'view_activity_log';
 
     // Farms
     case ManageFarms = 'manage_farms';
@@ -27,6 +29,7 @@ enum Permission: string
 
     // Listings
     case ManageOwnListings = 'manage_own_listings';
+    case ManageFarmListings = 'manage_farm_listings';
     case TakedownListings = 'takedown_listings';
 
     // Tawad
@@ -77,6 +80,8 @@ enum Permission: string
         return match ($this) {
             self::ManageAccounts => 'Manage accounts',
             self::SuspendAccounts => 'Suspend accounts',
+            self::ManageAdminAccounts => 'Manage administrator accounts',
+            self::ViewActivityLog => 'View the activity log',
             self::ManageFarms => 'Manage farms',
             self::ManageOwnFarmProfile => 'Manage own farm profile',
             self::ViewOwnFarmRoster => 'View own farm roster',
@@ -85,6 +90,7 @@ enum Permission: string
             self::SetCropPricing => 'Set floor price and maximum discount',
             self::SetFarmPricing => 'Tighten a farm floor price and maximum discount',
             self::ManageOwnListings => 'Manage own listings',
+            self::ManageFarmListings => 'View and edit the listings of own farm',
             self::TakedownListings => 'Take down listings',
             self::ManageOwnTawadRules => 'Manage own tawad rules',
             self::BrowseMarketplace => 'Browse marketplace',
@@ -124,38 +130,57 @@ enum Permission: string
     {
         return match ($role) {
             /*
-             * Deliberately enumerated rather than self::cases(). The Super
-             * Admin governs the system; they do not act inside it. Handing
-             * them every case gave them authorship of farm content and
-             * ownership of seller pricing, neither of which is theirs.
+             * The ICTD Department: the technical side. Deliberately
+             * enumerated rather than self::cases(). It governs the system and
+             * does not act inside it, and it does not manage people: farmer,
+             * buyer, and Content Editor accounts belong to COSEL. It creates
+             * administrator accounts only, so a locked-out COSEL account can
+             * always be recovered.
              *
              * SetFarmPricing is governance, not seller pricing: it tightens a
-             * farm's guardrail and never sets a listing price. The Super Admin
-             * holds it so a suspended Content Editor cannot leave a farm's
-             * numbers unfixable.
+             * farm's guardrail and never sets a listing price. It stays here
+             * so a suspended Content Editor cannot leave a farm's numbers
+             * unfixable.
              */
             Role::SuperAdmin => [
+                self::ManageAdminAccounts,
+                self::ManageCropTypes,
+                self::SetCropPricing,
+                self::SetFarmPricing,
+                self::ViewAllOrders,
+                self::ManageSystemFaq,
+                self::ViewSystemAnalytics,
+                self::ViewFarmAnalytics,
+                self::GenerateExports,
+                self::ViewActivityLog,
+            ],
+
+            /*
+             * COSEL: people and partnerships. Accounts, ID checks, deletion
+             * requests, partner farm records, moderation, and system-wide
+             * announcements. It cannot create or change administrator
+             * accounts, and it has no technical settings.
+             */
+            Role::AccountManager => [
                 self::ManageAccounts,
                 self::SuspendAccounts,
                 self::ManageFarms,
                 self::ManageOrganicCertification,
-                self::ManageCropTypes,
-                self::SetCropPricing,
-                self::SetFarmPricing,
                 self::TakedownListings,
                 self::ViewAllOrders,
                 self::ModerateReviews,
                 self::ResolveReports,
                 self::ModerateArticles,
                 self::ManageOwnFarmAnnouncements,
-                self::ManageSystemFaq,
                 self::ViewSystemAnalytics,
                 self::ViewFarmAnalytics,
                 self::GenerateExports,
+                self::ViewActivityLog,
             ],
 
             Role::ContentEditor => [
                 self::ManageOwnFarmProfile,
+                self::ManageFarmListings,
                 self::SetFarmPricing,
                 self::ViewOwnFarmRoster,
                 self::ManageOwnFarmArticles,

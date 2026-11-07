@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Actions\Exports\ExportAnalyticsAction;
+use App\Actions\Exports\ExportCommunityImpactAction;
 use App\Actions\Exports\ExportYearlyAnalyticsAction;
 use App\Enums\Permission;
 use App\Models\Farm;
@@ -124,6 +125,32 @@ class Dashboard extends BaseDashboard
                     $until = now()->parse($data['until'])->endOfDay();
 
                     return $export->download(auth()->user(), $since, $until);
+                }),
+            // COSEL: per-farm figures for extension reporting.
+            Action::make('communityImpactReport')
+                ->label('Community impact')
+                ->icon(Heroicon::OutlinedUserGroup)
+                ->modalSubmitActionLabel('Download spreadsheet')
+                ->visible(fn (): bool => auth()->user()?->can(Permission::ManageFarms->value) ?? false)
+                ->schema([
+                    DatePicker::make('from')
+                        ->label('From')
+                        ->default(now()->startOfYear()->toDateString())
+                        ->required(),
+                    DatePicker::make('until')
+                        ->label('Until')
+                        ->default(now()->toDateString())
+                        ->required(),
+                ])
+                ->action(function (array $data, ExportCommunityImpactAction $export) {
+                    $user = auth()->user();
+                    abort_unless($user instanceof User && $user->can(Permission::ManageFarms->value), 403);
+
+                    return $export->download(
+                        $user,
+                        now()->parse($data['from'])->startOfDay(),
+                        now()->parse($data['until'])->endOfDay(),
+                    );
                 }),
             Action::make('yearlyReport')
                 ->label('Yearly report')

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Role;
+use App\Models\Concerns\LogsCmsActivity;
 use Database\Factories\FaqEntryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,6 +27,8 @@ class FaqEntry extends Model
 {
     /** @use HasFactory<FaqEntryFactory> */
     use HasFactory;
+
+    use LogsCmsActivity;
 
     protected function casts(): array
     {

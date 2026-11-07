@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AccountDeletionStatus;
+use App\Models\Concerns\LogsCmsActivity;
 use Database\Factories\AccountDeletionRequestFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -22,6 +23,8 @@ class AccountDeletionRequest extends Model
 {
     /** @use HasFactory<AccountDeletionRequestFactory> */
     use HasFactory;
+
+    use LogsCmsActivity;
 
     protected function casts(): array
     {

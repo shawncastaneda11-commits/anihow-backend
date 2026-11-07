@@ -5,6 +5,7 @@ namespace App\Enums;
 enum Role: string
 {
     case SuperAdmin = 'super_admin';
+    case AccountManager = 'account_manager';
     case ContentEditor = 'content_editor';
     case FarmerSeller = 'farmer_seller';
     case Buyer = 'buyer';
@@ -13,6 +14,7 @@ enum Role: string
     {
         return match ($this) {
             self::SuperAdmin => 'Super Admin',
+            self::AccountManager => 'Account Manager',
             self::ContentEditor => 'Content Editor',
             self::FarmerSeller => 'Farmer-Seller',
             self::Buyer => 'Buyer',
@@ -26,7 +28,23 @@ enum Role: string
      */
     public static function panelRoles(): array
     {
-        return [self::SuperAdmin, self::ContentEditor];
+        return [self::SuperAdmin, self::AccountManager, self::ContentEditor];
+    }
+
+    /**
+     * Administrator roles. Only an account that may manage administrators
+     * (the ICTD Super Admin) creates, edits, or suspends these.
+     *
+     * @return list<self>
+     */
+    public static function adminRoles(): array
+    {
+        return [self::SuperAdmin, self::AccountManager];
+    }
+
+    public function isAdmin(): bool
+    {
+        return in_array($this, self::adminRoles(), true);
     }
 
     /**

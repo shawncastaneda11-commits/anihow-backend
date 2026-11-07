@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Farms\Schemas;
 
+use App\Enums\Permission;
 use App\Models\Farm;
 use App\Policies\FarmPolicy;
 use App\Support\FarmPin;
@@ -93,6 +94,21 @@ class FarmForm
                 Toggle::make('is_active')
                     ->label('Active')
                     ->default(true),
+
+                Section::make('Partnership (COSEL)')
+                    ->description('Not shown in the app.')
+                    ->schema([
+                        DatePicker::make('partnered_since')
+                            ->label('Partner since')
+                            ->native(false),
+                        Textarea::make('partnership_notes')
+                            ->label('Partnership notes')
+                            ->rows(3)
+                            ->maxLength(5000)
+                            ->helperText('Agreement details, renewals, and contact history.'),
+                    ])
+                    ->visible(fn (): bool => auth()->user()?->can(Permission::ManageFarms->value) ?? false)
+                    ->columnSpanFull(),
 
                 Section::make('Farm features')
                     ->schema(collect(Farm::featureSwitches())

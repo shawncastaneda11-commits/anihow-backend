@@ -12,6 +12,7 @@ class ListingPolicy
     {
         return $user->can(Permission::ManageOwnListings->value)
             || $user->can(Permission::TakedownListings->value)
+            || $user->can(Permission::ManageFarmListings->value)
             || $user->can(Permission::BrowseMarketplace->value);
     }
 
@@ -21,7 +22,7 @@ class ListingPolicy
             return true;
         }
 
-        if ($listing->isOwnedBy($user)) {
+        if ($listing->isOwnedBy($user) || $this->editsForFarm($user, $listing)) {
             return true;
         }
 
@@ -37,18 +38,27 @@ class ListingPolicy
     }
 
     /**
-     * A Super Admin does not edit a seller's listing. Moderation is takedown,
-     * not rewriting someone else's price or copy.
+     * An administrator does not edit a seller's listing: moderation is
+     * takedown. The farm's own Content Editor may, for listings on that farm;
+     * every such edit is logged and the seller is told (EditFarmListing).
      */
     public function update(User $user, Listing $listing): bool
     {
-        return $user->can(Permission::ManageOwnListings->value)
-            && $listing->isOwnedBy($user);
+        return ($user->can(Permission::ManageOwnListings->value) && $listing->isOwnedBy($user))
+            || $this->editsForFarm($user, $listing);
     }
 
+    /** Only the seller deletes their listing. */
     public function delete(User $user, Listing $listing): bool
     {
-        return $this->update($user, $listing);
+        return $user->can(Permission::ManageOwnListings->value) && $listing->isOwnedBy($user);
+    }
+
+    private function editsForFarm(User $user, Listing $listing): bool
+    {
+        return $user->can(Permission::ManageFarmListings->value)
+            && $user->farm_id !== null
+            && (int) $user->farm_id === (int) $listing->farm_id;
     }
 
     public function takedown(User $user, Listing $listing): bool

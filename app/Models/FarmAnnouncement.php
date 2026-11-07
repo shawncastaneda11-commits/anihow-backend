@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AnnouncementAudience;
+use App\Models\Concerns\LogsCmsActivity;
 use App\Support\ImageVariants;
 use Database\Factories\FarmAnnouncementFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -27,6 +28,8 @@ class FarmAnnouncement extends Model
 {
     /** @use HasFactory<FarmAnnouncementFactory> */
     use HasFactory;
+
+    use LogsCmsActivity;
 
     protected function casts(): array
     {

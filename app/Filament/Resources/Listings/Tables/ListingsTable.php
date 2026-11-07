@@ -6,6 +6,7 @@ use App\Actions\Listings\GuardListingOpenOrders;
 use App\Actions\Listings\TakeDownListingAction;
 use App\Actions\Reservations\GuardListingReservationCancellation;
 use App\Enums\ListingStatus;
+use App\Filament\Resources\Listings\Actions\FarmListingActions;
 use App\Models\Listing;
 use App\Support\InAppNotifier;
 use App\Support\Pricing\UnitConverter;
@@ -141,7 +142,8 @@ class ListingsTable
                     ->relationship('cropType', 'name')
                     ->label('Crop type'),
                 SelectFilter::make('farm')
-                    ->relationship('farm', 'name'),
+                    ->relationship('farm', 'name')
+                    ->visible(fn (): bool => auth()->user()?->farm_id === null),
                 TernaryFilter::make('is_active')
                     ->label('Seller active'),
                 // Same answer as the red price badge, computed in SQL so it can
@@ -157,6 +159,7 @@ class ListingsTable
             ])
             ->recordActions([
                 ViewAction::make(),
+                ...FarmListingActions::make(),
 
                 /*
                  * The Super Admin's only write power over a listing. The seller
@@ -167,7 +170,8 @@ class ListingsTable
                     ->icon('heroicon-o-eye-slash')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->visible(fn (Listing $record): bool => $record->status === ListingStatus::Published)
+                    ->visible(fn (Listing $record): bool => $record->status === ListingStatus::Published
+                        && (auth()->user()?->can('takedown', $record) ?? false))
                     ->modalDescription(fn (Listing $record): ?string => collect([
                         app(GuardListingReservationCancellation::class)->warning($record),
                         app(GuardListingOpenOrders::class)->warning($record),
@@ -203,7 +207,8 @@ class ListingsTable
                     ->icon('heroicon-o-eye')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->visible(fn (Listing $record): bool => $record->status === ListingStatus::TakenDown)
+                    ->visible(fn (Listing $record): bool => $record->status === ListingStatus::TakenDown
+                        && (auth()->user()?->can('takedown', $record) ?? false))
                     ->action(function (Listing $record): void {
                         $record->update([
                             'status' => ListingStatus::Published,

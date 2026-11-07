@@ -17,7 +17,7 @@ class PaymentProofScreenshotController extends Controller
         $reservation = $paymentProof->reservation;
 
         $allowed = $user !== null && (
-            $user->isSuperAdmin()
+            $user->isAdministrator()
             || ($order !== null && ($order->isOwnedByBuyer($user) || $order->isOwnedByFarmer($user)))
             || ($reservation !== null && (
                 (int) $reservation->buyer_id === (int) $user->id

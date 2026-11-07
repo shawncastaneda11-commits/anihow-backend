@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\IdDocumentType;
 use App\Enums\IdVerificationStatus;
+use App\Models\Concerns\LogsCmsActivity;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -26,6 +27,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 ])]
 class IdVerification extends Model
 {
+    use LogsCmsActivity;
+
     protected function casts(): array
     {
         return [

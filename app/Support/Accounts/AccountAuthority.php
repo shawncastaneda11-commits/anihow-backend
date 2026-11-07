@@ -91,12 +91,17 @@ final class AccountAuthority
             return $query;
         }
 
+        // Everyone always sees their own account.
         if ($admins) {
-            return $query->whereHas('roles', fn (Builder $roles): Builder => $roles->whereIn('name', $admin));
+            return $query->where(fn (Builder $q): Builder => $q
+                ->whereHas('roles', fn (Builder $roles): Builder => $roles->whereIn('name', $admin))
+                ->orWhereKey($actor->getKey()));
         }
 
         if ($people) {
-            return $query->whereDoesntHave('roles', fn (Builder $roles): Builder => $roles->whereIn('name', $admin));
+            return $query->where(fn (Builder $q): Builder => $q
+                ->whereDoesntHave('roles', fn (Builder $roles): Builder => $roles->whereIn('name', $admin))
+                ->orWhereKey($actor->getKey()));
         }
 
         return $query->where('farm_id', $actor->farm_id);

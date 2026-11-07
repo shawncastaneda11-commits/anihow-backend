@@ -96,10 +96,8 @@ class TemporaryPasswordTest extends TestCase
             ->assertActionHidden('resetTemporaryPassword')
             ->assertFormFieldVisible('password');
 
-        Livewire::actingAs($admin)
-            ->test(EditUser::class, ['record' => $otherAdmin->getKey()])
-            ->assertActionHidden('resetTemporaryPassword')
-            ->assertFormFieldHidden('password');
+        // Another administrator's account is not COSEL's to manage at all.
+        $this->assertFalse($admin->can('update', $otherAdmin));
 
         $component = Livewire::actingAs($admin)
             ->test(EditUser::class, ['record' => $editor->getKey()])

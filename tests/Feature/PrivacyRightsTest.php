@@ -207,7 +207,7 @@ class PrivacyRightsTest extends TestCase
 
     public function test_only_one_pending_deletion_request_is_allowed_and_cancel_works(): void
     {
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $buyer = $this->buyer(['name' => 'Ana Buyer']);
 
         $this->asUser($buyer)
@@ -254,7 +254,7 @@ class PrivacyRightsTest extends TestCase
     {
         Mail::fake();
 
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $farm = $this->farm();
         $farmer = $this->farmer([
             'name' => 'Mang Tonyo',
@@ -333,7 +333,7 @@ class PrivacyRightsTest extends TestCase
     {
         Mail::fake();
 
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $farmer = $this->farmer(['name' => 'Mang Tonyo', 'email' => 'tony@example.com']);
         $listing = $this->listingFor($farmer, ['price_per_unit' => 30, 'quantity_available' => 10]);
         $this->asUser($farmer)->postJson('/api/auth/user/deletion-request')->assertCreated();
@@ -359,7 +359,7 @@ class PrivacyRightsTest extends TestCase
     {
         Mail::fake();
 
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $buyer = $this->buyer(['name' => 'Ana Buyer', 'email' => 'ana@example.com']);
         $this->asUser($buyer)->postJson('/api/auth/user/deletion-request')->assertCreated();
         $deletion = AccountDeletionRequest::query()->where('user_id', $buyer->id)->firstOrFail();
@@ -383,7 +383,7 @@ class PrivacyRightsTest extends TestCase
 
     public function test_reject_keeps_the_account_and_notifies(): void
     {
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $buyer = $this->buyer(['email' => 'keep-me@example.com']);
         $this->asUser($buyer)->postJson('/api/auth/user/deletion-request')->assertCreated();
         $deletion = AccountDeletionRequest::query()->where('user_id', $buyer->id)->firstOrFail();
@@ -408,7 +408,7 @@ class PrivacyRightsTest extends TestCase
 
     public function test_super_admin_cms_lists_pending_deletion_requests(): void
     {
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $buyer = $this->buyer(['name' => 'CMS Visible Buyer', 'email' => 'cms.visible@example.com']);
 
         $this->asUser($buyer)

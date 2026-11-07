@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\TawadType;
+use App\Models\Concerns\LogsCmsActivity;
 use App\Support\Pricing\PriceGuard;
 use App\Support\Pricing\UnitConverter;
 use Database\Factories\TawadRuleFactory;
@@ -30,6 +31,8 @@ class TawadRule extends Model
 {
     /** @use HasFactory<TawadRuleFactory> */
     use HasFactory;
+
+    use LogsCmsActivity;
 
     protected function casts(): array
     {

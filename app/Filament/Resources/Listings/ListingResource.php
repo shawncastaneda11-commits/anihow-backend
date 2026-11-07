@@ -16,10 +16,10 @@ use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
 
 /**
- * Moderation only. A Super Admin holds takedown power over a published
- * listing, not the power to rewrite a farmer's price, photos or copy, so this
- * resource has no create or edit page. Sellers manage their own listings in
- * the app.
+ * COSEL moderates every listing: takedown and restore, never rewriting a
+ * seller's listing. A farm's Content Editor sees that farm's listings only and
+ * may edit them, the tawad included (FarmListingActions); each edit is logged
+ * and the seller is told. Sellers still manage their own listings in the app.
  */
 class ListingResource extends Resource
 {
@@ -58,13 +58,23 @@ class ListingResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
+        $query = parent::getEloquentQuery()
             ->with(['cropType', 'farm.cropTypeOverrides', 'farmerSeller', 'activeTawadRule']);
+        $user = auth()->user();
+
+        if ($user !== null && ! $user->can(Permission::TakedownListings->value)) {
+            $query->where('listings.farm_id', $user->farm_id ?? 0);
+        }
+
+        return $query;
     }
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->can(Permission::TakedownListings->value) ?? false;
+        $user = auth()->user();
+
+        return ($user?->can(Permission::TakedownListings->value) ?? false)
+            || ($user?->can(Permission::ManageFarmListings->value) ?? false);
     }
 
     public static function canCreate(): bool

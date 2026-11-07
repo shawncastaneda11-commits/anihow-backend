@@ -117,7 +117,7 @@ class OrderResource extends JsonResource
             return false;
         }
 
-        if ($user->isSuperAdmin()) {
+        if ($user->isAdministrator()) {
             return true;
         }
 

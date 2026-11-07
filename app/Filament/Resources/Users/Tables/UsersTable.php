@@ -8,6 +8,7 @@ use App\Enums\ReservationCancellationReason;
 use App\Enums\Role;
 use App\Enums\UserStatus;
 use App\Models\User;
+use App\Support\Accounts\AccountAuthority;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -65,7 +66,7 @@ class UsersTable
                     ->relationship('roles', 'name')
                     ->getOptionLabelFromRecordUsing(fn (RoleModel $record): string => Role::tryFrom($record->name)?->label() ?? $record->name)
                     ->label('Role')
-                    ->visible(fn (): bool => auth()->user()?->can(Permission::ManageAccounts->value) ?? false),
+                    ->visible(fn (): bool => AccountAuthority::managesAny(auth()->user())),
                 SelectFilter::make('status')
                     ->options(UserStatus::options()),
                 SelectFilter::make('farm')
@@ -78,8 +79,7 @@ class UsersTable
                     ->color('danger')
                     ->requiresConfirmation()
                     ->visible(fn (User $record): bool => $record->isActive()
-                        && ! $record->isSuperAdmin()
-                        && auth()->user()->can(Permission::SuspendAccounts->value))
+                        && (auth()->user()?->can('suspend', $record) ?? false))
                     ->form(function (User $record): array {
                         $waiting = $record->unsettledPaymentOrderCount();
                         $fields = [];
@@ -116,12 +116,12 @@ class UsersTable
                     ->visible(fn (User $record): bool => ! (auth()->user()?->can('update', $record) ?? false)),
                 EditAction::make(),
                 DeleteAction::make()
-                    ->visible(fn (User $record): bool => ! $record->isSuperAdmin()),
+                    ->visible(fn (User $record): bool => auth()->user()?->can('delete', $record) ?? false),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
-                        ->visible(fn (): bool => auth()->user()->can(Permission::ManageAccounts->value)),
+                        ->visible(fn (): bool => AccountAuthority::managesAny(auth()->user())),
                 ]),
             ]);
     }

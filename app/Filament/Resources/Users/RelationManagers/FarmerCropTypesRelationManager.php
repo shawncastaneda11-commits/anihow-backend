@@ -39,7 +39,7 @@ class FarmerCropTypesRelationManager extends RelationManager
             && $ownerRecord->isFarmerSeller()
             && $viewer !== null
             && (
-                $viewer->can(Permission::ManageCropTypes->value)
+                $viewer->can(Permission::ManageAccounts->value)
                 || self::editsThisFarm($viewer, $ownerRecord)
             );
     }
@@ -129,7 +129,7 @@ class FarmerCropTypesRelationManager extends RelationManager
             $viewer !== null
             && $farmer instanceof User
             && (
-                $viewer->can(Permission::ManageCropTypes->value)
+                $viewer->can(Permission::ManageAccounts->value)
                 || self::editsThisFarm($viewer, $farmer)
             ),
             403,

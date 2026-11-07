@@ -544,7 +544,7 @@ class FarmFeatureSwitchTest extends TestCase
         $own = Farm::factory()->create();
         $other = Farm::factory()->create();
         $editor = $this->staff(Role::ContentEditor, $own);
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $farmer = $this->farmer([], $own);
         $buyer = $this->buyer();
 

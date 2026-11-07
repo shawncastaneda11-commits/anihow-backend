@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ArticleCategory;
 use App\Enums\ArticleStatus;
+use App\Models\Concerns\LogsCmsActivity;
 use App\Support\ImageVariants;
 use Database\Factories\CropCareArticleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -38,6 +39,8 @@ class CropCareArticle extends Model
 {
     /** @use HasFactory<CropCareArticleFactory> */
     use HasFactory, SoftDeletes;
+
+    use LogsCmsActivity;
 
     protected function casts(): array
     {

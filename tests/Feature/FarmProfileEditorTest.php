@@ -100,7 +100,7 @@ class FarmProfileEditorTest extends TestCase
             'tawad_enabled' => true,
             'walk_in_enabled' => true,
         ]);
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
 
         $this->actingAs($admin);
         $this->assertSame('Farms', FarmResource::getNavigationItems()[0]->getLabel());
@@ -194,7 +194,7 @@ class FarmProfileEditorTest extends TestCase
     public function test_a_location_outside_the_philippines_is_rejected(): void
     {
         $farm = Farm::factory()->create();
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
 
         $preview = Livewire::actingAs($admin)
             ->test(EditFarm::class, ['record' => $farm->id]);
@@ -437,7 +437,7 @@ class FarmProfileEditorTest extends TestCase
     public function test_set_active_is_a_super_admin_confirmation(): void
     {
         $farm = Farm::factory()->create(['is_active' => true, 'name' => 'Status Farm']);
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $editor = $this->staff(Role::ContentEditor, $farm);
 
         Livewire::actingAs($editor)

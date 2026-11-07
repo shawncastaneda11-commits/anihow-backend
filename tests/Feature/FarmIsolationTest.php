@@ -221,7 +221,7 @@ class FarmIsolationTest extends TestCase
         $editorB = $this->staff(Role::ContentEditor, $farmB);
         $sellerA = $this->farmer(['email' => 'seller.a@example.com'], $farmA);
         $sellerB = $this->farmer(['email' => 'seller.b@example.com'], $farmB);
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $buyer = $this->buyer();
 
         $articleA = CropCareArticle::factory()->forFarm($farmA, $editorA)->create(['title' => 'Farm A care']);

@@ -30,7 +30,7 @@ class FarmPriceGuardFormTest extends TestCase
         $farm = Farm::factory()->create();
         $crop = CropType::factory()->create(['name' => 'Ampalaya', 'floor_price' => 30, 'max_discount' => 12]);
         $admin = User::factory()->create();
-        $admin->syncRoles(Role::SuperAdmin);
+        $admin->syncRoles(Role::AccountManager);
 
         $this->actingAs($admin, 'web');
         Filament::setCurrentPanel(Filament::getPanel('admin'));
@@ -49,7 +49,7 @@ class FarmPriceGuardFormTest extends TestCase
         $farm = Farm::factory()->create();
         $crop = CropType::factory()->create(['floor_price' => 30, 'max_discount' => 12]);
         $admin = User::factory()->create();
-        $admin->syncRoles(Role::SuperAdmin);
+        $admin->syncRoles(Role::AccountManager);
 
         $this->actingAs($admin, 'web');
         Filament::setCurrentPanel(Filament::getPanel('admin'));

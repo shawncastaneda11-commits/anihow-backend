@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\LogsCmsActivity;
 use Database\Factories\ReviewFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -28,6 +29,8 @@ class Review extends Model
 {
     /** @use HasFactory<ReviewFactory> */
     use HasFactory;
+
+    use LogsCmsActivity;
 
     protected function casts(): array
     {

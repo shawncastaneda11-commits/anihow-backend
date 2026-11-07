@@ -77,7 +77,7 @@ class FarmAnnouncementTest extends TestCase
     public function test_a_super_admin_can_manage_announcements_for_any_farm(): void
     {
         [$farmA] = $this->twoFarms();
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $announcement = FarmAnnouncement::factory()->forFarm($farmA)->create();
 
         $this->assertTrue(Gate::forUser($admin)->allows('create', FarmAnnouncement::class));

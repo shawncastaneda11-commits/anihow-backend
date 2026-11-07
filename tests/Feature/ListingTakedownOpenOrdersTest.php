@@ -168,7 +168,7 @@ class ListingTakedownOpenOrdersTest extends TestCase
     private function superAdmin(): User
     {
         $admin = User::factory()->create();
-        $admin->syncRoles(Role::SuperAdmin);
+        $admin->syncRoles(Role::AccountManager);
 
         return $admin;
     }

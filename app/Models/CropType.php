@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ListingUnit;
 use App\Enums\ProductCategory;
+use App\Models\Concerns\LogsCmsActivity;
 use App\Observers\CropTypeObserver;
 use Database\Factories\CropTypeFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -47,6 +48,8 @@ class CropType extends Model
 {
     /** @use HasFactory<CropTypeFactory> */
     use HasFactory;
+
+    use LogsCmsActivity;
 
     /**
      * Kilograms when a crop type is created without a unit. The CMS asks for

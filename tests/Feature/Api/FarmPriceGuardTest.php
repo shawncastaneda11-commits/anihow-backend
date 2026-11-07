@@ -232,7 +232,7 @@ class FarmPriceGuardTest extends TestCase
         $this->assertFalse($clear->isBelowFloor());
         $this->assertSame(35.0, $clear->effectiveFloor());
 
-        $superAdmin = $this->userWithRole(Role::SuperAdmin);
+        $superAdmin = $this->userWithRole(Role::AccountManager);
         $this->actingAs($superAdmin);
         $this->assertTrue(ListingResource::canAccess());
 
@@ -351,7 +351,7 @@ class FarmPriceGuardTest extends TestCase
         $cropType = $this->kamatis();
 
         $editorA = $this->userWithRole(Role::ContentEditor, $farmA);
-        $superAdmin = $this->userWithRole(Role::SuperAdmin);
+        $superAdmin = $this->userWithRole(Role::AccountManager);
         $farmer = $this->farmer(['email' => 'no.guards@example.com'], $farmA);
 
         $overrideOnB = $this->guard($farmB, $cropType, floor: 35);
@@ -419,7 +419,7 @@ class FarmPriceGuardTest extends TestCase
     {
         $farm = Farm::factory()->create();
         $cropType = $this->kamatis();
-        $superAdmin = $this->userWithRole(Role::SuperAdmin);
+        $superAdmin = $this->userWithRole(Role::AccountManager);
 
         $this->actingAs($superAdmin);
         $this->assertNull($superAdmin->farm_id);
@@ -440,7 +440,7 @@ class FarmPriceGuardTest extends TestCase
         $editorFarm = Farm::factory()->create();
         $adminFarm = Farm::factory()->create();
         $editor = $this->userWithRole(Role::ContentEditor, $editorFarm);
-        $superAdmin = $this->userWithRole(Role::SuperAdmin);
+        $superAdmin = $this->userWithRole(Role::AccountManager);
 
         $this->actingAs($editor);
         $this->assertTrue($editor->can('manageForFarm', [FarmCropTypeOverride::class, $editorFarm]));

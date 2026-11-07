@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ReportReason;
 use App\Enums\ReportStatus;
+use App\Models\Concerns\LogsCmsActivity;
 use Database\Factories\ReportFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -27,6 +28,8 @@ class Report extends Model
 {
     /** @use HasFactory<ReportFactory> */
     use HasFactory;
+
+    use LogsCmsActivity;
 
     protected function casts(): array
     {

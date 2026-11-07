@@ -2,10 +2,10 @@
 
 namespace App\Filament\Resources\Users\Pages;
 
-use App\Enums\Permission;
 use App\Filament\Resources\Users\Actions\TemporaryPasswordAction;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
+use App\Support\Accounts\AccountAuthority;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Facades\Filament;
@@ -31,9 +31,7 @@ class EditUser extends EditRecord
                         return false;
                     }
 
-                    return $actor->can(Permission::ManageAccounts->value)
-                        && ! $record->isSuperAdmin()
-                        && $actor->isNot($record);
+                    return AccountAuthority::canManageOther($actor, $record);
                 })
                 ->action(function (): void {
                     $record = $this->getRecord();
@@ -50,7 +48,7 @@ class EditUser extends EditRecord
                     ]);
                 }),
             DeleteAction::make()
-                ->visible(fn (): bool => ! $this->record->isSuperAdmin()),
+                ->visible(fn (): bool => auth()->user()?->can('delete', $this->record) ?? false),
         ];
     }
 
@@ -83,7 +81,9 @@ class EditUser extends EditRecord
      */
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        if (! auth()->user()?->can(Permission::ManageAccounts->value)) {
+        $record = $this->getRecord();
+
+        if (! $record instanceof User || ! AccountAuthority::canManageOther(auth()->user(), $record)) {
             unset($data['roles'], $data['farm_id'], $data['status']);
         }
 

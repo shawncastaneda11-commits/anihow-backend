@@ -20,7 +20,8 @@ class TawadRulePolicy
 
     public function create(User $user): bool
     {
-        return $user->can(Permission::ManageOwnTawadRules->value);
+        return $user->can(Permission::ManageOwnTawadRules->value)
+            || $user->can(Permission::ManageFarmListings->value);
     }
 
     public function update(User $user, TawadRule $rule): bool
@@ -35,7 +36,13 @@ class TawadRulePolicy
 
     private function owns(User $user, TawadRule $rule): bool
     {
-        return $user->can(Permission::ManageOwnTawadRules->value)
-            && $rule->listing->isOwnedBy($user);
+        if ($user->can(Permission::ManageOwnTawadRules->value) && $rule->listing->isOwnedBy($user)) {
+            return true;
+        }
+
+        // The farm's Content Editor manages the farm's listings, tawad included.
+        return $user->can(Permission::ManageFarmListings->value)
+            && $user->farm_id !== null
+            && (int) $user->farm_id === (int) $rule->listing->farm_id;
     }
 }

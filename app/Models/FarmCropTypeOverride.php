@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ListingUnit;
+use App\Models\Concerns\LogsCmsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class FarmCropTypeOverride extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsCmsActivity;
 
     protected $table = 'farm_crop_type_overrides';
 

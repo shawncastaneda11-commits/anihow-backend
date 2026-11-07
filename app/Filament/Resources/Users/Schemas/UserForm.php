@@ -2,10 +2,10 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
-use App\Enums\Permission;
 use App\Enums\Role;
 use App\Enums\UserStatus;
 use App\Models\User;
+use App\Support\Accounts\AccountAuthority;
 use Closure;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -36,18 +36,18 @@ class UserForm
 
                 /*
                  * One account, one role. This select is deliberately not
-                 * multiple. Super Admin is seeded and cannot be assigned here.
+                 * multiple. COSEL assigns people's roles; ICTD assigns the
+                 * administrator roles (AccountAuthority).
                  */
                 Select::make('roles')
                     ->label('Role')
                     ->relationship(
                         name: 'roles',
                         titleAttribute: 'name',
-                        modifyQueryUsing: fn (Builder $query) => $query->whereIn('name', [
-                            Role::ContentEditor->value,
-                            Role::FarmerSeller->value,
-                            Role::Buyer->value,
-                        ]),
+                        modifyQueryUsing: fn (Builder $query) => $query->whereIn(
+                            'name',
+                            array_column(AccountAuthority::assignableRoles(auth()->user()), 'value'),
+                        ),
                     )
                     ->getOptionLabelFromRecordUsing(
                         fn (RoleModel $record): string => Role::tryFrom($record->name)?->label() ?? $record->name,
@@ -56,9 +56,9 @@ class UserForm
                     ->native(false)
                     ->preload()
                     ->live()
-                    ->visible(fn (?User $record): bool => self::canManageAccounts() && ! ($record?->isSuperAdmin() ?? false))
-                    ->dehydrated(fn (?User $record): bool => self::canManageAccounts() && ! ($record?->isSuperAdmin() ?? false))
-                    ->helperText('One account holds one role. Super Admin is seeded and cannot be assigned from this form.'),
+                    ->visible(fn (?User $record): bool => self::managesOtherAccount($record))
+                    ->dehydrated(fn (?User $record): bool => self::managesOtherAccount($record))
+                    ->helperText('One account holds one role.'),
 
                 /*
                  * Required for Content Editors and Farmer-Sellers, meaningless
@@ -135,12 +135,16 @@ class UserForm
 
     private static function managesOtherAccount(?User $record): bool
     {
-        return self::canManageAccounts() && ($record === null || auth()->id() !== $record->getKey());
+        $actor = auth()->user();
+
+        return $record === null || ! $record->exists
+            ? AccountAuthority::managesAny($actor)
+            : AccountAuthority::canManageOther($actor, $record);
     }
 
     private static function canManageAccounts(): bool
     {
-        return auth()->user()?->can(Permission::ManageAccounts->value) ?? false;
+        return AccountAuthority::managesPeople(auth()->user());
     }
 
     /**

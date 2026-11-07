@@ -29,7 +29,7 @@ class OneContentEditorPerFarmTest extends TestCase
 
     public function test_a_second_content_editor_for_the_same_farm_is_rejected(): void
     {
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $farm = Farm::factory()->create();
         $this->staff(Role::ContentEditor, $farm);
 
@@ -47,7 +47,7 @@ class OneContentEditorPerFarmTest extends TestCase
 
     public function test_a_content_editor_can_be_created_for_a_farm_without_one(): void
     {
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $farm = Farm::factory()->create();
 
         $this->actingAs($admin);
@@ -67,7 +67,7 @@ class OneContentEditorPerFarmTest extends TestCase
 
     public function test_editing_the_existing_content_editor_on_the_same_farm_still_saves(): void
     {
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $farm = Farm::factory()->create();
         $editor = $this->staff(Role::ContentEditor, $farm);
 
@@ -94,7 +94,7 @@ class OneContentEditorPerFarmTest extends TestCase
 
     public function test_changing_a_farmer_sellers_farm_is_not_blocked_by_the_content_editor(): void
     {
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $farm = Farm::factory()->create();
         $otherFarm = Farm::factory()->create();
         $this->staff(Role::ContentEditor, $farm);

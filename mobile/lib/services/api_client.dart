@@ -6,8 +6,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../config/api_config.dart';
+import '../config/app_version.dart';
 import '../models/models.dart';
 import '../push/push_preferences.dart';
+import '../state/app_availability.dart';
 import 'cart_requests.dart';
 import 'tawad_requests.dart';
 
@@ -215,6 +217,7 @@ class ApiClient {
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
+            'X-App-Version': kAppVersion,
           },
           connectTimeout: const Duration(seconds: 20),
           receiveTimeout: const Duration(seconds: 20),
@@ -242,6 +245,19 @@ class ApiClient {
               path.contains('/auth/reset-password');
           if (error.response?.statusCode == 401 && !isCredentialAttempt) {
             onUnauthorized();
+          }
+          final body = error.response?.data;
+          if (body is Map) {
+            if (error.response?.statusCode == 503 && body['maintenance'] == true) {
+              AppAvailability.instance.apply(
+                maintenanceMessage: body['message']?.toString(),
+              );
+            } else if (error.response?.statusCode == 426 &&
+                body['update_required'] == true) {
+              AppAvailability.instance.apply(
+                minVersion: body['min_version']?.toString(),
+              );
+            }
           }
           if (isPasswordChangeRequired(
             error.response?.statusCode,
@@ -1486,6 +1502,17 @@ class ApiClient {
     } on DioException catch (error) {
       throw ApiException(_messageFrom(error));
     }
+  }
+
+  /// The minimum version and maintenance notice set by ICTD. Public.
+  Future<void> refreshAppAvailability() async {
+    final data = await _get('/app/config');
+    AppAvailability.instance.apply(
+      maintenanceMessage: data['maintenance'] == true
+          ? data['maintenance_message']?.toString()
+          : null,
+      minVersion: data['min_version']?.toString(),
+    );
   }
 
   Future<Map<String, dynamic>> _get(

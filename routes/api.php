@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Role;
+use App\Http\Controllers\Api\App\AppConfigController;
 use App\Http\Controllers\Api\Auth\AcceptTermsController;
 use App\Http\Controllers\Api\Auth\AccountDeletionRequestController;
 use App\Http\Controllers\Api\Auth\ChangePasswordController;
@@ -73,6 +74,9 @@ use Spatie\Permission\Middleware\RoleMiddleware;
 Route::get('seller-help', SellerHelpController::class)
     ->middleware('throttle:public')
     ->name('seller-help');
+
+// The app checks this when it opens: minimum version and maintenance.
+Route::get('app/config', AppConfigController::class)->name('app.config');
 
 Route::prefix('auth')->group(function (): void {
     Route::middleware('throttle:auth')->group(function (): void {

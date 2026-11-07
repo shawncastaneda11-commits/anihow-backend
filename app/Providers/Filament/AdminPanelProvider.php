@@ -7,7 +7,10 @@ use App\Filament\Pages\Dashboard;
 use App\Filament\Resources\Users\UserResource;
 use App\Http\Middleware\AuthenticatePanel;
 use App\Http\Middleware\RedirectIfMustChangePassword;
+use App\Models\SystemSetting;
+use App\Models\User;
 use Filament\Actions\Action;
+use Filament\Auth\MultiFactor\Email\EmailAuthentication;
 use Filament\Enums\ThemeMode;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -41,6 +44,13 @@ class AdminPanelProvider extends PanelProvider
             ->defaultThemeMode(ThemeMode::Light)
             ->themeSwitcher(true)
             ->login(Login::class)
+            // Two-step sign-in by email code. ICTD can require it for every
+            // administrator from System health; anyone else may set it up.
+            ->multiFactorAuthentication(
+                [EmailAuthentication::make()],
+                isRequired: fn (): bool => SystemSetting::requiresAdminTwoStep()
+                    && (auth()->user() instanceof User && auth()->user()->isAdministrator()),
+            )
             ->passwordReset()
             ->revealablePasswords()
             ->colors([

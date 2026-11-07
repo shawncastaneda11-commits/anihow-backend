@@ -5,6 +5,7 @@ import 'config/api_config.dart';
 import 'push/firebase_push.dart';
 import 'push/push_open.dart';
 import 'screens/admin_gate_screen.dart';
+import 'screens/app_gate.dart';
 import 'screens/buyer/buyer_shell.dart';
 import 'screens/farmer/farmer_shell.dart';
 import 'screens/auth/terms_screen.dart';
@@ -107,7 +108,7 @@ class _AniHowAppState extends State<AniHowApp> with WidgetsBindingObserver {
             themeMode: theme.mode,
             scaffoldMessengerKey: anihowScaffoldMessengerKey,
             navigatorObservers: [anihowRouteObserver],
-            home: const PushOpenBinder(child: RoleGate()),
+            home: const PushOpenBinder(child: AppGate(child: RoleGate())),
           );
         },
       ),

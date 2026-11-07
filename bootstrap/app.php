@@ -1,10 +1,12 @@
 <?php
 
 use App\Exceptions\ReservationsRequireConfirmation;
+use App\Http\Middleware\EnforceAppAvailability;
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsureIdVerified;
 use App\Http\Middleware\EnsurePasswordChanged;
 use App\Http\Middleware\ForceJsonResponse;
+use App\Http\Middleware\RecordAppVersion;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -35,6 +37,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->api(prepend: [
             ForceJsonResponse::class,
+            EnforceAppAvailability::class,
+        ]);
+
+        $middleware->api(append: [
+            RecordAppVersion::class,
         ]);
 
         $middleware->append(SecurityHeaders::class);

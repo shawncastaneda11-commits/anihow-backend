@@ -11,6 +11,13 @@ mysqldump --defaults-extra-file=/root/anihow-mysqldump.cnf --single-transaction 
 
 find /var/backups/anihow -type f -name 'db-*.sql.gz' -mtime +14 -delete
 
+# Tell the CMS System health page when the last database backup finished.
+# Only a timestamp: the backups themselves stay root-only.
+marker=/var/www/anihow/storage/app/last-backup.txt
+date --iso-8601=seconds > "${marker}.tmp"
+chmod 644 "${marker}.tmp"
+mv "${marker}.tmp" "${marker}"
+
 if [[ "$(date +%u)" == "7" ]]; then
     tar -czf "/var/backups/anihow/files-${stamp}.tar.gz" -C /var/www/anihow/storage app
     mapfile -t old_archives < <(ls -1t /var/backups/anihow/files-*.tar.gz 2>/dev/null || true)

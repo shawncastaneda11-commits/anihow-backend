@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../config/app_version.dart';
 import '../../l10n/app_strings.dart';
 import '../../models/models.dart';
 import '../auth/terms_screen.dart';
@@ -146,7 +147,7 @@ class SettingsScreen extends StatelessWidget {
               _SettingsRow(
                 icon: Icons.info_outline,
                 label: s.aboutAniHow,
-                trailing: const Text('v1.0.3'),
+                trailing: const Text('v$kAppVersion'),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => _SettingsCopyScreen(

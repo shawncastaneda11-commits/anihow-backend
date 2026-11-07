@@ -12,6 +12,7 @@ use App\Models\Concerns\LogsCmsActivity;
 use App\Notifications\ResetPasswordNotification;
 use App\Support\ImageVariants;
 use Database\Factories\UserFactory;
+use Filament\Auth\MultiFactor\Email\Contracts\HasEmailAuthentication;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -25,7 +26,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Sanctum\HasApiTokens;
 use RuntimeException;
@@ -65,7 +68,7 @@ use Spatie\Permission\Traits\HasRoles;
     'id_verified_at',
 ])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable implements FilamentUser, MustVerifyEmail
+class User extends Authenticatable implements FilamentUser, HasEmailAuthentication, MustVerifyEmail
 {
     use LogsCmsActivity;
 
@@ -102,6 +105,8 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             'approved_at' => 'datetime',
             'suspended_at' => 'datetime',
             'must_change_password' => 'boolean',
+            'has_email_authentication' => 'boolean',
+            'last_app_seen_at' => 'datetime',
             'temporary_password_expires_at' => 'datetime',
             'terms_accepted_at' => 'datetime',
             'terms_version' => 'integer',
@@ -238,6 +243,34 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     public function isSuperAdmin(): bool
     {
         return $this->hasRole(Role::SuperAdmin);
+    }
+
+    /**
+     * Ends every session: app tokens, CMS sessions and "remember me". The
+     * password is unchanged.
+     */
+    public function signOutEverywhere(): void
+    {
+        $this->tokens()->delete();
+
+        if (config('session.driver') === 'database') {
+            DB::table(config('session.table', 'sessions'))
+                ->where('user_id', $this->getKey())
+                ->delete();
+        }
+
+        $this->forceFill(['remember_token' => Str::random(60)])->saveQuietly();
+    }
+
+    /** Two-step sign-in to the CMS with a code sent by email (Filament). */
+    public function hasEmailAuthentication(): bool
+    {
+        return (bool) $this->has_email_authentication;
+    }
+
+    public function toggleEmailAuthentication(bool $condition): void
+    {
+        $this->forceFill(['has_email_authentication' => $condition])->save();
     }
 
     /** COSEL's Account Manager. */

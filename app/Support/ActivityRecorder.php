@@ -51,8 +51,8 @@ final class ActivityRecorder
                 'user_id' => $actor->getKey(),
                 'action' => $action,
                 'subject_type' => $model->getMorphClass(),
-                'subject_id' => $model->getKey(),
-                'subject_label' => self::label($model),
+                'subject_id' => is_numeric($model->getKey()) ? $model->getKey() : null,
+                'subject_label' => self::label($model) ?? (is_string($model->getKey()) ? $model->getKey() : null),
                 'changes' => $changes === [] ? null : $changes,
             ]);
         } catch (Throwable $exception) {

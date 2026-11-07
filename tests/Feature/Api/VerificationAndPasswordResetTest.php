@@ -63,6 +63,23 @@ class VerificationAndPasswordResetTest extends TestCase
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
     }
 
+    public function test_the_verification_code_is_in_the_body_but_not_the_subject(): void
+    {
+        $user = User::factory()->create();
+        $mail = (new VerifyEmailNotification('482913'))->toMail($user);
+
+        $this->assertStringNotContainsString('482913', (string) $mail->subject);
+        $this->assertContains('482913', $mail->introLines);
+    }
+
+    public function test_the_password_reset_code_is_not_in_the_subject(): void
+    {
+        $user = User::factory()->create();
+        $mail = (new ResetPasswordCodeNotification('482913'))->toMail($user);
+
+        $this->assertStringNotContainsString('482913', (string) $mail->subject);
+    }
+
     public function test_verify_rejects_a_wrong_code(): void
     {
         Notification::fake();

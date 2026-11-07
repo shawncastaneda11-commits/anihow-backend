@@ -23,7 +23,9 @@ class VerifyEmailNotification extends Notification
         $minutes = SendEmailVerificationCodeAction::TTL_MINUTES;
 
         return (new MailMessage)
-            ->subject('AniHow code / code: '.$this->code)
+            // The code stays out of the subject: subjects show in inbox lists, phone lock screens and
+            // notification previews, where anyone nearby could read and use it.
+            ->subject('Your AniHow verification code / Ang verification code mo sa AniHow')
             ->line('Your AniHow verification code is:')
             ->line('Ang verification code mo sa AniHow ay:')
             ->line($this->code)

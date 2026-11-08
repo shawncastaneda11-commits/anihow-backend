@@ -23,9 +23,11 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
+use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Str;
@@ -39,6 +41,10 @@ class EditFarm extends EditRecord
         return $schema->components([]);
     }
 
+    /**
+     * The farm's header, then tabs: the farm's details first, then its price
+     * guards, sellers' crop types and photos.
+     */
     public function content(Schema $schema): Schema
     {
         return $schema
@@ -48,12 +54,56 @@ class EditFarm extends EditRecord
                     ->viewData(fn (): array => [
                         'farm' => $this->getRecord(),
                     ]),
-                Grid::make(['default' => 1, 'lg' => 3])
-                    ->schema(FarmProfileOverview::components($this)),
                 Group::make([
                     $this->getRelationManagersContentComponent(),
-                ])->extraAttributes(['style' => 'margin-top:1.5rem']),
+                ])->extraAttributes(['style' => 'margin-top:1rem']),
             ]);
+    }
+
+    public function hasCombinedRelationManagerTabsWithContent(): bool
+    {
+        return true;
+    }
+
+    public function getContentTabComponent(): Tab
+    {
+        return Tab::make('Farm details')
+            ->icon(Heroicon::OutlinedInformationCircle)
+            ->schema([
+                Grid::make(['default' => 1, 'lg' => 3])
+                    ->schema(FarmProfileOverview::components($this)),
+            ]);
+    }
+
+    public function canManagePartnership(): bool
+    {
+        return auth()->user()?->can(Permission::ManageFarms->value) ?? false;
+    }
+
+    public function editPartnershipAction(): Action
+    {
+        return Action::make('editPartnership')
+            ->modalHeading('Partnership')
+            ->modalDescription('COSEL only. Farmer-sellers and buyers never see this.')
+            ->modalSubmitActionLabel('Save')
+            ->visible(fn (): bool => $this->canManagePartnership())
+            ->fillForm(fn (Farm $record): array => [
+                'partnered_since' => $record->partnered_since?->toDateString(),
+                'partnership_notes' => $record->partnership_notes,
+            ])
+            ->schema([
+                DatePicker::make('partnered_since')->label('Partner since'),
+                Textarea::make('partnership_notes')->label('Notes')->rows(5)->maxLength(5000)
+                    ->helperText('Visits, agreements and contact history.'),
+            ])
+            ->action(function (Farm $record, array $data): void {
+                abort_unless($this->canManagePartnership(), 403);
+
+                $record->update([
+                    'partnered_since' => $data['partnered_since'] ?? null,
+                    'partnership_notes' => $data['partnership_notes'] ?? null,
+                ]);
+            });
     }
 
     protected function resolveRecord(int|string $key): Model

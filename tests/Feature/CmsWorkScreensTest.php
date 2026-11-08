@@ -1,0 +1,196 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Enums\IdDocumentType;
+use App\Enums\IdVerificationStatus;
+use App\Enums\ListingUnit;
+use App\Enums\NotificationType;
+use App\Enums\Role;
+use App\Enums\TawadType;
+use App\Filament\Resources\Farms\Pages\EditFarm;
+use App\Filament\Resources\IdVerifications\Pages\ListIdVerifications;
+use App\Filament\Resources\Listings\Pages\ListListings;
+use App\Filament\Resources\Users\Pages\ListUsers;
+use App\Models\Farm;
+use App\Models\IdVerification;
+use App\Models\InAppNotification;
+use App\Models\Listing;
+use App\Models\User;
+use Database\Seeders\RolePermissionSeeder;
+use Filament\Facades\Filament;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
+use Tests\Concerns\CreatesMarketplaceActors;
+use Tests\TestCase;
+
+/**
+ * The redesigned work screens: a Content Editor's listing panel, COSEL's ID
+ * check review, the account panel and the farm's partnership record.
+ */
+class CmsWorkScreensTest extends TestCase
+{
+    use CreatesMarketplaceActors;
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seed(RolePermissionSeeder::class);
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+    }
+
+    public function test_the_listing_panel_saves_price_and_tawad_and_tells_the_seller(): void
+    {
+        [$editor, $seller, $listing] = $this->farmListing();
+
+        Livewire::actingAs($editor)
+            ->test(ListListings::class)
+            ->callTableAction('editFarmListing', $listing, data: [
+                'price_per_unit' => 55,
+                'type' => TawadType::Flat->value,
+                'discount_amount' => 5,
+            ])
+            ->assertHasNoTableActionErrors();
+
+        $listing->refresh();
+        $this->assertEquals(55, (float) $listing->price_per_unit);
+        $this->assertEquals(5, (float) $listing->activeTawadRule->discount_amount);
+        $this->assertGreaterThan(0, InAppNotification::query()
+            ->where('user_id', $seller->id)
+            ->where('type', NotificationType::ListingEditedByFarm)
+            ->count());
+    }
+
+    public function test_the_listing_panel_refuses_a_price_below_the_floor_and_keeps_the_tawad(): void
+    {
+        [$editor, , $listing] = $this->farmListing(floor: 40);
+
+        Livewire::actingAs($editor)
+            ->test(ListListings::class)
+            ->callTableAction('editFarmListing', $listing, data: [
+                'price_per_unit' => 30,
+                'type' => TawadType::Flat->value,
+                'discount_amount' => 5,
+            ])
+            ->assertHasTableActionErrors(['price_per_unit']);
+
+        $listing->refresh();
+        $this->assertEquals(50, (float) $listing->price_per_unit);
+        $this->assertNull($listing->activeTawadRule);
+    }
+
+    public function test_choosing_no_tawad_ends_the_current_one(): void
+    {
+        [$editor, , $listing] = $this->farmListing();
+        $listing->tawadRules()->create(['type' => TawadType::Flat, 'discount_amount' => 3, 'is_active' => true]);
+
+        Livewire::actingAs($editor)
+            ->test(ListListings::class)
+            ->callTableAction('editFarmListing', $listing, data: ['type' => 'none'])
+            ->assertHasNoTableActionErrors();
+
+        $this->assertNull($listing->fresh()->activeTawadRule);
+    }
+
+    public function test_the_below_the_lowest_price_tab_shows_only_those_listings(): void
+    {
+        [$editor, $seller, $fine] = $this->farmListing(floor: 40);
+        $low = $this->listingFor($seller, [
+            'crop_type_id' => $fine->crop_type_id,
+            'unit' => ListingUnit::Kilogram,
+            'price_per_unit' => 50,
+        ]);
+        $low->forceFill(['price_per_unit' => 20])->saveQuietly();
+
+        Livewire::actingAs($editor)
+            ->test(ListListings::class)
+            ->set('activeTab', 'below')
+            ->assertCanSeeTableRecords([$low])
+            ->assertCanNotSeeTableRecords([$fine]);
+    }
+
+    public function test_cosel_rejects_an_id_from_the_review_panel(): void
+    {
+        $cosel = $this->staff(Role::AccountManager);
+        $verification = IdVerification::query()->create([
+            'user_id' => $this->buyer()->id,
+            'id_type' => IdDocumentType::NationalId,
+            'status' => IdVerificationStatus::Pending,
+            'consented_at' => now(),
+        ]);
+
+        Livewire::actingAs($cosel)
+            ->test(ListIdVerifications::class)
+            ->assertCanSeeTableRecords([$verification])
+            ->callTableAction('review', $verification, data: ['decision' => 'reject', 'reason' => 'expired'])
+            ->assertHasNoTableActionErrors();
+
+        $this->assertSame(IdVerificationStatus::Rejected, $verification->fresh()->status);
+    }
+
+    public function test_the_account_panel_signs_a_person_out_everywhere(): void
+    {
+        $cosel = $this->staff(Role::AccountManager);
+        $buyer = $this->buyer();
+        $buyer->createToken('phone');
+
+        Livewire::actingAs($cosel)
+            ->test(ListUsers::class)
+            ->callTableAction('account', $buyer, arguments: ['signOut' => true]);
+
+        $this->assertSame(0, $buyer->tokens()->count());
+    }
+
+    public function test_cosel_records_the_partnership_and_a_content_editor_cannot(): void
+    {
+        $farm = $this->farm();
+
+        Livewire::actingAs($this->staff(Role::AccountManager))
+            ->test(EditFarm::class, ['record' => $farm->id])
+            ->callAction('editPartnership', data: [
+                'partnered_since' => '2025-06-01',
+                'partnership_notes' => 'Signed the agreement in June.',
+            ])
+            ->assertHasNoActionErrors();
+
+        $this->assertSame('2025-06-01', $farm->fresh()->partnered_since?->toDateString());
+
+        Livewire::actingAs($this->staff(Role::ContentEditor, $farm))
+            ->test(EditFarm::class, ['record' => $farm->id])
+            ->assertActionHidden('editPartnership');
+    }
+
+    /**
+     * @return array{0: User, 1: User, 2: Listing}
+     */
+    private function farmListing(float $floor = 40): array
+    {
+        $farm = $this->farm();
+        $editor = $this->staff(Role::ContentEditor, $farm);
+        $seller = $this->farmer([], $farm);
+        $crop = $this->cropType([
+            'unit_of_measure' => ListingUnit::Kilogram,
+            'floor_price' => $floor,
+            'max_discount' => 10,
+        ]);
+        $listing = $this->listingFor($seller, [
+            'crop_type_id' => $crop->id,
+            'unit' => ListingUnit::Kilogram,
+            'price_per_unit' => 50,
+            'min_order_quantity' => 1,
+            'order_step' => 1,
+        ]);
+
+        return [$editor, $seller, $listing];
+    }
+
+    private function staff(Role $role, ?Farm $farm = null): User
+    {
+        $user = User::factory()->create(['farm_id' => $farm?->id]);
+        $user->syncRoles($role);
+
+        return $user;
+    }
+}

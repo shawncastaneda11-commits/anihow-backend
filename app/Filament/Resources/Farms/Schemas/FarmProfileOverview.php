@@ -22,6 +22,7 @@ class FarmProfileOverview
             Group::make([
                 self::about($page),
                 self::contact($page),
+                self::partnership($page),
             ])->columnSpan(['default' => 1, 'lg' => 2]),
             Group::make([
                 self::location($page),
@@ -46,6 +47,28 @@ class FarmProfileOverview
 
                         return filled($description) ? (string) $description : 'No description yet';
                     }),
+            ]);
+    }
+
+    /**
+     * COSEL's own record of the partnership. Sellers and buyers never see it.
+     */
+    private static function partnership(EditFarm $page): Section
+    {
+        return Section::make('Partnership')
+            ->description('COSEL only. Farmer-sellers and buyers never see this.')
+            ->visible(fn (): bool => $page->canManagePartnership())
+            ->headerActions([
+                self::editLink('editPartnership', 'Edit partnership'),
+            ])
+            ->schema([
+                TextEntry::make('partnered_since')
+                    ->label('Partner since')
+                    ->state(fn (): string => self::farm($page)->partnered_since?->format('M j, Y') ?? 'Not recorded'),
+                TextEntry::make('partnership_notes')
+                    ->label('Notes')
+                    ->extraAttributes(['style' => 'white-space:pre-wrap'])
+                    ->state(fn (): string => self::filled(self::farm($page)->partnership_notes, 'No notes yet')),
             ]);
     }
 

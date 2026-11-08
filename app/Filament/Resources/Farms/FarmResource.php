@@ -56,9 +56,9 @@ class FarmResource extends Resource
     public static function getRelations(): array
     {
         return [
-            'photos' => FarmPhotosRelationManager::class,
             'price-guards' => CropTypeOverridesRelationManager::class,
             'crop-types' => SellerCropTypesRelationManager::class,
+            'photos' => FarmPhotosRelationManager::class,
         ];
     }
 

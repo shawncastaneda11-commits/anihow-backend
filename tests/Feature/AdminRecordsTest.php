@@ -78,6 +78,7 @@ class AdminRecordsTest extends TestCase
             ->assertHasNoFormErrors();
 
         $manager = User::query()->where('email', 'cosel.manager@example.com')->firstOrFail();
+        $this->assertTrue($manager->hasRole(Role::AccountManager));
         $rows = ActivityLog::query()
             ->where('subject_type', $manager->getMorphClass())
             ->where('subject_id', $manager->id)

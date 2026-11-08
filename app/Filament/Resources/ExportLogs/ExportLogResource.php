@@ -22,7 +22,7 @@ class ExportLogResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowDownTray;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Marketplace';
+    protected static string|UnitEnum|null $navigationGroup = 'Records';
 
     protected static ?string $navigationLabel = 'Export log';
 
@@ -30,7 +30,7 @@ class ExportLogResource extends Resource
 
     protected static ?string $pluralModelLabel = 'exports';
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 2;
 
     public static function table(Table $table): Table
     {

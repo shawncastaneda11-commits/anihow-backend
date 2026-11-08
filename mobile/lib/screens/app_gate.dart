@@ -27,9 +27,6 @@ class AppGate extends StatefulWidget {
 }
 
 class _AppGateState extends State<AppGate> with WidgetsBindingObserver {
-  static const storeUrl =
-      'https://play.google.com/store/apps/details?id=com.anihow.anihow';
-
   bool _checking = false;
 
   @override
@@ -78,9 +75,9 @@ class _AppGateState extends State<AppGate> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _openStore() async {
+  Future<void> _openDownload(String url) async {
     try {
-      await launchUrl(Uri.parse(storeUrl), mode: LaunchMode.externalApplication);
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } catch (_) {
       // Nothing else to do: the message already says to update.
     }
@@ -97,6 +94,7 @@ class _AppGateState extends State<AppGate> with WidgetsBindingObserver {
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurface.withValues(alpha: 0.72);
     final maintenance = availability.underMaintenance;
+    final downloadUrl = availability.downloadUrl;
 
     return Scaffold(
       body: SafeArea(
@@ -154,10 +152,21 @@ class _AppGateState extends State<AppGate> with WidgetsBindingObserver {
                       busy: _checking,
                       onPressed: _check,
                     )
-                  else
+                  else if (downloadUrl != null)
                     PrimaryButton(
+                      key: const ValueKey('app-gate-download'),
                       label: s.t('Get the update', 'Kunin ang update'),
-                      onPressed: _openStore,
+                      onPressed: () => _openDownload(downloadUrl),
+                    )
+                  else
+                    Text(
+                      s.t(
+                        "Ask your farm's Content Editor or the AniHow team for the new app.",
+                        'Humingi ng bagong app sa Content Editor ng inyong farm o sa AniHow team.',
+                      ),
+                      key: const ValueKey('app-gate-ask'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: muted, height: 1.4),
                     ),
                 ],
               ),

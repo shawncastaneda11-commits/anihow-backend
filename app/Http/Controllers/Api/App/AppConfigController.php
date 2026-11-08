@@ -7,8 +7,8 @@ use App\Models\SystemSetting;
 use Illuminate\Http\JsonResponse;
 
 /**
- * What the app checks when it opens: the minimum version and whether AniHow
- * is under maintenance. Public, so it works before sign-in.
+ * What the app checks when it opens: the minimum version, where to get the
+ * new app, and whether AniHow is under maintenance. Public, so it works before sign-in.
  */
 class AppConfigController extends Controller
 {
@@ -18,6 +18,7 @@ class AppConfigController extends Controller
 
         return response()->json([
             'min_version' => SystemSetting::minimumAppVersion(),
+            'download_url' => SystemSetting::appDownloadUrl(),
             'maintenance' => $maintenance !== null,
             'maintenance_message' => $maintenance,
         ]);

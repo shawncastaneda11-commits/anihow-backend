@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ActivityLogs\Tables;
 
 use App\Models\ActivityLog;
+use App\Models\User;
 use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -32,11 +33,15 @@ class ActivityLogsTable
                         'deleted' => 'danger',
                         default => 'warning',
                     })
-                    ->formatStateUsing(fn (string $state): string => ucfirst($state)),
+                    ->formatStateUsing(fn (string $state): string => ActivityLog::ACTIONS[$state] ?? ucfirst(str_replace('_', ' ', $state))),
                 TextColumn::make('subject_type')
                     ->label('Record')
                     ->state(fn (ActivityLog $record): string => $record->subjectName()
-                        .($record->subject_label ? ': '.$record->subject_label : ' #'.$record->subject_id)),
+                        .match (true) {
+                            filled($record->subject_label) => ': '.$record->subject_label,
+                            $record->subject_id !== null => ' #'.$record->subject_id,
+                            default => '',
+                        }),
                 TextColumn::make('changes')
                     ->label('Changes')
                     ->state(fn (ActivityLog $record): string => $record->changeSummary())
@@ -50,10 +55,11 @@ class ActivityLogsTable
                     ->searchable()
                     ->preload(),
                 SelectFilter::make('action')
-                    ->options(['created' => 'Created', 'updated' => 'Updated', 'deleted' => 'Deleted']),
+                    ->options(ActivityLog::ACTIONS),
                 SelectFilter::make('subject_type')
                     ->label('Record type')
                     ->options(fn (): array => ActivityLog::query()
+                        ->when(auth()->user() instanceof User, fn ($query) => $query->visibleTo(auth()->user()))
                         ->distinct()
                         ->pluck('subject_type')
                         ->mapWithKeys(fn (string $type): array => [$type => (new ActivityLog(['subject_type' => $type]))->subjectName()])

@@ -3,13 +3,13 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Auth\Login;
+use App\Filament\Auth\MyAccount;
 use App\Filament\Pages\Dashboard;
-use App\Filament\Resources\Users\UserResource;
+use App\Filament\Pages\Home;
 use App\Http\Middleware\AuthenticatePanel;
 use App\Http\Middleware\RedirectIfMustChangePassword;
 use App\Models\SystemSetting;
 use App\Models\User;
-use Filament\Actions\Action;
 use Filament\Auth\MultiFactor\Email\EmailAuthentication;
 use Filament\Enums\ThemeMode;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -44,17 +44,31 @@ class AdminPanelProvider extends PanelProvider
             ->defaultThemeMode(ThemeMode::Light)
             ->themeSwitcher(true)
             ->login(Login::class)
-            // Two-step sign-in by email code. ICTD can require it for every
-            // administrator from System health; anyone else may set it up.
+            // Two-step sign-in by email code, off unless ICTD requires it for
+            // administrators on System health. Turning it off there clears it
+            // for everyone (SystemHealthPage::save).
             ->multiFactorAuthentication(
                 [EmailAuthentication::make()],
                 isRequired: fn (): bool => SystemSetting::requiresAdminTwoStep()
                     && (auth()->user() instanceof User && auth()->user()->isAdministrator()),
             )
             ->passwordReset()
+            ->profile(MyAccount::class, isSimple: false)
             ->revealablePasswords()
             ->colors([
-                'primary' => Color::Green,
+                'primary' => Color::hex('#1F5A3E'),
+            ])
+            // One menu for every office; each person sees only the items
+            // their role can open.
+            ->navigationGroups([
+                'Overview',
+                'People',
+                'Farms',
+                'Marketplace',
+                'Moderation',
+                'Content',
+                'System',
+                'Records',
             ])
             // Wide tables use the whole screen instead of scrolling sideways.
             ->maxContentWidth(Width::Full)
@@ -69,12 +83,18 @@ class AdminPanelProvider extends PanelProvider
                     : '',
             )
             ->renderHook(
+                PanelsRenderHook::SIMPLE_LAYOUT_START,
+                fn (): string => view('filament.login-side')->render(),
+                scopes: Login::class,
+            )
+            ->renderHook(
                 PanelsRenderHook::GLOBAL_SEARCH_AFTER,
                 fn (): string => Blade::render('@include(\'filament.topbar-theme-switcher\')'),
             )
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
+                Home::class,
                 Dashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
@@ -88,12 +108,6 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
-            ])
-            ->userMenuItems([
-                'account' => Action::make('account')
-                    ->label('My account')
-                    ->icon('heroicon-o-user-circle')
-                    ->url(fn (): string => UserResource::getUrl('edit', ['record' => auth()->id()])),
             ])
             /*
              * Persistent, so these also run on every in-page action and a

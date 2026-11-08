@@ -44,6 +44,7 @@ class EnforceAppAvailability
                 'message' => "Please update AniHow to version {$minimum} or newer to keep using it.",
                 'update_required' => true,
                 'min_version' => $minimum,
+                'download_url' => SystemSetting::appDownloadUrl(),
             ], 426);
         }
 

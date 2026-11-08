@@ -7,6 +7,7 @@ use App\Filament\Concerns\RedirectsToIndexAfterCreate;
 use App\Filament\Resources\Users\Actions\TemporaryPasswordAction;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
+use App\Support\ActivityRecorder;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Support\Facades\FilamentView;
@@ -33,6 +34,8 @@ class CreateUser extends CreateRecord
         if (! $user instanceof User) {
             return;
         }
+
+        ActivityRecorder::roleChanged($user, [], $user->load('roles')->getRoleNames()->values()->all());
 
         // A buyer made here passes the same ID check as one who signed up.
         // Only accounts that predate the ID feature are exempt.

@@ -358,4 +358,478 @@
     .dark .anihow-tone-secondary {
         background: var(--info-300);
     }
+
+    /* ---- The AniHow look: warm paper background, white panels, green accents ---- */
+    :root {
+        --anihow-paper: #F6F4EE;
+        --anihow-line: #E5E1D6;
+        --anihow-line-soft: #EEEAE0;
+        --anihow-ink: #1E2421;
+        --anihow-ink-muted: #5F6863;
+        --anihow-green: #1F5A3E;
+        --anihow-green-tint: #E3EFE7;
+        --anihow-warn: #B45309;
+        --anihow-surface: #FFFFFF;
+        --anihow-surface-soft: #FAF9F5;
+    }
+
+    .dark {
+        --anihow-line: rgba(255, 255, 255, 0.10);
+        --anihow-line-soft: rgba(255, 255, 255, 0.06);
+        --anihow-ink: var(--gray-100);
+        --anihow-ink-muted: var(--gray-400);
+        --anihow-green: var(--primary-300);
+        --anihow-green-tint: rgba(110, 190, 140, 0.14);
+        --anihow-warn: #F2B35B;
+        --anihow-surface: var(--gray-900);
+        --anihow-surface-soft: rgba(255, 255, 255, 0.03);
+    }
+
+    html:not(.dark) body.fi-body,
+    html:not(.dark) .fi-layout {
+        background-color: var(--anihow-paper);
+    }
+
+    html:not(.dark) .fi-sidebar,
+    html:not(.dark) .fi-topbar > nav,
+    html:not(.dark) .fi-topbar {
+        background-color: #FFFFFF;
+    }
+
+    html:not(.dark) .fi-sidebar {
+        border-inline-end: 1px solid var(--anihow-line);
+    }
+
+    html:not(.dark) .fi-topbar {
+        border-bottom: 1px solid var(--anihow-line);
+        box-shadow: none;
+    }
+
+    .fi-sidebar-group-label {
+        font-size: 0.6875rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    html:not(.dark) .fi-sidebar-item-active > .fi-sidebar-item-btn,
+    html:not(.dark) .fi-sidebar-item.fi-active > .fi-sidebar-item-btn {
+        background-color: var(--anihow-green-tint);
+    }
+
+    html:not(.dark) .fi-section,
+    html:not(.dark) .fi-ta-ctn,
+    html:not(.dark) .fi-wi-stats-overview-stat {
+        border-radius: 14px;
+        box-shadow: none;
+        --tw-ring-color: var(--anihow-line);
+    }
+
+    /* ---- Home screens ---- */
+    .anihow-home {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .anihow-home-block {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .anihow-home-heading {
+        margin: 0;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--anihow-ink);
+    }
+
+    .anihow-home-tiles {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+        gap: 0.75rem;
+    }
+
+    .anihow-home-tile {
+        display: flex;
+        flex-direction: column;
+        gap: 0.375rem;
+        padding: 1rem;
+        border: 1px solid var(--anihow-line);
+        border-radius: 14px;
+        background: var(--anihow-surface);
+        color: var(--anihow-ink);
+        text-decoration: none;
+    }
+
+    .anihow-home-tile:hover {
+        border-color: var(--anihow-green);
+    }
+
+    .anihow-home-tile:focus-visible,
+    .anihow-home-link:focus-visible,
+    .anihow-home-button:focus-visible {
+        outline: 2px solid var(--anihow-green);
+        outline-offset: 2px;
+    }
+
+    .anihow-home-tile-label {
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--anihow-ink-muted);
+    }
+
+    .anihow-home-tile-count {
+        font-size: 1.875rem;
+        font-weight: 700;
+        line-height: 1.1;
+    }
+
+    .anihow-home-tile-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        line-height: 1.15;
+    }
+
+    .anihow-home-tile-cta,
+    .anihow-home-link {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--anihow-green);
+        text-decoration: none;
+    }
+
+    .anihow-home-link:hover {
+        text-decoration: underline;
+    }
+
+    .anihow-home-tile-note {
+        font-size: 0.75rem;
+        color: var(--anihow-ink-muted);
+    }
+
+    .anihow-home-warn,
+    .anihow-home-tile-note.anihow-home-warn {
+        color: var(--anihow-warn);
+        font-weight: 600;
+    }
+
+    .anihow-home-columns {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+
+    .anihow-home-wide {
+        flex: 2 1 30rem;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .anihow-home-narrow {
+        flex: 1 1 18rem;
+        min-width: 0;
+    }
+
+    .anihow-home-table-wrap {
+        overflow-x: auto;
+        margin: -0.5rem;
+    }
+
+    .anihow-home-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8125rem;
+    }
+
+    .anihow-home-table th {
+        text-align: start;
+        font-weight: 600;
+        color: var(--anihow-ink-muted);
+        background: var(--anihow-surface-soft);
+        padding: 0.625rem 0.75rem;
+        white-space: nowrap;
+    }
+
+    .anihow-home-table td {
+        padding: 0.6875rem 0.75rem;
+        border-top: 1px solid var(--anihow-line-soft);
+        color: var(--anihow-ink);
+    }
+
+    .anihow-home-strong {
+        font-weight: 600;
+        color: var(--anihow-ink);
+    }
+
+    a.anihow-home-strong {
+        text-decoration: none;
+    }
+
+    a.anihow-home-strong:hover {
+        color: var(--anihow-green);
+        text-decoration: underline;
+    }
+
+    .anihow-home-note {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--anihow-warn);
+    }
+
+    .anihow-home-activity,
+    .anihow-home-posts {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.875rem;
+        font-size: 0.8125rem;
+        color: var(--anihow-ink);
+    }
+
+    .anihow-home-activity li,
+    .anihow-home-posts li {
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--anihow-line-soft);
+    }
+
+    .anihow-home-kind {
+        font-size: 0.6875rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--anihow-ink-muted);
+    }
+
+    .anihow-home-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .anihow-home-actions-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .anihow-home-button {
+        display: inline-flex;
+        align-items: center;
+        min-height: 2.5rem;
+        padding: 0 1rem;
+        border-radius: 10px;
+        background: var(--anihow-green);
+        color: #FFFFFF;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .dark .anihow-home-button {
+        color: var(--gray-950);
+    }
+
+    .anihow-home-button-quiet {
+        background: var(--anihow-surface);
+        color: var(--anihow-ink);
+        border: 1px solid var(--anihow-line);
+    }
+
+    .dark .anihow-home-button-quiet {
+        color: var(--anihow-ink);
+    }
+
+    .anihow-home-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        min-height: 1.75rem;
+        padding: 0 0.75rem;
+        border-radius: 999px;
+        background: var(--anihow-green-tint);
+        color: var(--anihow-green);
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .anihow-home-pill::before {
+        content: "";
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: 999px;
+        background: currentColor;
+    }
+
+    .anihow-home-pill-warn {
+        background: rgba(180, 83, 9, 0.12);
+        color: var(--anihow-warn);
+    }
+
+    .anihow-home-strip {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1.75rem;
+        padding: 0.875rem 1.125rem;
+        border: 1px solid var(--anihow-line);
+        border-radius: 14px;
+        background: var(--anihow-surface);
+    }
+
+    .anihow-home-strip > div {
+        display: flex;
+        flex-direction: column;
+        font-size: 0.75rem;
+    }
+
+    .anihow-home-strip-value {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--anihow-ink);
+    }
+
+    .anihow-home-push {
+        margin-inline-start: auto;
+    }
+
+    .anihow-home-settings {
+        margin: 0 0 0.75rem;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .anihow-home-settings > div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--anihow-line-soft);
+    }
+
+    .anihow-home-settings dt {
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--anihow-ink);
+    }
+
+    .anihow-home-settings dd {
+        margin: 0;
+        font-size: 0.8125rem;
+        color: var(--anihow-ink-muted);
+    }
+
+    /* ---- Sign-in: green panel on the left, the form on the right ---- */
+    .fi-simple-layout:has(> .anihow-login-side) {
+        flex-direction: row;
+        align-items: stretch;
+        background: var(--anihow-paper);
+    }
+
+    .dark .fi-simple-layout:has(> .anihow-login-side) {
+        background: var(--gray-950);
+    }
+
+    .fi-simple-layout:has(> .anihow-login-side) > .fi-simple-main-ctn {
+        flex: 1 1 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem 1rem;
+    }
+
+    .anihow-login-side {
+        flex: 1 1 50%;
+        box-sizing: border-box;
+        min-height: 100vh;
+        padding: 3.5rem;
+        background: #1F5A3E;
+        color: #FFFFFF;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 2rem;
+    }
+
+    .anihow-login-side-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .anihow-login-side-mark {
+        width: 3.25rem;
+        height: 3.25rem;
+        border-radius: 14px;
+        background: #FFFFFF;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .anihow-login-side-mark img {
+        width: 2.5rem;
+        height: 2.5rem;
+        object-fit: contain;
+    }
+
+    .anihow-login-side-name {
+        font-size: 1.375rem;
+        font-weight: 700;
+    }
+
+    .anihow-login-side-copy {
+        max-width: 28rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.875rem;
+    }
+
+    .anihow-login-side-title {
+        margin: 0;
+        font-size: 2.125rem;
+        line-height: 1.2;
+        font-weight: 700;
+    }
+
+    .anihow-login-side-text {
+        margin: 0;
+        font-size: 1rem;
+        line-height: 1.55;
+        color: #D6E7DC;
+    }
+
+    .anihow-login-side-foot {
+        margin: 0;
+        font-size: 0.8125rem;
+        color: #B9D3C3;
+    }
+
+    @media (min-width: 64rem) {
+        .fi-simple-layout:has(> .anihow-login-side) .anihow-brand-login {
+            display: none !important;
+        }
+    }
+
+    @media (max-width: 63.99rem) {
+        .fi-simple-layout:has(> .anihow-login-side) {
+            flex-direction: column;
+        }
+
+        .anihow-login-side {
+            display: none;
+        }
+    }
 </style>

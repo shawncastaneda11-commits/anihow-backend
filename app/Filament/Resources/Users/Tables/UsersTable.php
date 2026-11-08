@@ -120,8 +120,12 @@ class UsersTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    // Checks each selected account like the single Delete
+                    // button, so your own account and accounts the other
+                    // office manages are skipped.
                     DeleteBulkAction::make()
-                        ->visible(fn (): bool => AccountAuthority::managesAny(auth()->user())),
+                        ->visible(fn (): bool => AccountAuthority::managesAny(auth()->user()))
+                        ->authorizeIndividualRecords('delete'),
                 ]),
             ]);
     }

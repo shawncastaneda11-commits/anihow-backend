@@ -53,4 +53,28 @@ void main() {
     expect(find.text('Update AniHow'), findsOneWidget);
     expect(find.text('home'), findsNothing);
   });
+
+  testWidgets('the update screen opens ICTD\'s download link', (tester) async {
+    AppAvailability.instance.apply(
+      minVersion: '99.0.0',
+      downloadUrl: 'https://example.com/anihow.apk',
+    );
+    await tester.pumpWidget(_app());
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('app-gate-download')), findsOneWidget);
+    expect(find.byKey(const ValueKey('app-gate-ask')), findsNothing);
+  });
+
+  testWidgets('without a download link the update screen says who to ask', (tester) async {
+    AppAvailability.instance.apply(
+      minVersion: '99.0.0',
+      downloadUrl: 'javascript:alert(1)',
+    );
+    await tester.pumpWidget(_app());
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('app-gate-download')), findsNothing);
+    expect(find.byKey(const ValueKey('app-gate-ask')), findsOneWidget);
+  });
 }

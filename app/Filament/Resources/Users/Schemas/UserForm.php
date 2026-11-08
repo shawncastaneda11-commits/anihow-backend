@@ -137,7 +137,9 @@ class UserForm
     {
         $actor = auth()->user();
 
-        return $record === null || ! $record->exists
+        // An account this request just created has no role yet, so it counts
+        // as new: otherwise ICTD's choice of an administrator role is dropped.
+        return $record === null || ! $record->exists || $record->wasRecentlyCreated
             ? AccountAuthority::managesAny($actor)
             : AccountAuthority::canManageOther($actor, $record);
     }

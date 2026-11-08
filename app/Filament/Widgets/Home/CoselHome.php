@@ -19,6 +19,9 @@ class CoselHome extends Widget
 {
     protected static bool $isDiscovered = false;
 
+    /** The home screen shows at once instead of loading after the page. */
+    protected static bool $isLazy = false;
+
     protected string $view = 'filament.widgets.home.cosel';
 
     protected int|string|array $columnSpan = 'full';

@@ -6,6 +6,7 @@ use App\Actions\Listings\GuardListingOpenOrders;
 use App\Actions\Listings\TakeDownListingAction;
 use App\Actions\Reservations\GuardListingReservationCancellation;
 use App\Enums\ListingStatus;
+use App\Enums\TawadType;
 use App\Filament\Resources\Listings\Actions\FarmListingActions;
 use App\Models\Listing;
 use App\Support\InAppNotifier;
@@ -14,6 +15,7 @@ use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Textarea;
+use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -58,68 +60,103 @@ class ListingsTable
         return UnitConverter::belowFloorComparison(self::EFFECTIVE_FLOOR_SQL);
     }
 
+    /** Stock at or below this shows as low. */
+    public const LOW_STOCK = 5;
+
+    /**
+     * Shown, Hidden, Starts <date>, Ended, Taken down or Archived.
+     */
+    public static function state(Listing $record): string
+    {
+        return match (true) {
+            $record->status === ListingStatus::TakenDown => 'Taken down',
+            $record->status === ListingStatus::Archived => 'Archived',
+            ! $record->is_active => 'Hidden',
+            $record->isExpired() => 'Ended',
+            $record->isUpcoming() => 'Starts '.$record->available_from?->format('M j'),
+            default => 'Shown',
+        };
+    }
+
+    public static function tawadSummary(Listing $record): string
+    {
+        $rule = $record->activeTawadRule;
+
+        if ($rule === null) {
+            return 'No tawad';
+        }
+
+        $off = '₱'.number_format((float) $rule->discount_amount, 2).' off';
+
+        return $rule->type === TawadType::MinimumQuantity
+            ? $off.' at '.rtrim(rtrim(number_format((float) $rule->min_quantity, 2), '0'), '.').'+'
+            : $off.' every order';
+    }
+
     public static function configure(Table $table): Table
     {
         return $table
             ->columns([
                 ImageColumn::make('image_path')
-                    ->label('Image')
+                    ->label('')
                     ->disk(config('anihow.listing_disk', 'public'))
-                    ->square(),
+                    ->square()
+                    ->imageSize(52)
+                    ->defaultImageUrl(asset('images/anihow-mark.png')),
+                // The listing, who sells it, and a red line when it is priced
+                // below the lowest price (the Super Admin or the farm raised it).
                 TextColumn::make('title')
+                    ->label('Listing')
+                    ->weight(FontWeight::SemiBold)
                     ->searchable()
-                    ->sortable(),
-                TextColumn::make('cropType.name')
-                    ->label('Crop type')
-                    ->sortable(),
+                    ->sortable()
+                    ->description(fn (Listing $record): string => collect([
+                        $record->farmerSeller?->name,
+                        $record->cropType?->name,
+                    ])->filter()->implode(' · '))
+                    ->wrap(),
+                TextColumn::make('listing_state')
+                    ->label('Status')
+                    ->badge()
+                    ->getStateUsing(fn (Listing $record): string => self::state($record))
+                    ->color(fn (string $state): string => match (true) {
+                        $state === 'Shown' => 'success',
+                        $state === 'Taken down' => 'danger',
+                        str_starts_with($state, 'Starts') => 'warning',
+                        default => 'gray',
+                    }),
                 TextColumn::make('farmerSeller.name')
                     ->label('Seller')
                     ->searchable()
-                    ->sortable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('farm.name')
                     ->label('Farm')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('price_per_unit')
                     ->label('Price')
-                    ->money('PHP')
                     ->sortable()
-                    // A listing priced below its crop type's floor is stranded,
-                    // because the Super Admin raised the system floor or the
-                    // farm raised its own.
+                    ->formatStateUsing(fn (Listing $record): string => '₱'.number_format((float) $record->price_per_unit, 2).' / '.($record->unit?->value ?? 'unit'))
                     ->color(fn (Listing $record): ?string => $record->isBelowFloor() ? 'danger' : null)
-                    ->description(fn (Listing $record): ?string => $record->isBelowFloor()
-                        ? 'Below floor of PHP '.number_format((float) $record->effectiveFloor(), 2)
-                        : null),
+                    ->description(fn (Listing $record): string => $record->isBelowFloor()
+                        ? 'Below the lowest price of ₱'.number_format((float) $record->effectiveFloor(), 2)
+                        : self::tawadSummary($record)),
                 TextColumn::make('quantity_available')
-                    ->label('Qty')
-                    ->sortable(),
-                TextColumn::make('quantity_held')
-                    ->label('Held')
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('availability_state')
-                    ->label('Availability')
-                    ->badge()
-                    ->getStateUsing(fn (Listing $record): string => ucfirst($record->availabilityState()))
-                    ->color(fn (string $state): string => match ($state) {
-                        'Upcoming' => 'warning',
-                        'Expired' => 'gray',
-                        default => 'success',
-                    }),
-                TextColumn::make('status')
-                    ->badge()
-                    ->formatStateUsing(fn (ListingStatus $state): string => $state->label())
-                    ->color(fn (ListingStatus $state): string => match ($state) {
-                        ListingStatus::Published => 'success',
-                        ListingStatus::TakenDown => 'danger',
-                        ListingStatus::Archived => 'gray',
-                    }),
+                    ->label('Stock')
+                    ->sortable()
+                    ->formatStateUsing(fn (Listing $record): string => rtrim(rtrim(number_format((float) $record->quantity_available, 2), '0'), '.').' '.($record->unit?->value ?? '').' left')
+                    ->color(fn (Listing $record): ?string => (float) $record->quantity_available <= self::LOW_STOCK ? 'warning' : null)
+                    ->description(fn (Listing $record): ?string => (float) $record->activeReservedQuantity() > 0
+                        ? rtrim(rtrim(number_format((float) $record->activeReservedQuantity(), 2), '0'), '.').' reserved'
+                        : null),
                 IconColumn::make('is_active')
                     ->label('Seller active')
                     ->boolean()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->modifyQueryUsing(fn (Builder $query) => $query->with(['cropType', 'farm.cropTypeOverrides']))
+            // A Content Editor opens the edit panel by clicking the row.
+            ->recordAction(fn (Listing $record): ?string => FarmListingActions::canEdit($record) ? 'editFarmListing' : null)
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['cropType', 'farm.cropTypeOverrides', 'farmerSeller', 'activeTawadRule']))
             ->filters([
                 SelectFilter::make('status')
                     ->options(ListingStatus::options()),

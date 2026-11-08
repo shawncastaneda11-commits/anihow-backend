@@ -7,9 +7,12 @@ use App\Enums\IdDocumentType;
 use App\Enums\IdVerificationStatus;
 use App\Models\IdVerification;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -73,7 +76,10 @@ class IdVerificationsTable
                 SelectFilter::make('status')
                     ->options(IdVerificationStatus::options()),
             ])
+            // Clicking a waiting ID opens the review panel.
+            ->recordAction(fn (IdVerification $record): ?string => $record->isPending() ? 'review' : null)
             ->recordActions([
+                self::review(),
                 Action::make('approve')
                     ->icon('heroicon-o-check')
                     ->color('success')
@@ -124,7 +130,76 @@ class IdVerificationsTable
         return $note === '' ? self::REJECTION_REASONS[$reason] : self::REJECTION_REASONS[$reason].' '.$note;
     }
 
-    private static function photos(IdVerification $record): HtmlString
+    /**
+     * The review panel: both photos side by side, the details to check, and
+     * one decision. Approving and rejecting work as the separate buttons do.
+     */
+    private static function review(): Action
+    {
+        return Action::make('review')
+            ->label('Review')
+            ->icon('heroicon-o-identification')
+            ->slideOver()
+            ->modalWidth(Width::FourExtraLarge)
+            ->visible(fn (IdVerification $record): bool => $record->isPending())
+            ->modalHeading(fn (IdVerification $record): string => (string) $record->user?->name)
+            ->modalDescription(fn (IdVerification $record): string => collect([
+                $record->user?->email,
+                'sent '.$record->created_at?->diffForHumans(),
+                self::earlierTries($record),
+            ])->filter()->implode(' · '))
+            ->modalContent(fn (IdVerification $record): HtmlString => self::photos($record, sideBySide: true))
+            ->fillForm(['decision' => 'approve'])
+            ->schema([
+                Radio::make('decision')
+                    ->label('Your decision')
+                    ->options(['approve' => 'Approve', 'reject' => 'Reject'])
+                    ->descriptions([
+                        'approve' => 'The name matches, the whole card shows, it is not expired, and the selfie matches.',
+                        'reject' => 'The buyer sees the reason and can send a new photo.',
+                    ])
+                    ->required()
+                    ->live(),
+                Select::make('reason')
+                    ->label('Reason')
+                    ->options(self::REJECTION_REASONS)
+                    ->visible(fn (Get $get): bool => $get('decision') === 'reject')
+                    ->required(fn (Get $get): bool => $get('decision') === 'reject')
+                    ->live(),
+                Textarea::make('note')
+                    ->label('Note for the buyer')
+                    ->rows(2)
+                    ->maxLength(300)
+                    ->visible(fn (Get $get): bool => $get('decision') === 'reject')
+                    ->required(fn (Get $get): bool => $get('decision') === 'reject' && $get('reason') === 'other'),
+                Text::make('The photos are deleted once you decide.')->color('gray'),
+            ])
+            ->modalSubmitActionLabel('Save decision')
+            ->action(function (IdVerification $record, array $data): void {
+                $review = app(ReviewIdVerificationAction::class);
+
+                if (($data['decision'] ?? 'approve') === 'reject') {
+                    $review->reject(auth()->user(), $record, self::rejectionText($data));
+
+                    return;
+                }
+
+                $review->approve(auth()->user(), $record);
+            });
+    }
+
+    private static function earlierTries(IdVerification $record): string
+    {
+        $rejected = IdVerification::query()
+            ->where('user_id', $record->user_id)
+            ->whereKeyNot($record->getKey())
+            ->where('status', IdVerificationStatus::Rejected)
+            ->count();
+
+        return $rejected === 0 ? 'first try' : $rejected.' earlier '.($rejected === 1 ? 'try' : 'tries').' rejected';
+    }
+
+    private static function photos(IdVerification $record, bool $sideBySide = false): HtmlString
     {
         $images = '';
 
@@ -143,10 +218,14 @@ class IdVerificationsTable
         $name = e((string) $record->user?->name);
         $type = e($record->id_type->label());
 
+        $gallery = $images !== ''
+            ? ($sideBySide ? '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(16rem,1fr));gap:14px">'.$images.'</div>' : $images)
+            : '<p class="text-sm text-gray-500">The photos are no longer available.</p>';
+
         return new HtmlString(
             '<div style="display:flex;flex-direction:column;gap:12px">'
             .'<p class="text-sm">Account name: <strong>'.$name.'</strong> · '.$type.'</p>'
-            .($images !== '' ? $images : '<p class="text-sm text-gray-500">The photos are no longer available.</p>')
+            .$gallery
             .'</div>'
         );
     }

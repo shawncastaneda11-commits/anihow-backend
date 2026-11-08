@@ -93,7 +93,8 @@ final class ActivityRecorder
      * Records a change of role, which the account's own update does not show
      * because roles are stored apart from the account. A change to or from an
      * administrator role is ICTD's; the account's "created" row is moved with
-     * it so ICTD sees the administrator accounts it creates.
+     * it, with anything else already logged about the new account, so ICTD sees
+     * the administrator accounts it creates.
      *
      * @param  list<string>  $old
      * @param  list<string>  $new
@@ -115,7 +116,6 @@ final class ActivityRecorder
             ActivityLog::query()
                 ->where('subject_type', $user->getMorphClass())
                 ->where('subject_id', $user->getKey())
-                ->where('action', 'created')
                 ->update(['area' => $area]);
         }
 

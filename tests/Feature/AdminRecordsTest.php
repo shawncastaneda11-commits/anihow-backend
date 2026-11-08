@@ -83,7 +83,12 @@ class AdminRecordsTest extends TestCase
             ->where('subject_id', $manager->id)
             ->get();
 
-        $this->assertTrue($rows->where('action', 'created')->every(fn (ActivityLog $row): bool => $row->area === ActivityLog::AREA_ADMINS));
+        $this->assertNotEmpty($rows->where('action', 'created'));
+        $this->assertSame(
+            [ActivityLog::AREA_ADMINS],
+            $rows->pluck('area')->unique()->values()->all(),
+            $rows->map(fn (ActivityLog $row): string => "{$row->action}:{$row->area}")->implode(', '),
+        );
         $roleRow = $rows->firstWhere('action', 'role_changed');
         $this->assertNotNull($roleRow);
         $this->assertSame(ActivityLog::AREA_ADMINS, $roleRow->area);

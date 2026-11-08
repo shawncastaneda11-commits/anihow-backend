@@ -100,7 +100,7 @@ String pushChannelFor(Map<String, String> data) {
   if (type.startsWith('payment_') || type.startsWith('refund_')) {
     return 'payments';
   }
-  if (type == 'farm_announcement') {
+  if (type == 'farm_announcement' || type == 'system_announcement') {
     return 'farm_updates';
   }
   if (type.startsWith('order_') ||

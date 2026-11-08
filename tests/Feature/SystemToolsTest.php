@@ -35,11 +35,17 @@ class SystemToolsTest extends TestCase
             ->assertJson(['min_version' => null, 'maintenance' => false]);
 
         SystemSetting::put(SystemSetting::MIN_APP_VERSION, '1.0.3');
+        SystemSetting::put(SystemSetting::APP_DOWNLOAD_URL, 'https://example.com/anihow.apk');
         SystemSetting::put(SystemSetting::MAINTENANCE_MESSAGE, 'Back at 5 PM.');
 
         $this->getJson('/api/app/config')
             ->assertOk()
-            ->assertJson(['min_version' => '1.0.3', 'maintenance' => true, 'maintenance_message' => 'Back at 5 PM.']);
+            ->assertJson([
+                'min_version' => '1.0.3',
+                'download_url' => 'https://example.com/anihow.apk',
+                'maintenance' => true,
+                'maintenance_message' => 'Back at 5 PM.',
+            ]);
     }
 
     public function test_maintenance_answers_every_api_call_with_the_message(): void
@@ -54,12 +60,13 @@ class SystemToolsTest extends TestCase
     public function test_an_app_below_the_minimum_version_is_asked_to_update(): void
     {
         SystemSetting::put(SystemSetting::MIN_APP_VERSION, '1.0.3');
+        SystemSetting::put(SystemSetting::APP_DOWNLOAD_URL, 'https://example.com/anihow.apk');
         $buyer = $this->buyer();
 
         $this->asUser($buyer)->withHeader('X-App-Version', '1.0.2')
             ->getJson('/api/crop-types')
             ->assertStatus(426)
-            ->assertJson(['update_required' => true, 'min_version' => '1.0.3']);
+            ->assertJson(['update_required' => true, 'min_version' => '1.0.3', 'download_url' => 'https://example.com/anihow.apk']);
 
         $this->asUser($buyer)->withHeader('X-App-Version', '1.0.3')
             ->getJson('/api/crop-types')

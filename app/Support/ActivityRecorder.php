@@ -4,6 +4,10 @@ namespace App\Support;
 
 use App\Enums\Role;
 use App\Models\ActivityLog;
+use App\Models\CropType;
+use App\Models\CropTypeUnitGuard;
+use App\Models\FaqEntry;
+use App\Models\SystemSetting;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Throwable;
@@ -34,9 +38,7 @@ final class ActivityRecorder
             return;
         }
 
-        $actor = auth()->user();
-
-        if (! $actor instanceof User || ! $actor->hasAnyRole(array_column(Role::panelRoles(), 'value'))) {
+        if (self::actor() === null) {
             return;
         }
 
@@ -47,17 +49,114 @@ final class ActivityRecorder
                 return;
             }
 
+            self::note($action, $model, $changes);
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+    }
+
+    /**
+     * Records an action that is not a plain create, update or delete, such as
+     * "signed_out_everywhere" or "role_changed". $subject is a record, or a
+     * label for something that is not one (with $area saying who reads it).
+     *
+     * @param  array<string, mixed>  $changes
+     */
+    public static function note(string $action, Model|string $subject, array $changes = [], ?string $area = null): void
+    {
+        $actor = self::actor();
+
+        if ($actor === null) {
+            return;
+        }
+
+        try {
+            $isModel = $subject instanceof Model;
+
             ActivityLog::query()->create([
                 'user_id' => $actor->getKey(),
                 'action' => $action,
-                'subject_type' => $model->getMorphClass(),
-                'subject_id' => is_numeric($model->getKey()) ? $model->getKey() : null,
-                'subject_label' => self::label($model) ?? (is_string($model->getKey()) ? $model->getKey() : null),
+                'area' => $area ?? ($isModel ? self::area($subject) : ActivityLog::AREA_SYSTEM),
+                'subject_type' => $isModel ? $subject->getMorphClass() : $subject,
+                'subject_id' => $isModel && is_numeric($subject->getKey()) ? $subject->getKey() : null,
+                'subject_label' => $isModel
+                    ? (self::label($subject) ?? (is_string($subject->getKey()) ? $subject->getKey() : null))
+                    : null,
                 'changes' => $changes === [] ? null : $changes,
             ]);
         } catch (Throwable $exception) {
             report($exception);
         }
+    }
+
+    /**
+     * Records a change of role, which the account's own update does not show
+     * because roles are stored apart from the account. A change to or from an
+     * administrator role is ICTD's; the account's "created" row is moved with
+     * it so ICTD sees the administrator accounts it creates.
+     *
+     * @param  list<string>  $old
+     * @param  list<string>  $new
+     */
+    public static function roleChanged(User $user, array $old, array $new): void
+    {
+        sort($old);
+        sort($new);
+
+        if ($old === $new) {
+            return;
+        }
+
+        $adminRoles = array_column(Role::adminRoles(), 'value');
+        $touchesAdmin = array_intersect(array_merge($old, $new), $adminRoles) !== [];
+        $area = $touchesAdmin ? ActivityLog::AREA_ADMINS : ActivityLog::AREA_PEOPLE;
+
+        if ($old === [] && $touchesAdmin) {
+            ActivityLog::query()
+                ->where('subject_type', $user->getMorphClass())
+                ->where('subject_id', $user->getKey())
+                ->where('action', 'created')
+                ->update(['area' => $area]);
+        }
+
+        $label = fn (array $names): ?string => $names === []
+            ? null
+            : implode(', ', array_map(fn (string $name): string => Role::tryFrom($name)?->label() ?? $name, $names));
+
+        self::note('role_changed', $user, ['role' => ['old' => $label($old), 'new' => $label($new)]], $area);
+    }
+
+    /**
+     * Which office reads a row about this record. An account is an
+     * administrator's when it holds, or is losing, an administrator role.
+     */
+    public static function area(Model $model): string
+    {
+        if ($model instanceof SystemSetting || $model instanceof CropType || $model instanceof CropTypeUnitGuard) {
+            return ActivityLog::AREA_SYSTEM;
+        }
+
+        if ($model instanceof FaqEntry) {
+            return $model->farm_id === null ? ActivityLog::AREA_SYSTEM : ActivityLog::AREA_PEOPLE;
+        }
+
+        if ($model instanceof User) {
+            return $model->isAdministrator() ? ActivityLog::AREA_ADMINS : ActivityLog::AREA_PEOPLE;
+        }
+
+        return ActivityLog::AREA_PEOPLE;
+    }
+
+    /** The signed-in administrator or Content Editor, if any. */
+    private static function actor(): ?User
+    {
+        $actor = auth()->user();
+
+        if (! $actor instanceof User || ! $actor->hasAnyRole(array_column(Role::panelRoles(), 'value'))) {
+            return null;
+        }
+
+        return $actor;
     }
 
     /**

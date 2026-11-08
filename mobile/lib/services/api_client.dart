@@ -256,6 +256,7 @@ class ApiClient {
                 body['update_required'] == true) {
               AppAvailability.instance.apply(
                 minVersion: body['min_version']?.toString(),
+                downloadUrl: body['download_url']?.toString(),
               );
             }
           }
@@ -1504,7 +1505,8 @@ class ApiClient {
     }
   }
 
-  /// The minimum version and maintenance notice set by ICTD. Public.
+  /// The minimum version, download link and maintenance notice set by ICTD.
+  /// Public.
   Future<void> refreshAppAvailability() async {
     final data = await _get('/app/config');
     AppAvailability.instance.apply(
@@ -1512,6 +1514,7 @@ class ApiClient {
           ? data['maintenance_message']?.toString()
           : null,
       minVersion: data['min_version']?.toString(),
+      downloadUrl: data['download_url']?.toString(),
     );
   }
 

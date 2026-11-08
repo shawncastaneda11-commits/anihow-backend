@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\Permission;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -11,14 +13,43 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * changes  {"field": {"old": ..., "new": ...}} for updates; the new values for
  *          a created record; empty for a deletion. Passwords and tokens are
  *          never recorded.
+ * area     Which office reads the row: AREA_PEOPLE (COSEL), AREA_ADMINS
+ *          (ICTD), or AREA_SYSTEM (both).
  */
 class ActivityLog extends Model
 {
     public const UPDATED_AT = null;
 
+    /** Accounts of farmer-sellers, buyers and Content Editors; farms; listings. */
+    public const AREA_PEOPLE = 'people';
+
+    /** Administrator accounts (ICTD and COSEL). */
+    public const AREA_ADMINS = 'admins';
+
+    /** Crop types, the system FAQ, system settings and jobs. */
+    public const AREA_SYSTEM = 'system';
+
+    /** What each action is called on screen. */
+    public const ACTIONS = [
+        'created' => 'Created',
+        'updated' => 'Updated',
+        'deleted' => 'Deleted',
+        'role_changed' => 'Role changed',
+        'signed_out_everywhere' => 'Signed out everywhere',
+        'two_step_turned_off' => 'Two-step sign-in turned off',
+        'retried_failed_jobs' => 'Retried failed jobs',
+        'announced' => 'Announced',
+        'exported' => 'Exported',
+    ];
+
+    protected $attributes = [
+        'area' => self::AREA_PEOPLE,
+    ];
+
     protected $fillable = [
         'user_id',
         'action',
+        'area',
         'subject_type',
         'subject_id',
         'subject_label',
@@ -31,6 +62,28 @@ class ActivityLog extends Model
             'changes' => 'array',
             'created_at' => 'datetime',
         ];
+    }
+
+    /**
+     * COSEL reads people and system rows; ICTD reads administrator and system
+     * rows, so ICTD never sees the personal details in people's accounts.
+     *
+     * @param  Builder<ActivityLog>  $query
+     * @return Builder<ActivityLog>
+     */
+    public function scopeVisibleTo(Builder $query, User $viewer): Builder
+    {
+        $areas = [self::AREA_SYSTEM];
+
+        if ($viewer->can(Permission::ManageAccounts->value)) {
+            $areas[] = self::AREA_PEOPLE;
+        }
+
+        if ($viewer->can(Permission::ManageAdminAccounts->value)) {
+            $areas[] = self::AREA_ADMINS;
+        }
+
+        return $query->whereIn('area', $areas);
     }
 
     public function user(): BelongsTo

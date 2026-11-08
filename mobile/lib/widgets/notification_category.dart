@@ -22,7 +22,7 @@ NotificationCategory notificationCategory(String? type) {
   if (value.startsWith('payment_') || value.startsWith('refund_')) {
     return NotificationCategory.payments;
   }
-  if (value == 'farm_announcement') {
+  if (value == 'farm_announcement' || value == 'system_announcement') {
     return NotificationCategory.farmNews;
   }
   if (value.startsWith('listing_') ||

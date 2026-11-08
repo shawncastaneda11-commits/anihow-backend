@@ -6,6 +6,7 @@ use App\Filament\Resources\Users\Actions\TemporaryPasswordAction;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
 use App\Support\Accounts\AccountAuthority;
+use App\Support\ActivityRecorder;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Facades\Filament;
@@ -15,6 +16,9 @@ use Filament\Resources\Pages\EditRecord;
 class EditUser extends EditRecord
 {
     protected static string $resource = UserResource::class;
+
+    /** @var list<string> */
+    private array $rolesBeforeSave = [];
 
     protected function getHeaderActions(): array
     {
@@ -62,6 +66,7 @@ class EditUser extends EditRecord
                     abort_unless($record instanceof User && AccountAuthority::canManageOther(auth()->user(), $record), 403);
 
                     $record->signOutEverywhere();
+                    ActivityRecorder::note('signed_out_everywhere', $record);
 
                     Notification::make()->title('Signed out everywhere.')->success()->send();
                 }),
@@ -79,9 +84,22 @@ class EditUser extends EditRecord
      * Changing your own password would otherwise end this session on the
      * next request, because the session stores the old password hash.
      */
+    protected function beforeSave(): void
+    {
+        $record = $this->getRecord();
+
+        if ($record instanceof User) {
+            $this->rolesBeforeSave = $record->getRoleNames()->values()->all();
+        }
+    }
+
     protected function afterSave(): void
     {
         $record = $this->getRecord();
+
+        if ($record instanceof User) {
+            ActivityRecorder::roleChanged($record, $this->rolesBeforeSave, $record->load('roles')->getRoleNames()->values()->all());
+        }
 
         if ($record->is(auth()->user()) && $record->wasChanged('password') && request()->hasSession()) {
             request()->session()->put([

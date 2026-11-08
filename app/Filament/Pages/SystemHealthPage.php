@@ -4,7 +4,10 @@ namespace App\Filament\Pages;
 
 use App\Enums\Permission;
 use App\Filament\Widgets\SystemHealthStats;
+use App\Models\ActivityLog;
 use App\Models\SystemSetting;
+use App\Models\User;
+use App\Support\ActivityRecorder;
 use App\Support\AppVersion;
 use App\Support\System\SystemHealth;
 use BackedEnum;
@@ -59,6 +62,7 @@ class SystemHealthPage extends Page
             'maintenance_on' => SystemSetting::maintenanceMessage() !== null,
             'maintenance_message' => SystemSetting::maintenanceMessage()
                 ?? 'AniHow is being updated and will be back shortly. Thank you for waiting.',
+            'app_download_url' => SystemSetting::appDownloadUrl(),
             'require_admin_two_step' => SystemSetting::requiresAdminTwoStep(),
         ]);
     }
@@ -78,7 +82,9 @@ class SystemHealthPage extends Page
                 ->requiresConfirmation()
                 ->visible(fn (): bool => SystemHealth::failedJobs() > 0)
                 ->action(function (): void {
+                    $failed = SystemHealth::failedJobs();
                     Artisan::call('queue:retry', ['id' => ['all']]);
+                    ActivityRecorder::note('retried_failed_jobs', 'Background jobs', ['jobs' => $failed], ActivityLog::AREA_SYSTEM);
 
                     Notification::make()->title('Failed jobs sent back to the queue.')->success()->send();
                 }),
@@ -102,6 +108,13 @@ class SystemHealthPage extends Page
                                 }
                             })
                             ->helperText('Apps older than this are asked to update before they can continue. Apps from before 1.0.3 do not report their version and are not blocked.'),
+                        TextInput::make('app_download_url')
+                            ->label('Where to get the new app')
+                            ->placeholder('https://')
+                            ->url()
+                            ->maxLength(500)
+                            ->required(fn ($get): bool => filled($get('min_app_version')))
+                            ->helperText('The update screen opens this link, for example the shared folder with the APK. Needed when a minimum version is set.'),
                         Toggle::make('maintenance_on')
                             ->label('Maintenance mode')
                             ->live()
@@ -117,7 +130,7 @@ class SystemHealthPage extends Page
                     ->schema([
                         Toggle::make('require_admin_two_step')
                             ->label('Require two-step sign-in for administrators')
-                            ->helperText('ICTD and COSEL accounts must enter a code sent to their email each time they sign in to the CMS. Each sets it up at their next sign-in.'),
+                            ->helperText('ICTD and COSEL accounts must enter a code sent to their email each time they sign in to the CMS. Turn this on only when every administrator account uses a real email they can open, or they cannot sign in. Turning it off stops the codes for everyone.'),
                     ]),
             ])
             ->statePath('data');
@@ -151,7 +164,20 @@ class SystemHealthPage extends Page
             SystemSetting::MAINTENANCE_MESSAGE,
             ($data['maintenance_on'] ?? false) ? trim((string) ($data['maintenance_message'] ?? '')) : null,
         );
-        SystemSetting::put(SystemSetting::REQUIRE_ADMIN_TWO_STEP, ($data['require_admin_two_step'] ?? false) ? '1' : null);
+        SystemSetting::put(SystemSetting::APP_DOWNLOAD_URL, trim((string) ($data['app_download_url'] ?? '')));
+
+        $requireTwoStep = (bool) ($data['require_admin_two_step'] ?? false);
+        SystemSetting::put(SystemSetting::REQUIRE_ADMIN_TWO_STEP, $requireTwoStep ? '1' : null);
+
+        // Off means off: nobody keeps being asked for a code they set up
+        // while it was required.
+        if (! $requireTwoStep) {
+            $stopped = User::query()->where('has_email_authentication', true)->update(['has_email_authentication' => false]);
+
+            if ($stopped > 0) {
+                ActivityRecorder::note('two_step_turned_off', 'Two-step sign-in', ['accounts' => $stopped], ActivityLog::AREA_ADMINS);
+            }
+        }
 
         Notification::make()->title('Settings saved.')->success()->send();
     }

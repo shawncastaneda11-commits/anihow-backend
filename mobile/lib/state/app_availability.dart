@@ -12,24 +12,48 @@ class AppAvailability extends ChangeNotifier {
 
   String? _maintenanceMessage;
   String? _requiredVersion;
+  String? _downloadUrl;
 
   String? get maintenanceMessage => _maintenanceMessage;
   String? get requiredVersion => _requiredVersion;
+
+  /// Where ICTD shares the new app (AniHow is an APK, not on the Play Store).
+  /// Only http and https links are kept.
+  String? get downloadUrl => _downloadUrl;
   bool get underMaintenance => _maintenanceMessage != null;
   bool get mustUpdate => _requiredVersion != null;
 
-  void apply({String? maintenanceMessage, String? minVersion}) {
+  void apply({
+    String? maintenanceMessage,
+    String? minVersion,
+    String? downloadUrl,
+  }) {
     final message = (maintenanceMessage ?? '').trim();
     final nextMaintenance = message.isEmpty ? null : message;
     final nextRequired =
         isOlder(kAppVersion, minVersion) ? minVersion!.trim() : null;
+    final nextDownload = webLink(downloadUrl);
     if (nextMaintenance == _maintenanceMessage &&
-        nextRequired == _requiredVersion) {
+        nextRequired == _requiredVersion &&
+        nextDownload == _downloadUrl) {
       return;
     }
     _maintenanceMessage = nextMaintenance;
     _requiredVersion = nextRequired;
+    _downloadUrl = nextDownload;
     notifyListeners();
+  }
+
+  /// [value] when it is an http or https link, otherwise null.
+  static String? webLink(String? value) {
+    final text = (value ?? '').trim();
+    final uri = Uri.tryParse(text);
+    if (uri == null ||
+        !(uri.scheme == 'https' || uri.scheme == 'http') ||
+        uri.host.isEmpty) {
+      return null;
+    }
+    return text;
   }
 
   /// True when [version] is older than [minimum]. Unknown values never are.

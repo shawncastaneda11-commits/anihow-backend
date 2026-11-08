@@ -21,6 +21,9 @@ class SystemSetting extends Model
 
     public const REQUIRE_ADMIN_TWO_STEP = 'require_admin_two_step';
 
+    /** Where the update screen sends people; AniHow is shared as an APK, not on the Play Store. */
+    public const APP_DOWNLOAD_URL = 'app_download_url';
+
     protected $primaryKey = 'key';
 
     public $incrementing = false;
@@ -60,6 +63,11 @@ class SystemSetting extends Model
     public static function minimumAppVersion(): ?string
     {
         return self::get(self::MIN_APP_VERSION);
+    }
+
+    public static function appDownloadUrl(): ?string
+    {
+        return self::get(self::APP_DOWNLOAD_URL);
     }
 
     public static function requiresAdminTwoStep(): bool

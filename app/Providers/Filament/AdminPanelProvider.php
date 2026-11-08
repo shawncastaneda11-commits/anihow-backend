@@ -44,8 +44,9 @@ class AdminPanelProvider extends PanelProvider
             ->defaultThemeMode(ThemeMode::Light)
             ->themeSwitcher(true)
             ->login(Login::class)
-            // Two-step sign-in by email code. ICTD can require it for every
-            // administrator from System health; anyone else may set it up.
+            // Two-step sign-in by email code, off unless ICTD requires it for
+            // administrators on System health. Turning it off there clears it
+            // for everyone (SystemHealthPage::save).
             ->multiFactorAuthentication(
                 [EmailAuthentication::make()],
                 isRequired: fn (): bool => SystemSetting::requiresAdminTwoStep()

@@ -182,6 +182,7 @@ class UserAccount {
   bool get canRecordWalkInSales =>
       isFarmerSeller && permissions.contains('record_walk_in_sales');
   bool get isSuperAdmin => roles.contains('super_admin');
+  bool get isAccountManager => roles.contains('account_manager');
   bool get isVerified => emailVerifiedAt != null && emailVerifiedAt!.isNotEmpty;
   bool get isIdVerified => idVerification?.verified == true;
   bool get mustVerifyIdToOrder => idVerification?.blocksOrders == true;

@@ -9,6 +9,7 @@ use App\Support\Accounts\AccountAuthority;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Facades\Filament;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 
 class EditUser extends EditRecord
@@ -46,6 +47,23 @@ class EditUser extends EditRecord
                         'password' => $plain,
                         'email' => $record->email,
                     ]);
+                }),
+            // For a lost or shared phone: ends every app and CMS session.
+            Action::make('signOutEverywhere')
+                ->label('Sign out everywhere')
+                ->icon('heroicon-o-arrow-right-start-on-rectangle')
+                ->color('gray')
+                ->requiresConfirmation()
+                ->modalDescription('This signs the person out of the app on every phone and out of the CMS. Their password does not change.')
+                ->visible(fn (): bool => $this->getRecord() instanceof User
+                    && AccountAuthority::canManageOther(auth()->user(), $this->getRecord()))
+                ->action(function (): void {
+                    $record = $this->getRecord();
+                    abort_unless($record instanceof User && AccountAuthority::canManageOther(auth()->user(), $record), 403);
+
+                    $record->signOutEverywhere();
+
+                    Notification::make()->title('Signed out everywhere.')->success()->send();
                 }),
             DeleteAction::make()
                 ->visible(fn (): bool => auth()->user()?->can('delete', $this->record) ?? false),

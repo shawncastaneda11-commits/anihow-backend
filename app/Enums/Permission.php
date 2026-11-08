@@ -9,6 +9,7 @@ enum Permission: string
     case SuspendAccounts = 'suspend_accounts';
     case ManageAdminAccounts = 'manage_admin_accounts';
     case ViewActivityLog = 'view_activity_log';
+    case ManageSystemSettings = 'manage_system_settings';
 
     // Farms
     case ManageFarms = 'manage_farms';
@@ -82,6 +83,7 @@ enum Permission: string
             self::SuspendAccounts => 'Suspend accounts',
             self::ManageAdminAccounts => 'Manage administrator accounts',
             self::ViewActivityLog => 'View the activity log',
+            self::ManageSystemSettings => 'Manage system health and settings',
             self::ManageFarms => 'Manage farms',
             self::ManageOwnFarmProfile => 'Manage own farm profile',
             self::ViewOwnFarmRoster => 'View own farm roster',
@@ -142,6 +144,7 @@ enum Permission: string
              */
             Role::SuperAdmin => [
                 self::ManageAdminAccounts,
+                self::ManageSystemSettings,
                 self::ManageCropTypes,
                 self::SetCropPricing,
                 self::ViewAllOrders,

@@ -66,6 +66,8 @@ class AdminGateScreen extends StatelessWidget {
     final user = auth.user;
     final role = user?.isSuperAdmin == true
         ? s.superAdmin
+        : user?.isAccountManager == true
+        ? s.t('Account manager', 'Account manager')
         : s.t('Content editor', 'Content editor');
     final muted = theme.colorScheme.onSurface.withValues(alpha: 0.72);
 

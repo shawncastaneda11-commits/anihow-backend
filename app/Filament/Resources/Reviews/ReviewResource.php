@@ -25,7 +25,7 @@ class ReviewResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedStar;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Marketplace';
+    protected static string|UnitEnum|null $navigationGroup = 'Moderation';
 
     protected static ?string $navigationLabel = 'Reviews';
 
@@ -33,7 +33,7 @@ class ReviewResource extends Resource
 
     protected static ?string $pluralModelLabel = 'reviews';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 2;
 
     public static function table(Table $table): Table
     {

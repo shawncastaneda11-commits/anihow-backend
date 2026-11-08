@@ -12,6 +12,7 @@ use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use UnitEnum;
 
 class AccountDeletionRequestResource extends Resource
 {
@@ -19,13 +20,15 @@ class AccountDeletionRequestResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTrash;
 
-    protected static ?string $navigationLabel = 'Account deletion requests';
+    protected static string|UnitEnum|null $navigationGroup = 'People';
+
+    protected static ?string $navigationLabel = 'Deletion requests';
 
     protected static ?string $modelLabel = 'account deletion request';
 
     protected static ?string $pluralModelLabel = 'account deletion requests';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 3;
 
     public static function table(Table $table): Table
     {

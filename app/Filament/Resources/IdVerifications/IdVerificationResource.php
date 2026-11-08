@@ -12,6 +12,7 @@ use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use UnitEnum;
 
 class IdVerificationResource extends Resource
 {
@@ -19,13 +20,15 @@ class IdVerificationResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedIdentification;
 
-    protected static ?string $navigationLabel = 'ID verifications';
+    protected static string|UnitEnum|null $navigationGroup = 'People';
+
+    protected static ?string $navigationLabel = 'ID checks';
 
     protected static ?string $modelLabel = 'ID verification';
 
     protected static ?string $pluralModelLabel = 'ID verifications';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 2;
 
     public static function table(Table $table): Table
     {

@@ -10,6 +10,7 @@ use App\Models\Farm;
 use App\Models\User;
 use App\Services\AnalyticsService;
 use App\Support\Analytics\AnalyticsRange;
+use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Component;
 use Filament\Forms\Components\DatePicker;
@@ -22,10 +23,25 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use UnitEnum;
 
+/**
+ * Sales and harvest analytics, with the report exports. Each office's home
+ * screen is the Home page; this page sits beside it in the Overview group.
+ */
 class Dashboard extends BaseDashboard
 {
     use HasFiltersForm;
+
+    protected static string $routePath = 'analytics';
+
+    protected static ?string $title = 'Analytics';
+
+    protected static string|UnitEnum|null $navigationGroup = 'Overview';
+
+    protected static ?int $navigationSort = 2;
+
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChartBar;
 
     public function filtersForm(Schema $schema): Schema
     {

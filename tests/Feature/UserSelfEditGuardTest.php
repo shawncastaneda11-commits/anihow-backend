@@ -4,9 +4,9 @@ namespace Tests\Feature;
 
 use App\Enums\Role;
 use App\Enums\UserStatus;
+use App\Filament\Auth\MyAccount;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
-use App\Filament\Resources\Users\UserResource;
 use App\Models\Farm;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
@@ -150,7 +150,7 @@ class UserSelfEditGuardTest extends TestCase
             ->get('/admin')
             ->assertOk()
             ->assertSee('My account')
-            ->assertSee(UserResource::getUrl('edit', ['record' => $editor], panel: 'admin'), escape: false);
+            ->assertSee(MyAccount::getUrl(panel: 'admin'), escape: false);
     }
 
     private function listAccounts(User $actor): Testable

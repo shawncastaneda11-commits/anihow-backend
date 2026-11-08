@@ -16,6 +16,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use UnitEnum;
 
 /**
  * Each farm has its own crop types. A Content Editor sees and edits only
@@ -29,13 +30,15 @@ class CropTypeResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSquares2x2;
 
+    protected static string|UnitEnum|null $navigationGroup = 'System';
+
     protected static ?string $navigationLabel = 'Crop types';
 
     protected static ?string $modelLabel = 'crop type';
 
     protected static ?string $pluralModelLabel = 'crop types';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 1;
 
     public static function form(Schema $schema): Schema
     {

@@ -19,6 +19,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use UnitEnum;
 
 class FarmResource extends Resource
 {
@@ -27,6 +28,8 @@ class FarmResource extends Resource
     protected static ?string $recordTitleAttribute = 'name';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedHomeModern;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Farms';
 
     protected static ?string $navigationLabel = 'Farms';
 

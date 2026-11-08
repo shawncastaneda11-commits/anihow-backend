@@ -19,7 +19,7 @@ class ReportResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFlag;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Marketplace';
+    protected static string|UnitEnum|null $navigationGroup = 'Moderation';
 
     protected static ?string $navigationLabel = 'Reports';
 
@@ -27,7 +27,7 @@ class ReportResource extends Resource
 
     protected static ?string $pluralModelLabel = 'reports';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 1;
 
     public static function table(Table $table): Table
     {

@@ -5,6 +5,11 @@ namespace App\Filament\Resources\Farms\Pages;
 use App\Enums\Permission;
 use App\Filament\Forms\FarmLocationPicker;
 use App\Filament\Resources\Farms\FarmResource;
+use App\Filament\Resources\Farms\RelationManagers\CropTypeOverridesRelationManager;
+use App\Filament\Resources\Farms\RelationManagers\FarmListingsRelationManager;
+use App\Filament\Resources\Farms\RelationManagers\FarmPhotosRelationManager;
+use App\Filament\Resources\Farms\RelationManagers\FarmSellersRelationManager;
+use App\Filament\Resources\Farms\RelationManagers\SellerCropTypesRelationManager;
 use App\Filament\Resources\Farms\Schemas\FarmProfileOverview;
 use App\Models\Farm;
 use App\Policies\FarmPolicy;
@@ -21,13 +26,14 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Livewire;
+use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
-use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Str;
@@ -42,8 +48,8 @@ class EditFarm extends EditRecord
     }
 
     /**
-     * The farm's header, then tabs: the farm's details first, then its price
-     * guards, sellers' crop types and photos.
+     * The farm's header, then its tabs: details, partnership (COSEL only),
+     * sellers, price guards, listings, sellers' crop types and photos.
      */
     public function content(Schema $schema): Schema
     {
@@ -54,24 +60,42 @@ class EditFarm extends EditRecord
                     ->viewData(fn (): array => [
                         'farm' => $this->getRecord(),
                     ]),
-                Group::make([
-                    $this->getRelationManagersContentComponent(),
-                ])->extraAttributes(['style' => 'margin-top:1rem']),
+                Tabs::make('farm')
+                    ->extraAttributes(['class' => 'anihow-underline-tabs'])
+                    ->contained(false)
+                    ->persistTabInQueryString('tab')
+                    ->tabs([
+                        Tab::make('Details')
+                            ->schema([
+                                Grid::make(['default' => 1, 'lg' => 3])
+                                    ->schema(FarmProfileOverview::components($this)),
+                            ]),
+                        Tab::make('Partnership')
+                            ->visible(fn (): bool => $this->canManagePartnership())
+                            ->schema([FarmProfileOverview::partnership($this)]),
+                        $this->managerTab(FarmSellersRelationManager::class, 'Sellers'),
+                        $this->managerTab(CropTypeOverridesRelationManager::class, 'Price guards'),
+                        $this->managerTab(FarmListingsRelationManager::class, 'Listings'),
+                        $this->managerTab(SellerCropTypesRelationManager::class, 'Crop types'),
+                        $this->managerTab(FarmPhotosRelationManager::class, 'Photos'),
+                    ]),
             ]);
     }
 
-    public function hasCombinedRelationManagerTabsWithContent(): bool
+    /**
+     * A tab holding one of the farm's tables, shown when the viewer may see it.
+     *
+     * @param  class-string<RelationManager>  $manager
+     */
+    private function managerTab(string $manager, string $label): Tab
     {
-        return true;
-    }
+        $farm = $this->getRecord();
 
-    public function getContentTabComponent(): Tab
-    {
-        return Tab::make('Farm details')
-            ->icon(Heroicon::OutlinedInformationCircle)
+        return Tab::make($label)
+            ->visible(fn (): bool => $manager::canViewForRecord($farm, static::class))
             ->schema([
-                Grid::make(['default' => 1, 'lg' => 3])
-                    ->schema(FarmProfileOverview::components($this)),
+                Livewire::make($manager, ['ownerRecord' => $farm, 'pageClass' => static::class])
+                    ->key('farm-'.Str::kebab(class_basename($manager))),
             ]);
     }
 

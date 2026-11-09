@@ -1996,6 +1996,11 @@
         font-weight: 700;
     }
 
+    .anihow-underline-tabs .fi-tabs:not(.fi-vertical) {
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
     /* ---- Listings ---- */
     .anihow-thumb {
         flex-shrink: 0;
@@ -2020,7 +2025,8 @@
     }
 
     /* Underlined tabs in the panel, all on one line with no scroll strip. */
-    .anihow-listing-panel .fi-tabs:not(.fi-vertical) {
+    .anihow-listing-panel .fi-tabs:not(.fi-vertical),
+    .anihow-underline-tabs .fi-tabs:not(.fi-vertical) {
         flex-wrap: nowrap;
         overflow: visible !important;
         gap: 0 !important;
@@ -2028,7 +2034,8 @@
         border-radius: 0;
     }
 
-    .anihow-listing-panel .fi-tabs:not(.fi-vertical) .fi-tabs-item {
+    .anihow-listing-panel .fi-tabs:not(.fi-vertical) .fi-tabs-item,
+    .anihow-underline-tabs .fi-tabs:not(.fi-vertical) .fi-tabs-item {
         flex: 0 1 auto;
         min-height: 2.5rem;
         padding: 0 0.75rem !important;
@@ -2039,18 +2046,21 @@
         background: transparent !important;
     }
 
-    .anihow-listing-panel .fi-tabs:not(.fi-vertical) .fi-tabs-item .fi-tabs-item-label {
+    .anihow-listing-panel .fi-tabs:not(.fi-vertical) .fi-tabs-item .fi-tabs-item-label,
+    .anihow-underline-tabs .fi-tabs:not(.fi-vertical) .fi-tabs-item .fi-tabs-item-label {
         color: var(--anihow-ink-muted) !important;
         font-size: 0.8125rem;
         font-weight: 600;
     }
 
-    .anihow-listing-panel .fi-tabs:not(.fi-vertical) .fi-tabs-item.fi-active {
+    .anihow-listing-panel .fi-tabs:not(.fi-vertical) .fi-tabs-item.fi-active,
+    .anihow-underline-tabs .fi-tabs:not(.fi-vertical) .fi-tabs-item.fi-active {
         border-bottom-color: var(--anihow-green);
         background: transparent !important;
     }
 
-    .anihow-listing-panel .fi-tabs:not(.fi-vertical) .fi-tabs-item.fi-active .fi-tabs-item-label {
+    .anihow-listing-panel .fi-tabs:not(.fi-vertical) .fi-tabs-item.fi-active .fi-tabs-item-label,
+    .anihow-underline-tabs .fi-tabs:not(.fi-vertical) .fi-tabs-item.fi-active .fi-tabs-item-label {
         color: var(--anihow-green) !important;
     }
 

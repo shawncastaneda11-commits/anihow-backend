@@ -13,6 +13,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Support\Enums\FontWeight;
 use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -51,26 +52,32 @@ class IdVerificationsTable
                     }),
                 TextColumn::make('user.name')
                     ->label('Buyer')
+                    ->weight(FontWeight::SemiBold)
+                    ->description(fn (IdVerification $record): ?string => $record->user?->email)
                     ->searchable(),
                 TextColumn::make('user.email')
                     ->label('Email')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('id_type')
                     ->label('ID type')
                     ->formatStateUsing(fn (IdDocumentType $state): string => $state->label()),
+                // Empty while an ID waits, so shown only once decided.
                 TextColumn::make('rejection_reason')
                     ->label('Reason')
                     ->limit(40)
                     ->wrap()
                     ->placeholder('—')
-                    ->toggleable(),
+                    ->toggleable()
+                    ->visible(fn (mixed $livewire): bool => ($livewire->activeTab ?? null) !== 'waiting'),
                 TextColumn::make('reviewer.name')
                     ->label('Reviewed by')
                     ->placeholder('Open')
-                    ->toggleable(),
+                    ->toggleable()
+                    ->visible(fn (mixed $livewire): bool => ($livewire->activeTab ?? null) !== 'waiting'),
                 TextColumn::make('created_at')
-                    ->label('Submitted')
-                    ->dateTime()
+                    ->label('Sent')
+                    ->since()
+                    ->dateTimeTooltip()
                     ->sortable(),
             ])
             ->filters([

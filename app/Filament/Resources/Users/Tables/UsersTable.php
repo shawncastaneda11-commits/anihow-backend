@@ -28,6 +28,7 @@ use Filament\Schemas\Components\Text;
 use Filament\Support\Enums\FontWeight;
 use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Spatie\Permission\Models\Role as RoleModel;
@@ -71,6 +72,9 @@ class UsersTable
             ])
             // Clicking an account opens its panel beside the list.
             ->recordAction('account')
+            // Filters sit above the list, beside the role chips.
+            ->filtersLayout(FiltersLayout::AboveContent)
+            ->filtersFormColumns(3)
             ->filters([
                 /*
                  * A Content Editor only ever sees their own farm's accounts,

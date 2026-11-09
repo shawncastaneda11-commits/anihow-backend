@@ -152,9 +152,12 @@ class ListingsTable
                     ->sortable()
                     ->formatStateUsing(fn (Listing $record): string => rtrim(rtrim(number_format((float) $record->quantity_available, 2), '0'), '.').' '.($record->unit?->value ?? '').' left')
                     ->color(fn (Listing $record): ?string => (float) $record->quantity_available <= self::LOW_STOCK ? 'warning' : null)
-                    ->description(fn (Listing $record): ?string => (float) $record->activeReservedQuantity() > 0
-                        ? rtrim(rtrim(number_format((float) $record->activeReservedQuantity(), 2), '0'), '.').' reserved'
-                        : null),
+                    ->description(fn (Listing $record): ?string => collect([
+                        (float) $record->quantity_available <= self::LOW_STOCK ? 'Low stock' : null,
+                        (float) $record->activeReservedQuantity() > 0
+                            ? rtrim(rtrim(number_format((float) $record->activeReservedQuantity(), 2), '0'), '.').' reserved'
+                            : null,
+                    ])->filter()->implode(' · ') ?: null),
                 IconColumn::make('is_active')
                     ->label('Seller active')
                     ->boolean()

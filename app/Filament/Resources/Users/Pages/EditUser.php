@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\Accounts\AccountAuthority;
 use App\Support\ActivityRecorder;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
@@ -70,8 +71,11 @@ class EditUser extends EditRecord
 
                     Notification::make()->title('Signed out everywhere.')->success()->send();
                 }),
-            DeleteAction::make()
-                ->visible(fn (): bool => auth()->user()?->can('delete', $this->record) ?? false),
+            // Deleting is rare and final, so it waits in a menu.
+            ActionGroup::make([
+                DeleteAction::make()
+                    ->visible(fn (): bool => auth()->user()?->can('delete', $this->record) ?? false),
+            ])->tooltip('More'),
         ];
     }
 

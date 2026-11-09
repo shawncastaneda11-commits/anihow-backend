@@ -3,15 +3,20 @@
 namespace App\Filament\Resources\Users\Pages;
 
 use App\Actions\Accounts\BulkCreateFarmerSellers;
+use App\Enums\Role;
+use App\Enums\UserStatus;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\Farm;
 use App\Support\Accounts\AccountAuthority;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Schemas\Components\Tabs\Tab;
+use Illuminate\Database\Eloquent\Builder;
 
 class ListUsers extends ListRecords
 {
@@ -58,5 +63,36 @@ class ListUsers extends ListRecords
             CreateAction::make()
                 ->label('Create account'),
         ];
+    }
+
+    /**
+     * COSEL's role chips. ICTD's list is administrators only, so it has none.
+     *
+     * @return array<string, Tab>
+     */
+    public function getTabs(): array
+    {
+        if (! AccountAuthority::managesPeople(auth()->user())) {
+            return [];
+        }
+
+        $role = fn (Role $role): Closure => fn (Builder $query): Builder => $query->whereHas(
+            'roles',
+            fn (Builder $roles): Builder => $roles->where('name', $role->value),
+        );
+
+        $tabs = [
+            'all' => ['All', fn (Builder $query): Builder => $query],
+            'sellers' => ['Farmer-sellers', $role(Role::FarmerSeller)],
+            'buyers' => ['Buyers', $role(Role::Buyer)],
+            'editors' => ['Content Editors', $role(Role::ContentEditor)],
+            'suspended' => ['Suspended', fn (Builder $query): Builder => $query->where('status', UserStatus::Suspended)],
+        ];
+
+        return collect($tabs)
+            ->map(fn (array $tab): Tab => Tab::make($tab[0])
+                ->modifyQueryUsing($tab[1])
+                ->badge(fn (): int => $tab[1](UserResource::getEloquentQuery())->count()))
+            ->all();
     }
 }

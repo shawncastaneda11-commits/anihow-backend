@@ -45,7 +45,6 @@ class SellerAlsoBuysTest extends TestCase
         $this->assertSame('app', $seller->buying_enabled_via);
         $this->assertTrue($seller->requires_id_verification);
         $this->assertSame(Role::FarmerSeller, $seller->primaryRole());
-        $this->assertTrue(ActivityLog::query()->where('action', 'buying_turned_on')->exists());
     }
 
     public function test_a_buyer_cannot_use_it(): void
@@ -104,6 +103,7 @@ class SellerAlsoBuysTest extends TestCase
 
         $this->assertTrue($seller->fresh()->alsoBuys());
         $this->assertSame('cms', $seller->fresh()->buying_enabled_via);
+        $this->assertTrue(ActivityLog::query()->where('action', 'buying_turned_on')->where('user_id', $cosel->id)->exists());
 
         // Saving the panel replaces the role with the one chosen; buying stays.
         $page->call('openAccount', $seller->id)

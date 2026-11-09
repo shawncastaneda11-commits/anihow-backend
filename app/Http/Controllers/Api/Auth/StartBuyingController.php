@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\UserResource;
-use App\Support\ActivityRecorder;
 use Illuminate\Http\Request;
 
 /**
@@ -18,10 +17,9 @@ class StartBuyingController extends Controller
         $user = $request->user();
         abort_unless($user->isFarmerSeller(), 403, 'Only a farmer-seller can turn on buying.');
 
-        if (! $user->isBuyer()) {
-            $user->turnOnBuying('app');
-            ActivityRecorder::note('buying_turned_on', $user, ['via' => 'app']);
-        }
+        // Recorded on the account (buying_enabled_via = "app"); the activity
+        // log holds what CMS staff do, so COSEL's own changes are logged.
+        $user->turnOnBuying('app');
 
         return new UserResource($user->fresh()->load(['roles', 'farm']));
     }

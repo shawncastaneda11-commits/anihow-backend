@@ -236,15 +236,25 @@ class ExportCsvTest extends TestCase
         $this->assertSame(0, ExportLog::query()->count());
     }
 
-    public function test_super_admin_can_open_export_pages_and_a_content_editor_cannot(): void
+    public function test_cosel_opens_orders_ictd_opens_only_the_export_log_and_a_content_editor_neither(): void
     {
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
 
         $this->actingAs($admin)
             ->get('/admin/orders')
             ->assertOk();
 
         $this->actingAs($admin)
+            ->get('/admin/export-logs')
+            ->assertOk();
+
+        $ictd = $this->staff(Role::SuperAdmin);
+
+        $this->actingAs($ictd)
+            ->get('/admin/orders')
+            ->assertForbidden();
+
+        $this->actingAs($ictd)
             ->get('/admin/export-logs')
             ->assertOk();
 

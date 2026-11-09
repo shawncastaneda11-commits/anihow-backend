@@ -544,6 +544,10 @@ Future<void> openNotificationTarget(
 
   if ((item.type ?? '').startsWith('id_verification_')) {
     final auth = context.read<AuthController>();
+    // An ID check is about buying.
+    if (auth.user?.alsoBuys == true) {
+      auth.showSide(buying: true);
+    }
     try {
       await auth.refreshUser();
     } catch (_) {}
@@ -556,9 +560,20 @@ Future<void> openNotificationTarget(
     return;
   }
 
-  final user = context.read<AuthController>().user;
-  final api = context.read<AuthController>().api;
-  final isFarmer = user?.isFarmerSeller == true;
+  final auth = context.read<AuthController>();
+  final user = auth.user;
+  final api = auth.api;
+  var isFarmer = user?.isFarmerSeller == true;
+
+  // A seller who also buys: open the notice on its own side, and move the
+  // Selling / Buying switch there.
+  if (user?.alsoBuys == true) {
+    isFarmer = await _isSellerSide(api, item);
+    if (!context.mounted) {
+      return;
+    }
+    auth.showSide(buying: !isFarmer);
+  }
 
   if (isFarmer && item.pointsToAnnouncement) {
     if (!context.mounted) {
@@ -758,6 +773,32 @@ Future<void> openNotificationTarget(
 
   await Navigator.of(context)
       .push(MaterialPageRoute(builder: (_) => const OrderHistoryScreen()));
+}
+
+/// For a seller who also buys: whether a notice is about their selling
+/// (their own order, reservation or listing as the seller) or their buying.
+Future<bool> _isSellerSide(ApiClient api, AppNotification item) async {
+  final id = item.relatedId;
+  if (id == null) {
+    return true;
+  }
+  try {
+    if (item.pointsToReservation) {
+      await api.farmerReservation(id);
+      return true;
+    }
+    if (item.pointsToOrder || item.type == 'order_message') {
+      await api.farmerOrder(id);
+      return true;
+    }
+    if (item.pointsToListing || item.pointsToStockHistory) {
+      await api.farmerListing(id);
+      return true;
+    }
+  } on ApiException {
+    return false;
+  }
+  return true;
 }
 
 Future<ReservationRecord?> _buyerReservation(ApiClient api, int id) async {

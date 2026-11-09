@@ -4,6 +4,7 @@ import 'package:anihow/services/api_client.dart';
 import 'package:anihow/state/auth_controller.dart';
 import 'package:anihow/state/preferences_controller.dart';
 import 'package:anihow/theme/anihow_theme.dart';
+import 'package:anihow/widgets/side_chip.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -91,5 +92,52 @@ void main() {
     expect(api.calls, 1);
     expect(auth.user?.alsoBuys, isTrue);
     expect(find.text('Buying is on'), findsOneWidget);
+  });
+
+  testWidgets('the header chip flips a seller who also buys between sides', (tester) async {
+    final auth = AuthController(api: _BuyingApi())
+      ..user = _seller(alsoBuys: true)
+      ..restoring = false;
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AuthController>.value(value: auth),
+          ChangeNotifierProvider(create: (_) => PreferencesController()),
+        ],
+        child: MaterialApp(
+          theme: AniHowTheme.light(),
+          home: Scaffold(appBar: AppBar(title: const Text('My listings'), actions: const [SideChip()])),
+        ),
+      ),
+    );
+
+    expect(find.text('Selling'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('side-chip')));
+    await tester.pump();
+
+    expect(auth.buying, isTrue);
+    expect(find.text('Buying'), findsOneWidget);
+  });
+
+  testWidgets('no chip for a seller who only sells', (tester) async {
+    final auth = AuthController(api: _BuyingApi())
+      ..user = _seller()
+      ..restoring = false;
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AuthController>.value(value: auth),
+          ChangeNotifierProvider(create: (_) => PreferencesController()),
+        ],
+        child: MaterialApp(
+          theme: AniHowTheme.light(),
+          home: Scaffold(appBar: AppBar(title: const Text('My listings'), actions: const [SideChip()])),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const ValueKey('side-chip')), findsNothing);
   });
 }

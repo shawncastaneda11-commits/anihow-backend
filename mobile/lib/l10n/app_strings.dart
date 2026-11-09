@@ -2838,4 +2838,12 @@ class AppStrings {
   );
   String get editInSelling => t('Edit in Selling', 'Baguhin sa Nagbebenta');
   String get sendIdPhoto => t('Send ID photo', 'Ipadala ang larawan ng ID');
+  String get sendIdBannerBody => t(
+    'You can look around now. COSEL checks it, usually within a day.',
+    'Puwede ka nang tumingin-tingin. Susuriin ito ng COSEL, kadalasan sa loob ng isang araw.',
+  );
+  String get sideChipSellingHint => t('Selling. Tap to switch to Buying', 'Nagbebenta. I-tap para lumipat sa Bumibili');
+  String get sideChipBuyingHint => t('Buying. Tap to switch to Selling', 'Bumibili. I-tap para lumipat sa Nagbebenta');
+  String get nowBuying => t('Now buying. Your sales stay on Selling.', 'Bumibili ka na. Nasa Nagbebenta pa rin ang iyong benta.');
+  String get backToSelling => t('Back to selling.', 'Balik sa pagbebenta.');
 }

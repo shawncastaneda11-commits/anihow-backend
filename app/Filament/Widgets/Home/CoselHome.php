@@ -7,6 +7,7 @@ use App\Filament\Resources\AccountDeletionRequests\AccountDeletionRequestResourc
 use App\Filament\Resources\Farms\FarmResource;
 use App\Filament\Resources\IdVerifications\IdVerificationResource;
 use App\Filament\Resources\Reports\ReportResource;
+use App\Filament\Resources\SellerRequests\SellerRequestResource;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
 use App\Support\Dashboard\HomeSummary;
@@ -42,6 +43,7 @@ class CoselHome extends Widget
         return [
             'tiles' => [
                 ['label' => 'ID checks waiting', 'count' => $queue['id_checks'], 'cta' => 'Review', 'url' => IdVerificationResource::getUrl(), 'warn' => $queue['id_checks'] > 0],
+                ['label' => 'Seller requests', 'count' => $queue['seller_requests'], 'cta' => 'Decide', 'url' => SellerRequestResource::getUrl(), 'warn' => $queue['seller_requests'] > 0],
                 ['label' => 'Deletion requests', 'count' => $queue['deletion_requests'], 'cta' => 'Open', 'url' => AccountDeletionRequestResource::getUrl(), 'warn' => $queue['deletion_requests'] > 0],
                 ['label' => 'Open reports', 'count' => $queue['open_reports'], 'cta' => 'Moderate', 'url' => ReportResource::getUrl(), 'warn' => $queue['open_reports'] > 0],
                 ['label' => 'New accounts this week', 'count' => $queue['new_accounts'], 'cta' => 'See accounts', 'url' => UserResource::getUrl(), 'warn' => false],

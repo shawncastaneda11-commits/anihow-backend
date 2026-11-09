@@ -7,6 +7,7 @@ use App\Enums\IdVerificationStatus;
 use App\Enums\OrderStatus;
 use App\Enums\ReportStatus;
 use App\Enums\Role;
+use App\Enums\SellerRequestStatus;
 use App\Filament\Resources\Listings\Tables\ListingsTable;
 use App\Models\AccountDeletionRequest;
 use App\Models\ActivityLog;
@@ -18,6 +19,7 @@ use App\Models\IdVerification;
 use App\Models\Listing;
 use App\Models\Order;
 use App\Models\Report;
+use App\Models\SellerRequest;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Services\AnalyticsService;
@@ -37,12 +39,13 @@ final class HomeSummary
     public const LOW_STOCK = 5;
 
     /**
-     * @return array{id_checks: int, deletion_requests: int, open_reports: int, new_accounts: int}
+     * @return array{id_checks: int, seller_requests: int, deletion_requests: int, open_reports: int, new_accounts: int}
      */
     public static function coselQueue(): array
     {
         return [
             'id_checks' => IdVerification::query()->where('status', IdVerificationStatus::Pending)->count(),
+            'seller_requests' => SellerRequest::query()->where('status', SellerRequestStatus::Waiting)->count(),
             'deletion_requests' => AccountDeletionRequest::query()->where('status', AccountDeletionStatus::Pending)->count(),
             'open_reports' => Report::query()->where('status', ReportStatus::Open)->count(),
             'new_accounts' => User::query()

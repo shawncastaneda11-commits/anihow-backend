@@ -995,4 +995,26 @@
     .fi-ta-row td {
         border-color: var(--anihow-line-soft);
     }
+
+    /* Full-height sidebar: brand at the top, account menu at the foot. */
+    html:not(.dark) .fi-sidebar,
+    html:not(.dark) .fi-sidebar-header {
+        background-color: #FFFFFF !important;
+    }
+
+    .fi-sidebar-header {
+        border-bottom: 0 !important;
+        box-shadow: none !important;
+        padding-inline: 1.25rem !important;
+    }
+
+    .fi-sidebar-footer {
+        border-top: 1px solid var(--anihow-line);
+        padding: 0.75rem !important;
+    }
+
+    /* Side panels keep the list in view behind them. */
+    .fi-modal-close-overlay {
+        background-color: rgba(30, 36, 33, 0.18) !important;
+    }
 </style>

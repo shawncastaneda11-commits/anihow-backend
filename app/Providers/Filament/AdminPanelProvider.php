@@ -76,6 +76,9 @@ class AdminPanelProvider extends PanelProvider
             // switch lives in the account menu.
             ->breadcrumbs(false)
             ->collapsibleNavigationGroups(false)
+            // No top bar: the sidebar runs the full height with the brand at
+            // its top, search under it and the account menu at its foot.
+            ->topbar(false)
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
                 fn (): string => Blade::render('@include(\'filament.brand-styles\')'),

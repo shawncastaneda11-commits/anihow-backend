@@ -44,6 +44,7 @@ class IdVerificationsTable
             ->columns([
                 TextColumn::make('status')
                     ->badge()
+                    ->visible(fn (mixed $livewire): bool => ($livewire->activeTab ?? null) !== 'waiting')
                     ->formatStateUsing(fn (IdVerificationStatus $state): string => $state->label())
                     ->color(fn (IdVerificationStatus $state): string => match ($state) {
                         IdVerificationStatus::Pending => 'warning',

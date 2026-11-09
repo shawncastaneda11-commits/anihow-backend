@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users\Pages;
 
+use App\Enums\Role;
 use App\Filament\Resources\Users\Actions\TemporaryPasswordAction;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
@@ -20,6 +21,28 @@ class EditUser extends EditRecord
 
     /** @var list<string> */
     private array $rolesBeforeSave = [];
+
+    public function getTitle(): string
+    {
+        $record = $this->getRecord();
+
+        return $record instanceof User ? $record->name : parent::getTitle();
+    }
+
+    public function getSubheading(): ?string
+    {
+        $record = $this->getRecord();
+
+        if (! $record instanceof User) {
+            return null;
+        }
+
+        return collect([
+            Role::tryFrom((string) $record->getRoleNames()->first())?->label(),
+            $record->farm?->name,
+            $record->created_at ? 'joined '.$record->created_at->format('M j, Y') : null,
+        ])->filter()->implode(' · ');
+    }
 
     protected function getHeaderActions(): array
     {

@@ -42,9 +42,12 @@ class ActivityLogsTable
                             $record->subject_id !== null => ' #'.$record->subject_id,
                             default => '',
                         }),
-                TextColumn::make('changes')
+                // Not named "changes": that is the stored array, which the
+                // column would show instead of this summary.
+                TextColumn::make('change_summary')
                     ->label('Changes')
-                    ->state(fn (ActivityLog $record): string => $record->changeSummary())
+                    ->getStateUsing(fn (ActivityLog $record): string => $record->changeSummary())
+                    ->placeholder('—')
                     ->wrap()
                     ->limit(240),
             ])

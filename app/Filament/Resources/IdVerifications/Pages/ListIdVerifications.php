@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ListIdVerifications extends ListRecords
 {
+    protected static ?string $title = 'ID checks';
+
     protected static string $resource = IdVerificationResource::class;
 
     protected function getHeaderActions(): array

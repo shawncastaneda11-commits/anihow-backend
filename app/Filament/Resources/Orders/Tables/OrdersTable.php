@@ -40,6 +40,7 @@ class OrdersTable
                     ->label('Buyer')
                     // A Content Editor sees the buyer's first name only.
                     ->formatStateUsing(fn (?string $state): ?string => SalesAccess::buyerName($state, auth()->user()))
+                    ->placeholder('Walk-in')
                     ->searchable(condition: fn (): bool => SalesAccess::seesAll(auth()->user()))
                     ->sortable(),
                 TextColumn::make('farmerSeller.name')

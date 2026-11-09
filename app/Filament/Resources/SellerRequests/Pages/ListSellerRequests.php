@@ -19,6 +19,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ListSellerRequests extends ListRecords
 {
+    protected static ?string $title = 'Seller requests';
+
     protected static string $resource = SellerRequestResource::class;
 
     public function getSubheading(): ?string
@@ -34,6 +36,7 @@ class ListSellerRequests extends ListRecords
             Action::make('askCosel')
                 ->label('Ask COSEL to add farmer-sellers')
                 ->icon('heroicon-o-user-plus')
+                ->slideOver()
                 ->visible(fn (): bool => SellerRequestResource::asks(auth()->user()))
                 ->modalDescription(fn (): string => 'For '.(auth()->user()?->farm?->name ?? 'your farm').' only. COSEL creates the accounts and hands each person a temporary password.')
                 ->modalSubmitActionLabel('Send to COSEL')

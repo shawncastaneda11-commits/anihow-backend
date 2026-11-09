@@ -94,6 +94,20 @@ class ActivityLog extends Model
     /** "Listing", "Crop type", from the subject's class name. */
     public function subjectName(): string
     {
+        $named = [
+            'User' => 'Account',
+            'IdVerification' => 'ID check',
+            'SellerRequest' => 'Seller request',
+            'FaqEntry' => 'FAQ answer',
+            'TawadRule' => 'Tawad',
+            'CropTypeUnitGuard' => 'Price limit for a unit',
+            'FarmCropTypeOverride' => 'Farm price guard',
+        ][class_basename($this->subject_type)] ?? null;
+
+        if ($named !== null) {
+            return $named;
+        }
+
         return ucfirst(strtolower(trim((string) preg_replace('/(?<!^)[A-Z]/', ' $0', class_basename($this->subject_type)))));
     }
 

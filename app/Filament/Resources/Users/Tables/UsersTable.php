@@ -75,6 +75,8 @@ class UsersTable
             // Filters sit above the list, beside the role chips.
             ->filtersLayout(FiltersLayout::AboveContent)
             ->filtersFormColumns(3)
+            // Applied as soon as one is picked, so no Apply button.
+            ->deferFilters(false)
             ->filters([
                 /*
                  * A Content Editor only ever sees their own farm's accounts,

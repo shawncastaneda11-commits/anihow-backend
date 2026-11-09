@@ -977,8 +977,10 @@
     }
 
     /* Tables: soft header row, clickable rows. */
+    /* Header row: white like the table, with a line under it. */
     html:not(.dark) .fi-ta-header-cell {
-        background: var(--anihow-surface-soft);
+        background: #FFFFFF;
+        border-bottom: 1px solid #DDD8CC;
     }
 
     .fi-ta-header-cell {
@@ -1041,5 +1043,20 @@
 
     .fi-sidebar-nav:hover {
         scrollbar-color: #CFCAC0 transparent;
+    }
+
+    /* Filters above a list: one quiet row, no "Filters" heading. */
+    .fi-ta-filters-above-content-ctn .fi-ta-filters-header {
+        display: none !important;
+    }
+
+    .fi-ta-filters-above-content-ctn {
+        padding-block: 0.75rem !important;
+    }
+
+    .fi-ta-filters-above-content-ctn .fi-fo-field-label-content,
+    .fi-ta-filters-above-content-ctn label {
+        font-size: 0.8125rem;
+        color: var(--anihow-ink-muted);
     }
 </style>

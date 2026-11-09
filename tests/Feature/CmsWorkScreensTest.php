@@ -48,8 +48,9 @@ class CmsWorkScreensTest extends TestCase
 
         $page = Livewire::actingAs($editor)->test(ListListings::class);
 
-        // A row opens the panel; it is not a link.
+        // A row opens the panel; it is not a link, and there is no row menu.
         $this->assertNull($page->instance()->getTable()->getRecordUrl($listing));
+        $page->assertTableActionHidden('view', $listing);
 
         $page->call('openListing', $listing->id)
             ->assertSet('openId', $listing->id)

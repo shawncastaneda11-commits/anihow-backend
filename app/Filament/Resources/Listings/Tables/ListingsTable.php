@@ -221,7 +221,11 @@ class ListingsTable
 
                             app(InAppNotifier::class)->listingRestored($record->farmerSeller, $record);
                         }),
-                ])->tooltip('More'),
+                ])
+                    ->tooltip('More')
+                    // A Content Editor edits by clicking the row; the menu
+                    // holds only the takedown tools, which are COSEL's.
+                    ->visible(fn (): bool => auth()->user()?->farm_id === null),
             ])
             ->toolbarActions([]);
     }

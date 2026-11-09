@@ -7,7 +7,9 @@ use App\Filament\Resources\Farms\Pages\CreateFarm;
 use App\Filament\Resources\Farms\Pages\EditFarm;
 use App\Filament\Resources\Farms\Pages\ListFarms;
 use App\Filament\Resources\Farms\RelationManagers\CropTypeOverridesRelationManager;
+use App\Filament\Resources\Farms\RelationManagers\FarmListingsRelationManager;
 use App\Filament\Resources\Farms\RelationManagers\FarmPhotosRelationManager;
+use App\Filament\Resources\Farms\RelationManagers\FarmSellersRelationManager;
 use App\Filament\Resources\Farms\RelationManagers\SellerCropTypesRelationManager;
 use App\Filament\Resources\Farms\Schemas\FarmForm;
 use App\Filament\Resources\Farms\Tables\FarmsTable;
@@ -56,7 +58,9 @@ class FarmResource extends Resource
     public static function getRelations(): array
     {
         return [
+            'sellers' => FarmSellersRelationManager::class,
             'price-guards' => CropTypeOverridesRelationManager::class,
+            'listings' => FarmListingsRelationManager::class,
             'crop-types' => SellerCropTypesRelationManager::class,
             'photos' => FarmPhotosRelationManager::class,
         ];

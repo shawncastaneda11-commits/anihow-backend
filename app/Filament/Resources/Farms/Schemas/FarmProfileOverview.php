@@ -22,7 +22,6 @@ class FarmProfileOverview
             Group::make([
                 self::about($page),
                 self::contact($page),
-                self::partnership($page),
             ])->columnSpan(['default' => 1, 'lg' => 2]),
             Group::make([
                 self::location($page),
@@ -53,10 +52,10 @@ class FarmProfileOverview
     /**
      * COSEL's own record of the partnership. Sellers and buyers never see it.
      */
-    private static function partnership(EditFarm $page): Section
+    public static function partnership(EditFarm $page): Section
     {
         return Section::make('Partnership')
-            ->description('COSEL only. Farmer-sellers and buyers never see this.')
+            ->description('COSEL only. Farmer-sellers and buyers never see this. Visits, agreements and contact history.')
             ->visible(fn (): bool => $page->canManagePartnership())
             ->headerActions([
                 self::editLink('editPartnership', 'Edit partnership'),

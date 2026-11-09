@@ -10,6 +10,8 @@ use App\Enums\Role;
 use App\Enums\TawadType;
 use App\Enums\UserStatus;
 use App\Filament\Resources\Farms\Pages\EditFarm;
+use App\Filament\Resources\Farms\RelationManagers\FarmListingsRelationManager;
+use App\Filament\Resources\Farms\RelationManagers\FarmSellersRelationManager;
 use App\Filament\Resources\IdVerifications\Pages\ListIdVerifications;
 use App\Filament\Resources\Listings\Pages\ListListings;
 use App\Filament\Resources\Users\Pages\ListUsers;
@@ -271,6 +273,28 @@ class CmsWorkScreensTest extends TestCase
         Livewire::actingAs($this->staff(Role::ContentEditor, $farm))
             ->test(EditFarm::class, ['record' => $farm->id])
             ->assertActionHidden('editPartnership');
+    }
+
+    public function test_the_farm_page_has_sellers_and_listings_tabs(): void
+    {
+        [$editor, $seller, $listing] = $this->farmListing();
+        $farm = $listing->farm;
+        $elsewhere = $this->farmer();
+
+        Livewire::actingAs($editor)
+            ->test(EditFarm::class, ['record' => $farm->id])
+            ->assertSee('Sellers')
+            ->assertSee('Listings')
+            ->assertSee('Price guards');
+
+        Livewire::actingAs($editor)
+            ->test(FarmSellersRelationManager::class, ['ownerRecord' => $farm, 'pageClass' => EditFarm::class])
+            ->assertCanSeeTableRecords([$seller])
+            ->assertCanNotSeeTableRecords([$elsewhere]);
+
+        Livewire::actingAs($editor)
+            ->test(FarmListingsRelationManager::class, ['ownerRecord' => $farm, 'pageClass' => EditFarm::class])
+            ->assertCanSeeTableRecords([$listing]);
     }
 
     /**

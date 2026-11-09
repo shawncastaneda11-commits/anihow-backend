@@ -1429,17 +1429,34 @@
         box-shadow: inset 3px 0 0 var(--anihow-green);
     }
 
+    /* Stays in view while the list scrolls, with Save always on screen. */
     .anihow-dock-panel {
-        flex: 1 1 21.25rem;
-        max-width: 25rem;
+        flex: 1 1 28rem;
+        max-width: 30rem;
         min-width: 0;
         box-sizing: border-box;
+        align-self: flex-start;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
         background: var(--anihow-surface);
         border-inline-start: 1px solid var(--anihow-line);
-        padding: 1.5rem;
+        padding: 1.75rem;
         display: flex;
         flex-direction: column;
-        gap: 1rem;
+        gap: 1.125rem;
+    }
+
+    .anihow-dock-panel .fi-fo-field-label-content {
+        font-size: 0.9375rem;
+    }
+
+    .anihow-dock-foot {
+        position: sticky;
+        bottom: 0;
+        padding-top: 0.75rem;
+        background: var(--anihow-surface);
     }
 
     .anihow-dock-panel-head {
@@ -1533,13 +1550,13 @@
     }
 
     .anihow-dock-row-title {
-        font-size: 0.8125rem;
+        font-size: 0.875rem;
         font-weight: 600;
         color: var(--anihow-ink);
     }
 
     .anihow-dock-row-hint {
-        font-size: 0.75rem;
+        font-size: 0.8125rem;
         color: var(--anihow-ink-muted);
     }
 
@@ -1687,6 +1704,8 @@
 
         .anihow-dock-panel {
             max-width: none;
+            position: static;
+            height: auto;
             border-inline-start: 0;
             border-top: 1px solid var(--anihow-line);
         }

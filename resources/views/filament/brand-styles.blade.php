@@ -1566,6 +1566,105 @@
         min-height: 2.5rem;
     }
 
+    .anihow-dock-tools {
+        display: flex;
+        gap: 0.625rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .anihow-search {
+        flex: 1 1 15rem;
+        max-width: 21.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        height: 2.375rem;
+        padding: 0 0.75rem;
+        border: 1px solid #DDD8CC;
+        border-radius: 10px;
+        background: var(--anihow-surface);
+        color: var(--anihow-ink-muted);
+    }
+
+    .anihow-search input {
+        flex: 1;
+        min-width: 0;
+        border: 0;
+        padding: 0;
+        background: transparent;
+        font: inherit;
+        font-size: 0.875rem;
+        color: var(--anihow-ink);
+        box-shadow: none;
+        outline: none;
+    }
+
+    .anihow-search:focus-within {
+        outline: 2px solid var(--anihow-green);
+        outline-offset: 2px;
+    }
+
+    .anihow-dock-tools .anihow-chip {
+        min-height: 2rem;
+        padding: 0 0.75rem;
+        font-size: 0.8125rem;
+    }
+
+    .anihow-dock-farm {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        font-size: 0.8125rem;
+        color: var(--anihow-ink-muted);
+    }
+
+    .anihow-dock-farm .anihow-input {
+        width: auto;
+        height: 2.125rem;
+        padding: 0 2rem 0 0.5rem;
+        border-radius: 8px;
+        font-size: 0.8125rem;
+    }
+
+    /* A compact list, as in the design. */
+    .anihow-accounts-page .fi-ta-ctn {
+        border-radius: 14px;
+    }
+
+    .anihow-accounts-page .fi-ta-header-cell {
+        padding-top: 0.625rem;
+        padding-bottom: 0.625rem;
+        font-size: 0.8125rem;
+    }
+
+    html:not(.dark) .anihow-accounts-page .fi-ta-header-cell,
+    html:not(.dark) .anihow-accounts-page .fi-ta-table thead tr {
+        background: var(--anihow-surface-soft);
+    }
+
+    .anihow-accounts-page .fi-ta-cell,
+    .anihow-accounts-page .fi-ta-record-content .fi-ta-col,
+    .anihow-accounts-page .fi-ta-text {
+        font-size: 0.8125rem;
+    }
+
+    .anihow-accounts-page .fi-ta-text {
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+
+    .anihow-accounts-page .fi-ta-cell.fi-ta-selection-cell,
+    .anihow-accounts-page .fi-ta-cell:has(.fi-ta-actions),
+    .anihow-accounts-page .fi-ta-cell:has(.fi-ta-record-checkbox) {
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+
+    .anihow-accounts-page .fi-ta-text-description {
+        font-size: 0.75rem;
+    }
+
     @media (max-width: 47.99rem) {
         .anihow-dock-main {
             padding: 1.25rem 1rem;

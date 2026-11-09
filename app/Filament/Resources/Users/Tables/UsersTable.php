@@ -2,10 +2,9 @@
 
 namespace App\Filament\Resources\Users\Tables;
 
-use App\Enums\Permission;
 use App\Enums\Role;
-use App\Enums\UserStatus;
 use App\Filament\Resources\Users\Actions\SuspendAccountAction;
+use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Models\User;
 use App\Support\Accounts\AccountAuthority;
 use Filament\Actions\ActionGroup;
@@ -16,10 +15,8 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Enums\FiltersLayout;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Spatie\Permission\Models\Role as RoleModel;
+use Illuminate\Database\Eloquent\Builder;
 
 class UsersTable
 {
@@ -30,59 +27,42 @@ class UsersTable
                 TextColumn::make('name')
                     ->weight(FontWeight::SemiBold)
                     ->description(fn (User $record): string => (string) $record->email)
-                    ->searchable(['name', 'email'])
                     ->sortable(),
-                TextColumn::make('email')
-                    ->searchable()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('roles.name')
+                TextColumn::make('role')
                     ->label('Role')
-                    ->badge()
-                    ->formatStateUsing(fn (string $state): string => Role::tryFrom($state)?->label() ?? $state),
+                    ->state(fn (User $record): string => Role::tryFrom((string) $record->getRoleNames()->first())?->label() ?? '—'),
                 TextColumn::make('farm.name')
                     ->label('Farm')
-                    ->sortable()
-                    ->placeholder('None'),
+                    ->color('gray')
+                    ->placeholder('—'),
                 TextColumn::make('status')
                     ->badge()
-                    ->formatStateUsing(fn (UserStatus $state): string => $state->label())
-                    ->color(fn (UserStatus $state): string => match ($state) {
-                        UserStatus::Active => 'success',
-                        UserStatus::Suspended => 'danger',
+                    ->state(fn (User $record): string => match (true) {
+                        ! $record->isActive() => 'Suspended',
+                        (bool) $record->must_change_password => 'Must change password',
+                        default => 'Active',
+                    })
+                    ->color(fn (string $state): string => match ($state) {
+                        'Suspended' => 'danger',
+                        'Must change password' => 'warning',
+                        default => 'success',
                     }),
-                TextColumn::make('phone')
-                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
                     ->label('Joined')
-                    ->date('M j, Y')
+                    ->date('M j')
+                    ->color('gray')
                     ->sortable(),
             ])
+            // Search, the role chips and the farm sit in one row above the
+            // list (ListUsers), as in the design, so the table has no
+            // search box or filter panel of its own.
+            ->modifyQueryUsing(fn (Builder $query, mixed $livewire): Builder => $livewire instanceof ListUsers
+                ? $livewire->applyListFilters($query)
+                : $query)
             // Clicking an account opens its panel beside the list
             // (ListUsers::openAccount), and the open row stays marked.
             ->recordAction('openAccount')
             ->recordClasses(fn (User $record, mixed $livewire): ?string => ($livewire->openId ?? null) === $record->getKey() ? 'anihow-row-on' : null)
-            // Filters sit above the list, beside the role chips.
-            ->filtersLayout(FiltersLayout::AboveContent)
-            ->filtersFormColumns(3)
-            // Applied as soon as one is picked, so no Apply button.
-            ->deferFilters(false)
-            ->filters([
-                /*
-                 * A Content Editor only ever sees their own farm's accounts,
-                 * so role and farm filters would only lead to empty results.
-                 */
-                SelectFilter::make('role')
-                    ->relationship('roles', 'name')
-                    ->getOptionLabelFromRecordUsing(fn (RoleModel $record): string => Role::tryFrom($record->name)?->label() ?? $record->name)
-                    ->label('Role')
-                    ->visible(fn (): bool => AccountAuthority::managesAny(auth()->user())),
-                SelectFilter::make('status')
-                    ->options(UserStatus::options()),
-                SelectFilter::make('farm')
-                    ->relationship('farm', 'name')
-                    ->visible(fn (): bool => auth()->user()?->can(Permission::ManageAccounts->value) ?? false),
-            ])
             // One "⋯" menu per row; clicking the row opens its panel.
             ->recordActions([
                 ActionGroup::make([

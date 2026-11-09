@@ -16,6 +16,40 @@
                 <x-filament::actions :actions="$this->getCachedHeaderActions()" />
             </div>
 
+            <div class="anihow-dock-tools">
+                <label class="anihow-search">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path></svg>
+                    <span class="sr-only">Search accounts</span>
+                    <input type="search" wire:model.live.debounce.400ms="search" placeholder="Name, email or phone">
+                </label>
+
+                @foreach ($this->getCachedTabs() as $key => $tab)
+                    <button
+                        type="button"
+                        wire:click="$set('activeTab', @js((string) $key))"
+                        aria-pressed="{{ $activeTab === (string) $key ? 'true' : 'false' }}"
+                        @class(['anihow-chip', 'anihow-chip-on' => $activeTab === (string) $key])
+                    >
+                        {{ $tab->getLabel() }}
+                        @if (filled($badge = $tab->getBadge()))
+                            <span class="anihow-chip-count">{{ $badge }}</span>
+                        @endif
+                    </button>
+                @endforeach
+
+                @if ($farms = $this->farmOptions())
+                    <label class="anihow-dock-farm">
+                        Farm
+                        <select wire:model.live="farm" class="anihow-input">
+                            <option value="">All farms</option>
+                            @foreach ($farms as $id => $name)
+                                <option value="{{ $id }}">{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                @endif
+            </div>
+
             {{ $this->content }}
         </div>
 

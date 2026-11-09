@@ -21,10 +21,13 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Schemas\Components\EmbeddedTable;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\RenderHook;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -43,6 +46,12 @@ class ListUsers extends ListRecords
 
     /** The account open in the panel. */
     public ?int $openId = null;
+
+    /** Name, email or phone. */
+    public string $search = '';
+
+    /** COSEL's farm choice above the list. */
+    public ?string $farm = null;
 
     /** @var array<string, mixed>|null */
     public ?array $account = [];
@@ -79,6 +88,55 @@ class ListUsers extends ListRecords
     public function getPageClasses(): array
     {
         return ['anihow-split-page', 'anihow-accounts-page'];
+    }
+
+    /**
+     * The list without Filament's tab bar: the chips render in the row with
+     * the search and the farm (filament.accounts.list).
+     */
+    public function content(Schema $schema): Schema
+    {
+        return $schema->components([
+            RenderHook::make(PanelsRenderHook::RESOURCE_PAGES_LIST_RECORDS_TABLE_BEFORE),
+            EmbeddedTable::make(),
+            RenderHook::make(PanelsRenderHook::RESOURCE_PAGES_LIST_RECORDS_TABLE_AFTER),
+        ]);
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedFarm(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * @return array<int|string, string>
+     */
+    public function farmOptions(): array
+    {
+        return AccountAuthority::managesPeople(auth()->user())
+            ? Farm::query()->orderBy('name')->pluck('name', 'id')->all()
+            : [];
+    }
+
+    /**
+     * @param  Builder<User>  $query
+     * @return Builder<User>
+     */
+    public function applyListFilters(Builder $query): Builder
+    {
+        $term = trim($this->search);
+
+        return $query
+            ->when($term !== '', fn (Builder $query): Builder => $query->where(fn (Builder $match): Builder => $match
+                ->where('name', 'like', "%{$term}%")
+                ->orWhere('email', 'like', "%{$term}%")
+                ->orWhere('phone', 'like', "%{$term}%")))
+            ->when(filled($this->farm) && $this->farmOptions() !== [], fn (Builder $query): Builder => $query->where('farm_id', (int) $this->farm));
     }
 
     public function openAccount(int|string $key): void

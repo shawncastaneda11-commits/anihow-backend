@@ -22,6 +22,7 @@ use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\HtmlString;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use UnitEnum;
 
@@ -42,6 +43,16 @@ class Dashboard extends BaseDashboard
     protected static ?int $navigationSort = 2;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChartBar;
+
+    /**
+     * A farm's Content Editor can switch to the figures by seller.
+     */
+    public function getSubheading(): ?HtmlString
+    {
+        return SellerAnalytics::canAccess()
+            ? new HtmlString(view('filament.analytics.switch', ['on' => 'farm'])->render())
+            : null;
+    }
 
     public function filtersForm(Schema $schema): Schema
     {

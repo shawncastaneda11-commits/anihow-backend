@@ -694,7 +694,7 @@ class ReservationsTest extends TestCase
 
     public function test_a_content_editor_cannot_open_reservations(): void
     {
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
         $editor = $this->staff(Role::ContentEditor, Farm::factory()->create());
         $listing = $this->upcoming($this->farmer());
 

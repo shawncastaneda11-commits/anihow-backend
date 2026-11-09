@@ -168,7 +168,7 @@ class ChatAttachmentTest extends TestCase
             ->json('data.attachment.url');
 
         $admin = User::factory()->create();
-        $admin->syncRoles(Role::SuperAdmin);
+        $admin->syncRoles(Role::AccountManager);
 
         $this->asUser($admin)->get($tagged)->assertOk();
         $this->asUser($admin)->get($untagged)->assertForbidden();

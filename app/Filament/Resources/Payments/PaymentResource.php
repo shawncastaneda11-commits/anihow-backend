@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Payments;
 
+use App\Enums\Permission;
 use App\Filament\Resources\Payments\Pages\ListPayments;
 use App\Filament\Resources\Payments\Tables\PaymentsTable;
 use App\Models\PaymentProof;
@@ -67,7 +68,7 @@ class PaymentResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isAdministrator() ?? false;
+        return auth()->user()?->can(Permission::ViewAllOrders->value) ?? false;
     }
 
     public static function canCreate(): bool

@@ -436,7 +436,7 @@ class ReservationPaymentTest extends TestCase
         $this->assertSame('1008', $row['reference_number']);
 
         $admin = User::factory()->create();
-        $admin->syncRoles(Role::SuperAdmin);
+        $admin->syncRoles(Role::AccountManager);
         $this->actingAs($admin);
         Filament::setCurrentPanel(Filament::getPanel('admin'));
         Livewire::actingAs($admin)

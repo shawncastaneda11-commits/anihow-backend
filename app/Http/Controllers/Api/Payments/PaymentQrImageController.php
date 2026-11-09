@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Payments;
 
 use App\Enums\OrderPaymentStatus;
+use App\Enums\Permission;
 use App\Enums\ReservationStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
@@ -40,7 +41,7 @@ class PaymentQrImageController extends Controller
 
     private function allowed(User $user, SellerPaymentQr $qr): bool
     {
-        if ($qr->farmer_seller_id === $user->id || $user->isAdministrator()) {
+        if ($qr->farmer_seller_id === $user->id || $user->can(Permission::ViewAllOrders->value)) {
             return true;
         }
 

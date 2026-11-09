@@ -141,13 +141,15 @@ enum Permission: string
              *
              * System pricing (crop floors and maximums) is here; a farm's own
              * tightening of those guards is with COSEL, beside the farm record.
+             * Orders, payments and reservations carry people's details and
+             * payment screenshots, so they are COSEL's; ICTD sees totals only,
+             * in Analytics.
              */
             Role::SuperAdmin => [
                 self::ManageAdminAccounts,
                 self::ManageSystemSettings,
                 self::ManageCropTypes,
                 self::SetCropPricing,
-                self::ViewAllOrders,
                 self::ManageSystemFaq,
                 self::ViewSystemAnalytics,
                 self::ViewFarmAnalytics,

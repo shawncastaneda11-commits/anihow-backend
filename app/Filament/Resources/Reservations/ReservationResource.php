@@ -66,6 +66,15 @@ class ReservationResource extends Resource
         return SalesAccess::canOpen(auth()->user());
     }
 
+    /**
+     * Reached from the Orders | Reservations switch on the Orders screen, so
+     * it has no menu entry of its own.
+     */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
     public static function canCreate(): bool
     {
         return false;

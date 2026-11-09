@@ -4,11 +4,14 @@ namespace App\Filament\Resources\Reservations\Tables;
 
 use App\Enums\OrderPaymentStatus;
 use App\Enums\ReservationStatus;
+use App\Filament\Resources\Reservations\Pages\ListReservations;
 use App\Models\Reservation;
 use App\Support\Sales\SalesAccess;
+use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class ReservationsTable
 {
@@ -20,18 +23,16 @@ class ReservationsTable
                 TextColumn::make('buyer.name')
                     ->label('Buyer')
                     // A Content Editor sees the buyer's first name only.
-                    ->formatStateUsing(fn (?string $state): ?string => SalesAccess::buyerName($state, auth()->user()))
-                    ->searchable(condition: fn (): bool => SalesAccess::seesAll(auth()->user())),
+                    ->formatStateUsing(fn (?string $state): ?string => SalesAccess::buyerName($state, auth()->user())),
                 TextColumn::make('farmerSeller.name')
-                    ->label('Seller')
-                    ->searchable(),
+                    ->label('Seller'),
                 TextColumn::make('farm.name')
                     ->label('Farm')
                     ->placeholder('—')
                     ->visible(fn (): bool => SalesAccess::seesAll(auth()->user())),
                 TextColumn::make('listing_name')
                     ->label('Listing')
-                    ->searchable(),
+                    ->weight(FontWeight::SemiBold),
                 TextColumn::make('quantity')
                     ->label('Quantity')
                     ->formatStateUsing(fn (mixed $state, Reservation $record): string => trim(
@@ -55,17 +56,22 @@ class ReservationsTable
                         default => 'gray',
                     }),
                 TextColumn::make('created_at')
-                    ->dateTime()
+                    ->label('Reserved')
+                    ->date('M j')
+                    ->color('gray')
                     ->sortable(),
             ])
+            // Clicking a row opens it read-only beside the list
+            // (ListsSalesWithAPanel::openRecord).
+            ->recordUrl(null)
+            ->recordAction('openRecord')
+            ->recordClasses(fn (Reservation $record, mixed $livewire): ?string => ($livewire->openId ?? null) === $record->getKey() ? 'anihow-row-on' : null)
+            ->modifyQueryUsing(fn (Builder $query, mixed $livewire): Builder => $livewire instanceof ListReservations ? $livewire->applyListFilters($query) : $query)
             ->filters([
-                SelectFilter::make('status')
-                    ->options(collect(ReservationStatus::cases())
-                        ->mapWithKeys(fn (ReservationStatus $status): array => [$status->value => $status->label()])
-                        ->all()),
                 SelectFilter::make('payment_status')
                     ->label('Payment')
-                    ->options(OrderPaymentStatus::options()),
+                    ->options(OrderPaymentStatus::options())
+                    ->visible(fn (): bool => SalesAccess::seesAll(auth()->user())),
                 SelectFilter::make('farm')
                     ->relationship('farm', 'name')
                     ->visible(fn (): bool => SalesAccess::seesAll(auth()->user())),

@@ -1658,49 +1658,62 @@
 
     /* A compact list, as in the design. */
     .anihow-accounts-page .fi-ta-ctn,
-    .anihow-listings-page .fi-ta-ctn {
+    .anihow-listings-page .fi-ta-ctn,
+    .anihow-sales-page .fi-ta-ctn {
         border-radius: 14px;
     }
     .anihow-accounts-page .fi-ta-header-cell,
-    .anihow-listings-page .fi-ta-header-cell {
+    .anihow-listings-page .fi-ta-header-cell,
+    .anihow-sales-page .fi-ta-header-cell {
         padding-top: 0.625rem;
         padding-bottom: 0.625rem;
         font-size: 0.8125rem;
     }
     html:not(.dark) .anihow-accounts-page .fi-ta-header-cell,
     html:not(.dark) .anihow-listings-page .fi-ta-header-cell,
+    html:not(.dark) .anihow-sales-page .fi-ta-header-cell,
     html:not(.dark) .anihow-accounts-page .fi-ta-table thead tr,
-    html:not(.dark) .anihow-listings-page .fi-ta-table thead tr {
+    html:not(.dark) .anihow-listings-page .fi-ta-table thead tr,
+    html:not(.dark) .anihow-sales-page .fi-ta-table thead tr {
         background: var(--anihow-surface-soft);
     }
     .anihow-accounts-page .fi-ta-cell,
     .anihow-listings-page .fi-ta-cell,
+    .anihow-sales-page .fi-ta-cell,
     .anihow-accounts-page .fi-ta-record-content .fi-ta-col,
     .anihow-listings-page .fi-ta-record-content .fi-ta-col,
+    .anihow-sales-page .fi-ta-record-content .fi-ta-col,
     .anihow-accounts-page .fi-ta-text,
-    .anihow-listings-page .fi-ta-text {
+    .anihow-listings-page .fi-ta-text,
+    .anihow-sales-page .fi-ta-text {
         font-size: 0.8125rem;
     }
     .anihow-accounts-page .fi-ta-text,
-    .anihow-listings-page .fi-ta-text {
+    .anihow-listings-page .fi-ta-text,
+    .anihow-sales-page .fi-ta-text {
         padding-top: 0.625rem;
         padding-bottom: 0.625rem;
     }
     .anihow-accounts-page .fi-ta-text.fi-ta-text-has-descriptions,
-    .anihow-listings-page .fi-ta-text.fi-ta-text-has-descriptions {
+    .anihow-listings-page .fi-ta-text.fi-ta-text-has-descriptions,
+    .anihow-sales-page .fi-ta-text.fi-ta-text-has-descriptions {
         gap: 0;
     }
     .anihow-accounts-page .fi-ta-cell.fi-ta-selection-cell,
     .anihow-listings-page .fi-ta-cell.fi-ta-selection-cell,
+    .anihow-sales-page .fi-ta-cell.fi-ta-selection-cell,
     .anihow-accounts-page .fi-ta-cell:has(.fi-ta-actions),
     .anihow-listings-page .fi-ta-cell:has(.fi-ta-actions),
+    .anihow-sales-page .fi-ta-cell:has(.fi-ta-actions),
     .anihow-accounts-page .fi-ta-cell:has(.fi-ta-record-checkbox),
-    .anihow-listings-page .fi-ta-cell:has(.fi-ta-record-checkbox) {
+    .anihow-listings-page .fi-ta-cell:has(.fi-ta-record-checkbox),
+    .anihow-sales-page .fi-ta-cell:has(.fi-ta-record-checkbox) {
         padding-top: 0.5rem;
         padding-bottom: 0.5rem;
     }
     .anihow-accounts-page .fi-ta-text-description,
-    .anihow-listings-page .fi-ta-text-description {
+    .anihow-listings-page .fi-ta-text-description,
+    .anihow-sales-page .fi-ta-text-description {
         font-size: 0.75rem;
     }
 
@@ -1932,6 +1945,55 @@
 
     .anihow-dock-foot .anihow-btn-primary {
         flex: 2 1 0;
+    }
+
+    /* ---- Orders and reservations ---- */
+    .anihow-segment-inline {
+        align-self: flex-start;
+    }
+
+    .anihow-segment-inline a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 2.25rem;
+        padding: 0 1rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--anihow-ink-muted);
+        text-decoration: none;
+    }
+
+    .anihow-segment-inline a.anihow-segment-on {
+        background: var(--anihow-surface);
+        color: var(--anihow-ink);
+        box-shadow: 0 1px 2px rgba(30, 36, 33, 0.08);
+    }
+
+    .anihow-pill-self {
+        align-self: flex-start;
+    }
+
+    .anihow-lines {
+        gap: 0.5rem;
+    }
+
+    .anihow-lines-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        font-size: 0.875rem;
+        color: var(--anihow-ink);
+    }
+
+    .anihow-lines-note {
+        color: var(--anihow-green);
+    }
+
+    .anihow-lines-total {
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--anihow-line-soft);
+        font-weight: 700;
     }
 
     /* ---- Listings ---- */

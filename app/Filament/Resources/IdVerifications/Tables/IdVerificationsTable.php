@@ -7,11 +7,13 @@ use App\Enums\IdDocumentType;
 use App\Enums\IdVerificationStatus;
 use App\Models\IdVerification;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Support\Enums\FontWeight;
 use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -50,26 +52,32 @@ class IdVerificationsTable
                     }),
                 TextColumn::make('user.name')
                     ->label('Buyer')
+                    ->weight(FontWeight::SemiBold)
+                    ->description(fn (IdVerification $record): ?string => $record->user?->email)
                     ->searchable(),
                 TextColumn::make('user.email')
                     ->label('Email')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('id_type')
                     ->label('ID type')
                     ->formatStateUsing(fn (IdDocumentType $state): string => $state->label()),
+                // Empty while an ID waits, so shown only once decided.
                 TextColumn::make('rejection_reason')
                     ->label('Reason')
                     ->limit(40)
                     ->wrap()
                     ->placeholder('—')
-                    ->toggleable(),
+                    ->toggleable()
+                    ->visible(fn (mixed $livewire): bool => ($livewire->activeTab ?? null) !== 'waiting'),
                 TextColumn::make('reviewer.name')
                     ->label('Reviewed by')
                     ->placeholder('Open')
-                    ->toggleable(),
+                    ->toggleable()
+                    ->visible(fn (mixed $livewire): bool => ($livewire->activeTab ?? null) !== 'waiting'),
                 TextColumn::make('created_at')
-                    ->label('Submitted')
-                    ->dateTime()
+                    ->label('Sent')
+                    ->since()
+                    ->dateTimeTooltip()
                     ->sortable(),
             ])
             ->filters([
@@ -78,39 +86,42 @@ class IdVerificationsTable
             ])
             // Clicking a waiting ID opens the review panel.
             ->recordAction(fn (IdVerification $record): ?string => $record->isPending() ? 'review' : null)
+            // One "⋯" menu per row; clicking the row opens its panel.
             ->recordActions([
-                self::review(),
-                Action::make('approve')
-                    ->icon('heroicon-o-check')
-                    ->color('success')
-                    ->requiresConfirmation()
-                    ->modalHeading('Approve this ID')
-                    ->modalDescription('Check that the ID is real, readable and matches the account name. The photos are deleted once you decide.')
-                    ->modalContent(fn (IdVerification $record): HtmlString => self::photos($record))
-                    ->visible(fn (IdVerification $record): bool => $record->isPending())
-                    ->action(fn (IdVerification $record) => app(ReviewIdVerificationAction::class)
-                        ->approve(auth()->user(), $record)),
-                Action::make('reject')
-                    ->icon('heroicon-o-x-mark')
-                    ->color('gray')
-                    ->modalHeading('Reject this ID')
-                    ->modalDescription('The buyer sees the reason and can submit a new photo. The photos are deleted once you decide.')
-                    ->modalContent(fn (IdVerification $record): HtmlString => self::photos($record))
-                    ->visible(fn (IdVerification $record): bool => $record->isPending())
-                    ->schema([
-                        Select::make('reason')
-                            ->label('Reason')
-                            ->options(self::REJECTION_REASONS)
-                            ->required()
-                            ->live(),
-                        Textarea::make('note')
-                            ->label('Reason shown to the buyer')
-                            ->rows(2)
-                            ->maxLength(300)
-                            ->required(fn (Get $get): bool => $get('reason') === 'other'),
-                    ])
-                    ->action(fn (IdVerification $record, array $data) => app(ReviewIdVerificationAction::class)
-                        ->reject(auth()->user(), $record, self::rejectionText($data))),
+                ActionGroup::make([
+                    self::review(),
+                    Action::make('approve')
+                        ->icon('heroicon-o-check')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->modalHeading('Approve this ID')
+                        ->modalDescription('Check that the ID is real, readable and matches the account name. The photos are deleted once you decide.')
+                        ->modalContent(fn (IdVerification $record): HtmlString => self::photos($record))
+                        ->visible(fn (IdVerification $record): bool => $record->isPending())
+                        ->action(fn (IdVerification $record) => app(ReviewIdVerificationAction::class)
+                            ->approve(auth()->user(), $record)),
+                    Action::make('reject')
+                        ->icon('heroicon-o-x-mark')
+                        ->color('gray')
+                        ->modalHeading('Reject this ID')
+                        ->modalDescription('The buyer sees the reason and can submit a new photo. The photos are deleted once you decide.')
+                        ->modalContent(fn (IdVerification $record): HtmlString => self::photos($record))
+                        ->visible(fn (IdVerification $record): bool => $record->isPending())
+                        ->schema([
+                            Select::make('reason')
+                                ->label('Reason')
+                                ->options(self::REJECTION_REASONS)
+                                ->required()
+                                ->live(),
+                            Textarea::make('note')
+                                ->label('Reason shown to the buyer')
+                                ->rows(2)
+                                ->maxLength(300)
+                                ->required(fn (Get $get): bool => $get('reason') === 'other'),
+                        ])
+                        ->action(fn (IdVerification $record, array $data) => app(ReviewIdVerificationAction::class)
+                            ->reject(auth()->user(), $record, self::rejectionText($data))),
+                ])->tooltip('More'),
             ])
             ->toolbarActions([]);
     }

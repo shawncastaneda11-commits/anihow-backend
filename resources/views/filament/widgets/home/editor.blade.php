@@ -1,7 +1,7 @@
 <x-filament-widgets::widget>
     <div class="anihow-home">
         <div class="anihow-home-actions">
-            <p class="anihow-muted">{{ $farmName }}: what your farmer-sellers need from you today.</p>
+            <p class="anihow-muted">What your farmer-sellers need from you today.</p>
             <div class="anihow-home-actions-buttons">
                 <a href="{{ $faqUrl }}" class="anihow-home-button anihow-home-button-quiet">FAQ answers</a>
                 <a href="{{ $announceUrl }}" class="anihow-home-button">Post an announcement</a>

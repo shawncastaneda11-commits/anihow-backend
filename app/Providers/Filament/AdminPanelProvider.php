@@ -72,6 +72,13 @@ class AdminPanelProvider extends PanelProvider
             ])
             // Wide tables use the whole screen instead of scrolling sideways.
             ->maxContentWidth(Width::Full)
+            // The mockup look: no breadcrumbs, flat menu groups. The theme
+            // switch lives in the account menu.
+            ->breadcrumbs(false)
+            ->collapsibleNavigationGroups(false)
+            // No top bar: the sidebar runs the full height with the brand at
+            // its top, search under it and the account menu at its foot.
+            ->topbar(false)
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
                 fn (): string => Blade::render('@include(\'filament.brand-styles\')'),
@@ -86,10 +93,6 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::SIMPLE_LAYOUT_START,
                 fn (): string => view('filament.login-side')->render(),
                 scopes: Login::class,
-            )
-            ->renderHook(
-                PanelsRenderHook::GLOBAL_SEARCH_AFTER,
-                fn (): string => Blade::render('@include(\'filament.topbar-theme-switcher\')'),
             )
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')

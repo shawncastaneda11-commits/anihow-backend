@@ -285,6 +285,20 @@ class User extends Authenticatable implements FilamentUser, HasEmailAuthenticati
         return $this->hasAnyRole(array_column(Role::adminRoles(), 'value'));
     }
 
+    /**
+     * The office line under the logo in the CMS, such as "COSEL · Account
+     * Manager" or "Sanctuario Nature Farm · Content Editor".
+     */
+    public function officeLabel(): ?string
+    {
+        return match (true) {
+            $this->hasRole(Role::SuperAdmin->value) => 'ICTD · Super Admin',
+            $this->hasRole(Role::AccountManager->value) => 'COSEL · Account Manager',
+            $this->hasRole(Role::ContentEditor->value) => ($this->farm?->name ?? 'Farm').' · Content Editor',
+            default => null,
+        };
+    }
+
     public function isContentEditor(): bool
     {
         return $this->hasRole(Role::ContentEditor);

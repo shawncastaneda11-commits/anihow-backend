@@ -1,4 +1,4 @@
-{{-- Sidebar uses the leaf mark only. Login keeps the full lockup. --}}
+{{-- Sidebar and top bar: the leaf mark, "AniHow" and the office. Login keeps the full lockup. --}}
 @if (request()->is('admin/login'))
     <div class="anihow-brand-login">
         <img
@@ -14,11 +14,18 @@
         <p class="anihow-tagline">FROM FARM TO MARKET</p>
     </div>
 @else
+    @php($office = auth()->user()?->officeLabel())
     <div class="anihow-brand-panel">
         <img
             class="anihow-mark"
             src="/images/anihow-mark.png?v=12"
-            alt="AniHow"
+            alt=""
         >
+        <span class="anihow-brand-text">
+            <span class="anihow-brand-name">AniHow</span>
+            @if ($office)
+                <span class="anihow-brand-office">{{ $office }}</span>
+            @endif
+        </span>
     </div>
 @endif

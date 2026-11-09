@@ -8,6 +8,7 @@ use App\Actions\Reservations\GuardListingReservationCancellation;
 use App\Enums\ListingStatus;
 use App\Enums\TawadType;
 use App\Filament\Resources\Listings\Actions\FarmListingActions;
+use App\Filament\Resources\Listings\Pages\ListListings;
 use App\Models\Listing;
 use App\Support\InAppNotifier;
 use App\Support\Pricing\UnitConverter;
@@ -17,12 +18,8 @@ use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Textarea;
 use Filament\Support\Enums\FontWeight;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\Filter;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -107,18 +104,18 @@ class ListingsTable
                     ->label('')
                     ->disk(config('anihow.listing_disk', 'public'))
                     ->square()
-                    ->imageSize(52)
+                    ->imageSize(44)
                     ->defaultImageUrl(asset('images/anihow-mark.png')),
                 // The listing, who sells it, and a red line when it is priced
-                // below the lowest price (the Super Admin or the farm raised it).
+                // below the lowest price.
                 TextColumn::make('title')
                     ->label('Listing')
                     ->weight(FontWeight::SemiBold)
-                    ->searchable()
                     ->sortable()
                     ->description(fn (Listing $record): string => collect([
                         $record->farmerSeller?->name,
                         $record->cropType?->name,
+                        auth()->user()?->farm_id === null ? $record->farm?->name : null,
                     ])->filter()->implode(' · '))
                     ->wrap(),
                 TextColumn::make('listing_state')
@@ -131,83 +128,40 @@ class ListingsTable
                         str_starts_with($state, 'Starts') => 'warning',
                         default => 'gray',
                     }),
-                TextColumn::make('farmerSeller.name')
-                    ->label('Seller')
-                    ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('farm.name')
-                    ->label('Farm')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('price_per_unit')
                     ->label('Price')
                     ->sortable()
+                    ->weight(FontWeight::SemiBold)
                     ->formatStateUsing(fn (Listing $record): string => '₱'.number_format((float) $record->price_per_unit, 2).' / '.($record->unit?->value ?? 'unit'))
                     ->color(fn (Listing $record): ?string => $record->isBelowFloor() ? 'danger' : null)
                     ->description(fn (Listing $record): string => $record->isBelowFloor()
-                        ? 'Below the lowest price of ₱'.number_format((float) $record->effectiveFloor(), 2)
+                        ? 'Below the lowest price (₱'.number_format((float) $record->effectiveFloor(), 2).')'
                         : self::tawadSummary($record)),
                 TextColumn::make('quantity_available')
                     ->label('Stock')
                     ->sortable()
                     ->formatStateUsing(fn (Listing $record): string => rtrim(rtrim(number_format((float) $record->quantity_available, 2), '0'), '.').' '.($record->unit?->value ?? '').' left')
-                    ->color(fn (Listing $record): ?string => (float) $record->quantity_available <= self::LOW_STOCK ? 'warning' : null)
+                    ->color(fn (Listing $record): ?string => (float) $record->quantity_available <= self::LOW_STOCK ? 'danger' : 'gray')
                     ->description(fn (Listing $record): ?string => collect([
                         (float) $record->quantity_available <= self::LOW_STOCK ? 'Low stock' : null,
                         (float) $record->activeReservedQuantity() > 0
                             ? rtrim(rtrim(number_format((float) $record->activeReservedQuantity(), 2), '0'), '.').' reserved'
                             : null,
                     ])->filter()->implode(' · ') ?: null),
-                IconColumn::make('is_active')
-                    ->label('Seller active')
-                    ->boolean()
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
-            // A Content Editor opens the edit panel by clicking the row.
-            ->recordAction(fn (Listing $record): ?string => FarmListingActions::canEdit($record) ? 'editFarmListing' : null)
-            ->modifyQueryUsing(fn (Builder $query) => $query->with(['cropType', 'farm.cropTypeOverrides', 'farmerSeller', 'activeTawadRule']))
-            ->filters([
-                SelectFilter::make('status')
-                    ->options(ListingStatus::options()),
-                SelectFilter::make('availability')
-                    ->label('Availability')
-                    ->options([
-                        'available' => 'Available',
-                        'upcoming' => 'Upcoming',
-                        'expired' => 'Expired',
-                    ])
-                    ->query(function (Builder $query, array $data): Builder {
-                        return match ($data['value'] ?? null) {
-                            'available' => $query->availableNow(),
-                            'upcoming' => $query->upcoming(),
-                            'expired' => $query->expired(),
-                            default => $query,
-                        };
-                    }),
-                SelectFilter::make('crop_type')
-                    ->relationship('cropType', 'name')
-                    ->label('Crop type'),
-                SelectFilter::make('farm')
-                    ->relationship('farm', 'name')
-                    ->visible(fn (): bool => auth()->user()?->farm_id === null),
-                TernaryFilter::make('is_active')
-                    ->label('Seller active'),
-                // Same answer as the red price badge, computed in SQL so it can
-                // filter. Compares against the farm's effective floor, not the
-                // system floor alone. The listing price is converted into the
-                // crop type's unit first, using the same factors as UnitConverter.
-                Filter::make('below_floor')
-                    ->label('Priced below floor')
-                    ->query(fn (Builder $query): Builder => $query->whereHas(
-                        'cropType',
-                        fn (Builder $cropType): Builder => $cropType->whereRaw(self::belowFloorSql()),
-                    )),
-            ])
+            // A Content Editor opens the panel beside the list by clicking a
+            // row (ListListings::openListing). No link on the row, or the link
+            // takes the click.
+            ->recordUrl(null)
+            ->recordAction(fn (Listing $record): ?string => FarmListingActions::canEdit($record) ? 'openListing' : null)
+            ->recordClasses(fn (Listing $record, mixed $livewire): ?string => ($livewire->openId ?? null) === $record->getKey() ? 'anihow-row-on' : null)
+            ->modifyQueryUsing(fn (Builder $query, mixed $livewire): Builder => $livewire instanceof ListListings
+                ? $livewire->applyListFilters($query->with(['cropType', 'farm.cropTypeOverrides', 'farmerSeller', 'activeTawadRule']))
+                : $query->with(['cropType', 'farm.cropTypeOverrides', 'farmerSeller', 'activeTawadRule']))
             // One "⋯" menu per row; clicking the row opens its panel.
             ->recordActions([
                 ActionGroup::make([
                     ViewAction::make(),
-                    ...FarmListingActions::make(),
 
                     /*
                      * The Super Admin's only write power over a listing. The seller

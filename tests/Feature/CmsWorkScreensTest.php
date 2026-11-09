@@ -46,14 +46,18 @@ class CmsWorkScreensTest extends TestCase
     {
         [$editor, $seller, $listing] = $this->farmListing();
 
-        Livewire::actingAs($editor)
-            ->test(ListListings::class)
-            ->callTableAction('editFarmListing', $listing, data: [
-                'price_per_unit' => 55,
-                'type' => TawadType::Flat->value,
-                'discount_amount' => 5,
-            ])
-            ->assertHasNoTableActionErrors();
+        $page = Livewire::actingAs($editor)->test(ListListings::class);
+
+        // A row opens the panel; it is not a link.
+        $this->assertNull($page->instance()->getTable()->getRecordUrl($listing));
+
+        $page->call('openListing', $listing->id)
+            ->assertSet('openId', $listing->id)
+            ->set('listing.price_per_unit', 55)
+            ->set('listing.type', TawadType::Flat->value)
+            ->set('listing.discount_amount', 5)
+            ->call('saveListing')
+            ->assertHasNoErrors();
 
         $listing->refresh();
         $this->assertEquals(55, (float) $listing->price_per_unit);
@@ -70,12 +74,12 @@ class CmsWorkScreensTest extends TestCase
 
         Livewire::actingAs($editor)
             ->test(ListListings::class)
-            ->callTableAction('editFarmListing', $listing, data: [
-                'price_per_unit' => 30,
-                'type' => TawadType::Flat->value,
-                'discount_amount' => 5,
-            ])
-            ->assertHasTableActionErrors(['price_per_unit']);
+            ->call('openListing', $listing->id)
+            ->set('listing.price_per_unit', 30)
+            ->set('listing.type', TawadType::Flat->value)
+            ->set('listing.discount_amount', 5)
+            ->call('saveListing')
+            ->assertHasErrors(['listing.price_per_unit']);
 
         $listing->refresh();
         $this->assertEquals(50, (float) $listing->price_per_unit);
@@ -89,8 +93,10 @@ class CmsWorkScreensTest extends TestCase
 
         Livewire::actingAs($editor)
             ->test(ListListings::class)
-            ->callTableAction('editFarmListing', $listing, data: ['type' => 'none'])
-            ->assertHasNoTableActionErrors();
+            ->call('openListing', $listing->id)
+            ->set('listing.type', 'none')
+            ->call('saveListing')
+            ->assertHasNoErrors();
 
         $this->assertNull($listing->fresh()->activeTawadRule);
     }
@@ -121,6 +127,28 @@ class CmsWorkScreensTest extends TestCase
             ->test(ListListings::class)
             ->set('activeTab', 'below')
             ->assertCanNotSeeTableRecords([$fine]);
+    }
+
+    public function test_the_seller_choice_and_search_narrow_the_listings(): void
+    {
+        [$editor, $seller, $listing] = $this->farmListing();
+        $other = $this->farmer([], $listing->farm);
+        $theirs = $this->listingFor($other, [
+            'crop_type_id' => $listing->crop_type_id,
+            'unit' => ListingUnit::Kilogram,
+            'price_per_unit' => 50,
+            'title' => 'Kalabasa ni Pedro',
+        ]);
+
+        Livewire::actingAs($editor)
+            ->test(ListListings::class)
+            ->set('owner', (string) $seller->id)
+            ->assertCanSeeTableRecords([$listing])
+            ->assertCanNotSeeTableRecords([$theirs])
+            ->set('owner', '')
+            ->set('search', 'Kalabasa ni')
+            ->assertCanSeeTableRecords([$theirs])
+            ->assertCanNotSeeTableRecords([$listing]);
     }
 
     public function test_cosel_works_through_the_id_queue_oldest_first(): void

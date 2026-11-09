@@ -11,8 +11,6 @@ use App\Models\Listing;
 use App\Models\User;
 use App\Support\Pricing\PriceGuardResolver;
 use App\Support\Pricing\UnitConverter;
-use Closure;
-use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
@@ -21,19 +19,18 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Utilities\Get;
-use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
 /**
- * A Content Editor's edits to their farm's listings, in one side panel:
+ * A Content Editor's edits to their farm's listings, in the panel beside the
+ * list (ListListings):
  * price and stock, tawad, details and dates. Everything the seller can change
  * in the app except photos. Each change goes through EditFarmListing, so the
  * app's own checks apply and the seller is told.
@@ -48,14 +45,6 @@ class FarmListingActions
         'order_step', 'growing_method', 'available_from', 'available_until', 'harvested_on', 'is_active',
     ];
 
-    /**
-     * @return list<Action>
-     */
-    public static function make(): array
-    {
-        return [self::edit()];
-    }
-
     public static function canEdit(Listing $record): bool
     {
         return $record->status !== ListingStatus::TakenDown
@@ -64,64 +53,80 @@ class FarmListingActions
             && (auth()->user()?->farm_id !== null);
     }
 
-    private static function edit(): Action
+    /**
+     * The panel's starting values for a listing.
+     *
+     * @return array<string, mixed>
+     */
+    public static function formData(Listing $record): array
     {
-        return Action::make('editFarmListing')
-            ->label('Edit')
-            ->icon('heroicon-o-pencil-square')
-            ->slideOver()
-            ->modalWidth(Width::Large)
-            ->visible(fn (Listing $record): bool => self::canEdit($record))
-            ->modalHeading(fn (Listing $record): string => $record->title)
-            ->modalDescription(fn (Listing $record): string => collect([
-                $record->farmerSeller?->name,
-                $record->cropType?->name,
-                $record->created_at ? 'listed '.$record->created_at->format('M j') : null,
-            ])->filter()->implode(' · '))
-            ->modalSubmitActionLabel('Save and tell the seller')
-            ->fillForm(fn (Listing $record): array => [
-                'title' => $record->title,
-                'description' => $record->description,
-                'unit' => $record->unit?->value,
-                'price_per_unit' => $record->price_per_unit,
-                'quantity_available' => $record->quantity_available,
-                'min_order_quantity' => $record->min_order_quantity,
-                'order_step' => $record->order_step,
-                'is_active' => (bool) $record->is_active,
-                'available_from' => $record->available_from?->toDateTimeString(),
-                'available_until' => $record->available_until?->toDateTimeString(),
-                'harvested_on' => $record->harvested_on?->toDateString(),
-                'growing_method' => $record->growing_method?->value,
-                'type' => $record->activeTawadRule?->type?->value ?? self::NO_TAWAD,
-                'discount_amount' => $record->activeTawadRule?->discount_amount,
-                'min_quantity' => $record->activeTawadRule?->min_quantity,
-            ])
-            ->schema([
-                Tabs::make('sections')->tabs([
-                    Tab::make('Price and stock')->schema(self::priceAndStock()),
-                    Tab::make('Tawad')->schema(self::tawad()),
-                    Tab::make('Details')->schema([
-                        TextInput::make('title')->required()->maxLength(150),
-                        Textarea::make('description')->rows(4)->maxLength(5000),
-                        Select::make('growing_method')->label('How it was grown')->options(GrowingMethod::options())->native(false),
-                    ]),
-                    Tab::make('Dates')->schema([
-                        DatePicker::make('harvested_on')->label('Harvested on'),
-                        Grid::make(2)->schema([
-                            DateTimePicker::make('available_from')->label('Available from')->seconds(false),
-                            DateTimePicker::make('available_until')->label('Until')->seconds(false),
-                        ]),
-                        Text::make('After "until", the listing stops showing to buyers and its stock counts as left over.')->color('gray'),
-                    ]),
-                ]),
-                Text::make(fn (Get $get, Listing $record): string => self::changeSummary($record, $get))
-                    ->color('gray'),
-            ])
-            ->action(function (Listing $record, array $data, Action $action): void {
-                self::inModal($action, fn () => self::save(self::editor(), $record, $data));
+        return [
+            'title' => $record->title,
+            'description' => $record->description,
+            'unit' => $record->unit?->value,
+            'price_per_unit' => $record->price_per_unit,
+            'quantity_available' => $record->quantity_available,
+            'min_order_quantity' => $record->min_order_quantity,
+            'order_step' => $record->order_step,
+            'is_active' => (bool) $record->is_active,
+            'available_from' => $record->available_from?->toDateTimeString(),
+            'available_until' => $record->available_until?->toDateTimeString(),
+            'harvested_on' => $record->harvested_on?->toDateString(),
+            'growing_method' => $record->growing_method?->value,
+            'type' => $record->activeTawadRule?->type?->value ?? self::NO_TAWAD,
+            'discount_amount' => $record->activeTawadRule?->discount_amount,
+            'min_quantity' => $record->activeTawadRule?->min_quantity,
+            'confirm_cancel_reservations' => false,
+        ];
+    }
 
-                Notification::make()->title('Saved. The seller has been told.')->success()->send();
-            });
+    /**
+     * The panel: price and stock, tawad, details and dates, then what the
+     * seller will be told.
+     *
+     * @return list<mixed>
+     */
+    public static function panelSchema(): array
+    {
+        return [
+            Tabs::make('sections')->tabs([
+                Tab::make('Price and stock')->schema(self::priceAndStock()),
+                Tab::make('Tawad')->schema(self::tawad()),
+                Tab::make('Details')->schema([
+                    TextInput::make('title')->required()->maxLength(150),
+                    Textarea::make('description')->rows(4)->maxLength(5000),
+                    Select::make('growing_method')->label('How it was grown')->options(GrowingMethod::options())->native(false),
+                ]),
+                Tab::make('Dates')->schema([
+                    DatePicker::make('harvested_on')->label('Harvested on'),
+                    Grid::make(2)->schema([
+                        DateTimePicker::make('available_from')->label('Available from')->seconds(false),
+                        DateTimePicker::make('available_until')->label('Until')->seconds(false),
+                    ]),
+                    Text::make('After "until", the listing stops showing to buyers and its stock counts as left over.')->color('gray'),
+                ]),
+            ])->contained(false),
+            Text::make(fn (Get $get, Listing $record): string => self::changeSummary($record, $get))
+                ->color('gray'),
+        ];
+    }
+
+    /**
+     * Saves through save() and shows a refusal under the field it is about.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public static function saveFor(string $statePath, Listing $record, array $data): void
+    {
+        try {
+            self::save(self::editor(), $record, $data);
+        } catch (ValidationException $exception) {
+            throw ValidationException::withMessages(
+                collect($exception->errors())
+                    ->mapWithKeys(fn (array $messages, string $field): array => ["{$statePath}.{$field}" => $messages])
+                    ->all(),
+            );
+        }
     }
 
     /**
@@ -391,23 +396,5 @@ class FarmListingActions
         abort_unless($user instanceof User, 403);
 
         return $user;
-    }
-
-    /**
-     * Shows a refusal under the field it is about, inside the open panel.
-     */
-    private static function inModal(Action $action, Closure $run): void
-    {
-        try {
-            $run();
-        } catch (ValidationException $exception) {
-            $statePath = 'mountedActions.'.($action->getNestingIndex() ?? 0).'.data.';
-
-            throw ValidationException::withMessages(
-                collect($exception->errors())
-                    ->mapWithKeys(fn (array $messages, string $field): array => [$statePath.$field => $messages])
-                    ->all(),
-            );
-        }
     }
 }

@@ -1655,45 +1655,52 @@
         font-size: 0.8125rem;
     }
 
+
     /* A compact list, as in the design. */
-    .anihow-accounts-page .fi-ta-ctn {
+    .anihow-accounts-page .fi-ta-ctn,
+    .anihow-listings-page .fi-ta-ctn {
         border-radius: 14px;
     }
-
-    .anihow-accounts-page .fi-ta-header-cell {
+    .anihow-accounts-page .fi-ta-header-cell,
+    .anihow-listings-page .fi-ta-header-cell {
         padding-top: 0.625rem;
         padding-bottom: 0.625rem;
         font-size: 0.8125rem;
     }
-
     html:not(.dark) .anihow-accounts-page .fi-ta-header-cell,
-    html:not(.dark) .anihow-accounts-page .fi-ta-table thead tr {
+    html:not(.dark) .anihow-listings-page .fi-ta-header-cell,
+    html:not(.dark) .anihow-accounts-page .fi-ta-table thead tr,
+    html:not(.dark) .anihow-listings-page .fi-ta-table thead tr {
         background: var(--anihow-surface-soft);
     }
-
     .anihow-accounts-page .fi-ta-cell,
+    .anihow-listings-page .fi-ta-cell,
     .anihow-accounts-page .fi-ta-record-content .fi-ta-col,
-    .anihow-accounts-page .fi-ta-text {
+    .anihow-listings-page .fi-ta-record-content .fi-ta-col,
+    .anihow-accounts-page .fi-ta-text,
+    .anihow-listings-page .fi-ta-text {
         font-size: 0.8125rem;
     }
-
-    .anihow-accounts-page .fi-ta-text {
+    .anihow-accounts-page .fi-ta-text,
+    .anihow-listings-page .fi-ta-text {
         padding-top: 0.625rem;
         padding-bottom: 0.625rem;
     }
-
-    .anihow-accounts-page .fi-ta-text.fi-ta-text-has-descriptions {
+    .anihow-accounts-page .fi-ta-text.fi-ta-text-has-descriptions,
+    .anihow-listings-page .fi-ta-text.fi-ta-text-has-descriptions {
         gap: 0;
     }
-
     .anihow-accounts-page .fi-ta-cell.fi-ta-selection-cell,
+    .anihow-listings-page .fi-ta-cell.fi-ta-selection-cell,
     .anihow-accounts-page .fi-ta-cell:has(.fi-ta-actions),
-    .anihow-accounts-page .fi-ta-cell:has(.fi-ta-record-checkbox) {
+    .anihow-listings-page .fi-ta-cell:has(.fi-ta-actions),
+    .anihow-accounts-page .fi-ta-cell:has(.fi-ta-record-checkbox),
+    .anihow-listings-page .fi-ta-cell:has(.fi-ta-record-checkbox) {
         padding-top: 0.5rem;
         padding-bottom: 0.5rem;
     }
-
-    .anihow-accounts-page .fi-ta-text-description {
+    .anihow-accounts-page .fi-ta-text-description,
+    .anihow-listings-page .fi-ta-text-description {
         font-size: 0.75rem;
     }
 
@@ -1911,6 +1918,63 @@
 
     .anihow-split-panel .anihow-card {
         max-width: 40rem;
+    }
+
+    /* ---- Listings ---- */
+    .anihow-thumb {
+        flex-shrink: 0;
+        width: 2.75rem;
+        height: 2.75rem;
+        border-radius: 10px;
+        object-fit: cover;
+    }
+
+    .anihow-thumb-letters {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #DCEBE1;
+        color: var(--anihow-green);
+        font-weight: 700;
+        font-size: 0.875rem;
+    }
+
+    .anihow-listings-page .fi-ta-image img {
+        border-radius: 10px;
+    }
+
+    .anihow-listing-panel .fi-sc-tabs.fi-contained,
+    .anihow-listing-panel .fi-tabs {
+        box-shadow: none;
+    }
+
+    .anihow-listing-panel .fi-tabs {
+        border-bottom: 1px solid var(--anihow-line);
+        padding: 0;
+        gap: 0;
+        border-radius: 0;
+        background: transparent;
+    }
+
+    .anihow-listing-panel .fi-tabs-item {
+        border-radius: 0;
+        padding: 0.625rem 0.75rem;
+        margin-bottom: -1px;
+        border-bottom: 2px solid transparent;
+        background: transparent !important;
+        font-size: 0.8125rem;
+    }
+
+    .anihow-listing-panel .fi-tabs-item.fi-active {
+        border-bottom-color: var(--anihow-green);
+    }
+
+    .anihow-listing-panel .fi-tabs-item.fi-active .fi-tabs-item-label {
+        color: var(--anihow-green);
+    }
+
+    .anihow-listing-panel .fi-sc-tabs-tab {
+        padding-top: 1rem;
     }
 
     @media (max-width: 47.99rem) {

@@ -138,7 +138,9 @@
                 <section class="anihow-card" aria-labelledby="sr-sent">
                     <div class="anihow-card-head">
                         <h2 id="sr-sent" class="anihow-card-title">Requests sent to COSEL</h2>
-                        <span class="anihow-pill anihow-pill-wait">{{ $waiting }} waiting</span>
+                        @if ($waiting > 0)
+                            <span class="anihow-pill anihow-pill-wait">{{ $waiting }} waiting</span>
+                        @endif
                     </div>
 
                     @forelse ($requests as $item)

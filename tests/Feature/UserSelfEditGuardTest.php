@@ -128,18 +128,22 @@ class UserSelfEditGuardTest extends TestCase
     public function test_the_account_filters_match_what_each_role_can_see(): void
     {
         $farm = Farm::factory()->create();
+        $other = Farm::factory()->create();
         $editor = $this->staff(Role::ContentEditor, $farm);
         $admin = $this->staff(Role::AccountManager);
+        $here = $this->staff(Role::FarmerSeller, $farm);
+        $there = $this->staff(Role::FarmerSeller, $other);
 
-        $this->listAccounts($editor)
-            ->assertTableFilterHidden('role')
-            ->assertTableFilterHidden('farm')
-            ->assertTableFilterVisible('status');
+        $this->assertSame([], $this->listAccounts($editor)->instance()->farmOptions());
 
         $this->listAccounts($admin)
-            ->assertTableFilterVisible('role')
-            ->assertTableFilterVisible('farm')
-            ->assertTableFilterVisible('status');
+            ->set('farm', (string) $farm->id)
+            ->assertCanSeeTableRecords([$here])
+            ->assertCanNotSeeTableRecords([$there])
+            ->set('farm', '')
+            ->set('search', $there->email)
+            ->assertCanSeeTableRecords([$there])
+            ->assertCanNotSeeTableRecords([$here]);
     }
 
     public function test_the_user_menu_links_to_your_own_account(): void

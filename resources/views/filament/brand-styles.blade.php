@@ -1380,4 +1380,334 @@
         outline: 2px solid var(--anihow-green);
         outline-offset: 2px;
     }
+    /* ---- Docked panel: the list, with the open record's panel at the right edge ---- */
+    .anihow-dock {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: stretch;
+        min-height: 100vh;
+    }
+
+    .anihow-dock-main {
+        flex: 999 1 32rem;
+        min-width: 0;
+        box-sizing: border-box;
+        padding: 1.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.125rem;
+    }
+
+    .anihow-dock-main .fi-page-content,
+    .anihow-dock-main > .fi-sc {
+        gap: 1rem;
+    }
+
+    .anihow-dock-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .anihow-dock-title {
+        font-size: 1.5rem;
+    }
+
+    .anihow-dock-head .anihow-muted {
+        margin-top: 0.25rem;
+        font-size: 0.875rem;
+    }
+
+    html:not(.dark) .fi-ta-row.anihow-row-on,
+    html:not(.dark) .fi-ta-row.anihow-row-on:hover {
+        background: #F2F8F4;
+    }
+
+    .fi-ta-row.anihow-row-on td:first-child {
+        box-shadow: inset 3px 0 0 var(--anihow-green);
+    }
+
+    /* Stays in view while the list scrolls, with Save always on screen. */
+    .anihow-dock-panel {
+        flex: 1 1 28rem;
+        max-width: 30rem;
+        min-width: 0;
+        box-sizing: border-box;
+        align-self: flex-start;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+        background: var(--anihow-surface);
+        border-inline-start: 1px solid var(--anihow-line);
+        padding: 1.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.125rem;
+    }
+
+    .anihow-dock-panel .fi-fo-field-label-content {
+        font-size: 0.9375rem;
+    }
+
+    .anihow-dock-foot {
+        position: sticky;
+        bottom: 0;
+        padding-top: 0.75rem;
+        background: var(--anihow-surface);
+    }
+
+    .anihow-dock-panel-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .anihow-dock-who {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        min-width: 0;
+    }
+
+    .anihow-dock-who .anihow-split-name {
+        font-size: 1.125rem;
+    }
+
+    .anihow-dock-who .anihow-muted {
+        margin-top: 0.125rem;
+    }
+
+    .anihow-avatar {
+        flex-shrink: 0;
+        width: 2.75rem;
+        height: 2.75rem;
+        border-radius: 999px;
+        background: #DCEBE1;
+        color: var(--anihow-green);
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .anihow-dock-close {
+        flex-shrink: 0;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 8px;
+        border: 0;
+        background: #F1EFE9;
+        color: var(--anihow-ink);
+        font-size: 1rem;
+        cursor: pointer;
+    }
+
+    .anihow-dock-note {
+        margin: 0;
+        padding: 0.5rem 0.75rem;
+        border-radius: 10px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+    }
+
+    .anihow-dock-note-no { background: #FBEAE3; color: #9A3412; }
+    .anihow-dock-note-wait { background: #FFF1D6; color: #7A4A00; }
+
+    .anihow-dock-form {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .anihow-dock-rows {
+        border: 1px solid var(--anihow-line-soft);
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .anihow-dock-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 0.875rem;
+    }
+
+    .anihow-dock-row + .anihow-dock-row {
+        border-top: 1px solid var(--anihow-line-soft);
+    }
+
+    .anihow-dock-row > div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+    }
+
+    .anihow-dock-row-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--anihow-ink);
+    }
+
+    .anihow-dock-row-hint {
+        font-size: 0.8125rem;
+        color: var(--anihow-ink-muted);
+    }
+
+    .anihow-dock-row .fi-link {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .anihow-dock-more {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--anihow-green);
+    }
+
+    .anihow-dock-foot {
+        margin-top: auto;
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .anihow-dock-foot .anihow-btn {
+        flex: 1 1 0;
+        min-height: 2.5rem;
+    }
+
+    .anihow-dock-tools {
+        display: flex;
+        gap: 0.625rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .anihow-search {
+        flex: 1 1 15rem;
+        max-width: 21.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        height: 2.375rem;
+        padding: 0 0.75rem;
+        border: 1px solid #DDD8CC;
+        border-radius: 10px;
+        background: var(--anihow-surface);
+        color: var(--anihow-ink-muted);
+    }
+
+    .anihow-search input {
+        flex: 1;
+        min-width: 0;
+        border: 0;
+        padding: 0;
+        background: transparent;
+        font: inherit;
+        font-size: 0.875rem;
+        color: var(--anihow-ink);
+        box-shadow: none;
+        outline: none;
+    }
+
+    .anihow-search:focus-within {
+        outline: 2px solid var(--anihow-green);
+        outline-offset: 2px;
+    }
+
+    .anihow-dock-tools .anihow-chip {
+        min-height: 2rem;
+        padding: 0 0.75rem;
+        font-size: 0.8125rem;
+    }
+
+    .anihow-sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+
+    .anihow-dock-farm {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        font-size: 0.8125rem;
+        color: var(--anihow-ink-muted);
+    }
+
+    .anihow-dock-farm .anihow-input {
+        width: auto;
+        max-width: 15rem;
+        height: 2.125rem;
+        padding: 0 2rem 0 0.5rem;
+        border-radius: 8px;
+        font-size: 0.8125rem;
+    }
+
+    /* A compact list, as in the design. */
+    .anihow-accounts-page .fi-ta-ctn {
+        border-radius: 14px;
+    }
+
+    .anihow-accounts-page .fi-ta-header-cell {
+        padding-top: 0.625rem;
+        padding-bottom: 0.625rem;
+        font-size: 0.8125rem;
+    }
+
+    html:not(.dark) .anihow-accounts-page .fi-ta-header-cell,
+    html:not(.dark) .anihow-accounts-page .fi-ta-table thead tr {
+        background: var(--anihow-surface-soft);
+    }
+
+    .anihow-accounts-page .fi-ta-cell,
+    .anihow-accounts-page .fi-ta-record-content .fi-ta-col,
+    .anihow-accounts-page .fi-ta-text {
+        font-size: 0.8125rem;
+    }
+
+    .anihow-accounts-page .fi-ta-text {
+        padding-top: 0.625rem;
+        padding-bottom: 0.625rem;
+    }
+
+    .anihow-accounts-page .fi-ta-text.fi-ta-text-has-descriptions {
+        gap: 0;
+    }
+
+    .anihow-accounts-page .fi-ta-cell.fi-ta-selection-cell,
+    .anihow-accounts-page .fi-ta-cell:has(.fi-ta-actions),
+    .anihow-accounts-page .fi-ta-cell:has(.fi-ta-record-checkbox) {
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+
+    .anihow-accounts-page .fi-ta-text-description {
+        font-size: 0.75rem;
+    }
+
+    @media (max-width: 47.99rem) {
+        .anihow-dock-main {
+            padding: 1.25rem 1rem;
+        }
+
+        .anihow-dock-panel {
+            max-width: none;
+            position: static;
+            height: auto;
+            border-inline-start: 0;
+            border-top: 1px solid var(--anihow-line);
+        }
+    }
 </style>

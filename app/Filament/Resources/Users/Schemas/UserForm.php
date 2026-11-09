@@ -42,48 +42,8 @@ class UserForm
                             ->tel()
                             ->maxLength(30),
 
-                        /*
-                         * One account, one role. This select is deliberately not
-                         * multiple. COSEL assigns people's roles; ICTD assigns the
-                         * administrator roles (AccountAuthority).
-                         */
-                        Select::make('roles')
-                            ->label('Role')
-                            ->relationship(
-                                name: 'roles',
-                                titleAttribute: 'name',
-                                modifyQueryUsing: fn (Builder $query) => $query->whereIn(
-                                    'name',
-                                    array_column(AccountAuthority::assignableRoles(auth()->user()), 'value'),
-                                ),
-                            )
-                            ->getOptionLabelFromRecordUsing(
-                                fn (RoleModel $record): string => Role::tryFrom($record->name)?->label() ?? $record->name,
-                            )
-                            ->required()
-                            ->native(false)
-                            ->preload()
-                            ->live()
-                            ->visible(fn (?User $record): bool => self::managesOtherAccount($record))
-                            ->dehydrated(fn (?User $record): bool => self::managesOtherAccount($record))
-                            ->helperText('One account holds one role.'),
-
-                        /*
-                         * Required for Content Editors and Farmer-Sellers, meaningless
-                         * for Buyers. The schema cannot express that, so it is enforced
-                         * here and in validation.
-                         */
-                        Select::make('farm_id')
-                            ->label('Farm')
-                            ->relationship('farm', 'name')
-                            ->searchable()
-                            ->preload()
-                            ->native(false)
-                            ->visible(fn (Get $get): bool => self::canManageAccounts() && self::isFarmScoped($get))
-                            ->required(fn (Get $get): bool => self::canManageAccounts() && self::isFarmScoped($get))
-                            ->dehydrated(fn (Get $get): bool => self::canManageAccounts() && self::isFarmScoped($get))
-                            ->rule(fn (Get $get, Select $component): Closure => self::oneContentEditorPerFarm($get, $component))
-                            ->helperText('Content Editors and Farmer-Sellers belong to one farm. One Content Editor per farm.'),
+                        self::roleField(),
+                        self::farmField(),
 
                         /*
                          * Hidden on your own account so an administrator cannot
@@ -154,6 +114,54 @@ class UserForm
                             ->state(fn (User $record): string => $record->hasEmailAuthentication() ? 'On' : 'Off'),
                     ]),
             ]);
+    }
+
+    /**
+     * One account, one role. This select is deliberately not multiple. COSEL
+     * assigns people's roles; ICTD assigns the administrator roles
+     * (AccountAuthority). Shared by the full form and the account panel.
+     */
+    public static function roleField(): Select
+    {
+        return Select::make('roles')
+            ->label('Role')
+            ->relationship(
+                name: 'roles',
+                titleAttribute: 'name',
+                modifyQueryUsing: fn (Builder $query) => $query->whereIn(
+                    'name',
+                    array_column(AccountAuthority::assignableRoles(auth()->user()), 'value'),
+                ),
+            )
+            ->getOptionLabelFromRecordUsing(
+                fn (RoleModel $record): string => Role::tryFrom($record->name)?->label() ?? $record->name,
+            )
+            ->required()
+            ->native(false)
+            ->preload()
+            ->live()
+            ->visible(fn (?User $record): bool => self::managesOtherAccount($record))
+            ->dehydrated(fn (?User $record): bool => self::managesOtherAccount($record))
+            ->helperText('One account holds one role.');
+    }
+
+    /**
+     * Required for Content Editors and Farmer-Sellers, meaningless for Buyers.
+     * The schema cannot express that, so it is enforced here and in validation.
+     */
+    public static function farmField(): Select
+    {
+        return Select::make('farm_id')
+            ->label('Farm')
+            ->relationship('farm', 'name')
+            ->searchable()
+            ->preload()
+            ->native(false)
+            ->visible(fn (Get $get): bool => self::canManageAccounts() && self::isFarmScoped($get))
+            ->required(fn (Get $get): bool => self::canManageAccounts() && self::isFarmScoped($get))
+            ->dehydrated(fn (Get $get): bool => self::canManageAccounts() && self::isFarmScoped($get))
+            ->rule(fn (Get $get, Select $component): Closure => self::oneContentEditorPerFarm($get, $component))
+            ->helperText('Content Editors and Farmer-Sellers belong to one farm. One Content Editor per farm.');
     }
 
     private static function showsOwnPassword(string $operation, mixed $record): bool

@@ -8,6 +8,7 @@ use App\Enums\ListingUnit;
 use App\Enums\NotificationType;
 use App\Enums\Role;
 use App\Enums\TawadType;
+use App\Enums\UserStatus;
 use App\Filament\Resources\Farms\Pages\EditFarm;
 use App\Filament\Resources\IdVerifications\Pages\ListIdVerifications;
 use App\Filament\Resources\Listings\Pages\ListListings;
@@ -162,11 +163,51 @@ class CmsWorkScreensTest extends TestCase
         $buyer = $this->buyer();
         $buyer->createToken('phone');
 
-        Livewire::actingAs($cosel)
-            ->test(ListUsers::class)
-            ->callTableAction('account', $buyer, arguments: ['signOut' => true]);
+        $page = Livewire::actingAs($cosel)->test(ListUsers::class);
+
+        // A row opens the panel; it is not a link to the full page.
+        $this->assertNull($page->instance()->getTable()->getRecordUrl($buyer));
+
+        $page->call('openAccount', $buyer->id)
+            ->assertSet('openId', $buyer->id)
+            ->callAction('signOutEverywhere');
 
         $this->assertSame(0, $buyer->tokens()->count());
+    }
+
+    public function test_the_account_panel_saves_the_mobile_number_and_suspends(): void
+    {
+        $cosel = $this->staff(Role::AccountManager);
+        $buyer = $this->buyer(['phone' => '09170000000']);
+
+        Livewire::actingAs($cosel)
+            ->test(ListUsers::class)
+            ->call('openAccount', $buyer->id)
+            ->set('account.phone', '09171112222')
+            ->call('saveAccount')
+            ->assertHasNoErrors()
+            ->callAction('suspendOpenAccount', data: ['suspension_reason' => 'Asked to pause.'])
+            ->assertHasNoActionErrors();
+
+        $buyer->refresh();
+        $this->assertSame('09171112222', $buyer->phone);
+        $this->assertSame(UserStatus::Suspended, $buyer->status);
+        $this->assertTrue($buyer->hasRole(Role::Buyer->value));
+    }
+
+    public function test_a_content_editor_sees_the_account_panel_read_only(): void
+    {
+        $farm = $this->farm();
+        $editor = $this->staff(Role::ContentEditor, $farm);
+        $seller = $this->farmer([], $farm);
+
+        Livewire::actingAs($editor)
+            ->test(ListUsers::class)
+            ->call('openAccount', $seller->id)
+            ->assertSet('openId', $seller->id)
+            ->assertActionHidden('signOutEverywhere')
+            ->call('saveAccount')
+            ->assertForbidden();
     }
 
     public function test_cosel_records_the_partnership_and_a_content_editor_cannot(): void

@@ -209,9 +209,13 @@ class ExportCsvTest extends TestCase
         $farmer = $this->farmer([], $farm);
 
         $this->assertFalse(OrderResource::canAccess());
+        // A Content Editor sees their farm's orders but never exports them.
         $this->actingAs($editor);
-        $this->assertFalse(OrderResource::canAccess());
+        $this->assertTrue(OrderResource::canAccess());
         $this->assertFalse(ExportLogResource::canAccess());
+
+        $this->actingAs($unassigned);
+        $this->assertFalse(OrderResource::canAccess());
 
         $this->actingAs($farmer);
         $this->assertFalse(OrderResource::canAccess());
@@ -262,7 +266,8 @@ class ExportCsvTest extends TestCase
 
         $this->actingAs($editor)
             ->get('/admin/orders')
-            ->assertForbidden();
+            ->assertOk()
+            ->assertDontSee('Export CSV');
 
         $this->actingAs($editor)
             ->get('/admin/export-logs')

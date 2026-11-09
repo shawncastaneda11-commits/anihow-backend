@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Reservations\Tables;
 use App\Enums\OrderPaymentStatus;
 use App\Enums\ReservationStatus;
 use App\Models\Reservation;
+use App\Support\Sales\SalesAccess;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -18,13 +19,16 @@ class ReservationsTable
             ->columns([
                 TextColumn::make('buyer.name')
                     ->label('Buyer')
-                    ->searchable(),
+                    // A Content Editor sees the buyer's first name only.
+                    ->formatStateUsing(fn (?string $state): ?string => SalesAccess::buyerName($state, auth()->user()))
+                    ->searchable(condition: fn (): bool => SalesAccess::seesAll(auth()->user())),
                 TextColumn::make('farmerSeller.name')
                     ->label('Seller')
                     ->searchable(),
                 TextColumn::make('farm.name')
                     ->label('Farm')
-                    ->placeholder('—'),
+                    ->placeholder('—')
+                    ->visible(fn (): bool => SalesAccess::seesAll(auth()->user())),
                 TextColumn::make('listing_name')
                     ->label('Listing')
                     ->searchable(),
@@ -63,7 +67,8 @@ class ReservationsTable
                     ->label('Payment')
                     ->options(OrderPaymentStatus::options()),
                 SelectFilter::make('farm')
-                    ->relationship('farm', 'name'),
+                    ->relationship('farm', 'name')
+                    ->visible(fn (): bool => SalesAccess::seesAll(auth()->user())),
             ]);
     }
 }

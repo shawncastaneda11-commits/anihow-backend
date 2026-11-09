@@ -6,6 +6,7 @@ use App\Enums\FulfillmentPreference;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Models\Order;
+use App\Support\Sales\SalesAccess;
 use BackedEnum;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
@@ -30,7 +31,8 @@ class OrderForm
                 TextInput::make('status')
                     ->formatStateUsing(fn (mixed $state): string => self::enumLabel(OrderStatus::class, $state))
                     ->disabled(),
-                TextInput::make('buyer.name')->label('Buyer')->disabled(),
+                TextInput::make('buyer.name')->label('Buyer')->disabled()
+                    ->formatStateUsing(fn (?string $state): ?string => SalesAccess::buyerName($state, auth()->user())),
                 TextInput::make('farmerSeller.name')->label('Seller')->disabled(),
                 TextInput::make('farm.name')->label('Farm')->disabled(),
                 TextInput::make('fulfillment_preference')
@@ -66,6 +68,7 @@ class OrderForm
                     ->columnSpanFull(),
                 Placeholder::make('order_chat')
                     ->label('Order chat')
+                    ->visible(fn (): bool => SalesAccess::seesAll(auth()->user()))
                     ->content(fn (?Order $record): HtmlString => self::chatContent($record))
                     ->columnSpanFull(),
             ]);

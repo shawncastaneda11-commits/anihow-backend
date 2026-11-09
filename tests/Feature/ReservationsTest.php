@@ -692,7 +692,7 @@ class ReservationsTest extends TestCase
         $this->assertSame(1, $this->notices($buyer->id, NotificationType::ReservationCancelled));
     }
 
-    public function test_a_content_editor_cannot_open_reservations(): void
+    public function test_a_content_editor_sees_reservations_only_in_the_cms(): void
     {
         $admin = $this->staff(Role::AccountManager);
         $editor = $this->staff(Role::ContentEditor, Farm::factory()->create());
@@ -701,8 +701,8 @@ class ReservationsTest extends TestCase
         $this->actingAs($admin)->get('/admin/reservations')->assertOk();
 
         $this->actingAs($editor);
-        $this->assertFalse(ReservationResource::canAccess());
-        $this->get('/admin/reservations')->assertForbidden();
+        $this->assertTrue(ReservationResource::canAccess());
+        $this->get('/admin/reservations')->assertOk();
 
         $this->asUser($editor)
             ->getJson("/api/farmer/listings/{$listing->id}/reservations")

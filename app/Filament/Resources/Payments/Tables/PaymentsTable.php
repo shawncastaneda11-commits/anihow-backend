@@ -6,6 +6,7 @@ use App\Enums\OrderPaymentStatus;
 use App\Enums\PaymentProofStatus;
 use App\Models\Farm;
 use App\Models\PaymentProof;
+use App\Support\Sales\SalesAccess;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\TextColumn;
@@ -41,22 +42,28 @@ class PaymentsTable
                     )),
                 TextColumn::make('buyer.name')
                     ->label('Buyer')
-                    ->searchable(),
+                    // A Content Editor sees the buyer's first name only.
+                    ->formatStateUsing(fn (?string $state): ?string => SalesAccess::buyerName($state, auth()->user()))
+                    ->searchable(condition: fn (): bool => SalesAccess::seesAll(auth()->user())),
                 TextColumn::make('farmerSeller.name')
                     ->label('Seller')
                     ->searchable(),
                 TextColumn::make('farm_name')
                     ->label('Farm')
                     ->state(fn (PaymentProof $record): ?string => $record->order?->farm?->name ?? $record->reservation?->farm?->name)
-                    ->placeholder('—'),
+                    ->placeholder('—')
+                    ->visible(fn (): bool => SalesAccess::seesAll(auth()->user())),
                 TextColumn::make('amount')
                     ->money('PHP'),
                 TextColumn::make('paymentQr.wallet')
                     ->label('Wallet')
                     ->formatStateUsing(fn ($state): string => $state?->label() ?? '—'),
+                // Reference numbers and screenshots can identify the buyer's
+                // wallet, so only COSEL sees them.
                 TextColumn::make('reference_number')
                     ->label('Reference (last 4)')
-                    ->searchable(),
+                    ->searchable()
+                    ->visible(fn (): bool => SalesAccess::seesAll(auth()->user())),
                 TextColumn::make('status')
                     ->label('Proof')
                     ->badge()
@@ -101,6 +108,7 @@ class PaymentsTable
                     }),
                 SelectFilter::make('farm')
                     ->label('Farm')
+                    ->visible(fn (): bool => SalesAccess::seesAll(auth()->user()))
                     ->options(fn (): array => Farm::query()->orderBy('name')->pluck('name', 'id')->all())
                     ->query(function (Builder $query, array $data): Builder {
                         $value = $data['value'] ?? null;
@@ -127,7 +135,7 @@ class PaymentsTable
                 Action::make('viewScreenshot')
                     ->label('View')
                     ->icon('heroicon-o-photo')
-                    ->visible(fn (PaymentProof $record): bool => $record->hasScreenshot())
+                    ->visible(fn (PaymentProof $record): bool => $record->hasScreenshot() && SalesAccess::seesAll(auth()->user()))
                     ->url(fn (PaymentProof $record): string => route('payments.proofs.screenshot', $record))
                     ->openUrlInNewTab(),
             ])

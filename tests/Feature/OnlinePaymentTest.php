@@ -579,7 +579,7 @@ class OnlinePaymentTest extends TestCase
             ->assertJsonPath('errors.status.0', 'Settle your pending payments and refunds first.');
     }
 
-    public function test_the_payments_resource_is_cosel_only_and_export_includes_proofs(): void
+    public function test_payments_are_cosels_and_a_content_editors_own_farm_only_and_export_includes_proofs(): void
     {
         [$farmer, $order, $proof] = $this->sentProof();
         $admin = $this->staff(Role::AccountManager);
@@ -592,9 +592,11 @@ class OnlinePaymentTest extends TestCase
         $this->actingAs($ictd, 'web');
         $this->assertFalse(PaymentResource::canAccess());
 
+        // A Content Editor opens the page for their own farm only; this
+        // payment is another farm's (CmsSalesScreensTest covers the rest).
         $this->actingAs($editor, 'web');
-        $this->assertFalse(PaymentResource::canAccess());
-        $this->get('/admin/payments')->assertForbidden();
+        $this->assertTrue(PaymentResource::canAccess());
+        $this->get('/admin/payments')->assertOk();
 
         $buyer = User::query()->findOrFail($order->buyer_id);
         $export = app(ExportOwnDataAction::class)->handle($buyer);

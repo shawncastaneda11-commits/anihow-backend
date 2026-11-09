@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Orders\Tables;
 use App\Enums\FulfillmentPreference;
 use App\Enums\OrderStatus;
 use App\Models\Order;
+use App\Support\Sales\SalesAccess;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Tables\Columns\TextColumn;
@@ -37,7 +38,9 @@ class OrdersTable
                     }),
                 TextColumn::make('buyer.name')
                     ->label('Buyer')
-                    ->searchable()
+                    // A Content Editor sees the buyer's first name only.
+                    ->formatStateUsing(fn (?string $state): ?string => SalesAccess::buyerName($state, auth()->user()))
+                    ->searchable(condition: fn (): bool => SalesAccess::seesAll(auth()->user()))
                     ->sortable(),
                 TextColumn::make('farmerSeller.name')
                     ->label('Seller')
@@ -46,7 +49,8 @@ class OrdersTable
                 TextColumn::make('farm.name')
                     ->label('Farm')
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable()
+                    ->visible(fn (): bool => SalesAccess::seesAll(auth()->user())),
                 TextColumn::make('items_count')
                     ->label('Items')
                     ->counts('items'),
@@ -75,13 +79,16 @@ class OrdersTable
                 TextColumn::make('created_at')
                     ->label('Placed')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->description(fn (Order $record): ?string => self::isLate($record) ? 'Waiting over a day' : null)
+                    ->color(fn (Order $record): ?string => self::isLate($record) ? 'danger' : null),
             ])
             ->filters([
                 SelectFilter::make('status')
                     ->options(OrderStatus::options()),
                 SelectFilter::make('farm')
-                    ->relationship('farm', 'name'),
+                    ->relationship('farm', 'name')
+                    ->visible(fn (): bool => SalesAccess::seesAll(auth()->user())),
                 Filter::make('placed_at')
                     ->label('Placed')
                     ->schema([
@@ -108,5 +115,13 @@ class OrdersTable
                 ViewAction::make(),
             ])
             ->toolbarActions([]);
+    }
+
+    /** Placed over a day ago and still not confirmed by the seller. */
+    public static function isLate(Order $record): bool
+    {
+        return $record->status === OrderStatus::Placed
+            && $record->created_at !== null
+            && $record->created_at->lt(now()->subDay());
     }
 }

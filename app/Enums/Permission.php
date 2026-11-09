@@ -41,6 +41,7 @@ enum Permission: string
     case PlaceOrders = 'place_orders';
     case ManageOwnOrders = 'manage_own_orders';
     case ViewAllOrders = 'view_all_orders';
+    case ViewOwnFarmOrders = 'view_own_farm_orders';
 
     // Walk-in sales: the farmer-seller records an in-person sale to someone
     // with no buyer account. Deliberately not PlaceOrders, which stays with the
@@ -99,6 +100,7 @@ enum Permission: string
             self::PlaceOrders => 'Place orders',
             self::ManageOwnOrders => 'Manage own orders',
             self::ViewAllOrders => 'View all orders',
+            self::ViewOwnFarmOrders => 'View own farm orders, reservations and payment status',
             self::RecordWalkInSales => 'Record walk-in sales',
             self::WriteReviews => 'Write reviews',
             self::ModerateReviews => 'Moderate reviews',
@@ -191,6 +193,7 @@ enum Permission: string
                 self::ManageFarmListings,
                 self::SetFarmPricing,
                 self::ViewOwnFarmRoster,
+                self::ViewOwnFarmOrders,
                 self::ManageOwnFarmArticles,
                 self::ManageOwnFarmAnnouncements,
                 self::ManageOwnFarmFaq,

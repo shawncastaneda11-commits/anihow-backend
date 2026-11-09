@@ -2,10 +2,10 @@
 
 namespace App\Filament\Resources\Payments;
 
-use App\Enums\Permission;
 use App\Filament\Resources\Payments\Pages\ListPayments;
 use App\Filament\Resources\Payments\Tables\PaymentsTable;
 use App\Models\PaymentProof;
+use App\Support\Sales\SalesAccess;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -54,7 +54,7 @@ class PaymentResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->with([
+        $query = parent::getEloquentQuery()->with([
             'order.farm',
             'order.buyer',
             'order.farmerSeller',
@@ -64,11 +64,31 @@ class PaymentResource extends Resource
             'farmerSeller',
             'paymentQr',
         ]);
+        $user = auth()->user();
+
+        if (SalesAccess::seesAll($user)) {
+            return $query;
+        }
+
+        $farmId = SalesAccess::ownFarmId($user);
+
+        if ($farmId === null) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(fn (Builder $proofs): Builder => $proofs
+            ->whereHas('order', fn (Builder $order): Builder => $order->where('farm_id', $farmId))
+            ->orWhereHas('reservation', fn (Builder $reservation): Builder => $reservation->where('farm_id', $farmId)));
     }
 
+    /**
+     * COSEL sees every payment in full. A Content Editor sees their farm's
+     * payment status only: no screenshots or reference numbers, which can
+     * carry the buyer's wallet name and number.
+     */
     public static function canAccess(): bool
     {
-        return auth()->user()?->can(Permission::ViewAllOrders->value) ?? false;
+        return SalesAccess::canOpen(auth()->user());
     }
 
     public static function canCreate(): bool

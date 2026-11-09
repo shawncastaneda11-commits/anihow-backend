@@ -80,7 +80,8 @@ class _AccountMenuButtonState extends State<AccountMenuButton> {
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     final user = context.watch<AuthController>().user;
-    final seller = user?.isFarmerSeller == true;
+    // On the Buying side, a seller who also buys gets the buyer's menu.
+    final seller = user?.isFarmerSeller == true && !context.watch<AuthController>().actingAsBuyer;
     final shop = user?.shopName?.trim() ?? '';
     final avatarName = seller && shop.isNotEmpty ? shop : (user?.name ?? '');
     final screenWidth = MediaQuery.sizeOf(context).width;
@@ -120,7 +121,7 @@ class _AccountMenuButtonState extends State<AccountMenuButton> {
             onHelp: () =>
                 _push(seller ? const FaqBotScreen() : const HelpScreen()),
             onExtra: () =>
-                _push(seller ? const HelpScreen() : const SellerInfoScreen()),
+                _push(user?.isFarmerSeller == true ? const HelpScreen() : const SellerInfoScreen()),
             onLogOut: () {
               _menu.close();
               confirmAndLogOut(context);
@@ -212,7 +213,9 @@ class _AccountMenuPanel extends StatelessWidget {
     final theme = Theme.of(context);
     final s = AppStrings.of(context);
     final user = context.watch<AuthController>().user;
-    final seller = user?.isFarmerSeller == true;
+    // On the Buying side, a seller who also buys gets the buyer's menu.
+    final seller = user?.isFarmerSeller == true && !context.watch<AuthController>().actingAsBuyer;
+    final sells = user?.isFarmerSeller == true;
     final shop = user?.shopName?.trim() ?? '';
     final person = user?.name ?? '';
     final title = seller && shop.isNotEmpty ? shop : person;
@@ -321,10 +324,11 @@ class _AccountMenuPanel extends StatelessWidget {
                 onTap: onHelp,
               ),
               _MenuRow(
-                icon: seller
+                // A seller who also buys already sells: no "Want to be a seller".
+                icon: sells
                     ? Icons.menu_book_outlined
                     : Icons.storefront_outlined,
-                label: seller ? s.howAnihowWorks : s.wantToBeASeller,
+                label: sells ? s.howAnihowWorks : s.wantToBeASeller,
                 onTap: onExtra,
               ),
               const SizedBox(height: 4),

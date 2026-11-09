@@ -135,30 +135,6 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
         ],
-        if (user.isFarmerSeller && !user.isBuyer) ...[
-          const SizedBox(height: AniHowSpace.cardGap),
-          Card(
-            key: const ValueKey('start-buying-card'),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(s.buyFromOtherFarms, style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 6),
-                  Text(s.buyFromOtherFarmsBody, style: theme.textTheme.bodyMedium),
-                  const SizedBox(height: 10),
-                  OutlinedButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(builder: (_) => const StartBuyingScreen()),
-                    ),
-                    child: Text(s.startBuying),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
         const SizedBox(height: AniHowSpace.cardGap),
         Card(
           child: Column(
@@ -515,6 +491,11 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
                 ],
                 if (!complete) ...[
                   _ShopChecklist(shop: shop, onFix: () => _editShop(shop)),
+                  const SizedBox(height: AniHowSpace.cardGap),
+                ],
+                // A seller can also buy with this account (one login).
+                if (context.watch<AuthController>().user?.isBuyer != true) ...[
+                  const StartBuyingCard(),
                   const SizedBox(height: AniHowSpace.cardGap),
                 ],
                 ShopPaymentsCard(shop: shop, onManage: () => _editShop(shop)),

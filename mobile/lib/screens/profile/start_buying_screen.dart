@@ -122,3 +122,38 @@ class _StartBuyingScreenState extends State<StartBuyingScreen> {
     );
   }
 }
+
+/// On a farmer-seller's shop profile: buy from other farms with the same login.
+class StartBuyingCard extends StatelessWidget {
+  const StartBuyingCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+
+    return Card(
+      key: const ValueKey('start-buying-card'),
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(s.buyFromOtherFarms, style: theme.textTheme.titleMedium),
+            const SizedBox(height: 6),
+            Text(s.buyFromOtherFarmsBody, style: theme.textTheme.bodyMedium),
+            const SizedBox(height: 10),
+            OutlinedButton(
+              key: const ValueKey('start-buying'),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const StartBuyingScreen()),
+              ),
+              child: Text(s.startBuying),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

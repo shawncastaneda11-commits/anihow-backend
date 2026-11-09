@@ -2825,7 +2825,6 @@ class AppStrings {
     'Kapag na-suspend o na-delete ang account, titigil ang pagbebenta at pagbili.',
   );
   String get turnOnBuying => t('Turn on buying', 'I-on ang pagbili');
-  String get notNow => t('Not now', 'Hindi muna');
   String get buyingIsOn => t('Buying is on', 'Naka-on na ang pagbili');
   String get buyingIsOnBody => t(
     'Use the Selling / Buying switch at the top of the app. Before your first order, send a photo of your ID; COSEL checks it.',

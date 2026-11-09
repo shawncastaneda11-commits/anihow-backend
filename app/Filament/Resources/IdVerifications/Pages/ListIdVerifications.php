@@ -71,6 +71,7 @@ class ListIdVerifications extends Page
     public function cancelReject(): void
     {
         $this->rejecting = false;
+        $this->resetErrorBag();
     }
 
     public function approve(): void
@@ -88,6 +89,7 @@ class ListIdVerifications extends Page
 
     public function reject(): void
     {
+        $this->resetErrorBag();
         $record = $this->waitingSelected();
 
         if ($record === null) {

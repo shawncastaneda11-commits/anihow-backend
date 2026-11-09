@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Payments;
 
+use App\Enums\Permission;
 use App\Http\Controllers\Controller;
 use App\Models\PaymentProof;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ class PaymentProofScreenshotController extends Controller
         $reservation = $paymentProof->reservation;
 
         $allowed = $user !== null && (
-            $user->isAdministrator()
+            $user->can(Permission::ViewAllOrders->value)
             || ($order !== null && ($order->isOwnedByBuyer($user) || $order->isOwnedByFarmer($user)))
             || ($reservation !== null && (
                 (int) $reservation->buyer_id === (int) $user->id

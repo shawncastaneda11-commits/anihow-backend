@@ -2,17 +2,18 @@
 
 namespace App\Filament\Resources\Orders;
 
-use App\Enums\Permission;
 use App\Filament\Resources\Orders\Pages\ListOrders;
 use App\Filament\Resources\Orders\Schemas\OrderForm;
 use App\Filament\Resources\Orders\Tables\OrdersTable;
 use App\Models\Order;
+use App\Support\Sales\SalesAccess;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
 /**
@@ -60,13 +61,34 @@ class OrderResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
+        $query = parent::getEloquentQuery()
             ->with(['buyer', 'farmerSeller', 'farm', 'items', 'stallMessages.author']);
+
+        return SalesAccess::scope($query, auth()->user(), 'orders.farm_id');
     }
 
+    /** COSEL sees every farm's orders; a Content Editor their own farm's, read-only. */
     public static function canAccess(): bool
     {
-        return auth()->user()?->can(Permission::ViewAllOrders->value) ?? false;
+        return SalesAccess::canOpen(auth()->user());
+    }
+
+    /**
+     * Opening an order in the CMS. A Content Editor may open their farm's
+     * orders here, though the app's order policy still keeps them out of
+     * the order itself in the API.
+     */
+    public static function canView(Model $record): bool
+    {
+        $user = auth()->user();
+
+        if (SalesAccess::seesAll($user)) {
+            return true;
+        }
+
+        $farmId = SalesAccess::ownFarmId($user);
+
+        return $farmId !== null && $record instanceof Order && (int) $record->farm_id === $farmId;
     }
 
     public static function canCreate(): bool

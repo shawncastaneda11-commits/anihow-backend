@@ -152,7 +152,7 @@ class OrderChatApiTest extends TestCase
             ->assertCreated();
 
         $admin = User::factory()->create();
-        $admin->syncRoles(Role::SuperAdmin);
+        $admin->syncRoles(Role::AccountManager);
 
         $this->asUser($admin)
             ->getJson("/api/orders/{$order->id}/messages")
@@ -255,7 +255,7 @@ class OrderChatApiTest extends TestCase
             ->assertCreated();
 
         $admin = User::factory()->create();
-        $admin->syncRoles(Role::SuperAdmin);
+        $admin->syncRoles(Role::AccountManager);
 
         $this->asUser($admin)
             ->getJson("/api/orders/{$order->id}/messages")

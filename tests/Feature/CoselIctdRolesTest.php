@@ -95,7 +95,7 @@ class CoselIctdRolesTest extends TestCase
         $cosel = $this->staff(Role::AccountManager);
         $ictd = $this->staff(Role::SuperAdmin);
 
-        foreach (['manage_accounts', 'resolve_reports', 'takedown_listings', 'manage_farms'] as $permission) {
+        foreach (['manage_accounts', 'resolve_reports', 'takedown_listings', 'manage_farms', 'view_all_orders'] as $permission) {
             $this->assertTrue($cosel->can($permission), $permission);
             $this->assertFalse($ictd->can($permission), $permission);
         }

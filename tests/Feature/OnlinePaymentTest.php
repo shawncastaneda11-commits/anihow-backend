@@ -125,13 +125,15 @@ class OnlinePaymentTest extends TestCase
         $order = $this->placeOnline($farmer);
         $buyer = User::query()->findOrFail($order->buyer_id);
         $other = $this->buyer(['email' => 'other@example.com']);
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
+        $ictd = $this->staff(Role::SuperAdmin);
 
         $image = $this->asUser($farmer)->get("/api/payment-qrs/{$qr->id}/image")->assertOk();
         $cache = (string) $image->headers->get('Cache-Control');
         $this->assertStringContainsString('private', $cache);
         $this->assertStringContainsString('no-store', $cache);
         $this->asUser($admin)->get("/api/payment-qrs/{$qr->id}/image")->assertOk();
+        $this->asUser($ictd)->get("/api/payment-qrs/{$qr->id}/image")->assertForbidden();
         $this->asUser($buyer)->get("/api/payment-qrs/{$qr->id}/image")->assertOk();
         $this->asUser($other)->get("/api/payment-qrs/{$qr->id}/image")->assertForbidden();
 
@@ -577,18 +579,24 @@ class OnlinePaymentTest extends TestCase
             ->assertJsonPath('errors.status.0', 'Settle your pending payments and refunds first.');
     }
 
-    public function test_the_payments_resource_is_super_admin_only_and_export_includes_proofs(): void
+    public function test_payments_are_cosels_and_a_content_editors_own_farm_only_and_export_includes_proofs(): void
     {
         [$farmer, $order, $proof] = $this->sentProof();
-        $admin = $this->staff(Role::SuperAdmin);
+        $admin = $this->staff(Role::AccountManager);
+        $ictd = $this->staff(Role::SuperAdmin);
         $editor = $this->staff(Role::ContentEditor, Farm::factory()->create());
 
         $this->flushHeaders();
         $this->actingAs($admin, 'web')->get('/admin/payments')->assertOk();
 
-        $this->actingAs($editor, 'web');
+        $this->actingAs($ictd, 'web');
         $this->assertFalse(PaymentResource::canAccess());
-        $this->get('/admin/payments')->assertForbidden();
+
+        // A Content Editor opens the page for their own farm only; this
+        // payment is another farm's (CmsSalesScreensTest covers the rest).
+        $this->actingAs($editor, 'web');
+        $this->assertTrue(PaymentResource::canAccess());
+        $this->get('/admin/payments')->assertOk();
 
         $buyer = User::query()->findOrFail($order->buyer_id);
         $export = app(ExportOwnDataAction::class)->handle($buyer);

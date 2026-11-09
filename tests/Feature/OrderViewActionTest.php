@@ -24,10 +24,10 @@ class OrderViewActionTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
     }
 
-    public function test_a_super_admin_can_open_an_order_from_the_list(): void
+    public function test_cosel_can_open_an_order_from_the_list(): void
     {
         $admin = User::factory()->create();
-        $admin->syncRoles(Role::SuperAdmin);
+        $admin->syncRoles(Role::AccountManager);
         $farmer = $this->farmer(['name' => 'Kuya Jun']);
         $order = $this->placeOrder($this->buyer(['name' => 'Buyer 01']), $this->listingFor($farmer), 2);
 

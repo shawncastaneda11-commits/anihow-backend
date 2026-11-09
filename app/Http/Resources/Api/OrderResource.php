@@ -4,6 +4,7 @@ namespace App\Http\Resources\Api;
 
 use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderSource;
+use App\Enums\Permission;
 use App\Models\Order;
 use App\Models\SellerPaymentQr;
 use Illuminate\Http\Request;
@@ -117,7 +118,7 @@ class OrderResource extends JsonResource
             return false;
         }
 
-        if ($user->isAdministrator()) {
+        if ($user->can(Permission::ViewAllOrders->value)) {
             return true;
         }
 

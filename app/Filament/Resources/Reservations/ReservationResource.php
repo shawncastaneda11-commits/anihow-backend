@@ -2,10 +2,10 @@
 
 namespace App\Filament\Resources\Reservations;
 
-use App\Enums\Permission;
 use App\Filament\Resources\Reservations\Pages\ListReservations;
 use App\Filament\Resources\Reservations\Tables\ReservationsTable;
 use App\Models\Reservation;
+use App\Support\Sales\SalesAccess;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -55,12 +55,15 @@ class ReservationResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->with(['buyer', 'farmerSeller', 'listing', 'farm']);
+        $query = parent::getEloquentQuery()->with(['buyer', 'farmerSeller', 'listing', 'farm']);
+
+        return SalesAccess::scope($query, auth()->user(), 'reservations.farm_id');
     }
 
+    /** COSEL sees every farm's reservations; a Content Editor their own farm's, read-only. */
     public static function canAccess(): bool
     {
-        return auth()->user()?->can(Permission::ViewAllOrders->value) ?? false;
+        return SalesAccess::canOpen(auth()->user());
     }
 
     public static function canCreate(): bool

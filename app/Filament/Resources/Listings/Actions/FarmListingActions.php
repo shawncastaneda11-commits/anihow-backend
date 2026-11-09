@@ -8,6 +8,7 @@ use App\Enums\ListingStatus;
 use App\Enums\ListingUnit;
 use App\Enums\TawadType;
 use App\Models\Listing;
+use App\Models\TawadRule;
 use App\Models\User;
 use App\Support\Pricing\PriceGuardResolver;
 use App\Support\Pricing\UnitConverter;
@@ -24,6 +25,7 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Utilities\Get;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -100,9 +102,11 @@ class FarmListingActions
                 Tab::make('Dates')->schema([
                     DatePicker::make('harvested_on')->label('Harvested on'),
                     Grid::make(2)->schema([
-                        DateTimePicker::make('available_from')->label('Available from')->seconds(false),
+                        DateTimePicker::make('available_from')->label('Available from')->seconds(false)->live(),
                         DateTimePicker::make('available_until')->label('Until')->seconds(false),
                     ]),
+                    Text::make(fn (Get $get): string => self::startNote($get))
+                        ->visible(fn (Get $get): bool => self::startNote($get) !== ''),
                     Text::make('After "until", the listing stops showing to buyers and its stock counts as left over.')->color('gray'),
                 ]),
             ])->contained(false),
@@ -177,7 +181,7 @@ class FarmListingActions
                 ])
                 ->descriptions([
                     self::NO_TAWAD => 'Saving ends the current tawad, if there is one.',
-                    TawadType::Flat->value => 'Peso off each unit, any quantity.',
+                    TawadType::Flat->value => 'Pesos off any order, whatever the quantity.',
                     TawadType::MinimumQuantity->value => 'Only when they buy at least a set amount.',
                 ])
                 ->required()
@@ -186,11 +190,10 @@ class FarmListingActions
                 ->visible(fn (Get $get): bool => $get('type') !== self::NO_TAWAD)
                 ->schema([
                     TextInput::make('discount_amount')
-                        ->label('Peso off per unit')
+                        ->label('Peso amount off the order')
                         ->numeric()
                         ->prefix('₱')
                         ->live(debounce: 400)
-                        ->helperText(fn (Get $get, Listing $record): ?string => self::ceilingHint($record, $get))
                         ->required(fn (Get $get): bool => $get('type') !== self::NO_TAWAD),
                     TextInput::make('min_quantity')
                         ->label('When they buy at least')
@@ -199,9 +202,113 @@ class FarmListingActions
                         ->visible(fn (Get $get): bool => $get('type') === TawadType::MinimumQuantity->value)
                         ->required(fn (Get $get): bool => $get('type') === TawadType::MinimumQuantity->value),
                 ]),
+            // The same check the save runs, as you type: too big, or under
+            // the lowest price once taken off.
+            Text::make(fn (Get $get, Listing $record): string => self::tawadCheck($record, $get)['text'])
+                ->color(fn (Get $get, Listing $record): string => self::tawadCheck($record, $get)['problem'] ? 'danger' : 'gray')
+                ->visible(fn (Get $get): bool => $get('type') !== self::NO_TAWAD),
             Text::make(fn (Get $get, Listing $record): string => self::buyerPays($record, $get))
                 ->visible(fn (Get $get): bool => $get('type') !== self::NO_TAWAD),
         ];
+    }
+
+    /**
+     * The tawad as typed, judged as the app judges it (TawadRule::guardProblem):
+     * spread over the quantity it applies to, then held to the biggest tawad
+     * and the lowest price for this crop.
+     *
+     * @return array{text: string, problem: bool}
+     */
+    public static function tawadCheck(Listing $record, Get $get): array
+    {
+        try {
+            $type = TawadType::tryFrom((string) $get('type'));
+            $off = $get('discount_amount');
+            $cropType = $record->cropType;
+
+            if ($type === null || $cropType === null) {
+                return ['text' => '', 'problem' => false];
+            }
+
+            $probe = self::probe($record, $get);
+            $guard = app(PriceGuardResolver::class)->forFarmId($probe->farm_id, $cropType, $probe->unit);
+            $guardUnit = ($guard->unit ?? $cropType->unit_of_measure)?->value ?? 'unit';
+            $rule = new TawadRule([
+                'type' => $type,
+                'discount_amount' => is_numeric($off) ? (float) $off : 0.0,
+                'min_quantity' => $type === TawadType::MinimumQuantity && is_numeric($get('min_quantity')) ? (float) $get('min_quantity') : null,
+            ]);
+
+            $limit = $guard->hasCeiling() && (float) $guard->ceiling > 0
+                ? "The most tawad for {$cropType->name} is ₱{$guard->ceilingText()} per {$guardUnit}, counted over ".($type === TawadType::MinimumQuantity ? 'the quantity they buy at least' : 'the smallest order').'.'
+                : '';
+
+            if (! is_numeric($off) || (float) $off <= 0) {
+                return ['text' => $limit, 'problem' => false];
+            }
+
+            $perUnit = $rule->perUnitInCropUnit($probe);
+
+            return match ($rule->guardProblem($probe, $guard)) {
+                'ceiling' => [
+                    'text' => $guard->hasCeiling() && (float) $guard->ceiling > 0
+                        ? 'Too big. This works out to ₱'.number_format((float) $perUnit, 2)." per {$guardUnit}; the most for {$cropType->name} is ₱{$guard->ceilingText()}. Lower it to save."
+                        : "Tawad is turned off for {$cropType->name}.",
+                    'problem' => true,
+                ],
+                'floor' => [
+                    'text' => 'This brings the price under the lowest price of ₱'.number_format($guard->floor, 2)." per {$guardUnit}. Lower it to save.",
+                    'problem' => true,
+                ],
+                'unit' => ['text' => 'This unit cannot be checked against the price limits. Change the unit to save.', 'problem' => true],
+                default => ['text' => 'Works out to ₱'.number_format((float) $perUnit, 2)." off per {$guardUnit}. {$limit}", 'problem' => false],
+            };
+        } catch (Throwable) {
+            return ['text' => '', 'problem' => false];
+        }
+    }
+
+    /**
+     * The listing with the price, unit and minimum order as typed, unsaved.
+     */
+    private static function probe(Listing $record, Get $get): Listing
+    {
+        $probe = clone $record;
+
+        if (is_numeric($get('price_per_unit'))) {
+            $probe->price_per_unit = (float) $get('price_per_unit');
+        }
+
+        if (($unit = ListingUnit::tryFrom((string) $get('unit'))) !== null) {
+            $probe->unit = $unit;
+        }
+
+        if (is_numeric($get('min_order_quantity'))) {
+            $probe->min_order_quantity = (float) $get('min_order_quantity');
+        }
+
+        return $probe;
+    }
+
+    /**
+     * When the listing opens, if "Available from" is later than now.
+     */
+    public static function startNote(Get $get): string
+    {
+        try {
+            $from = $get('available_from');
+            $start = filled($from) ? Carbon::parse((string) $from) : null;
+        } catch (Throwable) {
+            return '';
+        }
+
+        if ($start === null || ! $start->isFuture()) {
+            return '';
+        }
+
+        return 'Starts '.$start->format('M j, g:i A').'. Buyers see it as coming soon and cannot order before then. '
+            .'If the seller takes online payment and the farm allows reservations, buyers can reserve until an hour before it opens; '
+            .'reservations become orders when it opens. Orders already placed are not changed.';
     }
 
     /**
@@ -287,89 +394,105 @@ class FarmListingActions
         }
     }
 
-    private static function ceilingHint(Listing $record, Get $get): ?string
-    {
-        try {
-            $guard = $record->priceGuard();
-
-            return $guard->hasCeiling() ? 'Biggest allowed ₱'.$guard->ceilingText() : null;
-        } catch (Throwable) {
-            return null;
-        }
-    }
-
     /**
-     * What a buyer pays at a few quantities with the tawad as typed.
+     * What a buyer pays at a few quantities with the tawad as typed. The
+     * tawad is pesos off the whole order, once it applies.
      */
     public static function buyerPays(Listing $record, Get $get): string
     {
         $price = is_numeric($get('price_per_unit')) ? (float) $get('price_per_unit') : (float) $record->price_per_unit;
         $off = is_numeric($get('discount_amount')) ? (float) $get('discount_amount') : 0.0;
-        $minimum = $get('type') === TawadType::MinimumQuantity->value && is_numeric($get('min_quantity'))
-            ? max(1.0, (float) $get('min_quantity'))
-            : 1.0;
+        $smallest = is_numeric($get('min_order_quantity')) ? max(0.01, (float) $get('min_order_quantity')) : 1.0;
+        $threshold = $get('type') === TawadType::MinimumQuantity->value && is_numeric($get('min_quantity'))
+            ? max($smallest, (float) $get('min_quantity'))
+            : $smallest;
         $unit = ListingUnit::tryFrom((string) $get('unit'))?->value ?? $record->unit?->value ?? 'unit';
 
-        $quantities = array_values(array_unique([1.0, $minimum, $minimum + 2]));
+        $quantities = array_values(array_unique([$smallest, $threshold, $threshold + 2]));
 
         return 'What the buyer pays: '.collect($quantities)
-            ->map(function (float $quantity) use ($price, $off, $minimum, $unit): string {
-                $tawad = $off > 0 && $quantity >= $minimum;
-                $total = $quantity * max(0, $price - ($tawad ? $off : 0));
+            ->map(function (float $quantity) use ($price, $off, $threshold, $unit): string {
+                $tawad = $off > 0 && $quantity >= $threshold;
+                $total = max(0, $quantity * $price - ($tawad ? $off : 0));
 
-                return rtrim(rtrim(number_format($quantity, 2), '0'), '.')." {$unit} ₱".number_format($total, 2).($tawad ? ' with tawad' : '');
+                return self::number($quantity)." {$unit} ₱".number_format($total, 2).($tawad ? ' with tawad' : '');
             })
             ->implode(' · ');
     }
 
     /**
-     * The sentence above the save button: what the seller will be told.
+     * The sentence above the save button: what the seller will be told,
+     * comparing the panel with the values it opened with (formData()).
      */
     public static function changeSummary(Listing $record, Get $get): string
     {
         $seller = $record->farmerSeller?->name ?? 'The seller';
+        $before = self::formData($record);
+        $changed = fn (string $field): bool => self::differs($field, $before[$field] ?? null, $get($field));
         $changes = [];
 
-        $price = $get('price_per_unit');
-        if (is_numeric($price) && round((float) $price, 2) !== round((float) $record->price_per_unit, 2)) {
-            $changes[] = 'price ₱'.number_format((float) $record->price_per_unit, 2).' → ₱'.number_format((float) $price, 2);
+        if ($changed('price_per_unit') && is_numeric($get('price_per_unit'))) {
+            $changes[] = 'price ₱'.number_format((float) $record->price_per_unit, 2).' → ₱'.number_format((float) $get('price_per_unit'), 2);
         }
 
-        $stock = $get('quantity_available');
-        if (is_numeric($stock) && (float) $stock !== (float) $record->quantity_available) {
-            $changes[] = 'stock '.self::number($record->quantity_available).' → '.self::number($stock);
+        if ($changed('quantity_available') && is_numeric($get('quantity_available'))) {
+            $changes[] = 'stock '.self::number($record->quantity_available).' → '.self::number($get('quantity_available'));
         }
 
-        if ((bool) $get('is_active') !== (bool) $record->is_active) {
+        if ($changed('is_active')) {
             $changes[] = $get('is_active') ? 'shown to buyers again' : 'hidden from buyers';
         }
 
         foreach (['title' => 'title', 'description' => 'description', 'unit' => 'unit', 'min_order_quantity' => 'minimum order', 'order_step' => 'order step', 'growing_method' => 'how it was grown', 'harvested_on' => 'harvest date', 'available_from' => 'start date', 'available_until' => 'end date'] as $field => $label) {
-            $before = $record->getAttribute($field);
-            $before = $before instanceof \BackedEnum ? $before->value : $before;
-            $before = $before instanceof \DateTimeInterface ? $before->format($field === 'harvested_on' ? 'Y-m-d' : 'Y-m-d H:i') : $before;
-            $after = $get($field);
-            $after = is_string($after) && $after !== '' && $before !== null && str_contains((string) $before, '-') ? substr($after, 0, strlen((string) $before)) : $after;
-
-            if ((string) ($before ?? '') !== (string) ($after ?? '') && ! (is_numeric($before) && is_numeric($after) && (float) $before === (float) $after)) {
+            if ($changed($field)) {
                 $changes[] = $label;
             }
         }
 
-        $current = $record->activeTawadRule;
         $type = (string) $get('type');
-        if ($type === self::NO_TAWAD && $current !== null) {
-            $changes[] = 'tawad ended';
-        } elseif ($type !== self::NO_TAWAD && ($current === null
-            || $current->type?->value !== $type
-            || (float) $current->discount_amount !== (float) $get('discount_amount')
-            || (float) $current->min_quantity !== (float) ($type === TawadType::MinimumQuantity->value ? $get('min_quantity') : null))) {
-            $changes[] = 'new tawad';
+        $tawadChanged = $changed('type') || ($type !== self::NO_TAWAD && ($changed('discount_amount')
+            || ($type === TawadType::MinimumQuantity->value && $changed('min_quantity'))));
+
+        if ($tawadChanged) {
+            $changes[] = $type === self::NO_TAWAD ? 'tawad ended' : 'new tawad';
         }
 
         return $changes === []
             ? 'Nothing changed yet. The seller is told only what you change.'
             : "{$seller} will be told: ".implode('; ', $changes).'.';
+    }
+
+    /**
+     * Whether a panel value differs from where it started: numbers by
+     * value, dates by the minute, and blank as blank however it is written.
+     */
+    private static function differs(string $field, mixed $before, mixed $after): bool
+    {
+        $blank = fn (mixed $value): bool => $value === null || $value === '' || $value === [];
+
+        if ($blank($before) || $blank($after)) {
+            return $blank($before) !== $blank($after);
+        }
+
+        if (is_bool($before) || is_bool($after)) {
+            return (bool) $before !== (bool) $after;
+        }
+
+        if (in_array($field, ['available_from', 'available_until', 'harvested_on'], true)) {
+            try {
+                $format = $field === 'harvested_on' ? 'Y-m-d' : 'Y-m-d H:i';
+
+                return Carbon::parse((string) $before)->format($format) !== Carbon::parse((string) $after)->format($format);
+            } catch (Throwable) {
+                return (string) $before !== (string) $after;
+            }
+        }
+
+        if (is_numeric($before) && is_numeric($after)) {
+            return abs((float) $before - (float) $after) > 0.00001;
+        }
+
+        return trim((string) $before) !== trim((string) $after);
     }
 
     private static function reservationText(Listing $record): string

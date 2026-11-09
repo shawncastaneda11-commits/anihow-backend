@@ -130,6 +130,21 @@ class CmsWorkScreensTest extends TestCase
             ->assertCanNotSeeTableRecords([$fine]);
     }
 
+    public function test_the_tawad_tab_warns_as_you_type_and_an_untouched_panel_changes_nothing(): void
+    {
+        [$editor, , $listing] = $this->farmListing();
+        $listing->tawadRules()->create(['type' => TawadType::MinimumQuantity, 'discount_amount' => 5, 'min_quantity' => 3, 'is_active' => true]);
+
+        Livewire::actingAs($editor)
+            ->test(ListListings::class)
+            ->call('openListing', $listing->id)
+            ->assertSee('Nothing changed yet')
+            ->set('listing.type', TawadType::Flat->value)
+            ->set('listing.discount_amount', 100)
+            ->assertSee('Too big')
+            ->assertSee('will be told: new tawad');
+    }
+
     public function test_the_seller_choice_and_search_narrow_the_listings(): void
     {
         [$editor, $seller, $listing] = $this->farmListing();

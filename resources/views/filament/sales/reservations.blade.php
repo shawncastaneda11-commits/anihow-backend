@@ -5,17 +5,15 @@
         $number = fn ($value) => rtrim(rtrim(number_format((float) $value, 2), '0'), '.');
     @endphp
 
-    <div class="anihow-dock anihow-dock-open">
+    <div @class(['anihow-dock', 'anihow-dock-open' => $reservation !== null])>
         <div class="anihow-dock-main">
             @include('filament.sales.head', ['placeholder' => 'Crop or seller'])
 
             {{ $this->content }}
         </div>
 
+        @if ($reservation)
         <aside class="anihow-dock-panel" aria-label="Reservation">
-            @if ($reservation === null)
-                <p class="anihow-muted">Click a reservation to see what was reserved, by whom, and when it opens.</p>
-            @else
                 <header class="anihow-dock-panel-head" wire:key="reservation-panel-{{ $reservation->getKey() }}">
                     <div>
                         <h2 class="anihow-split-name">Reservation #{{ $reservation->getKey() }}</h2>
@@ -73,7 +71,7 @@
                 @unless ($seesAll)
                     <p class="anihow-muted">You see the buyer's first name only. Phone numbers, chats and payment screenshots stay with COSEL.</p>
                 @endunless
-            @endif
         </aside>
+        @endif
     </div>
 </x-filament-panels::page>

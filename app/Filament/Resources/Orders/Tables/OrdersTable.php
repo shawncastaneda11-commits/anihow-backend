@@ -16,6 +16,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 
 class OrdersTable
 {
@@ -28,8 +29,7 @@ class OrdersTable
                     ->label('Order')
                     ->weight(FontWeight::SemiBold)
                     ->sortable()
-                    ->description(fn (Order $record): string => self::itemsSummary($record))
-                    ->wrap(),
+                    ->description(fn (Order $record): string => Str::limit(self::itemsSummary($record), 40)),
                 TextColumn::make('farmerSeller.name')
                     ->label('Seller')
                     ->sortable(),
@@ -39,10 +39,6 @@ class OrdersTable
                     ->formatStateUsing(fn (?string $state): ?string => SalesAccess::buyerName($state, auth()->user()))
                     ->placeholder('Walk-in')
                     ->sortable(),
-                TextColumn::make('farm.name')
-                    ->label('Farm')
-                    ->sortable()
-                    ->visible(fn (): bool => SalesAccess::seesAll(auth()->user())),
                 TextColumn::make('total')
                     ->money('PHP')
                     ->weight(FontWeight::SemiBold)

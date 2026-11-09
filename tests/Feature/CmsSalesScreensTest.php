@@ -60,7 +60,9 @@ class CmsSalesScreensTest extends TestCase
 
         $this->assertNull($page->instance()->getTable()->getRecordUrl($own));
 
-        $page->call('openRecord', $own->id)
+        // No panel until an order is clicked.
+        $page->assertDontSee('Order '.$own->order_number)
+            ->call('openRecord', $own->id)
             ->assertSet('openId', $own->id)
             ->assertSee('Order '.$own->order_number)
             ->assertSee('Rosa')

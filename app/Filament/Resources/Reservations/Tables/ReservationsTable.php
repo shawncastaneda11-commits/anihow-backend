@@ -26,10 +26,6 @@ class ReservationsTable
                     ->formatStateUsing(fn (?string $state): ?string => SalesAccess::buyerName($state, auth()->user())),
                 TextColumn::make('farmerSeller.name')
                     ->label('Seller'),
-                TextColumn::make('farm.name')
-                    ->label('Farm')
-                    ->placeholder('—')
-                    ->visible(fn (): bool => SalesAccess::seesAll(auth()->user())),
                 TextColumn::make('listing_name')
                     ->label('Listing')
                     ->weight(FontWeight::SemiBold),
@@ -43,18 +39,13 @@ class ReservationsTable
                     ->money('PHP'),
                 TextColumn::make('status')
                     ->badge()
-                    ->formatStateUsing(fn (ReservationStatus $state): string => $state->label()),
-                TextColumn::make('payment_status')
-                    ->label('Payment')
-                    ->badge()
-                    ->formatStateUsing(fn (?OrderPaymentStatus $state): string => $state?->label() ?? '—')
-                    ->color(fn (?OrderPaymentStatus $state): string => match ($state) {
-                        OrderPaymentStatus::Paid, OrderPaymentStatus::Refunded => 'success',
-                        OrderPaymentStatus::PaymentSent => 'info',
-                        OrderPaymentStatus::RefundDue, OrderPaymentStatus::AwaitingPayment => 'warning',
-                        OrderPaymentStatus::NotReceived => 'danger',
-                        default => 'gray',
-                    }),
+                    ->formatStateUsing(fn (ReservationStatus $state): string => $state->label())
+                    ->color(fn (ReservationStatus $state): string => match ($state) {
+                        ReservationStatus::Active => 'warning',
+                        ReservationStatus::Converted => 'success',
+                        ReservationStatus::Cancelled => 'danger',
+                    })
+                    ->description(fn (Reservation $record): ?string => $record->payment_status?->label()),
                 TextColumn::make('created_at')
                     ->label('Reserved')
                     ->date('M j')

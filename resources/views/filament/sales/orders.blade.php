@@ -4,17 +4,15 @@
         $seesAll = \App\Support\Sales\SalesAccess::seesAll(auth()->user());
     @endphp
 
-    <div class="anihow-dock anihow-dock-open">
+    <div @class(['anihow-dock', 'anihow-dock-open' => $order !== null])>
         <div class="anihow-dock-main">
             @include('filament.sales.head', ['placeholder' => 'Order number, crop or seller'])
 
             {{ $this->content }}
         </div>
 
+        @if ($order)
         <aside class="anihow-dock-panel" aria-label="Order">
-            @if ($order === null)
-                <p class="anihow-muted">Click an order to see what was bought, by whom, and how it is going.</p>
-            @else
                 <header class="anihow-dock-panel-head" wire:key="order-panel-{{ $order->getKey() }}">
                     <div>
                         <h2 class="anihow-split-name">Order {{ $order->order_number }}</h2>
@@ -73,7 +71,7 @@
                 @unless ($seesAll)
                     <p class="anihow-muted">You see the buyer's first name only. Phone numbers, chats and payment screenshots stay with COSEL.</p>
                 @endunless
-            @endif
         </aside>
+        @endif
     </div>
 </x-filament-panels::page>

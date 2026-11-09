@@ -1017,4 +1017,29 @@
     .fi-modal-close-overlay {
         background-color: rgba(30, 36, 33, 0.18) !important;
     }
+
+    /* Main buttons in the AniHow green, as in the mockups. */
+    html:not(.dark) .fi-btn.fi-color-primary:not(.fi-outlined):not(.fi-btn-link) {
+        background-color: var(--anihow-green) !important;
+        color: #FFFFFF !important;
+        --tw-ring-color: transparent;
+    }
+
+    html:not(.dark) .fi-btn.fi-color-primary:not(.fi-outlined):not(.fi-btn-link):hover {
+        background-color: #163F2C !important;
+    }
+
+    html:not(.dark) .fi-btn.fi-color-primary:not(.fi-outlined):not(.fi-btn-link) .fi-icon {
+        color: #FFFFFF !important;
+    }
+
+    /* A thin sidebar scrollbar that shows on hover only. */
+    .fi-sidebar-nav {
+        scrollbar-width: thin;
+        scrollbar-color: transparent transparent;
+    }
+
+    .fi-sidebar-nav:hover {
+        scrollbar-color: #CFCAC0 transparent;
+    }
 </style>

@@ -1061,59 +1061,92 @@
     }
 
     /* ---- Split screens: a list on the left, its panel open beside it ---- */
+    /* A split page runs edge to edge beside the sidebar, with no page header. */
+    .fi-main:has(.anihow-split-page) {
+        padding: 0;
+        max-width: none;
+    }
+
+    .anihow-split-page .fi-page-header-main-ctn {
+        padding: 0;
+        gap: 0;
+    }
+
     .anihow-split {
         display: flex;
         flex-wrap: wrap;
-        align-items: flex-start;
-        gap: 0;
-        border: 1px solid var(--anihow-line);
-        border-radius: 14px;
-        overflow: hidden;
-        background: var(--anihow-surface);
-        min-height: 32rem;
+        align-items: stretch;
+        min-height: 100vh;
     }
 
     .anihow-split-list {
         flex: 1 1 18rem;
-        max-width: 22rem;
-        align-self: stretch;
+        max-width: 21.25rem;
         box-sizing: border-box;
         background: var(--anihow-surface-soft);
         border-inline-end: 1px solid var(--anihow-line);
-        padding: 1rem;
+        padding: 1.5rem 1rem;
         display: flex;
         flex-direction: column;
-        gap: 0.625rem;
+        gap: 0.75rem;
+    }
+
+    .anihow-split-intro {
+        padding: 0 0.25rem;
+    }
+
+    .anihow-split-intro p {
+        margin: 0.25rem 0 0;
+        font-size: 0.8125rem;
+    }
+
+    .anihow-split-heading {
+        margin: 0;
+        font-size: 1.375rem;
+        font-weight: 700;
+        color: var(--anihow-ink);
     }
 
     .anihow-split-panel {
         flex: 999 1 28rem;
         min-width: 0;
         box-sizing: border-box;
-        padding: 1.5rem 1.75rem;
+        padding: 1.75rem;
         display: flex;
         flex-direction: column;
-        gap: 1rem;
+        gap: 1.125rem;
+    }
+
+    @media (max-width: 47.99rem) {
+        .anihow-split-list {
+            max-width: none;
+            border-inline-end: 0;
+            border-bottom: 1px solid var(--anihow-line);
+        }
+
+        .anihow-split-panel {
+            padding: 1.25rem 1rem;
+        }
     }
 
     .anihow-split-tabs {
         display: flex;
         gap: 0.375rem;
         flex-wrap: wrap;
-        margin-bottom: 0.25rem;
+        padding: 0 0.25rem;
     }
 
     .anihow-chip {
         display: inline-flex;
         align-items: center;
         gap: 0.375rem;
-        min-height: 2rem;
-        padding: 0 0.75rem;
+        min-height: 1.75rem;
+        padding: 0 0.625rem;
         border-radius: 999px;
         border: 1px solid #DDD8CC;
         background: var(--anihow-surface);
         color: var(--anihow-ink);
-        font-size: 0.8125rem;
+        font-size: 0.75rem;
         font-weight: 600;
         cursor: pointer;
     }
@@ -1203,7 +1236,7 @@
 
     .anihow-id-photos {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
         gap: 0.875rem;
     }
 
@@ -1225,10 +1258,14 @@
     }
 
     .anihow-id-photo-frame img {
+        display: block;
         width: 100%;
         height: 100%;
-        object-fit: contain;
-        background: #1E2421;
+        object-fit: cover;
+    }
+
+    .anihow-id-photo figcaption {
+        font-size: 0.8125rem;
     }
 
     .anihow-id-photo-missing {
@@ -1245,6 +1282,7 @@
         padding: 1rem 1.125rem;
         border: 1px solid var(--anihow-line);
         border-radius: 14px;
+        background: var(--anihow-surface);
     }
 
     .anihow-id-facts dt {
@@ -1309,6 +1347,7 @@
         padding: 1rem 1.125rem;
         border: 1px solid var(--anihow-line);
         border-radius: 14px;
+        background: var(--anihow-surface);
     }
 
     .anihow-field-label {

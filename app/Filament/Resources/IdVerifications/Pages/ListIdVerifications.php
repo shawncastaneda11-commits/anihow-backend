@@ -10,6 +10,7 @@ use App\Models\IdVerification;
 use App\Models\User;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
+use Filament\Support\Enums\Width;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
@@ -27,6 +28,8 @@ class ListIdVerifications extends Page
 
     protected string $view = 'filament.id-checks.queue';
 
+    protected Width|string|null $maxContentWidth = Width::Full;
+
     /** "waiting" or "decided". */
     public string $tab = 'waiting';
 
@@ -43,9 +46,26 @@ class ListIdVerifications extends Page
         $this->selectedId = $this->items()->first()?->getKey();
     }
 
-    public function getSubheading(): ?string
+    /**
+     * The title and its line sit at the top of the queue column, as in the
+     * design, so the page draws no header of its own.
+     */
+    public function getHeading(): string
+    {
+        return '';
+    }
+
+    public function intro(): string
     {
         return 'Buyers send an ID before their first order. Oldest first.';
+    }
+
+    /**
+     * @return array<string>
+     */
+    public function getPageClasses(): array
+    {
+        return ['anihow-split-page'];
     }
 
     public function showTab(string $tab): void

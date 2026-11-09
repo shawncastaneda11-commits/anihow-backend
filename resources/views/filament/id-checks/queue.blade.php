@@ -8,6 +8,11 @@
     <div class="anihow-split">
         {{-- The queue --}}
         <section class="anihow-split-list" aria-label="ID checks">
+            <div class="anihow-split-intro">
+                <h1 class="anihow-split-heading">{{ $this->getTitle() }}</h1>
+                <p class="anihow-muted">{{ $this->intro() }}</p>
+            </div>
+
             <div class="anihow-split-tabs" role="tablist" aria-label="Waiting or decided">
                 <button type="button" role="tab" wire:click="showTab('waiting')" aria-selected="{{ $tab === 'waiting' ? 'true' : 'false' }}" @class(['anihow-chip', 'anihow-chip-on' => $tab === 'waiting'])>
                     Waiting <span class="anihow-chip-count">{{ $waiting }}</span>

@@ -61,6 +61,8 @@ class UsersTable
                 : $query)
             // Clicking an account opens its panel beside the list
             // (ListUsers::openAccount), and the open row stays marked.
+            // No link to the full page on the row, or the link wins the click.
+            ->recordUrl(null)
             ->recordAction('openAccount')
             ->recordClasses(fn (User $record, mixed $livewire): ?string => ($livewire->openId ?? null) === $record->getKey() ? 'anihow-row-on' : null)
             // One "⋯" menu per row; clicking the row opens its panel.

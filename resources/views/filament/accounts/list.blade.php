@@ -19,7 +19,7 @@
             <div class="anihow-dock-tools">
                 <label class="anihow-search">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path></svg>
-                    <span class="sr-only">Search accounts</span>
+                    <span class="anihow-sr-only">Search accounts</span>
                     <input type="search" wire:model.live.debounce.400ms="search" placeholder="Name, email or phone">
                 </label>
 

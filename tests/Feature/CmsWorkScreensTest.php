@@ -163,9 +163,12 @@ class CmsWorkScreensTest extends TestCase
         $buyer = $this->buyer();
         $buyer->createToken('phone');
 
-        Livewire::actingAs($cosel)
-            ->test(ListUsers::class)
-            ->call('openAccount', $buyer->id)
+        $page = Livewire::actingAs($cosel)->test(ListUsers::class);
+
+        // A row opens the panel; it is not a link to the full page.
+        $this->assertNull($page->instance()->getTable()->getRecordUrl($buyer));
+
+        $page->call('openAccount', $buyer->id)
             ->assertSet('openId', $buyer->id)
             ->callAction('signOutEverywhere');
 

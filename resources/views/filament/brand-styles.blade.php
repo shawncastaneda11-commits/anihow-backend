@@ -1611,7 +1611,17 @@
         font-size: 0.8125rem;
     }
 
+    .anihow-sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+
     .anihow-dock-farm {
+        flex: 0 0 auto;
         display: flex;
         align-items: center;
         gap: 0.375rem;
@@ -1621,6 +1631,7 @@
 
     .anihow-dock-farm .anihow-input {
         width: auto;
+        max-width: 15rem;
         height: 2.125rem;
         padding: 0 2rem 0 0.5rem;
         border-radius: 8px;
@@ -1650,8 +1661,12 @@
     }
 
     .anihow-accounts-page .fi-ta-text {
-        padding-top: 0.75rem;
-        padding-bottom: 0.75rem;
+        padding-top: 0.625rem;
+        padding-bottom: 0.625rem;
+    }
+
+    .anihow-accounts-page .fi-ta-text.fi-ta-text-has-descriptions {
+        gap: 0;
     }
 
     .anihow-accounts-page .fi-ta-cell.fi-ta-selection-cell,

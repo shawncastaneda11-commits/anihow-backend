@@ -55,9 +55,14 @@ class ListingsTable
         END
         SQL;
 
+    /**
+     * Wrapped in brackets: the comparison joins three cases with OR, and a
+     * bare OR inside whereHas() would escape the crop type's own row and
+     * match every listing whenever any crop matched.
+     */
     public static function belowFloorSql(): string
     {
-        return UnitConverter::belowFloorComparison(self::EFFECTIVE_FLOOR_SQL);
+        return '('.UnitConverter::belowFloorComparison(self::EFFECTIVE_FLOOR_SQL).')';
     }
 
     /** Stock at or below this shows as low. */

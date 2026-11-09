@@ -157,7 +157,7 @@ class UnitConverter
               AND ({$rowFloor}) * ({$listingFactor}) > listings.price_per_unit * ({$rowFactor})
         )";
 
-        return "(({$converts}) AND ({$numeric})) OR ((NOT ({$converts})) AND {$belowRow}) OR (".self::incompatibleGuardSql().')';
+        return "((({$converts}) AND ({$numeric})) OR ((NOT ({$converts})) AND {$belowRow}) OR (".self::incompatibleGuardSql().'))';
     }
 
     /**

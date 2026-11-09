@@ -136,7 +136,7 @@ class SettingsScreen extends StatelessWidget {
                   MaterialPageRoute<void>(builder: (_) => const HelpScreen()),
                 ),
               ),
-              if (user?.isBuyer == true)
+              if (user?.isBuyer == true && user?.isFarmerSeller != true)
                 _SettingsRow(
                   icon: Icons.storefront_outlined,
                   label: s.wantToBeASeller,

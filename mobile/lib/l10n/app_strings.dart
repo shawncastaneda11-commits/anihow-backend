@@ -2785,4 +2785,58 @@ class AppStrings {
   );
   String get askTheFaqBot => t('Ask the FAQ bot', 'Tanungin ang FAQ bot');
   String get askTheFaqBotOnly => t('Ask the FAQ bot.', 'Tanungin ang FAQ bot.');
+
+  // One account for selling and buying.
+  String get sideSelling => t('Selling', 'Nagbebenta');
+  String get sideBuying => t('Buying', 'Bumibili');
+  String get sideSwitchLabel => t('Selling or buying', 'Pagbebenta o pagbili');
+  String get buyFromOtherFarms => t('Buy from other farms', 'Bumili sa ibang bukid');
+  String get buyFromOtherFarmsBody => t(
+    'Use this same account to buy produce. You keep one login and switch between selling and buying.',
+    'Gamitin ang account na ito para bumili ng ani. Iisang login lang, at lilipat ka lang sa pagbebenta o pagbili.',
+  );
+  String get startBuying => t('Start buying', 'Magsimulang bumili');
+  String get startBuyingIntro => t(
+    'Your account can sell and buy. Here is what changes:',
+    'Puwedeng magbenta at bumili ang account mo. Ito ang magbabago:',
+  );
+  String get startBuyingOneLogin => t('One login', 'Iisang login');
+  String get startBuyingOneLoginBody => t(
+    'No new account or password. Switch between Selling and Buying at the top of the app.',
+    'Walang bagong account o password. Lumipat sa Nagbebenta o Bumibili sa itaas ng app.',
+  );
+  String get startBuyingIdCheck => t('ID check before your first order', 'ID check bago ang unang order');
+  String get startBuyingIdCheckBody => t(
+    'Like every buyer, you send a photo of a government ID once. COSEL checks it.',
+    'Gaya ng bawat mamimili, magpapadala ka ng larawan ng government ID minsan. Susuriin ito ng COSEL.',
+  );
+  String get startBuyingNotOwn => t('Not your own listings', 'Hindi ang sarili mong listing');
+  String get startBuyingNotOwnBody => t(
+    'You can see them in the market, but you cannot buy, reserve or review them.',
+    'Makikita mo sila sa palengke, pero hindi mo sila mabibili, mare-reserve, o mare-review.',
+  );
+  String get startBuyingSeparate => t('Your sales stay separate', 'Hiwalay ang iyong benta');
+  String get startBuyingSeparateBody => t(
+    'What you buy never counts as your sales in My Sales.',
+    'Hindi kailanman bibilangin sa My Sales ang mga binibili mo.',
+  );
+  String get startBuyingSuspend => t(
+    'If the account is suspended or deleted, both selling and buying stop.',
+    'Kapag na-suspend o na-delete ang account, titigil ang pagbebenta at pagbili.',
+  );
+  String get turnOnBuying => t('Turn on buying', 'I-on ang pagbili');
+  String get notNow => t('Not now', 'Hindi muna');
+  String get buyingIsOn => t('Buying is on', 'Naka-on na ang pagbili');
+  String get buyingIsOnBody => t(
+    'Use the Selling / Buying switch at the top of the app. Before your first order, send a photo of your ID; COSEL checks it.',
+    'Gamitin ang Nagbebenta / Bumibili sa itaas ng app. Bago ang unang order, magpadala ng larawan ng iyong ID; susuriin ito ng COSEL.',
+  );
+  String get goToBuying => t('Go to buying', 'Pumunta sa pagbili');
+  String get yourListing => t('Your listing', 'Listing mo');
+  String get yourListingBody => t(
+    'This is what buyers see. You can\'t buy, reserve, review or message about your own listing. To change it, switch to Selling.',
+    'Ito ang nakikita ng mga mamimili. Hindi mo mabibili, mare-reserve, mare-review o mapag-uusapan ang sarili mong listing. Para baguhin ito, lumipat sa Nagbebenta.',
+  );
+  String get editInSelling => t('Edit in Selling', 'Baguhin sa Nagbebenta');
+  String get sendIdPhoto => t('Send ID photo', 'Ipadala ang larawan ng ID');
 }

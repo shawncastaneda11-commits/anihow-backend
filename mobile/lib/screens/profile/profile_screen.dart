@@ -28,6 +28,7 @@ import '../auth/seller_info_screen.dart';
 import '../farm/farm_profile_screen.dart';
 import 'online_payment_section.dart';
 import 'settings_screen.dart';
+import 'start_buying_screen.dart';
 import 'verify_email_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -134,11 +135,35 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
         ],
+        if (user.isFarmerSeller && !user.isBuyer) ...[
+          const SizedBox(height: AniHowSpace.cardGap),
+          Card(
+            key: const ValueKey('start-buying-card'),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(s.buyFromOtherFarms, style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 6),
+                  Text(s.buyFromOtherFarmsBody, style: theme.textTheme.bodyMedium),
+                  const SizedBox(height: 10),
+                  OutlinedButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => const StartBuyingScreen()),
+                    ),
+                    child: Text(s.startBuying),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: AniHowSpace.cardGap),
         Card(
           child: Column(
             children: [
-              if (user.isBuyer) ...[
+              if (user.isBuyer && !user.isFarmerSeller) ...[
                 _ProfileLink(
                   icon: Icons.storefront_outlined,
                   label: s.wantToSellOnAnihow,

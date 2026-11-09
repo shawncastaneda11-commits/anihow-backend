@@ -32,6 +32,50 @@ class AuthController extends ChangeNotifier {
 
   late final ApiClient api;
   UserAccount? user;
+
+  /// For a seller who also buys: true while the Buying side is on screen.
+  bool buying = false;
+
+  /// True when the screens on show are the buyer's: a buyer, or a seller who
+  /// also buys on the Buying side.
+  bool get actingAsBuyer {
+    final current = user;
+    if (current == null || !current.isBuyer) {
+      return false;
+    }
+    return !current.isFarmerSeller || buying;
+  }
+
+  /// Switches a seller who also buys between Selling and Buying.
+  void showSide({required bool buying}) {
+    this.buying = buying && (user?.alsoBuys ?? false);
+    _syncSide();
+    notifyListeners();
+  }
+
+  void _syncSide() {
+    final current = user;
+    api.side = current != null && current.alsoBuys ? (buying ? 'buying' : 'selling') : null;
+    if (current == null || !current.alsoBuys) {
+      buying = false;
+    }
+  }
+
+  /// Turns on buying for this farmer-seller. Returns false and sets [error]
+  /// when the server refuses.
+  Future<bool> startBuying() async {
+    error = null;
+    try {
+      user = await api.startBuying();
+      _syncSide();
+      notifyListeners();
+      return true;
+    } on ApiException catch (e) {
+      error = e.message;
+      notifyListeners();
+      return false;
+    }
+  }
   bool restoring = true;
   String? error;
   bool sessionEnded = false;
@@ -176,6 +220,12 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 
+  @override
+  void notifyListeners() {
+    _syncSide();
+    super.notifyListeners();
+  }
+
   void applyAccount(UserAccount next) {
     user = next;
     notifyListeners();
@@ -186,6 +236,7 @@ class AuthController extends ChangeNotifier {
     await api.logout(deviceToken: token);
     PushRuntime.device?.remember(null);
     user = null;
+    buying = false;
     pendingEmailVerification = false;
     pendingVerificationCode = null;
     notifyListeners();

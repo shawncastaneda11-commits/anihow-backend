@@ -96,12 +96,17 @@ class UserAccount {
     this.mustChangePassword = false,
     this.needsTerms = false,
     this.idVerification,
+    this.alsoBuys = false,
   });
 
   final int id;
   final String name;
   final String email;
   final List<String> roles;
+
+  /// A farmer-seller who has turned buying on: one login, a Selling / Buying
+  /// switch at the top of the app.
+  final bool alsoBuys;
   final List<String> permissions;
   final String? phone;
   final String? location;
@@ -144,6 +149,7 @@ class UserAccount {
       mustChangePassword: mustChange ?? mustChangePassword,
       needsTerms: terms ?? needsTerms,
       idVerification: idVerification,
+      alsoBuys: alsoBuys,
     );
   }
 
@@ -174,6 +180,7 @@ class UserAccount {
       mustChangePassword: json['must_change_password'] == true,
       needsTerms: json['needs_terms'] == true,
       idVerification: IdVerificationInfo.fromJson(json['id_verification']),
+      alsoBuys: json['also_buys'] == true,
     );
   }
 
@@ -186,8 +193,9 @@ class UserAccount {
   bool get isVerified => emailVerifiedAt != null && emailVerifiedAt!.isNotEmpty;
   bool get isIdVerified => idVerification?.verified == true;
   bool get mustVerifyIdToOrder => idVerification?.blocksOrders == true;
-  String get roleLabel =>
-      roles.isEmpty ? 'unknown' : roles.first.replaceAll('_', ' ');
+  String get roleLabel => isFarmerSeller
+      ? 'farmer seller'
+      : (roles.isEmpty ? 'unknown' : roles.first.replaceAll('_', ' '));
 }
 
 class AccountDeletionRequest {

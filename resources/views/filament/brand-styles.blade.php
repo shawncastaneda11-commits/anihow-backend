@@ -2001,6 +2001,216 @@
         margin-bottom: 1rem;
     }
 
+    /* ---- Seller analytics ---- */
+    .anihow-table-card {
+        padding: 0;
+        overflow: hidden;
+    }
+
+    .anihow-table-scroll {
+        overflow-x: auto;
+    }
+
+    .anihow-table {
+        width: 100%;
+        min-width: 38rem;
+        border-collapse: collapse;
+        font-size: 0.8125rem;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .anihow-table th {
+        text-align: start;
+        padding: 0.625rem 0.875rem;
+        background: var(--anihow-surface-soft);
+        color: var(--anihow-ink-muted);
+        font-weight: 600;
+    }
+
+    .anihow-table td {
+        padding: 0.75rem 0.875rem;
+        border-top: 1px solid var(--anihow-line-soft);
+        vertical-align: middle;
+        color: var(--anihow-ink);
+    }
+
+    .anihow-table td .anihow-line-title,
+    .anihow-table td .anihow-line-meta {
+        display: block;
+    }
+
+    .anihow-table .anihow-num {
+        text-align: end;
+    }
+
+    .anihow-table-row {
+        cursor: pointer;
+    }
+
+    .anihow-table-row:hover {
+        background: var(--anihow-surface-soft);
+    }
+
+    .anihow-table-row.anihow-row-on {
+        background: #F2F8F4;
+        box-shadow: inset 3px 0 0 var(--anihow-green);
+    }
+
+    .dark .anihow-table-row.anihow-row-on {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .anihow-table-row:focus-visible {
+        outline: 2px solid var(--anihow-green);
+        outline-offset: -2px;
+    }
+
+    .anihow-figures {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.625rem;
+    }
+
+    .anihow-figure {
+        border: 1px solid var(--anihow-line-soft);
+        border-radius: 12px;
+        padding: 0.75rem 0.875rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+    }
+
+    .anihow-figure span,
+    .anihow-figure small {
+        font-size: 0.75rem;
+        color: var(--anihow-ink-muted);
+    }
+
+    .anihow-figure strong {
+        font-size: 1.25rem;
+        font-variant-numeric: tabular-nums;
+        color: var(--anihow-ink);
+    }
+
+    .anihow-figure small.anihow-figure-up {
+        color: var(--anihow-green);
+    }
+
+    .anihow-section-label {
+        margin: 0 0 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--anihow-ink-muted);
+    }
+
+    .anihow-weeks {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.5rem;
+        height: 9rem;
+        align-items: end;
+    }
+
+    .anihow-week {
+        height: 100%;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        gap: 0.25rem;
+        text-align: center;
+    }
+
+    .anihow-week-value,
+    .anihow-week-label {
+        font-size: 0.6875rem;
+        color: var(--anihow-ink-muted);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    .anihow-week-bar {
+        align-self: end;
+        width: 100%;
+        border-radius: 4px 4px 0 0;
+        background: #BFDCC9;
+    }
+
+    .anihow-week-bar.anihow-week-latest {
+        background: #2E7D55;
+    }
+
+    .anihow-bars {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .anihow-bars li {
+        display: grid;
+        grid-template-columns: 7rem 1fr auto;
+        gap: 0.625rem;
+        align-items: center;
+        font-size: 0.8125rem;
+        color: var(--anihow-ink);
+    }
+
+    .anihow-bars strong {
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+    }
+
+    .anihow-bar-track {
+        height: 0.5rem;
+        border-radius: 4px;
+        background: #F1EFE9;
+        overflow: hidden;
+    }
+
+    .anihow-bar-track i {
+        display: block;
+        height: 100%;
+        border-radius: 4px;
+        background: #2E7D55;
+    }
+
+    .anihow-split-bar {
+        display: flex;
+        height: 0.625rem;
+        border-radius: 5px;
+        overflow: hidden;
+        background: #F1EFE9;
+    }
+
+    .anihow-split-bar i {
+        display: block;
+        height: 100%;
+    }
+
+    .anihow-split-app { background: #2E7D55; }
+    .anihow-split-walk { background: #BFDCC9; }
+
+    .anihow-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.875rem;
+        margin: 0.375rem 0 0;
+        font-size: 0.75rem;
+        color: var(--anihow-ink-muted);
+    }
+
+    .anihow-legend i {
+        display: inline-block;
+        width: 0.625rem;
+        height: 0.625rem;
+        border-radius: 3px;
+        margin-inline-end: 0.375rem;
+        vertical-align: -1px;
+    }
+
     /* ---- Listings ---- */
     .anihow-thumb {
         flex-shrink: 0;

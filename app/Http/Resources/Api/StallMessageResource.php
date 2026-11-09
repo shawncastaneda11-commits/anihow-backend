@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api;
 
 use App\Models\StallMessage;
+use App\Support\Accounts\MessageRole;
 use App\Support\ImageVariants;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -34,7 +35,7 @@ class StallMessageResource extends JsonResource
             'author' => [
                 'id' => $author?->id,
                 'name' => $author?->name,
-                'role' => $author?->roles->first()?->name,
+                'role' => MessageRole::for($author, fn () => $this->conversation?->buyer_id ?? $this->order?->buyer_id),
                 'avatar_url' => $author?->avatarUrl(),
             ],
         ];

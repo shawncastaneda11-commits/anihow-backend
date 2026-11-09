@@ -62,7 +62,7 @@
                         <div>
                             <h2 class="anihow-split-name">{{ $account->name }}</h2>
                             <p class="anihow-muted">
-                                {{ collect([\App\Enums\Role::tryFrom((string) $account->getRoleNames()->first())?->label(), $account->created_at ? 'joined '.$account->created_at->format('M j') : null])->filter()->implode(' · ') }}
+                                {{ collect([$account->primaryRole()?->label(), $account->farm?->name, $account->created_at ? 'joined '.$account->created_at->format('M j') : null])->filter()->implode(' · ') }}
                             </p>
                         </div>
                     </div>
@@ -94,6 +94,22 @@
                                 </div>
                                 {{ $this->signOutEverywhereAction }}
                             </div>
+                            @if ($this->canSetBuying())
+                                <div class="anihow-dock-row">
+                                    <div>
+                                        <span class="anihow-dock-row-title">Can also buy</span>
+                                        <span class="anihow-dock-row-hint">
+                                            @if ($account->isBuyer())
+                                                Turned on {{ $account->buying_enabled_at?->format('M j') }}, {{ $account->buying_enabled_via === 'app' ? 'by the seller in the app' : 'by COSEL' }}.
+                                                ID check: {{ $account->id_verified_at ? 'approved' : (($account->latestIdVerification?->status?->label()) ?? 'not sent yet') }}.
+                                            @else
+                                                Off. The seller can also turn it on in the app.
+                                            @endif
+                                        </span>
+                                    </div>
+                                    {{ $account->isBuyer() ? $this->turnOffBuyingAction : $this->turnOnBuyingAction }}
+                                </div>
+                            @endif
                             @if ($account->isActive())
                                 @if ($this->suspendOpenAccountAction->isVisible())
                                     <div class="anihow-dock-row anihow-dock-row-danger">

@@ -12,11 +12,13 @@ use App\Http\Resources\Api\StallConversationResource;
 use App\Http\Resources\Api\StallMessageResource;
 use App\Models\StallConversation;
 use App\Models\User;
+use App\Support\Accounts\AppSide;
 use App\Support\ChatAttachmentLimiter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Validation\ValidationException;
 
 class StallConversationController extends Controller
 {
@@ -25,12 +27,13 @@ class StallConversationController extends Controller
         $this->authorize('viewAny', StallConversation::class);
 
         $user = $request->user();
+        $buying = AppSide::isBuying($user, $request);
         $conversations = StallConversation::query()
             ->whereHas('messages')
-            ->visibleInInbox($user)
+            ->visibleInInbox($user, $buying)
             ->with(['buyer', 'farmerSeller', 'latestMessage', 'latestQuestion'])
             ->when(
-                $user->isBuyer(),
+                $buying,
                 fn ($query) => $query->where('buyer_id', $user->id),
                 fn ($query) => $query->where('farmer_seller_id', $user->id),
             )
@@ -44,6 +47,12 @@ class StallConversationController extends Controller
     {
         $seller = User::query()->findOrFail($request->integer('farmer_seller_id'));
         abort_unless($seller->isFarmerSeller() && $seller->isActive(), 404);
+
+        if ($seller->is($request->user())) {
+            throw ValidationException::withMessages([
+                'farmer_seller_id' => 'This is your own stall. Switch to Selling to answer buyers.',
+            ]);
+        }
 
         $conversation = StallConversation::query()->firstOrCreate([
             'buyer_id' => $request->user()->id,

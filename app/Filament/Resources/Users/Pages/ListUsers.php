@@ -230,6 +230,7 @@ class ListUsers extends ListRecords
         $data = $this->accountForm->getState();
 
         $record->update($data);
+        $record->keepBuyingInStep();
         ActivityRecorder::roleChanged($record, $rolesBefore, $record->load('roles')->getRoleNames()->values()->all());
 
         Notification::make()->title('Saved.')->success()->send();
@@ -286,6 +287,63 @@ class ListUsers extends ListRecords
             ->link()
             ->record(fn (): ?User => $this->openRecord())
             ->after(fn () => $this->openAccount((int) $this->openId));
+    }
+
+    /**
+     * "Can also buy": COSEL turns buying on or off for a farmer-seller. The
+     * seller can also turn it on in the app.
+     */
+    public function canSetBuying(): bool
+    {
+        $record = $this->openRecord();
+
+        return $record !== null
+            && $record->isFarmerSeller()
+            && AccountAuthority::managesPeople(auth()->user())
+            && AccountAuthority::canManageOther(auth()->user(), $record);
+    }
+
+    public function turnOnBuyingAction(): Action
+    {
+        return Action::make('turnOnBuying')
+            ->label('Turn on')
+            ->link()
+            ->requiresConfirmation()
+            ->modalHeading('Let this seller also buy?')
+            ->modalDescription('They keep one login and switch between Selling and Buying in the app. Like any buyer, they send an ID before their first order. They cannot buy their own listings.')
+            ->visible(fn (): bool => $this->canSetBuying() && ! $this->openRecord()?->isBuyer())
+            ->action(function (): void {
+                $record = $this->openRecord();
+                abort_unless($record !== null && $this->canSetBuying(), 403);
+
+                $record->turnOnBuying('cms');
+                ActivityRecorder::note('buying_turned_on', $record, ['via' => 'cms']);
+
+                Notification::make()->title('Buying turned on.')->success()->send();
+                $this->openAccount($record->getKey());
+            });
+    }
+
+    public function turnOffBuyingAction(): Action
+    {
+        return Action::make('turnOffBuying')
+            ->label('Turn off')
+            ->link()
+            ->color('danger')
+            ->requiresConfirmation()
+            ->modalHeading('Turn off buying?')
+            ->modalDescription('This ends buying only. Their open orders as a buyer stay as they are, and selling is not affected.')
+            ->visible(fn (): bool => $this->canSetBuying() && (bool) $this->openRecord()?->isBuyer())
+            ->action(function (): void {
+                $record = $this->openRecord();
+                abort_unless($record !== null && $this->canSetBuying(), 403);
+
+                $record->turnOffBuying();
+                ActivityRecorder::note('buying_turned_off', $record);
+
+                Notification::make()->title('Buying turned off.')->success()->send();
+                $this->openAccount($record->getKey());
+            });
     }
 
     public function liftSuspensionAction(): Action
@@ -374,7 +432,9 @@ class ListUsers extends ListRecords
         $tabs = [
             'all' => ['All', fn (Builder $query): Builder => $query],
             'sellers' => ['Farmer-sellers', $role(Role::FarmerSeller)],
-            'buyers' => ['Buyers', $role(Role::Buyer)],
+            // Buyer-only accounts; a farmer-seller who also buys stays a seller.
+            'buyers' => ['Buyers', fn (Builder $query): Builder => $role(Role::Buyer)($query)
+                ->whereDoesntHave('roles', fn (Builder $roles): Builder => $roles->where('name', Role::FarmerSeller->value))],
             'editors' => ['Content Editors', $role(Role::ContentEditor)],
             'suspended' => ['Suspended', fn (Builder $query): Builder => $query->where('status', UserStatus::Suspended)],
         ];

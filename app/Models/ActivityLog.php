@@ -36,6 +36,8 @@ class ActivityLog extends Model
         'deleted' => 'Deleted',
         'role_changed' => 'Role changed',
         'signed_out_everywhere' => 'Signed out everywhere',
+        'buying_turned_on' => 'Buying turned on',
+        'buying_turned_off' => 'Buying turned off',
         'two_step_turned_off' => 'Two-step sign-in turned off',
         'retried_failed_jobs' => 'Retried failed jobs',
         'announced' => 'Announced',

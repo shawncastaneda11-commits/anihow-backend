@@ -59,6 +59,12 @@ class CartController extends Controller
             abort(404);
         }
 
+        if ((int) $listing->farmer_seller_id === (int) $request->user()->id) {
+            throw ValidationException::withMessages([
+                'listing_id' => 'This is your own listing. You can\'t buy it; switch to Selling to change it.',
+            ]);
+        }
+
         if (! Listing::query()->allowedByFarmFeatures()->whereKey($listing->id)->exists()) {
             throw ValidationException::withMessages([
                 'listing_id' => "{$listing->title} is no longer available.",

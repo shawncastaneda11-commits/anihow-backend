@@ -38,7 +38,7 @@ class EditUser extends EditRecord
         }
 
         return collect([
-            Role::tryFrom((string) $record->getRoleNames()->first())?->label(),
+            $record->primaryRole()?->label().($record->alsoBuys() ? ' who also buys' : ''),
             $record->farm?->name,
             $record->created_at ? 'joined '.$record->created_at->format('M j, Y') : null,
         ])->filter()->implode(' · ');
@@ -125,6 +125,7 @@ class EditUser extends EditRecord
         $record = $this->getRecord();
 
         if ($record instanceof User) {
+            $record->keepBuyingInStep();
             ActivityRecorder::roleChanged($record, $this->rolesBeforeSave, $record->load('roles')->getRoleNames()->values()->all());
         }
 

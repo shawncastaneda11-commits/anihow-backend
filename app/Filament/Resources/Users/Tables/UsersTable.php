@@ -30,7 +30,9 @@ class UsersTable
                     ->sortable(),
                 TextColumn::make('role')
                     ->label('Role')
-                    ->state(fn (User $record): string => Role::tryFrom((string) $record->getRoleNames()->first())?->label() ?? '—'),
+                    ->state(fn (User $record): string => $record->primaryRole()?->label() ?? '—')
+                    // A farmer-seller who has turned buying on.
+                    ->description(fn (User $record): ?string => $record->alsoBuys() ? 'Also buys' : null),
                 TextColumn::make('farm.name')
                     ->label('Farm')
                     ->color('gray')

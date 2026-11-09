@@ -80,6 +80,15 @@ class CheckoutService
                 ->filter(fn (CartItem $item): bool => $item->listing !== null)
                 ->values();
 
+            // A seller who also buys never orders from their own stall.
+            $own = $cartItems->first(fn (CartItem $item): bool => (int) $item->listing->farmer_seller_id === (int) $buyer->id);
+
+            if ($own !== null) {
+                throw ValidationException::withMessages([
+                    'cart' => "{$own->listing->title} is your own listing. Remove it from your cart to check out.",
+                ]);
+            }
+
             $upcoming = $cartItems->first(
                 fn (CartItem $item): bool => $item->listing->isUpcoming(),
             );

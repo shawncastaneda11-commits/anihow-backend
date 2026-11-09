@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\Auth\MeController;
 use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\Auth\ResendVerificationController;
 use App\Http\Controllers\Api\Auth\ResetPasswordController;
+use App\Http\Controllers\Api\Auth\StartBuyingController;
 use App\Http\Controllers\Api\Auth\StoreUserAvatarController;
 use App\Http\Controllers\Api\Auth\UpdateProfileController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
@@ -127,6 +128,9 @@ Route::middleware(['auth:sanctum', 'account.active', 'password.changed'])->group
     Route::get('crop-care', [CropCareArticleController::class, 'index'])->name('crop-care.index');
     Route::get('crop-care/{cropCareArticle}', [CropCareArticleController::class, 'show'])
         ->name('crop-care.show');
+
+    // A farmer-seller turns on buying with the same account.
+    Route::post('me/buying', StartBuyingController::class)->name('me.buying.store');
 
     Route::post('me/device-tokens', [DeviceTokenController::class, 'store'])->name('me.device-tokens.store');
     Route::delete('me/device-tokens', [DeviceTokenController::class, 'destroy'])->name('me.device-tokens.destroy');

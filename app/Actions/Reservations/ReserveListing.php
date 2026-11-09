@@ -55,6 +55,12 @@ class ReserveListing
                 abort(404);
             }
 
+            if ((int) $listing->farmer_seller_id === (int) $buyer->id) {
+                throw ValidationException::withMessages([
+                    'listing_id' => 'This is your own listing. You can\'t reserve it.',
+                ]);
+            }
+
             $existing = Reservation::query()
                 ->where('buyer_id', $buyer->id)
                 ->where('listing_id', $listing->id)

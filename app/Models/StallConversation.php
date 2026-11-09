@@ -121,9 +121,9 @@ class StallConversation extends Model
      * @param  Builder<StallConversation>  $query
      * @return Builder<StallConversation>
      */
-    public function scopeVisibleInInbox(Builder $query, User $user): Builder
+    public function scopeVisibleInInbox(Builder $query, User $user, ?bool $buying = null): Builder
     {
-        $column = $user->isBuyer()
+        $column = ($buying ?? ($user->isBuyer() && ! $user->isFarmerSeller()))
             ? 'buyer_cleared_through_message_id'
             : 'farmer_seller_cleared_through_message_id';
 

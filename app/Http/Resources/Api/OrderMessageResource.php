@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api;
 
 use App\Models\StallMessage;
+use App\Support\Accounts\MessageRole;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,7 +24,7 @@ class OrderMessageResource extends JsonResource
             'author' => [
                 'id' => $author?->id,
                 'name' => $author?->name,
-                'role' => $author?->roles->first()?->name,
+                'role' => MessageRole::for($author, fn () => $this->order?->buyer_id),
                 'avatar_url' => $author?->avatarUrl(),
             ],
         ];

@@ -97,7 +97,7 @@ class UserForm
                     ->schema([
                         TextEntry::make('summary_role')
                             ->label('Role')
-                            ->state(fn (User $record): string => Role::tryFrom((string) $record->getRoleNames()->first())?->label() ?? '—'),
+                            ->state(fn (User $record): string => ($record->primaryRole()?->label() ?? '—').($record->alsoBuys() ? ', also buys' : '')),
                         TextEntry::make('summary_joined')
                             ->label('Joined')
                             ->state(fn (User $record): string => $record->created_at?->format('M j, Y') ?? '—'),
@@ -140,9 +140,16 @@ class UserForm
             ->native(false)
             ->preload()
             ->live()
+            // A seller who also buys holds the buyer role beside it; the field
+            // shows the seller role, and saving keeps buying (keepBuyingInStep).
+            ->afterStateHydrated(function (Select $component, ?User $record): void {
+                if ($record?->alsoBuys()) {
+                    $component->state(RoleModel::query()->where('name', Role::FarmerSeller->value)->value('id'));
+                }
+            })
             ->visible(fn (?User $record): bool => self::managesOtherAccount($record))
             ->dehydrated(fn (?User $record): bool => self::managesOtherAccount($record))
-            ->helperText('One account holds one role.');
+            ->helperText('One account holds one role. A farmer-seller can also buy.');
     }
 
     /**

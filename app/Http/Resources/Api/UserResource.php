@@ -29,6 +29,9 @@ class UserResource extends JsonResource
             'terms_accepted_at' => $this->terms_accepted_at,
             'id_verification' => $this->idVerificationSummary(),
             'roles' => $this->whenLoaded('roles', fn () => $this->roles->pluck('name')->values()),
+            // A farmer-seller who also buys: the app shows its Selling / Buying switch.
+            'also_buys' => $this->alsoBuys(),
+            'buying_enabled_at' => $this->buying_enabled_at?->toIso8601String(),
             'farm' => $this->whenLoaded(
                 'farm',
                 fn (): ?array => $this->farm === null

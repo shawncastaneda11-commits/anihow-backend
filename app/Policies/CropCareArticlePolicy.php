@@ -33,7 +33,7 @@ class CropCareArticlePolicy
             return true;
         }
 
-        return $article->isPublished() && ! $user->isBuyer();
+        return $article->isPublished() && ($user->isFarmerSeller() || ! $user->isBuyer());
     }
 
     public function create(User $user): bool

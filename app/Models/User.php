@@ -65,6 +65,8 @@ use Spatie\Permission\Traits\HasRoles;
     'terms_accepted_at',
     'terms_version',
     'requires_id_verification',
+    'buying_enabled_at',
+    'buying_enabled_via',
     'id_verified_at',
 ])]
 #[Hidden(['password', 'remember_token'])]
@@ -111,6 +113,7 @@ class User extends Authenticatable implements FilamentUser, HasEmailAuthenticati
             'terms_accepted_at' => 'datetime',
             'terms_version' => 'integer',
             'requires_id_verification' => 'boolean',
+            'buying_enabled_at' => 'datetime',
             'id_verified_at' => 'datetime',
         ];
     }
@@ -356,6 +359,88 @@ class User extends Authenticatable implements FilamentUser, HasEmailAuthenticati
     public function isBuyer(): bool
     {
         return $this->hasRole(Role::Buyer);
+    }
+
+    /**
+     * A farmer-seller who has turned buying on: one account, both sides.
+     */
+    public function alsoBuys(): bool
+    {
+        return $this->isFarmerSeller() && $this->isBuyer();
+    }
+
+    /**
+     * The role an account is known by, for an account that holds the buyer
+     * role beside another (a farmer-seller who also buys).
+     */
+    public function primaryRole(): ?Role
+    {
+        $names = $this->getRoleNames();
+
+        foreach ([Role::SuperAdmin, Role::AccountManager, Role::ContentEditor, Role::FarmerSeller, Role::Buyer] as $role) {
+            if ($names->contains($role->value)) {
+                return $role;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Lets a farmer-seller buy with the same account. Like any new buyer,
+     * they send an ID before their first order. $via is "app" when the
+     * seller turned it on, "cms" when COSEL did.
+     */
+    public function turnOnBuying(string $via): void
+    {
+        if (! $this->isFarmerSeller() || $this->isBuyer()) {
+            return;
+        }
+
+        $this->assignRole(Role::Buyer);
+        $this->forceFill([
+            'buying_enabled_at' => now(),
+            'buying_enabled_via' => $via,
+            'requires_id_verification' => $this->id_verified_at === null ? true : $this->requires_id_verification,
+        ])->save();
+    }
+
+    /**
+     * Ends buying only. Orders already placed as a buyer stay as they are,
+     * and selling is not affected.
+     */
+    public function turnOffBuying(): void
+    {
+        if (! $this->isFarmerSeller()) {
+            return;
+        }
+
+        $this->removeRole(Role::Buyer);
+        $this->forceFill(['buying_enabled_at' => null, 'buying_enabled_via' => null])->save();
+    }
+
+    /**
+     * After the CMS saves an account's role (which replaces its roles with
+     * the one chosen), puts back the buyer role of a farmer-seller who also
+     * buys, and forgets buying for an account that is no longer a seller.
+     */
+    public function keepBuyingInStep(): void
+    {
+        $this->unsetRelation('roles');
+
+        if ($this->buying_enabled_at === null) {
+            return;
+        }
+
+        if ($this->isFarmerSeller()) {
+            if (! $this->isBuyer()) {
+                $this->assignRole(Role::Buyer);
+            }
+
+            return;
+        }
+
+        $this->forceFill(['buying_enabled_at' => null, 'buying_enabled_via' => null])->save();
     }
 
     public function isActive(): bool

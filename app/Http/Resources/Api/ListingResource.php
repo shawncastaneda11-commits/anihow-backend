@@ -36,6 +36,8 @@ class ListingResource extends JsonResource
                 fn (): int => (int) ($this->active_reservations_count ?? 0),
             ),
             'is_active' => $this->is_active,
+            // A seller who also buys sees their own listings in the market but cannot buy them.
+            'is_own' => $request->user() !== null && (int) $this->farmer_seller_id === (int) $request->user()->id,
             'status' => $this->status->value,
             'available_from' => $this->available_from?->toIso8601String(),
             'available_until' => $this->available_until?->toIso8601String(),

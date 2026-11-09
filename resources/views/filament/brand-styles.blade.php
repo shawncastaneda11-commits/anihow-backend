@@ -1059,4 +1059,286 @@
         font-size: 0.8125rem;
         color: var(--anihow-ink-muted);
     }
+
+    /* ---- Split screens: a list on the left, its panel open beside it ---- */
+    .anihow-split {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 0;
+        border: 1px solid var(--anihow-line);
+        border-radius: 14px;
+        overflow: hidden;
+        background: var(--anihow-surface);
+        min-height: 32rem;
+    }
+
+    .anihow-split-list {
+        flex: 1 1 18rem;
+        max-width: 22rem;
+        align-self: stretch;
+        box-sizing: border-box;
+        background: var(--anihow-surface-soft);
+        border-inline-end: 1px solid var(--anihow-line);
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.625rem;
+    }
+
+    .anihow-split-panel {
+        flex: 999 1 28rem;
+        min-width: 0;
+        box-sizing: border-box;
+        padding: 1.5rem 1.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .anihow-split-tabs {
+        display: flex;
+        gap: 0.375rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.25rem;
+    }
+
+    .anihow-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        min-height: 2rem;
+        padding: 0 0.75rem;
+        border-radius: 999px;
+        border: 1px solid #DDD8CC;
+        background: var(--anihow-surface);
+        color: var(--anihow-ink);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .anihow-chip-on {
+        background: var(--anihow-green);
+        border-color: var(--anihow-green);
+        color: #FFFFFF;
+    }
+
+    .anihow-chip-count {
+        font-size: 0.6875rem;
+        padding: 0 0.375rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.22);
+    }
+
+    .anihow-chip:not(.anihow-chip-on) .anihow-chip-count {
+        background: #F1EFE9;
+        color: var(--anihow-ink-muted);
+    }
+
+    .anihow-split-item {
+        text-align: start;
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+        padding: 0.75rem 0.875rem;
+        border-radius: 12px;
+        border: 1px solid var(--anihow-line);
+        background: var(--anihow-surface);
+        cursor: pointer;
+    }
+
+    .anihow-split-item:hover {
+        border-color: var(--anihow-green);
+    }
+
+    .anihow-split-item-on {
+        border: 2px solid var(--anihow-green);
+        padding: calc(0.75rem - 1px) calc(0.875rem - 1px);
+    }
+
+    .anihow-split-item-title {
+        font-weight: 600;
+        color: var(--anihow-ink);
+    }
+
+    .anihow-split-item-meta {
+        font-size: 0.75rem;
+        color: var(--anihow-ink-muted);
+    }
+
+    .anihow-split-empty {
+        padding: 0.5rem 0.25rem;
+    }
+
+    .anihow-split-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .anihow-split-name {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--anihow-ink);
+    }
+
+    .anihow-pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 1.75rem;
+        padding: 0 0.75rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .anihow-pill-wait { background: #FFF1D6; color: #7A4A00; }
+    .anihow-pill-ok { background: #E3EFE7; color: #1F5A3E; }
+    .anihow-pill-no { background: #FBEAE3; color: #9A3412; }
+
+    .anihow-id-photos {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+        gap: 0.875rem;
+    }
+
+    .anihow-id-photo {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .anihow-id-photo-frame {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        aspect-ratio: 1.58;
+        border-radius: 14px;
+        overflow: hidden;
+        background: repeating-linear-gradient(135deg, #ECE8DE 0 12px, #E4DFD3 12px 24px);
+    }
+
+    .anihow-id-photo-frame img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background: #1E2421;
+    }
+
+    .anihow-id-photo-missing {
+        color: var(--anihow-ink-muted);
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .anihow-id-facts {
+        margin: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+        gap: 0.75rem;
+        padding: 1rem 1.125rem;
+        border: 1px solid var(--anihow-line);
+        border-radius: 14px;
+    }
+
+    .anihow-id-facts dt {
+        font-size: 0.75rem;
+        color: var(--anihow-ink-muted);
+    }
+
+    .anihow-id-facts dd {
+        margin: 0;
+        font-weight: 600;
+        color: var(--anihow-ink);
+    }
+
+    .anihow-id-actions {
+        display: flex;
+        gap: 0.625rem;
+        flex-wrap: wrap;
+    }
+
+    .anihow-id-actions-end {
+        justify-content: flex-end;
+    }
+
+    .anihow-btn {
+        min-height: 2.875rem;
+        padding: 0 1.125rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        cursor: pointer;
+        border: 0;
+    }
+
+    .anihow-btn-primary {
+        flex: 2 1 15rem;
+        background: var(--anihow-green);
+        color: #FFFFFF;
+    }
+
+    .anihow-btn-primary:hover { background: #163F2C; }
+
+    .anihow-btn-quiet {
+        background: var(--anihow-surface);
+        color: var(--anihow-ink);
+        border: 1px solid #DDD8CC;
+    }
+
+    .anihow-btn-reject {
+        flex: 1 1 10rem;
+        color: #9A3412;
+    }
+
+    .anihow-btn-danger {
+        background: #9A3412;
+        color: #FFFFFF;
+    }
+
+    .anihow-id-reject {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 1rem 1.125rem;
+        border: 1px solid var(--anihow-line);
+        border-radius: 14px;
+    }
+
+    .anihow-field-label {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--anihow-ink);
+    }
+
+    .anihow-input {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #DDD8CC;
+        border-radius: 10px;
+        padding: 0.625rem 0.75rem;
+        font: inherit;
+        background: var(--anihow-surface);
+        color: var(--anihow-ink);
+    }
+
+    .anihow-error {
+        margin: 0;
+        font-size: 0.8125rem;
+        color: #9A3412;
+    }
+
+    .anihow-split button:focus-visible,
+    .anihow-split a:focus-visible,
+    .anihow-split select:focus-visible,
+    .anihow-split textarea:focus-visible {
+        outline: 2px solid var(--anihow-green);
+        outline-offset: 2px;
+    }
 </style>

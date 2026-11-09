@@ -122,23 +122,38 @@ class CmsWorkScreensTest extends TestCase
             ->assertCanNotSeeTableRecords([$fine]);
     }
 
-    public function test_cosel_rejects_an_id_from_the_review_panel(): void
+    public function test_cosel_works_through_the_id_queue_oldest_first(): void
     {
         $cosel = $this->staff(Role::AccountManager);
+        $older = $this->pendingId(now()->subDay());
+        $newer = $this->pendingId(now());
+
+        Livewire::actingAs($cosel)
+            ->test(ListIdVerifications::class)
+            ->assertSet('selectedId', $older->id)
+            ->call('approve')
+            ->assertSet('selectedId', $newer->id)
+            ->call('startReject')
+            ->set('reason', 'expired')
+            ->call('reject')
+            ->assertHasNoErrors()
+            ->assertSet('selectedId', null);
+
+        $this->assertSame(IdVerificationStatus::Approved, $older->fresh()->status);
+        $this->assertSame(IdVerificationStatus::Rejected, $newer->fresh()->status);
+    }
+
+    private function pendingId(\DateTimeInterface $sentAt): IdVerification
+    {
         $verification = IdVerification::query()->create([
             'user_id' => $this->buyer()->id,
             'id_type' => IdDocumentType::NationalId,
             'status' => IdVerificationStatus::Pending,
             'consented_at' => now(),
         ]);
+        $verification->forceFill(['created_at' => $sentAt])->saveQuietly();
 
-        Livewire::actingAs($cosel)
-            ->test(ListIdVerifications::class)
-            ->assertCanSeeTableRecords([$verification])
-            ->callTableAction('review', $verification, data: ['decision' => 'reject', 'reason' => 'expired'])
-            ->assertHasNoTableActionErrors();
-
-        $this->assertSame(IdVerificationStatus::Rejected, $verification->fresh()->status);
+        return $verification;
     }
 
     public function test_the_account_panel_signs_a_person_out_everywhere(): void

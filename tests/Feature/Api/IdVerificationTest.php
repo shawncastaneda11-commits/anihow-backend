@@ -212,13 +212,15 @@ class IdVerificationTest extends TestCase
         Livewire::actingAs($admin);
 
         Livewire::test(ListIdVerifications::class)
-            ->assertCanSeeTableRecords([$verification])
-            ->callTableAction('reject', $verification, data: ['reason' => 'other', 'note' => ''])
-            ->assertHasTableActionErrors(['note' => 'required']);
-
-        Livewire::test(ListIdVerifications::class)
-            ->callTableAction('reject', $verification, data: ['reason' => 'expired', 'note' => ''])
-            ->assertHasNoTableActionErrors();
+            ->assertSet('selectedId', $verification->id)
+            ->call('startReject')
+            ->set('reason', 'other')
+            ->set('note', '')
+            ->call('reject')
+            ->assertHasErrors(['note'])
+            ->set('reason', 'expired')
+            ->call('reject')
+            ->assertHasNoErrors();
 
         $this->assertSame(IdVerificationsTable::REJECTION_REASONS['expired'], $verification->fresh()->rejection_reason);
     }

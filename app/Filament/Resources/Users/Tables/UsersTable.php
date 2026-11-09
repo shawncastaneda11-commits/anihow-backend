@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Support\Accounts\AccountAuthority;
 use App\Support\ActivityRecorder;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -62,7 +63,7 @@ class UsersTable
                         UserStatus::Suspended => 'danger',
                     }),
                 TextColumn::make('phone')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
                     ->label('Joined')
                     ->date('M j, Y')
@@ -86,51 +87,54 @@ class UsersTable
                     ->relationship('farm', 'name')
                     ->visible(fn (): bool => auth()->user()?->can(Permission::ManageAccounts->value) ?? false),
             ])
+            // One "⋯" menu per row; clicking the row opens its panel.
             ->recordActions([
-                self::accountPanel(),
-                Action::make('suspend')
-                    ->icon('heroicon-o-no-symbol')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->visible(fn (User $record): bool => $record->isActive()
-                        && (auth()->user()?->can('suspend', $record) ?? false))
-                    ->form(function (User $record): array {
-                        $waiting = $record->unsettledPaymentOrderCount();
-                        $fields = [];
+                ActionGroup::make([
+                    self::accountPanel(),
+                    Action::make('suspend')
+                        ->icon('heroicon-o-no-symbol')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->visible(fn (User $record): bool => $record->isActive()
+                            && (auth()->user()?->can('suspend', $record) ?? false))
+                        ->form(function (User $record): array {
+                            $waiting = $record->unsettledPaymentOrderCount();
+                            $fields = [];
 
-                        if ($waiting > 0) {
-                            $fields[] = Placeholder::make('open_payments')
-                                ->label('Open payments')
-                                ->content("This seller has {$waiting} orders waiting on a payment or a refund. Suspending does not change them.");
-                            $fields[] = Checkbox::make('confirm_open_payments')
-                                ->label('I understand these orders stay as they are')
-                                ->accepted()
-                                ->required();
-                        }
+                            if ($waiting > 0) {
+                                $fields[] = Placeholder::make('open_payments')
+                                    ->label('Open payments')
+                                    ->content("This seller has {$waiting} orders waiting on a payment or a refund. Suspending does not change them.");
+                                $fields[] = Checkbox::make('confirm_open_payments')
+                                    ->label('I understand these orders stay as they are')
+                                    ->accepted()
+                                    ->required();
+                            }
 
-                        $fields[] = TextInput::make('suspension_reason')
-                            ->required()
-                            ->maxLength(255);
+                            $fields[] = TextInput::make('suspension_reason')
+                                ->required()
+                                ->maxLength(255);
 
-                        return $fields;
-                    })
-                    ->action(function (User $record, array $data): void {
-                        $record->update([
-                            'status' => UserStatus::Suspended,
-                            'suspended_at' => now(),
-                            'suspension_reason' => $data['suspension_reason'],
-                        ]);
+                            return $fields;
+                        })
+                        ->action(function (User $record, array $data): void {
+                            $record->update([
+                                'status' => UserStatus::Suspended,
+                                'suspended_at' => now(),
+                                'suspension_reason' => $data['suspension_reason'],
+                            ]);
 
-                        app(CancelReservation::class)->forSeller(
-                            $record,
-                            ReservationCancellationReason::ListingRemoved,
-                        );
-                    }),
-                ViewAction::make()
-                    ->visible(fn (User $record): bool => ! (auth()->user()?->can('update', $record) ?? false)),
-                EditAction::make(),
-                DeleteAction::make()
-                    ->visible(fn (User $record): bool => auth()->user()?->can('delete', $record) ?? false),
+                            app(CancelReservation::class)->forSeller(
+                                $record,
+                                ReservationCancellationReason::ListingRemoved,
+                            );
+                        }),
+                    ViewAction::make()
+                        ->visible(fn (User $record): bool => ! (auth()->user()?->can('update', $record) ?? false)),
+                    EditAction::make(),
+                    DeleteAction::make()
+                        ->visible(fn (User $record): bool => auth()->user()?->can('delete', $record) ?? false),
+                ])->tooltip('More'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

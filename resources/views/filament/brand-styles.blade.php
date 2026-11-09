@@ -832,4 +832,167 @@
             display: none;
         }
     }
+
+    /* ---- Shell, to match the mockups ---- */
+
+    /* Brand block: leaf mark, "AniHow", and the office under it. */
+    .anihow-brand-panel {
+        gap: 0.625rem;
+        text-align: start;
+    }
+
+    .anihow-brand-panel img.anihow-mark {
+        height: 2.5rem;
+    }
+
+    .anihow-brand-text {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.2;
+    }
+
+    .anihow-brand-name {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--anihow-ink);
+    }
+
+    .anihow-brand-office {
+        font-size: 0.75rem;
+        color: var(--anihow-ink-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 11.5rem;
+    }
+
+    /* Sidebar: white, flat group labels, compact items. */
+    .fi-sidebar-nav-groups {
+        gap: 1.125rem !important;
+    }
+
+    .fi-sidebar-group-btn {
+        padding: 0 0.625rem 0.25rem !important;
+        min-height: 0 !important;
+    }
+
+    .fi-sidebar-group-label {
+        font-size: 0.6875rem !important;
+        letter-spacing: 0.06em;
+        color: var(--anihow-ink-muted) !important;
+    }
+
+    .fi-sidebar-group-items {
+        gap: 0.125rem !important;
+    }
+
+    .fi-sidebar-item-btn {
+        min-height: 2.25rem;
+        padding: 0.375rem 0.625rem !important;
+        border-radius: 8px !important;
+        gap: 0.625rem !important;
+    }
+
+    .fi-sidebar-item-label {
+        font-size: 0.875rem !important;
+        font-weight: 500 !important;
+        color: var(--anihow-ink);
+    }
+
+    .fi-sidebar-item-icon {
+        width: 1.125rem !important;
+        height: 1.125rem !important;
+        color: var(--anihow-ink-muted) !important;
+    }
+
+    .fi-sidebar-item.fi-active .fi-sidebar-item-label,
+    .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
+        color: var(--anihow-green) !important;
+        font-weight: 600 !important;
+    }
+
+    .fi-sidebar-item-badge-ctn .fi-badge {
+        background: #B45309 !important;
+        color: #FFFFFF !important;
+        --tw-ring-color: transparent !important;
+    }
+
+    /* Page header: a plain title with a description line. */
+    .fi-header-heading {
+        font-size: 1.5rem !important;
+        line-height: 1.25 !important;
+        font-weight: 700 !important;
+        letter-spacing: 0 !important;
+    }
+
+    .fi-header-subheading {
+        font-size: 0.875rem !important;
+        color: var(--anihow-ink-muted) !important;
+        margin-top: 0.25rem !important;
+    }
+
+    /* Tabs: left-aligned chips with counts. */
+    .fi-tabs:not(.fi-vertical) {
+        justify-content: flex-start !important;
+        margin-inline: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        --tw-ring-color: transparent !important;
+        padding: 0 !important;
+        gap: 0.5rem !important;
+        flex-wrap: wrap;
+    }
+
+    .fi-tabs:not(.fi-vertical) .fi-tabs-item {
+        min-height: 2rem;
+        padding: 0 0.75rem !important;
+        border-radius: 999px !important;
+        border: 1px solid #DDD8CC;
+        background: var(--anihow-surface);
+        font-size: 0.8125rem;
+        font-weight: 600;
+    }
+
+    .fi-tabs:not(.fi-vertical) .fi-tabs-item.fi-active {
+        background: var(--anihow-green) !important;
+        border-color: var(--anihow-green);
+    }
+
+    .fi-tabs:not(.fi-vertical) .fi-tabs-item.fi-active .fi-tabs-item-label {
+        color: #FFFFFF !important;
+    }
+
+    .dark .fi-tabs:not(.fi-vertical) .fi-tabs-item {
+        border-color: var(--anihow-line);
+    }
+
+    .dark .fi-tabs:not(.fi-vertical) .fi-tabs-item.fi-active .fi-tabs-item-label {
+        color: var(--gray-950) !important;
+    }
+
+    /* Status pills. */
+    .fi-badge {
+        border-radius: 999px !important;
+        font-weight: 600 !important;
+    }
+
+    /* Tables: soft header row, clickable rows. */
+    html:not(.dark) .fi-ta-header-cell {
+        background: var(--anihow-surface-soft);
+    }
+
+    .fi-ta-header-cell {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--anihow-ink-muted);
+    }
+
+    html:not(.dark) .fi-ta-row.fi-clickable:hover,
+    html:not(.dark) .fi-ta-row:hover {
+        background: var(--anihow-surface-soft);
+    }
+
+    .fi-ta-row td {
+        border-color: var(--anihow-line-soft);
+    }
 </style>

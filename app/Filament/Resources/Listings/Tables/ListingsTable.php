@@ -12,6 +12,7 @@ use App\Models\Listing;
 use App\Support\InAppNotifier;
 use App\Support\Pricing\UnitConverter;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Textarea;
@@ -199,68 +200,71 @@ class ListingsTable
                         fn (Builder $cropType): Builder => $cropType->whereRaw(self::belowFloorSql()),
                     )),
             ])
+            // One "⋯" menu per row; clicking the row opens its panel.
             ->recordActions([
-                ViewAction::make(),
-                ...FarmListingActions::make(),
+                ActionGroup::make([
+                    ViewAction::make(),
+                    ...FarmListingActions::make(),
 
-                /*
-                 * The Super Admin's only write power over a listing. The seller
-                 * is notified, because a listing that vanishes with no reason
-                 * is worse than one taken down with one.
-                 */
-                Action::make('takedown')
-                    ->icon('heroicon-o-eye-slash')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->visible(fn (Listing $record): bool => $record->status === ListingStatus::Published
-                        && (auth()->user()?->can('takedown', $record) ?? false))
-                    ->modalDescription(fn (Listing $record): ?string => collect([
-                        app(GuardListingReservationCancellation::class)->warning($record),
-                        app(GuardListingOpenOrders::class)->warning($record),
-                    ])->filter()->implode(' ') ?: null)
-                    ->schema([
-                        Textarea::make('takedown_reason')
-                            ->label('Reason')
-                            ->required()
-                            ->rows(2)
-                            ->helperText('Shown to the seller.'),
-                        Checkbox::make('confirm_cancel_reservations')
-                            ->label('I understand the reservations will be cancelled')
-                            ->visible(fn (Listing $record): bool => app(GuardListingReservationCancellation::class)->describe($record) !== null)
-                            ->required(fn (Listing $record): bool => app(GuardListingReservationCancellation::class)->describe($record) !== null)
-                            ->accepted(fn (Listing $record): bool => app(GuardListingReservationCancellation::class)->describe($record) !== null),
-                        Checkbox::make('confirm_open_orders')
-                            ->label('I understand the placed orders will be cancelled')
-                            ->visible(fn (Listing $record): bool => app(GuardListingOpenOrders::class)->describe($record) !== null)
-                            ->required(fn (Listing $record): bool => app(GuardListingOpenOrders::class)->describe($record) !== null)
-                            ->accepted(fn (Listing $record): bool => app(GuardListingOpenOrders::class)->describe($record) !== null),
-                    ])
-                    ->action(function (Listing $record, array $data): void {
-                        app(TakeDownListingAction::class)->handle(
-                            $record,
-                            auth()->user(),
-                            $data['takedown_reason'],
-                            (bool) ($data['confirm_cancel_reservations'] ?? false),
-                            (bool) ($data['confirm_open_orders'] ?? false),
-                        );
-                    }),
+                    /*
+                     * The Super Admin's only write power over a listing. The seller
+                     * is notified, because a listing that vanishes with no reason
+                     * is worse than one taken down with one.
+                     */
+                    Action::make('takedown')
+                        ->icon('heroicon-o-eye-slash')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->visible(fn (Listing $record): bool => $record->status === ListingStatus::Published
+                            && (auth()->user()?->can('takedown', $record) ?? false))
+                        ->modalDescription(fn (Listing $record): ?string => collect([
+                            app(GuardListingReservationCancellation::class)->warning($record),
+                            app(GuardListingOpenOrders::class)->warning($record),
+                        ])->filter()->implode(' ') ?: null)
+                        ->schema([
+                            Textarea::make('takedown_reason')
+                                ->label('Reason')
+                                ->required()
+                                ->rows(2)
+                                ->helperText('Shown to the seller.'),
+                            Checkbox::make('confirm_cancel_reservations')
+                                ->label('I understand the reservations will be cancelled')
+                                ->visible(fn (Listing $record): bool => app(GuardListingReservationCancellation::class)->describe($record) !== null)
+                                ->required(fn (Listing $record): bool => app(GuardListingReservationCancellation::class)->describe($record) !== null)
+                                ->accepted(fn (Listing $record): bool => app(GuardListingReservationCancellation::class)->describe($record) !== null),
+                            Checkbox::make('confirm_open_orders')
+                                ->label('I understand the placed orders will be cancelled')
+                                ->visible(fn (Listing $record): bool => app(GuardListingOpenOrders::class)->describe($record) !== null)
+                                ->required(fn (Listing $record): bool => app(GuardListingOpenOrders::class)->describe($record) !== null)
+                                ->accepted(fn (Listing $record): bool => app(GuardListingOpenOrders::class)->describe($record) !== null),
+                        ])
+                        ->action(function (Listing $record, array $data): void {
+                            app(TakeDownListingAction::class)->handle(
+                                $record,
+                                auth()->user(),
+                                $data['takedown_reason'],
+                                (bool) ($data['confirm_cancel_reservations'] ?? false),
+                                (bool) ($data['confirm_open_orders'] ?? false),
+                            );
+                        }),
 
-                Action::make('restore')
-                    ->icon('heroicon-o-eye')
-                    ->color('success')
-                    ->requiresConfirmation()
-                    ->visible(fn (Listing $record): bool => $record->status === ListingStatus::TakenDown
-                        && (auth()->user()?->can('takedown', $record) ?? false))
-                    ->action(function (Listing $record): void {
-                        $record->update([
-                            'status' => ListingStatus::Published,
-                            'taken_down_at' => null,
-                            'taken_down_by' => null,
-                            'takedown_reason' => null,
-                        ]);
+                    Action::make('restore')
+                        ->icon('heroicon-o-eye')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->visible(fn (Listing $record): bool => $record->status === ListingStatus::TakenDown
+                            && (auth()->user()?->can('takedown', $record) ?? false))
+                        ->action(function (Listing $record): void {
+                            $record->update([
+                                'status' => ListingStatus::Published,
+                                'taken_down_at' => null,
+                                'taken_down_by' => null,
+                                'takedown_reason' => null,
+                            ]);
 
-                        app(InAppNotifier::class)->listingRestored($record->farmerSeller, $record);
-                    }),
+                            app(InAppNotifier::class)->listingRestored($record->farmerSeller, $record);
+                        }),
+                ])->tooltip('More'),
             ])
             ->toolbarActions([]);
     }

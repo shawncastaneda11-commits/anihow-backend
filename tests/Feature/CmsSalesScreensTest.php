@@ -52,6 +52,25 @@ class CmsSalesScreensTest extends TestCase
         $this->assertFalse(OrderResource::canView($other));
     }
 
+    public function test_a_content_editor_opens_their_farms_order_beside_the_list(): void
+    {
+        [$editor, $own, $other] = $this->ordersOnTwoFarms();
+
+        $page = Livewire::actingAs($editor)->test(ListOrders::class);
+
+        $this->assertNull($page->instance()->getTable()->getRecordUrl($own));
+
+        // No panel until an order is clicked.
+        $page->assertDontSee('Order '.$own->order_number)
+            ->call('openRecord', $own->id)
+            ->assertSet('openId', $own->id)
+            ->assertSee('Order '.$own->order_number)
+            ->assertSee('Rosa')
+            ->assertDontSee('Rosa Dela Cruz')
+            ->call('openRecord', $other->id)
+            ->assertSet('openId', null);
+    }
+
     public function test_cosel_still_sees_every_farm_and_full_names(): void
     {
         [, $own, $other] = $this->ordersOnTwoFarms();

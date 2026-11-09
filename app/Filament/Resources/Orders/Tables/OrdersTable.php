@@ -4,15 +4,19 @@ namespace App\Filament\Resources\Orders\Tables;
 
 use App\Enums\FulfillmentPreference;
 use App\Enums\OrderStatus;
+use App\Filament\Resources\Orders\Pages\ListOrders;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Support\Sales\SalesAccess;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 
 class OrdersTable
 {
@@ -23,9 +27,22 @@ class OrdersTable
             ->columns([
                 TextColumn::make('order_number')
                     ->label('Order')
-                    ->searchable()
+                    ->weight(FontWeight::SemiBold)
                     ->sortable()
-                    ->copyable(),
+                    ->description(fn (Order $record): string => Str::limit(self::itemsSummary($record), 40)),
+                TextColumn::make('farmerSeller.name')
+                    ->label('Seller')
+                    ->sortable(),
+                TextColumn::make('buyer.name')
+                    ->label('Buyer')
+                    // A Content Editor sees the buyer's first name only.
+                    ->formatStateUsing(fn (?string $state): ?string => SalesAccess::buyerName($state, auth()->user()))
+                    ->placeholder('Walk-in')
+                    ->sortable(),
+                TextColumn::make('total')
+                    ->money('PHP')
+                    ->weight(FontWeight::SemiBold)
+                    ->sortable(),
                 TextColumn::make('status')
                     ->badge()
                     ->formatStateUsing(fn (OrderStatus $state): string => $state->label())
@@ -35,63 +52,25 @@ class OrdersTable
                         OrderStatus::Ready => 'primary',
                         OrderStatus::Completed => 'success',
                         OrderStatus::Cancelled => 'danger',
-                    }),
-                TextColumn::make('buyer.name')
-                    ->label('Buyer')
-                    // A Content Editor sees the buyer's first name only.
-                    ->formatStateUsing(fn (?string $state): ?string => SalesAccess::buyerName($state, auth()->user()))
-                    ->placeholder('Walk-in')
-                    ->searchable(condition: fn (): bool => SalesAccess::seesAll(auth()->user()))
-                    ->sortable(),
-                TextColumn::make('farmerSeller.name')
-                    ->label('Seller')
-                    ->searchable()
-                    ->sortable(),
-                TextColumn::make('farm.name')
-                    ->label('Farm')
-                    ->sortable()
-                    ->toggleable()
-                    ->visible(fn (): bool => SalesAccess::seesAll(auth()->user())),
-                TextColumn::make('items_count')
-                    ->label('Items')
-                    ->counts('items'),
-                TextColumn::make('total')
-                    ->money('PHP')
-                    ->sortable(),
-                TextColumn::make('tawad_total')
-                    ->label('Tawad')
-                    ->money('PHP')
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('amount_received')
-                    ->label('Received')
-                    ->money('PHP')
-                    ->placeholder('Not yet')
-                    // Cash is counted in person, so it can differ from total.
-                    // The record says what changed hands, not what was owed.
-                    ->color(fn (Order $record): ?string => $record->amount_received !== null
-                        && (float) $record->amount_received !== (float) $record->total
-                            ? 'warning'
-                            : null)
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('fulfillment_preference')
-                    ->label('Fulfillment')
-                    ->formatStateUsing(fn (FulfillmentPreference $state): string => $state->label())
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('created_at')
-                    ->label('Placed')
-                    ->dateTime()
-                    ->sortable()
-                    ->description(fn (Order $record): ?string => self::isLate($record) ? 'Waiting over a day' : null)
-                    ->color(fn (Order $record): ?string => self::isLate($record) ? 'danger' : null),
+                    })
+                    ->description(fn (Order $record): string => self::age($record)),
             ])
+            // Clicking a row opens it read-only beside the list
+            // (ListsSalesWithAPanel::openRecord).
+            ->recordUrl(null)
+            ->recordAction('openRecord')
+            ->recordClasses(fn (Order $record, mixed $livewire): ?string => ($livewire->openId ?? null) === $record->getKey() ? 'anihow-row-on' : null)
+            ->modifyQueryUsing(fn (Builder $query, mixed $livewire): Builder => $livewire instanceof ListOrders ? $livewire->applyListFilters($query) : $query)
             ->filters([
                 SelectFilter::make('status')
-                    ->options(OrderStatus::options()),
+                    ->options(OrderStatus::options())
+                    ->visible(fn (): bool => SalesAccess::seesAll(auth()->user())),
                 SelectFilter::make('farm')
                     ->relationship('farm', 'name')
                     ->visible(fn (): bool => SalesAccess::seesAll(auth()->user())),
                 Filter::make('placed_at')
                     ->label('Placed')
+                    ->visible(fn (): bool => SalesAccess::seesAll(auth()->user()))
                     ->schema([
                         DatePicker::make('from')->label('Placed from'),
                         DatePicker::make('until')->label('Placed until'),
@@ -101,6 +80,7 @@ class OrdersTable
                         ->when($data['until'] ?? null, fn (Builder $placed, mixed $until): Builder => $placed->whereDate('created_at', '<=', $until))),
                 Filter::make('completed_at')
                     ->label('Completed')
+                    ->visible(fn (): bool => SalesAccess::seesAll(auth()->user()))
                     ->schema([
                         DatePicker::make('from')->label('Completed from'),
                         DatePicker::make('until')->label('Completed until'),
@@ -110,12 +90,45 @@ class OrdersTable
                         ->when($data['until'] ?? null, fn (Builder $completed, mixed $until): Builder => $completed->whereDate('completed_at', '<=', $until))),
                 SelectFilter::make('fulfillment_preference')
                     ->options(FulfillmentPreference::options())
-                    ->label('Fulfillment'),
+                    ->label('Fulfillment')
+                    ->visible(fn (): bool => SalesAccess::seesAll(auth()->user())),
             ])
             ->recordActions([
-                ViewAction::make(),
+                // COSEL's full view, with the stall chat; the panel covers the rest.
+                ViewAction::make()
+                    ->visible(fn (): bool => SalesAccess::seesAll(auth()->user())),
             ])
             ->toolbarActions([]);
+    }
+
+    /**
+     * "Sitaw × 5 bundle, Talong × 2 kg".
+     */
+    public static function itemsSummary(Order $record): string
+    {
+        return $record->items
+            ->map(fn (OrderItem $item): string => $item->listing_name.' × '.self::number($item->quantity).' '.($item->unit?->value ?? ''))
+            ->implode(', ');
+    }
+
+    /**
+     * How long the order has been where it is: "Placed 26 hours ago",
+     * "Ready since 2 hours ago", "Cancelled Nov 6 by the buyer".
+     */
+    public static function age(Order $record): string
+    {
+        return match ($record->status) {
+            OrderStatus::Placed => 'Placed '.$record->created_at?->diffForHumans(),
+            OrderStatus::Confirmed => 'Confirmed '.($record->confirmed_at ?? $record->created_at)?->diffForHumans(),
+            OrderStatus::Ready => 'Ready since '.($record->ready_at ?? $record->created_at)?->diffForHumans(),
+            OrderStatus::Completed => 'Completed '.($record->completed_at ?? $record->created_at)?->format('M j'),
+            OrderStatus::Cancelled => trim('Cancelled '.$record->cancelled_at?->format('M j').($record->cancelled_by !== null ? ' by the '.strtolower($record->cancelled_by->label()) : '')),
+        };
+    }
+
+    public static function number(mixed $value): string
+    {
+        return rtrim(rtrim(number_format((float) $value, 2), '0'), '.');
     }
 
     /** Placed over a day ago and still not confirmed by the seller. */

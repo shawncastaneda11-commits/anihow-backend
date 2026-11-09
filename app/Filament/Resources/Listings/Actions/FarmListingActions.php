@@ -190,7 +190,7 @@ class FarmListingActions
                 ->visible(fn (Get $get): bool => $get('type') !== self::NO_TAWAD)
                 ->schema([
                     TextInput::make('discount_amount')
-                        ->label('Peso amount off the order')
+                        ->label('Peso off the order')
                         ->numeric()
                         ->prefix('₱')
                         ->live(debounce: 400)

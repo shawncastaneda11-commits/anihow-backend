@@ -1920,6 +1920,20 @@
         max-width: 40rem;
     }
 
+    /* Fields in a row line up along the bottom even when a label wraps. */
+    .anihow-dock-panel .fi-grid {
+        align-items: end;
+    }
+
+    .anihow-dock-foot {
+        border-top: 1px solid var(--anihow-line-soft);
+        box-shadow: 0 -8px 12px -10px rgba(30, 36, 33, 0.18);
+    }
+
+    .anihow-dock-foot .anihow-btn-primary {
+        flex: 2 1 0;
+    }
+
     /* ---- Listings ---- */
     .anihow-thumb {
         flex-shrink: 0;

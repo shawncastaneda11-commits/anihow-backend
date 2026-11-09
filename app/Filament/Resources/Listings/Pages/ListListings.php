@@ -21,6 +21,7 @@ use Filament\Support\Enums\Width;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Validation\ValidationException;
 
 /**
  * The farm's listings, with the chosen one open in a panel beside the list
@@ -231,7 +232,18 @@ class ListListings extends ListRecords
         $record = $this->openRecord();
         abort_unless($record !== null && FarmListingActions::canEdit($record), 403);
 
-        FarmListingActions::saveFor('listing', $record, $this->listingForm->getState());
+        try {
+            FarmListingActions::saveFor('listing', $record, $this->listingForm->getState());
+        } catch (ValidationException $exception) {
+            // The reason also shows under its field, which may be on another tab.
+            Notification::make()
+                ->title('Not saved.')
+                ->body((string) collect($exception->errors())->flatten()->first())
+                ->danger()
+                ->send();
+
+            throw $exception;
+        }
 
         Notification::make()->title('Saved. The seller has been told.')->success()->send();
         $this->openListing($record->getKey());

@@ -5,14 +5,12 @@ namespace App\Filament\Resources\SellerRequests;
 use App\Enums\Permission;
 use App\Enums\SellerRequestStatus;
 use App\Filament\Resources\SellerRequests\Pages\ListSellerRequests;
-use App\Filament\Resources\SellerRequests\Tables\SellerRequestsTable;
 use App\Models\SellerRequest;
 use App\Models\User;
 use App\Support\Accounts\AccountAuthority;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
 
@@ -36,11 +34,6 @@ class SellerRequestResource extends Resource
     protected static ?string $pluralModelLabel = 'seller requests';
 
     protected static ?int $navigationSort = 2;
-
-    public static function table(Table $table): Table
-    {
-        return SellerRequestsTable::configure($table);
-    }
 
     public static function getPages(): array
     {

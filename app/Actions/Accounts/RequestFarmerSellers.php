@@ -28,10 +28,51 @@ class RequestFarmerSellers
         $sent = [];
         $skipped = [];
         $note = trim((string) $note) === '' ? null : mb_substr(trim((string) $note), 0, 500);
+        $checked = $this->check($rows);
+
+        foreach ($checked['people'] as $person) {
+            // Checked again here: an earlier line of this batch may have
+            // just asked for the same email.
+            $problem = $person['problem'] ?? $this->problemWith((string) $person['email']);
+
+            if ($problem !== null) {
+                $skipped[] = "{$person['label']}: {$problem}";
+
+                continue;
+            }
+
+            SellerRequest::query()->create([
+                'farm_id' => $editor->farm_id,
+                'requested_by' => $editor->getKey(),
+                'name' => $person['name'],
+                'email' => $person['email'],
+                'phone' => $person['phone'] ?: null,
+                'note' => $note,
+                'status' => SellerRequestStatus::Waiting,
+            ]);
+
+            $sent[] = (string) $person['email'];
+        }
+
+        if ($checked['truncated']) {
+            $skipped[] = 'Only the first '.self::MAX_ROWS.' lines were read. Send the rest in another request.';
+        }
+
+        return ['sent' => $sent, 'skipped' => $skipped];
+    }
+
+    /**
+     * Reads the lines without sending anything, for "Check before sending".
+     *
+     * @return array{people: list<array{label: string, name: ?string, email: ?string, phone: ?string, problem: ?string}>, truncated: bool}
+     */
+    public function check(string $rows): array
+    {
         $lines = array_values(array_filter(
             array_map('trim', preg_split('/\r\n|\r|\n/', $rows) ?: []),
             fn (string $line): bool => $line !== '',
         ));
+        $people = [];
 
         foreach (array_slice($lines, 0, self::MAX_ROWS) as $number => $line) {
             [$name, $email, $phone] = array_pad(array_map('trim', preg_split('/\t|,/', $line) ?: []), 3, null);
@@ -41,7 +82,7 @@ class RequestFarmerSellers
                 continue; // a header row copied with the data
             }
 
-            $check = Validator::make(
+            $validation = Validator::make(
                 ['name' => $name, 'email' => $email, 'phone' => $phone],
                 [
                     'name' => ['required', 'string', 'max:255'],
@@ -51,41 +92,30 @@ class RequestFarmerSellers
                 ['email.required' => 'needs an email'],
             );
 
-            if ($check->fails()) {
-                $skipped[] = "{$label}: ".$check->errors()->first();
-
-                continue;
-            }
-
-            if (User::withTrashed()->where('email', $email)->exists()) {
-                $skipped[] = "{$label}: {$email} already has an AniHow account.";
-
-                continue;
-            }
-
-            if (SellerRequest::query()->where('email', $email)->where('status', SellerRequestStatus::Waiting)->exists()) {
-                $skipped[] = "{$label}: already waiting for COSEL.";
-
-                continue;
-            }
-
-            SellerRequest::query()->create([
-                'farm_id' => $editor->farm_id,
-                'requested_by' => $editor->getKey(),
+            $people[] = [
+                'label' => $label,
                 'name' => $name,
                 'email' => $email,
-                'phone' => $phone ?: null,
-                'note' => $note,
-                'status' => SellerRequestStatus::Waiting,
-            ]);
-
-            $sent[] = (string) $email;
+                'phone' => $phone,
+                'problem' => $validation->fails()
+                    ? $validation->errors()->first()
+                    : $this->problemWith((string) $email),
+            ];
         }
 
-        if (count($lines) > self::MAX_ROWS) {
-            $skipped[] = 'Only the first '.self::MAX_ROWS.' lines were read. Send the rest in another request.';
+        return ['people' => $people, 'truncated' => count($lines) > self::MAX_ROWS];
+    }
+
+    private function problemWith(string $email): ?string
+    {
+        if (User::withTrashed()->where('email', $email)->exists()) {
+            return "{$email} already has an AniHow account.";
         }
 
-        return ['sent' => $sent, 'skipped' => $skipped];
+        if (SellerRequest::query()->where('email', $email)->where('status', SellerRequestStatus::Waiting)->exists()) {
+            return 'already waiting for COSEL.';
+        }
+
+        return null;
     }
 }

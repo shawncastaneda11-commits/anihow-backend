@@ -105,31 +105,84 @@ class SellerRequestsTest extends TestCase
         app(DecideSellerRequest::class)->add($editor, $request);
     }
 
-    public function test_the_screens_follow_the_office(): void
+    public function test_a_content_editor_sends_from_the_panel_and_sees_only_their_farm(): void
     {
         $farm = $this->farm();
         $editor = $this->staff(Role::ContentEditor, $farm);
         $own = $this->waiting($farm, 'own@example.com');
         $other = $this->waiting($this->farm(), 'other@example.com');
 
-        Livewire::actingAs($editor)
-            ->test(ListSellerRequests::class)
-            ->assertCanSeeTableRecords([$own])
-            ->assertCanNotSeeTableRecords([$other])
-            ->assertTableActionHidden('addSeller', $own)
-            ->callAction('askCosel', data: ['mode' => 'one', 'name' => 'Pedro Reyes', 'email' => 'pedro@example.com'])
-            ->assertHasNoActionErrors();
+        $page = Livewire::actingAs($editor)->test(ListSellerRequests::class);
+
+        $this->assertSame([$own->id], $page->instance()->myRequests()->pluck('id')->all());
+        $this->assertNotContains($other->id, $page->instance()->myRequests()->pluck('id')->all());
+
+        $page->set('name', 'Pedro Reyes')
+            ->set('email', 'pedro@example.com')
+            ->call('send')
+            ->assertHasNoErrors()
+            ->assertSet('sent', true)
+            ->call('setMode', 'many')
+            ->set('rows', "Ana Cruz\nLuz Ramos, luz@example.com");
+
+        $preview = $page->instance()->preview()['people'];
+        $this->assertSame('needs an email', $preview[0]['problem']);
+        $this->assertNull($preview[1]['problem']);
+        $this->assertFalse(SellerRequest::query()->where('email', 'luz@example.com')->exists());
+
+        $page->call('send')->assertHasNoErrors();
 
         $this->assertTrue(SellerRequest::query()->where('email', 'pedro@example.com')->where('farm_id', $farm->id)->exists());
+        $this->assertTrue(SellerRequest::query()->where('email', 'luz@example.com')->where('farm_id', $farm->id)->exists());
+        $this->assertSame(3, SellerRequest::query()->where('farm_id', $farm->id)->count());
+    }
+
+    public function test_cosel_works_through_the_queue_and_sees_the_password_once(): void
+    {
+        $farm = $this->farm();
+        $older = $this->waiting($farm, 'older@example.com');
+        $older->forceFill(['created_at' => now()->subDay()])->saveQuietly();
+        $newer = $this->waiting($this->farm(), 'newer@example.com');
+
+        $page = Livewire::actingAs($this->staff(Role::AccountManager))
+            ->test(ListSellerRequests::class)
+            ->assertSet('selectedId', $older->id)
+            ->call('createAccount')
+            ->assertHasNoErrors()
+            ->assertSet('selectedId', null);
+
+        $this->assertSame('older@example.com', $page->get('created')['email']);
+        $this->assertNotSame('', $page->get('created')['password']);
+        $this->assertSame(SellerRequestStatus::Added, $older->fresh()->status);
+
+        $page->call('finishCreated')
+            ->assertSet('created', null)
+            ->assertSet('selectedId', $newer->id)
+            ->call('startDecline')
+            ->call('decline')
+            ->assertHasErrors(['reason'])
+            ->set('reason', 'Ask them to use another email.')
+            ->call('decline')
+            ->assertHasNoErrors()
+            ->assertSet('selectedId', null);
+
+        $this->assertSame(SellerRequestStatus::NotAdded, $newer->fresh()->status);
+        $this->assertSame('Ask them to use another email.', $newer->fresh()->decision_reason);
+    }
+
+    public function test_cosel_is_told_when_the_email_already_has_an_account(): void
+    {
+        $this->buyer(['email' => 'taken@example.com']);
+        $request = $this->waiting($this->farm(), 'taken@example.com');
 
         Livewire::actingAs($this->staff(Role::AccountManager))
             ->test(ListSellerRequests::class)
-            ->assertCanSeeTableRecords([$own, $other])
-            ->assertActionHidden('askCosel')
-            ->callTableAction('addSeller', $own)
-            ->assertActionMounted('temporaryPassword');
+            ->assertSet('selectedId', $request->id)
+            ->call('createAccount')
+            ->assertHasErrors(['decision'])
+            ->assertSet('created', null);
 
-        $this->assertSame(SellerRequestStatus::Added, $own->fresh()->status);
+        $this->assertSame(SellerRequestStatus::Waiting, $request->fresh()->status);
     }
 
     private function waiting(Farm $farm, string $email): SellerRequest

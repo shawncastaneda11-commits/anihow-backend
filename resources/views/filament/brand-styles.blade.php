@@ -1697,6 +1697,222 @@
         font-size: 0.75rem;
     }
 
+    /* ---- Seller requests ---- */
+    .anihow-card {
+        background: var(--anihow-surface);
+        border: 1px solid var(--anihow-line);
+        border-radius: 14px;
+        padding: 1.125rem 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .anihow-card-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .anihow-card-title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--anihow-ink);
+    }
+
+    .anihow-dock-intro {
+        margin-top: 0.25rem;
+        font-size: 0.875rem;
+    }
+
+    .anihow-line {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 0;
+        border-top: 1px solid var(--anihow-line-soft);
+    }
+
+    .anihow-card-head + .anihow-line {
+        border-top: 0;
+    }
+
+    .anihow-line-main {
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+        min-width: 0;
+    }
+
+    .anihow-line-title {
+        font-weight: 600;
+        color: var(--anihow-ink);
+    }
+
+    .anihow-line-meta {
+        font-size: 0.8125rem;
+        color: var(--anihow-ink-muted);
+    }
+
+    .anihow-line-reason {
+        font-size: 0.8125rem;
+        color: #9A3412;
+    }
+
+    .anihow-line-empty {
+        padding: 0.5rem 0;
+    }
+
+    .anihow-facts-stack {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .anihow-facts-wide {
+        grid-column: 1 / -1;
+    }
+
+    .anihow-facts-plain {
+        font-weight: 400 !important;
+    }
+
+    .anihow-checks {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .anihow-check {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+        font-size: 0.875rem;
+        color: var(--anihow-ink);
+    }
+
+    .anihow-check-dot {
+        flex-shrink: 0;
+        width: 0.625rem;
+        height: 0.625rem;
+        border-radius: 999px;
+        background: var(--anihow-green);
+    }
+
+    .anihow-check-no {
+        color: #9A3412;
+        font-weight: 600;
+    }
+
+    .anihow-check-no .anihow-check-dot {
+        background: #9A3412;
+    }
+
+    .anihow-created {
+        gap: 0.75rem;
+        padding: 1.5rem;
+    }
+
+    .anihow-password {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.875rem 1rem;
+        border-radius: 12px;
+        background: #F2F8F4;
+        border: 1px dashed #A9CDB6;
+    }
+
+    .anihow-password code {
+        font-size: 1.25rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        color: var(--anihow-ink);
+        word-break: break-all;
+    }
+
+    .anihow-segment {
+        display: flex;
+        padding: 0.25rem;
+        gap: 0.25rem;
+        border-radius: 10px;
+        background: #F1EFE9;
+    }
+
+    .anihow-segment button {
+        flex: 1 1 0;
+        min-height: 2.25rem;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        font: inherit;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--anihow-ink-muted);
+        cursor: pointer;
+    }
+
+    .anihow-segment button.anihow-segment-on {
+        background: var(--anihow-surface);
+        color: var(--anihow-ink);
+        box-shadow: 0 1px 2px rgba(30, 36, 33, 0.08);
+    }
+
+    .anihow-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.375rem;
+    }
+
+    .anihow-preview {
+        border: 1px solid var(--anihow-line-soft);
+        border-radius: 12px;
+        padding: 0.75rem 0.875rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        font-size: 0.8125rem;
+    }
+
+    .anihow-preview-title {
+        font-weight: 600;
+        color: var(--anihow-ink);
+        margin-bottom: 0.125rem;
+    }
+
+    .anihow-preview-line {
+        color: var(--anihow-green);
+    }
+
+    .anihow-preview-skip {
+        color: #9A3412;
+    }
+
+    .anihow-dock-note-ok { background: #E3EFE7; color: #1F5A3E; }
+
+    .anihow-dock-foot-stack {
+        flex-direction: column;
+    }
+
+    .anihow-dock-foot-stack .anihow-btn {
+        flex: 0 0 auto;
+        min-height: 2.875rem;
+    }
+
+    .anihow-dock-panel .anihow-input {
+        font-size: 0.875rem;
+    }
+
+    .anihow-split-panel .anihow-card {
+        max-width: 40rem;
+    }
+
     @media (max-width: 47.99rem) {
         .anihow-dock-main {
             padding: 1.25rem 1rem;

@@ -4,6 +4,7 @@ import '../theme/anihow_space.dart';
 import 'account_menu_button.dart';
 import 'cart_icon_button.dart';
 import 'notification_bell.dart';
+import 'side_chip.dart';
 
 /// The one header for every main tab. It is the themed [AppBar], so the title
 /// and the account button sit in the same place on Farms, Market, Orders,
@@ -19,6 +20,8 @@ AppBar mainTabAppBar({
     titleSpacing: AniHowSpace.screen,
     title: Text(title),
     actions: [
+      // A seller who also buys: Selling / Buying, beside the bell.
+      const SideChip(),
       if (showCart) const CartIconButton(),
       const NotificationBellButton(),
       if (showAccountMenu) const AccountMenuButton(),

@@ -234,13 +234,18 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   children: _details(context, listing, s),
                 ),
               ),
-              _ListingActionBar(
-                listing: listing,
-                quantity: _quantity,
-                adding: _adding,
-                onAddToCart: _addToCart,
-                onReserve: () => _openReserve(listing),
-              ),
+              if (listing.sellerId != null &&
+                  listing.sellerId == context.read<AuthController>().user?.id)
+                // A seller who also buys, looking at their own listing.
+                const _OwnListingBar()
+              else
+                _ListingActionBar(
+                  listing: listing,
+                  quantity: _quantity,
+                  adding: _adding,
+                  onAddToCart: _addToCart,
+                  onReserve: () => _openReserve(listing),
+                ),
             ],
           );
         },
@@ -822,6 +827,48 @@ class _ReserveChoice extends StatelessWidget {
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// In place of Add to cart on a seller's own listing while buying.
+class _OwnListingBar extends StatelessWidget {
+  const _OwnListingBar();
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final theme = Theme.of(context);
+
+    return DecoratedBox(
+      key: const ValueKey('own-listing-bar'),
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        border: Border(top: BorderSide(color: theme.dividerColor)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(AniHowSpace.screen, 10, AniHowSpace.screen, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(s.yourListing, style: theme.textTheme.titleSmall),
+              const SizedBox(height: 4),
+              Text(s.yourListingBody, style: theme.textTheme.bodySmall),
+              const SizedBox(height: 10),
+              PrimaryButton(
+                label: s.editInSelling,
+                onPressed: () {
+                  context.read<AuthController>().showSide(buying: false);
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                },
+              ),
+            ],
           ),
         ),
       ),

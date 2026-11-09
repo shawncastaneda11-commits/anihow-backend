@@ -28,6 +28,7 @@ import '../auth/seller_info_screen.dart';
 import '../farm/farm_profile_screen.dart';
 import 'online_payment_section.dart';
 import 'settings_screen.dart';
+import 'start_buying_screen.dart';
 import 'verify_email_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -138,7 +139,7 @@ class ProfileScreen extends StatelessWidget {
         Card(
           child: Column(
             children: [
-              if (user.isBuyer) ...[
+              if (user.isBuyer && !user.isFarmerSeller) ...[
                 _ProfileLink(
                   icon: Icons.storefront_outlined,
                   label: s.wantToSellOnAnihow,
@@ -490,6 +491,11 @@ class _FarmerProfileScreenState extends State<FarmerProfileScreen> {
                 ],
                 if (!complete) ...[
                   _ShopChecklist(shop: shop, onFix: () => _editShop(shop)),
+                  const SizedBox(height: AniHowSpace.cardGap),
+                ],
+                // A seller can also buy with this account (one login).
+                if (context.watch<AuthController>().user?.isBuyer != true) ...[
+                  const StartBuyingCard(),
                   const SizedBox(height: AniHowSpace.cardGap),
                 ],
                 ShopPaymentsCard(shop: shop, onManage: () => _editShop(shop)),

@@ -16,6 +16,7 @@ import '../../theme/anihow_space.dart';
 import '../../widgets/main_tab_app_bar.dart';
 import '../../widgets/async_view.dart';
 import '../../widgets/produce_card.dart';
+import '../../widgets/send_id_banner.dart';
 import '../../widgets/unverified_email_banner.dart';
 import 'announcements_feed_screen.dart';
 import 'listing_detail_screen.dart';
@@ -417,6 +418,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       children: [
         mainTabBodyGap,
         const UnverifiedEmailBanner(),
+        const SendIdBanner(),
         Expanded(
           child: RefreshIndicator(
             onRefresh: _reload,

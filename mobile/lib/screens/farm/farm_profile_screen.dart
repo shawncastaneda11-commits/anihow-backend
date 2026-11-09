@@ -330,7 +330,7 @@ class FarmProfileContent extends StatelessWidget {
 
   bool _isBuyer(BuildContext context) {
     try {
-      return context.watch<AuthController>().user?.isBuyer ?? false;
+      return context.watch<AuthController>().actingAsBuyer;
     } on ProviderNotFoundException {
       return false;
     }

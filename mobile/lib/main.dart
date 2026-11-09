@@ -12,6 +12,7 @@ import 'screens/auth/terms_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/profile/change_password_screen.dart';
 import 'screens/misconfigured_build_screen.dart';
+import 'screens/side_shell.dart';
 import 'navigation/route_observer.dart';
 import 'state/auth_controller.dart';
 import 'state/cart_controller.dart';
@@ -141,6 +142,9 @@ class _RoleGate extends StatelessWidget {
     }
     if (user.needsTerms) {
       return const TermsGateScreen();
+    }
+    if (user.alsoBuys) {
+      return const SideShell();
     }
     if (user.isFarmerSeller) {
       return const FarmerShell();

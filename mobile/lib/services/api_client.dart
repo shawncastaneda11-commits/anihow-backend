@@ -231,6 +231,10 @@ class ApiClient {
             options.headers['Authorization'] = 'Bearer $token';
           }
           options.headers['Accept-Language'] = acceptLanguage;
+          final currentSide = side;
+          if (currentSide != null) {
+            options.headers['X-AniHow-Side'] = currentSide;
+          }
           if (options.data is FormData) {
             options.headers.remove('Content-Type');
           }
@@ -280,6 +284,10 @@ class ApiClient {
   final void Function() onUnauthorized;
   final void Function()? onPasswordChangeRequired;
   String acceptLanguage = 'en';
+
+  /// "selling" or "buying" for a seller who also buys, so the server shows
+  /// the chats of the side on screen. Null for everyone else.
+  String? side;
 
   /// Set only when the user turns Remember me off. It is never written to disk.
   String? _sessionToken;
@@ -372,6 +380,12 @@ class ApiClient {
   }
 
   /// Records that the signed-in user accepted the current terms.
+  /// Turns on buying for a farmer-seller's own account.
+  Future<UserAccount> startBuying() async {
+    final response = await _post('/me/buying', {});
+    return UserAccount.fromJson(_asMap(response['data'] ?? response));
+  }
+
   Future<UserAccount> acceptTerms() async {
     final response = await _post('/auth/terms/accept', {'accept_terms': true});
     return UserAccount.fromJson(_asMap(response['data'] ?? response));

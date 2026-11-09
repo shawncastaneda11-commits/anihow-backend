@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\PaymentProofStatus;
 use App\Enums\Role;
 use App\Filament\Resources\Orders\OrderResource;
 use App\Filament\Resources\Orders\Pages\ListOrders;
@@ -105,12 +106,14 @@ class CmsSalesScreensTest extends TestCase
 
     private function proofFor(Order $order): PaymentProof
     {
-        return PaymentProof::factory()->create([
+        return PaymentProof::query()->create([
             'order_id' => $order->id,
             'buyer_id' => $order->buyer_id,
             'farmer_seller_id' => $order->farmer_seller_id,
+            'reference_number' => '1234',
             'amount' => $order->total,
             'screenshot_path' => 'payment-proofs/test.jpg',
+            'status' => PaymentProofStatus::Pending,
         ]);
     }
 

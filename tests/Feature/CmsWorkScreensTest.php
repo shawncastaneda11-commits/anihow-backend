@@ -111,6 +111,17 @@ class CmsWorkScreensTest extends TestCase
             ->assertCanNotSeeTableRecords([$fine]);
     }
 
+    public function test_a_crop_in_another_unit_does_not_put_every_listing_below_the_lowest_price(): void
+    {
+        [$editor, , $fine] = $this->farmListing(floor: 40);
+        $this->cropType(['unit_of_measure' => ListingUnit::Piece, 'floor_price' => 10]);
+
+        Livewire::actingAs($editor)
+            ->test(ListListings::class)
+            ->set('activeTab', 'below')
+            ->assertCanNotSeeTableRecords([$fine]);
+    }
+
     public function test_cosel_rejects_an_id_from_the_review_panel(): void
     {
         $cosel = $this->staff(Role::AccountManager);

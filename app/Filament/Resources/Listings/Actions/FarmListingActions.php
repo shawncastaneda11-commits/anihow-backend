@@ -130,14 +130,13 @@ class FarmListingActions
     private static function priceAndStock(): array
     {
         return [
-            Grid::make(['default' => 1, 'sm' => 3])->schema([
+            Grid::make(['default' => 1, 'sm' => 2])->schema([
                 TextInput::make('price_per_unit')
                     ->label('Price per unit')
                     ->numeric()
                     ->required()
                     ->prefix('₱')
-                    ->live(debounce: 400)
-                    ->columnSpan(['sm' => 2]),
+                    ->live(debounce: 400),
                 Select::make('unit')->options(ListingUnit::options())->required()->native(false)->live(),
             ]),
             Text::make(fn (Get $get, Listing $record): string => self::floorHint($record, $get)['text'])

@@ -24,9 +24,9 @@ class IdVerificationResource extends Resource
 
     protected static ?string $navigationLabel = 'ID checks';
 
-    protected static ?string $modelLabel = 'ID verification';
+    protected static ?string $modelLabel = 'ID check';
 
-    protected static ?string $pluralModelLabel = 'ID verifications';
+    protected static ?string $pluralModelLabel = 'ID checks';
 
     protected static ?int $navigationSort = 2;
 

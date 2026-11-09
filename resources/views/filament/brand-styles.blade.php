@@ -977,10 +977,9 @@
     }
 
     /* Tables: soft header row, clickable rows. */
-    /* A tint the page background never uses, so the header row reads as
-       part of the white table, not as the page showing through. */
+    /* Header row: white like the table, with a line under it. */
     html:not(.dark) .fi-ta-header-cell {
-        background: #EDEAE2;
+        background: #FFFFFF;
         border-bottom: 1px solid #DDD8CC;
     }
 

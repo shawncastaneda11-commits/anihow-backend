@@ -441,6 +441,9 @@ class EditFarm extends EditRecord
             ->label(fn (): string => $this->getRecord()->is_active ? 'Set inactive' : 'Set active')
             ->modalHeading(fn (): string => $this->getRecord()->is_active ? 'Set this farm inactive?' : 'Set this farm active?')
             ->modalSubmitActionLabel(fn (): string => $this->getRecord()->is_active ? 'Set inactive' : 'Set active')
+            ->modalDescription(fn (): string => $this->getRecord()->is_active
+                ? 'Its listings come off the marketplace and buyers can no longer order or reserve them. Orders already placed stay as they are. The listings return when the farm is set active again.'
+                : 'Its sellers\' shown listings return to the marketplace.')
             ->requiresConfirmation()
             ->visible(fn (): bool => $this->canManageStatus())
             ->authorize(fn (): bool => $this->canManageStatus())

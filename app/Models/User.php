@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use App\Actions\Auth\SendEmailVerificationCodeAction;
+use App\Actions\Reservations\CancelReservation;
 use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderStatus;
+use App\Enums\ReservationCancellationReason;
 use App\Enums\ReservationStatus;
 use App\Enums\Role;
 use App\Enums\UserStatus;
@@ -159,7 +161,8 @@ class User extends Authenticatable implements FilamentUser, HasEmailAuthenticati
         /*
          * A deleted account keeps its row for the orders and chats it took
          * part in, but gives up its email, so the person can sign up again
-         * or be given a new account with it. Its app sessions end with it.
+         * or be given a new account with it. Its app sessions and
+         * reservations end with it.
          */
         static::softDeleted(function (User $user): void {
             if ($user->email !== $user->releasedEmail()) {
@@ -168,7 +171,24 @@ class User extends Authenticatable implements FilamentUser, HasEmailAuthenticati
 
             $user->tokens()->delete();
             $user->deviceTokens()->delete();
+
+            $cancelReservation = app(CancelReservation::class);
+            $cancelReservation->forBuyer($user, ReservationCancellationReason::AccountClosed);
+            $cancelReservation->forSeller($user, ReservationCancellationReason::AccountClosed);
         });
+    }
+
+    /**
+     * Why the account can't be deleted yet, or null when it can. An order
+     * still in progress needs both people until it is completed or cancelled.
+     */
+    public function deletionBlocker(): ?string
+    {
+        if (! $this->hasOpenMarketplaceOrders()) {
+            return null;
+        }
+
+        return 'This account has orders still in progress or a refund due. Complete or cancel them first, or suspend the account instead.';
     }
 
     /**

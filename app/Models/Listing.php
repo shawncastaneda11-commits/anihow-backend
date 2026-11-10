@@ -485,7 +485,22 @@ class Listing extends Model
             ->where('listings.is_active', true)
             ->notExpired()
             ->whereHas('farmerSeller', fn (Builder $seller): Builder => $seller->where('status', UserStatus::Active))
+            ->fromActiveFarm()
             ->whereHas('cropType', fn (Builder $cropType): Builder => $cropType->where('is_active', true));
+    }
+
+    /**
+     * Off the market while the listing's farm is set inactive. The listing's
+     * own switch is left alone, so the listings return when the farm does.
+     *
+     * @param  Builder<Listing>  $query
+     * @return Builder<Listing>
+     */
+    public function scopeFromActiveFarm(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $farm): Builder => $farm
+            ->whereNull('listings.farm_id')
+            ->orWhereHas('farm', fn (Builder $farms): Builder => $farms->active()));
     }
 
     /**
@@ -512,7 +527,7 @@ class Listing extends Model
 
     /**
      * A listing a buyer is allowed to know about: published, active, from an
-     * active seller, under an active crop type, and in a unit that crop
+     * active seller on an active farm, under an active crop type, and in a unit that crop
      * accepts. The availability window is a separate question.
      *
      * @param  Builder<Listing>  $query
@@ -524,6 +539,7 @@ class Listing extends Model
             ->where('listings.status', ListingStatus::Published)
             ->where('listings.is_active', true)
             ->whereHas('farmerSeller', fn (Builder $seller): Builder => $seller->where('status', UserStatus::Active))
+            ->fromActiveFarm()
             ->whereHas('cropType', fn (Builder $cropType): Builder => $cropType->where('is_active', true))
             ->whereDoesntHave(
                 'cropType',

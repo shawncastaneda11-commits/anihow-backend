@@ -6,6 +6,7 @@ use App\Enums\CancellationReason;
 use App\Enums\NotificationType;
 use App\Enums\OrderActor;
 use App\Enums\OrderStatus;
+use App\Filament\Resources\Orders\Tables\OrdersTable;
 use App\Models\Farm;
 use App\Models\Listing;
 use App\Models\Order;
@@ -221,6 +222,30 @@ class SweepStaleOrdersTest extends TestCase
         $this->assertSame(OrderStatus::Confirmed, $confirmed->fresh()->status);
         $this->assertSame(OrderStatus::Cancelled, $stale->fresh()->status);
         $this->assertSame(CancellationReason::SellerUnresponsive, $stale->fresh()->cancellation_reason);
+    }
+
+    public function test_a_seller_is_reminded_once_to_complete_an_order_confirmed_three_days_ago(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-09-24 08:00:00', 'Asia/Manila'));
+
+        $farmer = $this->farmer();
+        $old = $this->placeOrder($this->buyer(), $this->heldListing($farmer), 1);
+        $recent = $this->placeOrder($this->buyer(), $this->heldListing($farmer), 1);
+        $this->asUser($farmer)->patchJson("/api/farmer/orders/{$old->id}/confirm")->assertOk();
+        $this->asUser($farmer)->patchJson("/api/farmer/orders/{$recent->id}/confirm")->assertOk();
+
+        Order::query()->whereKey($old->id)->update(['confirmed_at' => now()->subDays(3)]);
+        Order::query()->whereKey($recent->id)->update(['confirmed_at' => now()->subDays(2)]);
+
+        $this->artisan('orders:sweep-stale')->assertSuccessful();
+        $this->artisan('orders:sweep-stale')->assertSuccessful();
+
+        $this->assertSame(1, $this->notices($farmer->id, NotificationType::OrderCompletionReminder));
+        $this->assertNotNull($old->fresh()->completion_reminded_at);
+        $this->assertNull($recent->fresh()->completion_reminded_at);
+        $this->assertSame(OrderStatus::Confirmed, $old->fresh()->status);
+        $this->assertTrue(OrdersTable::awaitsCompletion($old->fresh()));
+        $this->assertFalse(OrdersTable::awaitsCompletion($recent->fresh()));
     }
 
     private function heldListing(User $farmer, float $available = 10): Listing

@@ -68,6 +68,7 @@ use Illuminate\Validation\ValidationException;
     'completed_at',
     'cancelled_at',
     'reminder_sent_at',
+    'completion_reminded_at',
     'reservation_id',
 ])]
 class Order extends Model
@@ -108,6 +109,7 @@ class Order extends Model
             'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',
             'reminder_sent_at' => 'datetime',
+            'completion_reminded_at' => 'datetime',
         ];
     }
 

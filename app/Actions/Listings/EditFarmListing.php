@@ -3,12 +3,16 @@
 namespace App\Actions\Listings;
 
 use App\Enums\NotificationType;
+use App\Enums\StockRemovalReason;
+use App\Http\Requests\Api\Listings\StoreHarvestRequest;
+use App\Http\Requests\Api\Listings\StoreStockRemovalRequest;
 use App\Http\Requests\Api\Listings\StoreTawadRuleRequest;
 use App\Http\Requests\Api\Listings\UpdateListingRequest;
 use App\Models\Farm;
 use App\Models\Listing;
 use App\Models\TawadRule;
 use App\Models\User;
+use App\Support\HarvestInput;
 use App\Support\InAppNotifier;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Request;
@@ -29,6 +33,8 @@ class EditFarmListing
     public function __construct(
         private readonly UpdateListingAction $updateListing,
         private readonly InAppNotifier $notifier,
+        private readonly AddStockAction $addStock,
+        private readonly RemoveStockAction $removeStock,
     ) {}
 
     /**
@@ -77,6 +83,51 @@ class EditFarmListing
         $this->tellSeller($listing, 'set a new tawad');
 
         return $rule;
+    }
+
+    /**
+     * Records a harvest for the seller, as Add stock does in the app.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function addStock(User $editor, Listing $listing, array $data): Listing
+    {
+        /** @var StoreHarvestRequest $request */
+        $request = $this->resolve(StoreHarvestRequest::class, $editor, $listing, $data);
+
+        $harvest = $request->harvest();
+        $updated = $this->addStock->handle($listing, $harvest, $editor);
+        $unit = $updated->unit?->value ?? '';
+
+        $this->tellSeller($updated, 'added '.HarvestInput::scale($harvest['quantity_good'] ?? $request->validated('quantity_harvested'))." {$unit} of stock");
+
+        return $updated;
+    }
+
+    /**
+     * Takes stock off, as Remove stock does in the app. Stock held by orders
+     * can't be removed.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function removeStock(User $editor, Listing $listing, array $data): Listing
+    {
+        /** @var StoreStockRemovalRequest $request */
+        $request = $this->resolve(StoreStockRemovalRequest::class, $editor, $listing, $data);
+        $reason = StockRemovalReason::from($request->validated('reason'));
+
+        $updated = $this->removeStock->handle(
+            $listing,
+            (string) $request->validated('quantity'),
+            $reason,
+            $request->validated('note'),
+            $editor,
+        );
+        $unit = $updated->unit?->value ?? '';
+
+        $this->tellSeller($updated, 'removed '.HarvestInput::scale($request->validated('quantity'))." {$unit} of stock ({$reason->label()})");
+
+        return $updated;
     }
 
     public function endTawad(User $editor, Listing $listing): void

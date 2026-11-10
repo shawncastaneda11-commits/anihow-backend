@@ -18,4 +18,14 @@ enum StockRemovalReason: string
             self::Correction => 'Correction',
         };
     }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function options(): array
+    {
+        return collect(self::cases())
+            ->mapWithKeys(fn (self $reason): array => [$reason->value => $reason->label()])
+            ->all();
+    }
 }

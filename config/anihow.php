@@ -45,6 +45,12 @@ return [
     'order_auto_cancel_after_hours' => (int) env('ORDER_AUTO_CANCEL_AFTER_HOURS', 48),
 
     /*
+    | A confirmed or ready order not completed after these many days: the
+    | seller is reminded once to complete it or cancel it as a no-show.
+    */
+    'order_completion_reminder_after_days' => (int) env('ORDER_COMPLETION_REMINDER_AFTER_DAYS', 3),
+
+    /*
     |--------------------------------------------------------------------------
     | App login tokens
     |--------------------------------------------------------------------------

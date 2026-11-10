@@ -132,6 +132,17 @@ class OrdersTable
     }
 
     /** Placed over a day ago and still not confirmed by the seller. */
+    /**
+     * Confirmed days ago and still not completed, so it is missing from the
+     * farm's sales figures.
+     */
+    public static function awaitsCompletion(Order $record): bool
+    {
+        return in_array($record->status, [OrderStatus::Confirmed, OrderStatus::Ready], true)
+            && $record->confirmed_at !== null
+            && $record->confirmed_at->lte(now()->subDays((int) config('anihow.order_completion_reminder_after_days')));
+    }
+
     public static function isLate(Order $record): bool
     {
         return $record->status === OrderStatus::Placed

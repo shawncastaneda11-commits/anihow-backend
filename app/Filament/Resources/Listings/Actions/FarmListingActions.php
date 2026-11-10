@@ -4,14 +4,18 @@ namespace App\Filament\Resources\Listings\Actions;
 
 use App\Actions\Listings\EditFarmListing;
 use App\Enums\GrowingMethod;
+use App\Enums\HarvestRejectionReason;
 use App\Enums\ListingStatus;
 use App\Enums\ListingUnit;
+use App\Enums\ProductCategory;
+use App\Enums\StockRemovalReason;
 use App\Enums\TawadType;
 use App\Models\Listing;
 use App\Models\TawadRule;
 use App\Models\User;
 use App\Support\Pricing\PriceGuardResolver;
 use App\Support\Pricing\UnitConverter;
+use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
@@ -20,6 +24,8 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -43,7 +49,7 @@ class FarmListingActions
 
     /** Fields the listing itself takes; the rest of the form is the tawad. */
     private const LISTING_FIELDS = [
-        'title', 'description', 'unit', 'price_per_unit', 'quantity_available', 'min_order_quantity',
+        'title', 'description', 'unit', 'price_per_unit', 'min_order_quantity',
         'order_step', 'growing_method', 'available_from', 'available_until', 'harvested_on', 'is_active',
     ];
 
@@ -67,7 +73,6 @@ class FarmListingActions
             'description' => $record->description,
             'unit' => $record->unit?->value,
             'price_per_unit' => $record->price_per_unit,
-            'quantity_available' => $record->quantity_available,
             'min_order_quantity' => $record->min_order_quantity,
             'order_step' => $record->order_step,
             'is_active' => (bool) $record->is_active,
@@ -150,11 +155,12 @@ class FarmListingActions
             ]),
             Text::make(fn (Get $get, Listing $record): string => self::floorHint($record, $get)['text'])
                 ->color(fn (Get $get, Listing $record): string => self::floorHint($record, $get)['below'] ? 'danger' : 'gray'),
-            Grid::make(['default' => 1, 'sm' => 3])->schema([
-                TextInput::make('quantity_available')->label('Stock')->numeric()->required(),
+            Grid::make(['default' => 1, 'sm' => 2])->schema([
                 TextInput::make('min_order_quantity')->label('Minimum order')->numeric()->required(),
                 TextInput::make('order_step')->label('Sold in steps of')->numeric()->required(),
             ]),
+            Text::make(fn (Listing $record): string => self::stockText($record)),
+            Actions::make([self::addStockAction(), self::removeStockAction()]),
             Text::make(fn (Listing $record): string => self::reservationText($record))->color('gray'),
             Toggle::make('is_active')
                 ->label('Shown to buyers')
@@ -164,6 +170,94 @@ class FarmListingActions
                 ->label('Cancel the reservations this change affects')
                 ->visible(fn (Listing $record): bool => (float) $record->activeReservedQuantity() > 0),
         ];
+    }
+
+    /**
+     * Stock is changed the way the app changes it: a harvest added, or stock
+     * taken off with a reason, never typed over.
+     */
+    public static function stockText(Listing $record): string
+    {
+        $unit = $record->unit?->value ?? '';
+        $text = 'Stock: '.self::number($record->quantity_available)." {$unit}";
+
+        if ((float) $record->quantity_held > 0) {
+            $text .= ', '.self::number($record->quantity_held).' of it held by orders not yet confirmed';
+        }
+
+        return $text.'. Add or remove stock below; the seller is told.';
+    }
+
+    private static function addStockAction(): Action
+    {
+        return Action::make('addStock')
+            ->label('Add stock')
+            ->icon('heroicon-o-plus')
+            ->color('gray')
+            ->modalHeading('Add stock')
+            ->modalDescription('Records a harvest for the seller, as Add stock does in the app.')
+            ->schema([
+                TextInput::make('quantity_harvested')->label('Quantity harvested')->numeric()->required(),
+                TextInput::make('quantity_rejected')->label('Not good enough to sell')->numeric()->default(0)->live(debounce: 400),
+                Select::make('rejection_reason')
+                    ->label('Why')
+                    ->options(fn (Listing $record): array => self::rejectionReasons($record))
+                    ->native(false)
+                    ->live()
+                    ->visible(fn (Get $get): bool => (float) $get('quantity_rejected') > 0)
+                    ->required(fn (Get $get): bool => (float) $get('quantity_rejected') > 0),
+                TextInput::make('rejection_note')
+                    ->label('What happened')
+                    ->maxLength(255)
+                    ->visible(fn (Get $get): bool => $get('rejection_reason') === HarvestRejectionReason::Other->value)
+                    ->required(fn (Get $get): bool => $get('rejection_reason') === HarvestRejectionReason::Other->value),
+                DatePicker::make('harvested_on')->label('Harvested on')->default(now())->maxDate(now())->required(),
+            ])
+            ->action(function (array $data, Listing $record, $livewire): void {
+                abort_unless(self::canEdit($record), 403);
+                app(EditFarmListing::class)->addStock(self::editor(), $record, $data);
+                Notification::make()->title('Stock added. The seller has been told.')->success()->send();
+                $livewire->openListing($record->getKey());
+            });
+    }
+
+    /**
+     * The reasons the app offers for this crop: fresh produce or value-added.
+     *
+     * @return array<string, string>
+     */
+    private static function rejectionReasons(Listing $record): array
+    {
+        $record->loadMissing('cropType');
+        $valueAdded = $record->cropType?->category === ProductCategory::ValueAdded;
+
+        return collect($valueAdded ? HarvestRejectionReason::forValueAdded() : HarvestRejectionReason::forFresh())
+            ->mapWithKeys(fn (HarvestRejectionReason $reason): array => [$reason->value => $reason->label()])
+            ->all();
+    }
+
+    private static function removeStockAction(): Action
+    {
+        return Action::make('removeStock')
+            ->label('Remove stock')
+            ->icon('heroicon-o-minus')
+            ->color('gray')
+            ->modalHeading('Remove stock')
+            ->modalDescription('Stock held by orders not yet confirmed cannot be removed.')
+            ->schema([
+                TextInput::make('quantity')->label('Quantity to remove')->numeric()->required(),
+                Select::make('reason')->options(StockRemovalReason::options())->required()->native(false)->live(),
+                TextInput::make('note')
+                    ->label('What happened')
+                    ->maxLength(255)
+                    ->required(fn (Get $get): bool => $get('reason') === StockRemovalReason::Correction->value),
+            ])
+            ->action(function (array $data, Listing $record, $livewire): void {
+                abort_unless(self::canEdit($record), 403);
+                app(EditFarmListing::class)->removeStock(self::editor(), $record, $data);
+                Notification::make()->title('Stock removed. The seller has been told.')->success()->send();
+                $livewire->openListing($record->getKey());
+            });
     }
 
     /**
@@ -433,10 +527,6 @@ class FarmListingActions
 
         if ($changed('price_per_unit') && is_numeric($get('price_per_unit'))) {
             $changes[] = 'price ₱'.number_format((float) $record->price_per_unit, 2).' → ₱'.number_format((float) $get('price_per_unit'), 2);
-        }
-
-        if ($changed('quantity_available') && is_numeric($get('quantity_available'))) {
-            $changes[] = 'stock '.self::number($record->quantity_available).' → '.self::number($get('quantity_available'));
         }
 
         if ($changed('is_active')) {

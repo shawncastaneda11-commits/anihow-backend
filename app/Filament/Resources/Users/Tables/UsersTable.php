@@ -3,19 +3,20 @@
 namespace App\Filament\Resources\Users\Tables;
 
 use App\Enums\Role;
+use App\Filament\Resources\Users\Actions\DeleteAccountAction;
 use App\Filament\Resources\Users\Actions\SuspendAccountAction;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Models\User;
 use App\Support\Accounts\AccountAuthority;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Database\Eloquent\Builder;
 
 class UsersTable
@@ -74,18 +75,18 @@ class UsersTable
                     ViewAction::make()
                         ->visible(fn (User $record): bool => ! (auth()->user()?->can('update', $record) ?? false)),
                     EditAction::make(),
-                    DeleteAction::make()
+                    DeleteAccountAction::make()
                         ->visible(fn (User $record): bool => auth()->user()?->can('delete', $record) ?? false),
                 ])->tooltip('More'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     // Checks each selected account like the single Delete
-                    // button, so your own account and accounts the other
-                    // office manages are skipped.
+                    // button, so your own account, accounts the other office
+                    // manages and accounts with orders in progress are skipped.
                     DeleteBulkAction::make()
                         ->visible(fn (): bool => AccountAuthority::managesAny(auth()->user()))
-                        ->authorizeIndividualRecords('delete'),
+                        ->authorizeIndividualRecords(fn (User $record): Response => DeleteAccountAction::recordResponse($record)),
                 ]),
             ]);
     }

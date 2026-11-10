@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Users\Pages;
 
 use App\Enums\Role;
+use App\Filament\Resources\Users\Actions\DeleteAccountAction;
 use App\Filament\Resources\Users\Actions\TemporaryPasswordAction;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
@@ -10,7 +11,6 @@ use App\Support\Accounts\AccountAuthority;
 use App\Support\ActivityRecorder;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
-use Filament\Actions\DeleteAction;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
@@ -96,7 +96,7 @@ class EditUser extends EditRecord
                 }),
             // Deleting is rare and final, so it waits in a menu.
             ActionGroup::make([
-                DeleteAction::make()
+                DeleteAccountAction::make()
                     ->visible(fn (): bool => auth()->user()?->can('delete', $this->record) ?? false),
             ])->tooltip('More'),
         ];

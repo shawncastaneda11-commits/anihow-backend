@@ -69,6 +69,10 @@
                     <div>{{ $this->cancelForSuspendedSellerAction }}</div>
                 @endif
 
+                @if (\App\Filament\Resources\Orders\Tables\OrdersTable::awaitsCompletion($order))
+                    <p class="anihow-dock-note anihow-dock-note-no">Confirmed {{ $order->confirmed_at->diffForHumans() }} and not completed, so it is not in the farm's sales yet. If it was handed over, remind {{ $order->farmerSeller?->name ?? 'the seller' }} to mark it Completed.</p>
+                @endif
+
                 @if (\App\Filament\Resources\Orders\Tables\OrdersTable::isLate($order))
                     <p class="anihow-dock-note anihow-dock-note-no">Waiting for the seller to confirm for over a day. Remind {{ $order->farmerSeller?->name ?? 'the seller' }} at the farm or by phone.</p>
                 @endif

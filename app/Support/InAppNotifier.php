@@ -83,6 +83,17 @@ class InAppNotifier
         );
     }
 
+    public function orderAwaitingCompletion(User $farmer, Order $order): InAppNotification
+    {
+        return $this->send(
+            $farmer,
+            NotificationType::OrderCompletionReminder,
+            NotificationType::OrderCompletionReminder->label(),
+            "Order {$order->order_number} was confirmed days ago. If it was handed over, mark it Completed so it counts in My Sales; if the buyer never came, cancel it as a no-show.",
+            $order,
+        );
+    }
+
     /**
      * Every state after Placed reaches the buyer.
      */

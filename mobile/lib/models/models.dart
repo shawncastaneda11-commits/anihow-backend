@@ -745,9 +745,11 @@ class OrderItemRow {
     this.unit,
     this.tawadAmount,
     this.lineTotal,
+    this.listingId,
   });
 
   final String listingName;
+  final int? listingId;
   final String quantity;
   final String listedPrice;
   final String lineSubtotal;
@@ -772,8 +774,23 @@ class OrderItemRow {
       unit: json['unit'] as String?,
       tawadAmount: json['tawad_amount']?.toString(),
       lineTotal: json['line_total']?.toString(),
+      listingId: int.tryParse('${json['listing_id'] ?? ''}'),
     );
   }
+}
+
+/// Names of cart lines that did not become part of any order: checkout
+/// leaves out an item that sold out or was hidden after it was added.
+List<String> itemsNotOrdered(CartSnapshot cart, List<OrderRecord> orders) {
+  final ordered = <int>{
+    for (final order in orders)
+      for (final item in order.items)
+        if (item.listingId != null) item.listingId!,
+  };
+  return [
+    for (final line in cart.items)
+      if (line.listing case final listing? when !ordered.contains(listing.id)) line.listingName,
+  ];
 }
 
 class PaymentQrCode {

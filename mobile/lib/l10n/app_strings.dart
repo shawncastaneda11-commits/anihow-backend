@@ -1058,6 +1058,10 @@ class AppStrings {
   String placeOrders(int count) =>
       t('Place $count orders', 'I-place ang $count order');
   String get ordersPlaced => t('Orders placed', 'Na-place na ang order');
+  String notOrdered(List<String> names) => t(
+    '${names.join(', ')} ${names.length == 1 ? 'was' : 'were'} no longer available and ${names.length == 1 ? 'was' : 'were'} not ordered.',
+    'Wala na ang ${names.join(', ')}, kaya hindi ito naisama sa order.',
+  );
   String cartSplit(int count) => t(
     'Your cart was split into $count orders, one per seller.',
     'Hinati ang cart mo sa $count order, isa bawat seller.',
@@ -2439,6 +2443,10 @@ class AppStrings {
     'order_awaiting_confirmation' => t(
       'Order awaiting confirmation',
       'May order na hinihintay ang kumpirmasyon',
+    ),
+    'order_completion_reminder' => t(
+      'Order waiting to be completed',
+      'Order na hinihintay pang matapos',
     ),
     'listing_low_stock' => t(
       'Listing low on stock',

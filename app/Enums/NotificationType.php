@@ -14,6 +14,7 @@ enum NotificationType: string
     // Farmer-seller facing
     case OrderPlaced = 'order_placed';
     case OrderAwaitingConfirmation = 'order_awaiting_confirmation';
+    case OrderCompletionReminder = 'order_completion_reminder';
     case ListingLowStock = 'listing_low_stock';
     case ListingTakenDown = 'listing_taken_down';
     case ListingRestored = 'listing_restored';
@@ -56,6 +57,7 @@ enum NotificationType: string
             self::OrderMessage => 'New order message',
             self::OrderPlaced => 'New order placed',
             self::OrderAwaitingConfirmation => 'Order awaiting confirmation',
+            self::OrderCompletionReminder => 'Order waiting to be completed',
             self::ListingLowStock => 'Listing low on stock',
             self::ListingTakenDown => 'Listing taken down',
             self::ListingRestored => 'Listing restored',

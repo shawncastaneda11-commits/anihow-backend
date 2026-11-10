@@ -36,6 +36,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _busy = false;
   String? _refusal;
   List<OrderRecord>? _placed;
+  List<String> _notOrdered = const [];
 
   @override
   void initState() {
@@ -63,6 +64,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
     setState(() => _busy = true);
+    final shown = context.read<CartController>().snapshot;
     try {
       final orders = await context.read<CartController>().checkout(
             fulfillmentPreference: _preference,
@@ -83,6 +85,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           .toList();
       setState(() {
         _placed = orders;
+        _notOrdered = itemsNotOrdered(shown, orders);
         _busy = false;
       });
       await offerPushPermission(context);
@@ -119,7 +122,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     if (_placed != null) {
-      return _PlacedView(orders: _placed!);
+      return _PlacedView(orders: _placed!, notOrdered: _notOrdered);
     }
 
     final cart = context.watch<CartController>();
@@ -433,9 +436,10 @@ class _MeetChoice extends StatelessWidget {
 }
 
 class _PlacedView extends StatelessWidget {
-  const _PlacedView({required this.orders});
+  const _PlacedView({required this.orders, this.notOrdered = const []});
 
   final List<OrderRecord> orders;
+  final List<String> notOrdered;
 
   @override
   Widget build(BuildContext context) {
@@ -450,6 +454,15 @@ class _PlacedView extends StatelessWidget {
             title: orders.length == 1 ? s.orderPlacedTitle : s.cartSplit(orders.length),
             tone: AniHowHintTone.brand,
           ),
+          if (notOrdered.isNotEmpty) ...[
+            const SizedBox(height: AniHowSpace.cardGap),
+            AniHowHintCard(
+              key: const ValueKey('not-ordered'),
+              icon: Icons.info_outline,
+              title: s.notOrdered(notOrdered),
+              tone: AniHowHintTone.cash,
+            ),
+          ],
           const SizedBox(height: AniHowSpace.cardGap),
           for (final order in orders) ...[
             Card(

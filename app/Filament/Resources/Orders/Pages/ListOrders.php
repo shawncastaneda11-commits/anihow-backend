@@ -3,14 +3,19 @@
 namespace App\Filament\Resources\Orders\Pages;
 
 use App\Actions\Exports\ExportOrderLedgerAction;
+use App\Enums\CancellationReason;
+use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderStatus;
 use App\Enums\Permission;
 use App\Filament\Concerns\ListsSalesWithAPanel;
 use App\Filament\Resources\Orders\OrderResource;
 use App\Models\Order;
+use App\Services\OrderStateMachine;
 use App\Support\Sales\SalesAccess;
 use Closure;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
@@ -73,6 +78,44 @@ class ListOrders extends ListRecords
         $record = $this->openedRecord();
 
         return $record instanceof Order ? $record : null;
+    }
+
+    /**
+     * COSEL closes an order its suspended seller can no longer finish.
+     */
+    public function cancelForSuspendedSellerAction(): Action
+    {
+        return Action::make('cancelForSuspendedSeller')
+            ->label('Cancel order')
+            ->color('danger')
+            ->requiresConfirmation()
+            ->modalHeading('Cancel this order?')
+            ->modalDescription(fn (): string => $this->openedOrder()?->payment_status === OrderPaymentStatus::Paid
+                || $this->openedOrder()?->payment_status === OrderPaymentStatus::PaymentSent
+                ? 'The buyer is told the order was cancelled because the seller is suspended, and the stock returns to the listing. The buyer already paid online, so the order becomes a refund due: arrange the refund with the seller or the farm.'
+                : 'The buyer is told the order was cancelled because the seller is suspended, and the stock returns to the listing.')
+            ->modalSubmitActionLabel('Cancel order')
+            ->schema([
+                Textarea::make('note')
+                    ->label('Note to the buyer (optional)')
+                    ->rows(2)
+                    ->maxLength(500),
+            ])
+            ->visible(fn (): bool => $this->openedOrder()?->canBeCancelledForSuspendedSeller(auth()->user()) ?? false)
+            ->action(function (array $data, OrderStateMachine $orders): void {
+                $order = $this->openedOrder();
+                abort_unless($order?->canBeCancelledForSuspendedSeller(auth()->user()) ?? false, 403);
+
+                $orders->transition(
+                    order: $order,
+                    next: OrderStatus::Cancelled,
+                    actor: auth()->user(),
+                    note: filled($data['note'] ?? null) ? $data['note'] : null,
+                    reason: CancellationReason::SellerSuspended,
+                );
+
+                Notification::make()->title('Order cancelled. The buyer has been told.')->success()->send();
+            });
     }
 
     /**

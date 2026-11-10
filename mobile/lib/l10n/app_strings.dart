@@ -2530,7 +2530,7 @@ class AppStrings {
             title: 'Sino ang gumagamit',
             body: 'Ang buyer ay puwedeng magpalista. Ang farmer-seller account ay ginagawa ng admin ng AniHow. Ang super admin at content editor ay nasa web panel, hindi sa app na ito.',
           ),
-          (title: 'Bersyon', body: 'Ang Android app na ito ay AniHow v1.0.4.'),
+          (title: 'Bersyon', body: 'Ang Android app na ito ay AniHow v1.0.5.'),
         ]
       : const [
           (
@@ -2545,7 +2545,7 @@ class AppStrings {
             title: 'Who uses the app',
             body: 'Buyers can create their own account. Farmer-seller accounts are created by the AniHow admin. Super admins and content editors use the web panel, not this app.',
           ),
-          (title: 'Version', body: 'This Android app is AniHow v1.0.4.'),
+          (title: 'Version', body: 'This Android app is AniHow v1.0.5.'),
         ];
 
   /// Terms of Service. Shown with [privacyPolicySections] on the terms page.

@@ -7,10 +7,15 @@ import '../models/models.dart';
 import '../screens/chat/open_stall_chat.dart';
 import '../screens/chat/order_chats_screen.dart';
 import '../screens/notifications/notifications_screen.dart';
+import '../state/app_availability.dart';
 import '../state/auth_controller.dart';
 import 'push_runtime.dart';
 
-/// Flushes a tap that arrived before the navigator existed, and later taps.
+/// Opens a tapped push once the app knows who is signed in. A tap that starts
+/// the app arrives before the sign-in is restored, so it waits for that, and
+/// for any gate in front of the app (password change, terms, email check,
+/// maintenance, update). If nobody is signed in, the tap is dropped: the
+/// notice may belong to whoever used the phone before.
 class PushOpenBinder extends StatefulWidget {
   const PushOpenBinder({super.key, required this.child});
 
@@ -21,30 +26,66 @@ class PushOpenBinder extends StatefulWidget {
 }
 
 class _PushOpenBinderState extends State<PushOpenBinder> {
+  AuthController? _auth;
+
   @override
   void initState() {
     super.initState();
     PushRuntime.inbox.addListener(_flush);
+    AppAvailability.instance.addListener(_flush);
+    _auth = context.read<AuthController>()..addListener(_flush);
     WidgetsBinding.instance.addPostFrameCallback((_) => _flush());
   }
 
   @override
   void dispose() {
     PushRuntime.inbox.removeListener(_flush);
+    AppAvailability.instance.removeListener(_flush);
+    _auth?.removeListener(_flush);
     super.dispose();
   }
 
   Future<void> _flush() async {
     final payload = PushRuntime.pending;
-    if (payload == null || !mounted) {
+    final auth = _auth;
+    if (payload == null || auth == null || !mounted) {
       return;
     }
-    PushRuntime.pending = null;
-    await openPushData(context, payload.data);
+    switch (pushOpenState(auth, AppAvailability.instance)) {
+      case PushOpenState.wait:
+        return;
+      case PushOpenState.drop:
+        PushRuntime.pending = null;
+        return;
+      case PushOpenState.open:
+        PushRuntime.pending = null;
+        await openPushData(context, payload.data);
+    }
   }
 
   @override
   Widget build(BuildContext context) => widget.child;
+}
+
+enum PushOpenState { wait, drop, open }
+
+/// Whether a tapped push can open its screen now.
+PushOpenState pushOpenState(AuthController auth, AppAvailability availability) {
+  if (auth.restoring) {
+    return PushOpenState.wait;
+  }
+  final user = auth.user;
+  if (user == null) {
+    return PushOpenState.drop;
+  }
+  if (user.mustChangePassword ||
+      user.needsTerms ||
+      auth.pendingEmailVerification ||
+      availability.underMaintenance ||
+      availability.mustUpdate) {
+    return PushOpenState.wait;
+  }
+  return PushOpenState.open;
 }
 
 /// Opens the screen a push points at. A test push with no notification id

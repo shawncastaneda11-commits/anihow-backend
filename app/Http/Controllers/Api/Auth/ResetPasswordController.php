@@ -33,6 +33,7 @@ class ResetPasswordController extends Controller
         ])->save();
 
         $user->tokens()->delete();
+        $user->deviceTokens()->delete();
         $codes->forget($user);
 
         event(new PasswordReset($user));

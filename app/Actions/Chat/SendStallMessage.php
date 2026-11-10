@@ -240,14 +240,19 @@ class SendStallMessage
             return;
         }
 
-        try {
-            app(FcmPush::class)->send($counterpart, 'chats', 'New message', 'Open AniHow to see it.', [
-                'type' => 'stall_message',
-                'conversation_id' => (string) $conversation->id,
-                'seller_id' => (string) $conversation->farmer_seller_id,
-            ]);
-        } catch (Throwable $exception) {
-            report($exception);
-        }
+        $data = [
+            'type' => 'stall_message',
+            'conversation_id' => (string) $conversation->id,
+            'seller_id' => (string) $conversation->farmer_seller_id,
+        ];
+
+        // Sent once the sender has their reply, so a slow push never holds up the chat.
+        dispatch(function () use ($counterpart, $data): void {
+            try {
+                app(FcmPush::class)->send($counterpart, 'chats', 'New message', 'Open AniHow to see it.', $data);
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        })->afterResponse();
     }
 }

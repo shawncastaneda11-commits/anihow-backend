@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Actions\Auth\SendEmailVerificationCodeAction;
 use App\Actions\Reservations\CancelReservation;
 use App\Enums\OrderPaymentStatus;
+use App\Enums\OrderSource;
 use App\Enums\OrderStatus;
 use App\Enums\ReservationCancellationReason;
 use App\Enums\ReservationStatus;
@@ -719,6 +720,18 @@ class User extends Authenticatable implements FilamentUser, HasEmailAuthenticati
      * Seller orders still waiting on a payment or a refund. Used only to warn
      * a Super Admin before they suspend the account. Nothing is changed.
      */
+    /**
+     * The seller's online orders not yet completed or cancelled.
+     */
+    public function ordersInProgressAsSellerCount(): int
+    {
+        return Order::query()
+            ->where('farmer_seller_id', $this->id)
+            ->where('source', '!=', OrderSource::WalkIn)
+            ->whereIn('status', [OrderStatus::Placed, OrderStatus::Confirmed, OrderStatus::Ready])
+            ->count();
+    }
+
     public function unsettledPaymentOrderCount(): int
     {
         return Order::query()

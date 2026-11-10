@@ -233,7 +233,7 @@ class OrderStateMachine
         $order->cancellation_reason = $reason;
         $order->cancellation_note = $note;
         $order->cancelled_by = match (true) {
-            $actor === OrderActor::System => OrderActor::System,
+            $actor === OrderActor::System, $reason === CancellationReason::SellerSuspended => OrderActor::System,
             $actor instanceof User && $order->isOwnedByBuyer($actor) => OrderActor::Buyer,
             default => OrderActor::FarmerSeller,
         };
@@ -326,6 +326,16 @@ class OrderStateMachine
             return;
         }
 
+        if ($next === OrderStatus::Cancelled && $reason === CancellationReason::SellerSuspended) {
+            if ($order->canBeCancelledForSuspendedSeller($actor)) {
+                return;
+            }
+
+            throw ValidationException::withMessages([
+                'status' => 'Only COSEL can cancel this order, and only while its seller is suspended.',
+            ]);
+        }
+
         if ($order->isOwnedByBuyer($actor)) {
             if ($next === OrderStatus::Cancelled && $order->canBeCancelledByBuyer()) {
                 return;
@@ -375,6 +385,24 @@ class OrderStateMachine
                     NotificationType::PaymentExpired,
                     NotificationType::PaymentExpired->label(),
                     "Order {$order->order_number} was cancelled because the payment time passed.",
+                    $order,
+                );
+            }
+
+            return;
+        }
+
+        if ($status === OrderStatus::Cancelled && $order->cancellation_reason === CancellationReason::SellerSuspended) {
+            $order->loadMissing('buyer');
+
+            if ($order->buyer !== null) {
+                $this->notifier->send(
+                    $order->buyer,
+                    NotificationType::OrderCancelled,
+                    NotificationType::OrderCancelled->label(),
+                    $order->payment_status === OrderPaymentStatus::RefundDue
+                        ? "Order {$order->order_number} was cancelled because the seller's account is suspended. You will be contacted about the refund of your payment."
+                        : "Order {$order->order_number} was cancelled because the seller's account is suspended.",
                     $order,
                 );
             }

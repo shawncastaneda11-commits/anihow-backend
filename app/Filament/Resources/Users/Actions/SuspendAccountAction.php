@@ -13,7 +13,8 @@ use Filament\Forms\Components\TextInput;
 
 /**
  * Suspend an account: it can't sign in until COSEL (or ICTD, for an
- * administrator) lifts it, and the seller's reservations are cancelled.
+ * administrator) lifts it, and its reservations, as seller and as buyer,
+ * are cancelled.
  * Used in the row menu and in the account panel.
  */
 class SuspendAccountAction
@@ -31,13 +32,14 @@ class SuspendAccountAction
                 && $record->isActive()
                 && (auth()->user()?->can('suspend', $record) ?? false))
             ->schema(function (User $record): array {
+                $inProgress = $record->ordersInProgressAsSellerCount();
                 $waiting = $record->unsettledPaymentOrderCount();
                 $fields = [];
 
-                if ($waiting > 0) {
+                if ($inProgress > 0 || $waiting > 0) {
                     $fields[] = Placeholder::make('open_payments')
-                        ->label('Open payments')
-                        ->content("This seller has {$waiting} orders waiting on a payment or a refund. Suspending does not change them.");
+                        ->label('Orders in progress')
+                        ->content(self::openOrdersNote($inProgress, $waiting));
                     $fields[] = Checkbox::make('confirm_open_payments')
                         ->label('I understand these orders stay as they are')
                         ->accepted()
@@ -60,10 +62,21 @@ class SuspendAccountAction
                     'suspension_reason' => $data['suspension_reason'],
                 ]);
 
-                app(CancelReservation::class)->forSeller(
-                    $record,
-                    ReservationCancellationReason::ListingRemoved,
-                );
+                $cancelReservation = app(CancelReservation::class);
+                $cancelReservation->forSeller($record, ReservationCancellationReason::ListingRemoved);
+                $cancelReservation->forBuyer($record, ReservationCancellationReason::AccountSuspended);
             });
+    }
+
+    /**
+     * What happens to the seller's orders: unanswered ones are cancelled by
+     * the hourly sweep, confirmed ones wait for COSEL in Orders.
+     */
+    private static function openOrdersNote(int $inProgress, int $waiting): string
+    {
+        $note = "This seller has {$inProgress} ".($inProgress === 1 ? 'order' : 'orders').' in progress';
+        $note .= $waiting > 0 ? ", {$waiting} of them waiting on a payment or a refund. " : '. ';
+
+        return $note.'Suspending does not change them. Orders the seller has not answered are cancelled automatically; a confirmed or ready order can be cancelled from Orders once the seller is suspended.';
     }
 }

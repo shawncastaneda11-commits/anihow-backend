@@ -10,6 +10,7 @@ enum CancellationReason: string
     case SellerUnresponsive = 'seller_unresponsive';
     case PaymentExpired = 'payment_expired';
     case ListingTakenDown = 'listing_taken_down';
+    case SellerSuspended = 'seller_suspended';
     case Other = 'other';
 
     public function label(): string
@@ -21,6 +22,7 @@ enum CancellationReason: string
             self::SellerUnresponsive => 'Seller unresponsive',
             self::PaymentExpired => 'Payment time expired',
             self::ListingTakenDown => 'Listing taken down',
+            self::SellerSuspended => 'Seller suspended',
             self::Other => 'Other',
         };
     }

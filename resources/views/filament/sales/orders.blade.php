@@ -64,6 +64,11 @@
                     @endif
                 </dl>
 
+                @if ($order->canBeCancelledForSuspendedSeller(auth()->user()))
+                    <p class="anihow-dock-note anihow-dock-note-no">{{ $order->farmerSeller?->name ?? 'The seller' }} is suspended and can't finish this order.</p>
+                    <div>{{ $this->cancelForSuspendedSellerAction }}</div>
+                @endif
+
                 @if (\App\Filament\Resources\Orders\Tables\OrdersTable::isLate($order))
                     <p class="anihow-dock-note anihow-dock-note-no">Waiting for the seller to confirm for over a day. Remind {{ $order->farmerSeller?->name ?? 'the seller' }} at the farm or by phone.</p>
                 @endif

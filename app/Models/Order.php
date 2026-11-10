@@ -9,6 +9,7 @@ use App\Enums\OrderPaymentStatus;
 use App\Enums\OrderSource;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
+use App\Enums\Permission;
 use Database\Factories\OrderFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -288,6 +289,21 @@ class Order extends Model
      * A buyer may cancel only before the seller confirms, and only before
      * they have sent payment. A sent or accepted payment needs a refund.
      */
+    /**
+     * COSEL may close an online order its seller can no longer finish
+     * because the seller is suspended. The buyer is told; a payment already
+     * sent becomes a refund due.
+     */
+    public function canBeCancelledForSuspendedSeller(?User $actor): bool
+    {
+        return $actor !== null
+            && $actor->can(Permission::SuspendAccounts->value)
+            && ! $this->isWalkIn()
+            && in_array($this->status, [OrderStatus::Placed, OrderStatus::Confirmed, OrderStatus::Ready], true)
+            && $this->farmerSeller !== null
+            && ! $this->farmerSeller->isActive();
+    }
+
     public function canBeCancelledByBuyer(): bool
     {
         if ($this->status !== OrderStatus::Placed) {

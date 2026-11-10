@@ -155,6 +155,28 @@ class User extends Authenticatable implements FilamentUser, HasEmailAuthenticati
             $images->delete($user->avatar_path);
             $images->delete($user->cover_photo_path);
         });
+
+        /*
+         * A deleted account keeps its row for the orders and chats it took
+         * part in, but gives up its email, so the person can sign up again
+         * or be given a new account with it. Its app sessions end with it.
+         */
+        static::softDeleted(function (User $user): void {
+            if ($user->email !== $user->releasedEmail()) {
+                $user->forceFill(['email' => $user->releasedEmail()])->saveQuietly();
+            }
+
+            $user->tokens()->delete();
+            $user->deviceTokens()->delete();
+        });
+    }
+
+    /**
+     * The placeholder email a deleted account holds, freeing its real one.
+     */
+    public function releasedEmail(): string
+    {
+        return "deleted-{$this->getKey()}@anihow.invalid";
     }
 
     /**

@@ -101,7 +101,7 @@ class AnonymizeUserAction
 
         $user->forceFill([
             'name' => 'Deleted user',
-            'email' => "deleted-{$user->id}@anihow.invalid",
+            'email' => $user->releasedEmail(),
             'phone' => null,
             'location' => null,
             'shop_name' => null,

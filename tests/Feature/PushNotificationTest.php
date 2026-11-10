@@ -255,6 +255,10 @@ class PushNotificationTest extends TestCase
         $action = app(SendStallMessage::class);
         $action->handle($buyer, $conversation, ['body' => 'Is the pechay still there?']);
         $action->handle($buyer, $conversation, ['body' => 'Hello again']);
+        $this->assertCount(0, $captured, 'The push waits until the sender has their reply.');
+
+        // Ending the request sends what was queued after the response.
+        $this->app->terminate();
 
         $this->assertSame(0, InAppNotification::query()->count());
         $this->assertCount(1, $captured);

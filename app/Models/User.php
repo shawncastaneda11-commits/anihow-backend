@@ -145,11 +145,13 @@ class User extends Authenticatable implements FilamentUser, HasEmailAuthenticati
 
         /*
          * However an account is suspended (the Suspend action, the Status
-         * field, an anonymised deletion), its app sessions end with it.
+         * field, an anonymised deletion), its app sessions and pushes end
+         * with it.
          */
         static::updated(function (User $user): void {
             if ($user->wasChanged('status') && ! $user->status->canAuthenticate()) {
                 $user->tokens()->delete();
+                $user->deviceTokens()->delete();
             }
         });
 
@@ -298,6 +300,7 @@ class User extends Authenticatable implements FilamentUser, HasEmailAuthenticati
     public function signOutEverywhere(): void
     {
         $this->tokens()->delete();
+        $this->deviceTokens()->delete();
 
         if (config('session.driver') === 'database') {
             DB::table(config('session.table', 'sessions'))

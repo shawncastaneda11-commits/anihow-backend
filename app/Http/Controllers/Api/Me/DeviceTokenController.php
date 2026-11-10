@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DeviceToken;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class DeviceTokenController extends Controller
 {
@@ -15,10 +16,14 @@ class DeviceTokenController extends Controller
             'token' => ['required', 'string', 'max:512'],
         ]);
 
+        $signIn = $request->user()->currentAccessToken();
+
+        // Tied to this sign-in: when it ends, this phone stops getting pushes.
         $device = DeviceToken::query()->updateOrCreate(
             ['token' => $validated['token']],
             [
                 'user_id' => $request->user()->id,
+                'personal_access_token_id' => $signIn instanceof PersonalAccessToken ? $signIn->getKey() : null,
                 'platform' => 'android',
                 'last_seen_at' => now(),
             ],

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'user_id',
+    'personal_access_token_id',
     'token',
     'platform',
     'last_seen_at',

@@ -81,6 +81,10 @@ class AccountDeleteGuardTest extends TestCase
         $cosel = User::factory()->create();
         $cosel->syncRoles(Role::AccountManager);
 
+        // placeOrder() signs in through the app API; drop its token first.
+        $this->flushHeaders();
+        $this->app['auth']->forgetGuards();
+
         $this->actingAs($cosel);
         Filament::setCurrentPanel(Filament::getPanel('admin'));
 

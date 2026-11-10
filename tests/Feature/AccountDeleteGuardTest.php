@@ -81,13 +81,15 @@ class AccountDeleteGuardTest extends TestCase
         $cosel = User::factory()->create();
         $cosel->syncRoles(Role::AccountManager);
 
-        // placeOrder() signs in through the app API; drop its token first.
+        // placeOrder() signs in through the app API, which leaves the token
+        // guard as the default; the CMS signs in on the web guard.
         $this->flushHeaders();
         $this->app['auth']->forgetGuards();
+        $this->app['auth']->shouldUse('web');
 
-        $this->actingAs($cosel);
+        $this->actingAs($cosel, 'web');
         Filament::setCurrentPanel(Filament::getPanel('admin'));
 
-        return Livewire::actingAs($cosel)->test(ListUsers::class);
+        return Livewire::actingAs($cosel, 'web')->test(ListUsers::class);
     }
 }

@@ -35,6 +35,7 @@ class CmsListingStockTest extends TestCase
         $updated = app(EditFarmListing::class)->addStock($editor, $listing, [
             'quantity_harvested' => 6,
             'quantity_rejected' => 1,
+            'rejection_reason' => 'pests',
             'harvested_on' => now()->toDateString(),
         ]);
 

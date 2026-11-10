@@ -4,8 +4,10 @@ namespace App\Filament\Resources\Listings\Actions;
 
 use App\Actions\Listings\EditFarmListing;
 use App\Enums\GrowingMethod;
+use App\Enums\HarvestRejectionReason;
 use App\Enums\ListingStatus;
 use App\Enums\ListingUnit;
+use App\Enums\ProductCategory;
 use App\Enums\StockRemovalReason;
 use App\Enums\TawadType;
 use App\Models\Listing;
@@ -196,7 +198,19 @@ class FarmListingActions
             ->modalDescription('Records a harvest for the seller, as Add stock does in the app.')
             ->schema([
                 TextInput::make('quantity_harvested')->label('Quantity harvested')->numeric()->required(),
-                TextInput::make('quantity_rejected')->label('Not good enough to sell')->numeric()->default(0),
+                TextInput::make('quantity_rejected')->label('Not good enough to sell')->numeric()->default(0)->live(debounce: 400),
+                Select::make('rejection_reason')
+                    ->label('Why')
+                    ->options(fn (Listing $record): array => self::rejectionReasons($record))
+                    ->native(false)
+                    ->live()
+                    ->visible(fn (Get $get): bool => (float) $get('quantity_rejected') > 0)
+                    ->required(fn (Get $get): bool => (float) $get('quantity_rejected') > 0),
+                TextInput::make('rejection_note')
+                    ->label('What happened')
+                    ->maxLength(255)
+                    ->visible(fn (Get $get): bool => $get('rejection_reason') === HarvestRejectionReason::Other->value)
+                    ->required(fn (Get $get): bool => $get('rejection_reason') === HarvestRejectionReason::Other->value),
                 DatePicker::make('harvested_on')->label('Harvested on')->default(now())->maxDate(now())->required(),
             ])
             ->action(function (array $data, Listing $record, $livewire): void {
@@ -205,6 +219,21 @@ class FarmListingActions
                 Notification::make()->title('Stock added. The seller has been told.')->success()->send();
                 $livewire->openListing($record->getKey());
             });
+    }
+
+    /**
+     * The reasons the app offers for this crop: fresh produce or value-added.
+     *
+     * @return array<string, string>
+     */
+    private static function rejectionReasons(Listing $record): array
+    {
+        $record->loadMissing('cropType');
+        $valueAdded = $record->cropType?->category === ProductCategory::ValueAdded;
+
+        return collect($valueAdded ? HarvestRejectionReason::forValueAdded() : HarvestRejectionReason::forFresh())
+            ->mapWithKeys(fn (HarvestRejectionReason $reason): array => [$reason->value => $reason->label()])
+            ->all();
     }
 
     private static function removeStockAction(): Action
